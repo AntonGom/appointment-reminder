@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "Appointment Reminder";
-    const copyEmail = process.env.BREVO_COPY_EMAIL || senderEmail;
+    const copyEmail = process.env.BREVO_COPY_EMAIL || "";
 
     if (!apiKey) {
       return res.status(500).json({ error: "Missing BREVO_API_KEY in Vercel environment variables." });
@@ -33,11 +33,11 @@ export default async function handler(req, res) {
       htmlContent: htmlMessage
     });
 
-    if (copyEmail) {
+    if (copyEmail && copyEmail !== clientEmail) {
       await sendBrevoEmail({
         apiKey,
         senderEmail,
-        senderName: "Copy of Reminder",
+        senderName,
         toEmail: copyEmail,
         subject: "Copy of Reminder",
         htmlContent: htmlMessage
