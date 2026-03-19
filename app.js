@@ -1,11 +1,11 @@
-// app.js
+// app.js - FULL COPY & PASTE
 
 let userEdited = false;
 
 // Detect mobile devices
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-// Track if user manually edits the preview
+// Cache the preview textarea
 const previewEl = document.getElementById("preview");
 if (previewEl) {
   previewEl.addEventListener("input", () => {
@@ -13,7 +13,7 @@ if (previewEl) {
   });
 }
 
-// Update required field styling for phone
+// Update phone required styling
 function updateRequiredField() {
   const phoneInput = document.getElementById("phone");
   if (!phoneInput) return;
@@ -27,7 +27,7 @@ function updateRequiredField() {
 const phoneInputEl = document.getElementById("phone");
 if (phoneInputEl) phoneInputEl.addEventListener("input", updateRequiredField);
 
-// Format time from 24h to AM/PM
+// Format time to AM/PM
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
@@ -37,7 +37,7 @@ function formatTime(time) {
   return hour + ":" + minute + " " + ampm;
 }
 
-// Generate message preview
+// Generate message preview text
 function generateMessage() {
   const name = document.getElementById("name")?.value || "";
   const date = document.getElementById("date")?.value || "";
@@ -63,21 +63,21 @@ function generateMessage() {
   return message;
 }
 
-// Update message preview unless user manually edited it
+// Update preview if user hasn't manually edited
 function updatePreview() {
   if (!userEdited && previewEl) {
     previewEl.value = generateMessage();
   }
 }
 
-// Attach input listeners to update preview
+// Attach input listeners for automatic preview
 document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", updatePreview);
   }
 });
 
-// Send reminder via Brevo backend
+// Send reminder using Brevo backend
 async function sendReminder() {
   const phone = document.getElementById("phone")?.value || "";
   const email = document.getElementById("email")?.value || "";
@@ -96,7 +96,15 @@ async function sendReminder() {
         body: JSON.stringify({ clientEmail: email, message }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        const text = await response.text();
+        console.error("Backend response was not JSON:", text);
+        alert("❌ Server error:\n" + text);
+        return;
+      }
 
       if (data.success) {
         alert("✅ Email sent successfully!");
@@ -112,7 +120,7 @@ async function sendReminder() {
   }
 }
 
-// 📱 Manual SMS behavior
+// Manual SMS button
 function manualSMS() {
   const phone = document.getElementById("phone")?.value || "";
   const message = encodeURIComponent(previewEl?.value || "");
@@ -129,7 +137,7 @@ function manualSMS() {
   }
 }
 
-// 📧 Manual Email behavior
+// Manual Email button
 function manualEmail() {
   const email = document.getElementById("email")?.value || "";
   const message = encodeURIComponent(previewEl?.value || "");
