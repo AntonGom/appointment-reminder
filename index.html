@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Appointment Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      background: white;
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+      margin: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h2 { text-align: center; }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    .required { background-color: #fff9c4; }
+
+    #preview {
+      border: 2px solid #007bff;
+      background-color: #f1f8ff;
+      white-space: pre-line;
+    }
+
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Send Reminder</h2>
+
+<label>Client Email</label>
+<input id="email" class="required" placeholder="Enter client's email">
+
+<label>Client Name (optional)</label>
+<input id="name" placeholder="Enter client's name">
+
+<label>Date of Service</label>
+<input type="date" id="date">
+
+<label>Time of Service</label>
+<input type="time" id="time">
+
+<label>Notes (optional)</label>
+<textarea id="notes"></textarea>
+
+<label>Message Preview (Editable)</label>
+<textarea id="preview"></textarea>
+
+<button onclick="sendReminder()">Send Reminder</button>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
