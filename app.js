@@ -6,13 +6,17 @@ let userEdited = false;
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 // Track if user manually edits the preview
-document.getElementById("preview").addEventListener("input", () => {
-  userEdited = true;
-});
+const previewEl = document.getElementById("preview");
+if (previewEl) {
+  previewEl.addEventListener("input", () => {
+    userEdited = true;
+  });
+}
 
 // Update required field styling for phone
 function updateRequiredField() {
-  let phoneInput = document.getElementById("phone");
+  const phoneInput = document.getElementById("phone");
+  if (!phoneInput) return;
   if (phoneInput.value.trim() === "") {
     phoneInput.classList.add("required");
   } else {
@@ -20,25 +24,26 @@ function updateRequiredField() {
   }
 }
 
-document.getElementById("phone").addEventListener("input", updateRequiredField);
+const phoneInputEl = document.getElementById("phone");
+if (phoneInputEl) phoneInputEl.addEventListener("input", updateRequiredField);
 
 // Format time from 24h to AM/PM
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
   hour = parseInt(hour);
-  let ampm = hour >= 12 ? "PM" : "AM";
+  const ampm = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
   return hour + ":" + minute + " " + ampm;
 }
 
 // Generate message preview
 function generateMessage() {
-  let name = document.getElementById("name").value;
-  let date = document.getElementById("date").value;
-  let time = document.getElementById("time").value;
-  let notes = document.getElementById("notes").value;
-  let address = document.getElementById("address").value;
+  const name = document.getElementById("name")?.value || "";
+  const date = document.getElementById("date")?.value || "";
+  const time = document.getElementById("time")?.value || "";
+  const notes = document.getElementById("notes")?.value || "";
+  const address = document.getElementById("address")?.value || "";
 
   let message = "Reminder";
 
@@ -53,20 +58,19 @@ function generateMessage() {
   if (address) message += "Location: " + address + "\n";
   if (notes) message += "Note: " + notes;
 
-  if (message === "Reminder") {
-    message = "Your message will appear here...";
-  }
+  if (message === "Reminder") message = "Your message will appear here...";
 
   return message;
 }
 
-// Update message preview automatically unless user edited it
+// Update message preview unless user manually edited it
 function updatePreview() {
-  if (!userEdited) {
-    document.getElementById("preview").value = generateMessage();
+  if (!userEdited && previewEl) {
+    previewEl.value = generateMessage();
   }
 }
 
+// Attach input listeners to update preview
 document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", updatePreview);
@@ -75,9 +79,9 @@ document.querySelectorAll("input, textarea").forEach(el => {
 
 // Send reminder via Brevo backend
 async function sendReminder() {
-  const phone = document.getElementById("phone").value;
-  const email = document.getElementById("email").value;
-  const message = document.getElementById("preview").value;
+  const phone = document.getElementById("phone")?.value || "";
+  const email = document.getElementById("email")?.value || "";
+  const message = previewEl?.value || "";
 
   if (!phone.trim() && !email.trim()) {
     alert("Please provide at least a phone number or email.");
@@ -92,7 +96,7 @@ async function sendReminder() {
         body: JSON.stringify({ clientEmail: email, message }),
       });
 
-      const data = await response.json(); // safe because backend always returns JSON
+      const data = await response.json();
 
       if (data.success) {
         alert("✅ Email sent successfully!");
@@ -108,10 +112,10 @@ async function sendReminder() {
   }
 }
 
-// 📱 SMS behavior
+// 📱 Manual SMS behavior
 function manualSMS() {
-  let phone = document.getElementById("phone").value;
-  let message = encodeURIComponent(document.getElementById("preview").value);
+  const phone = document.getElementById("phone")?.value || "";
+  const message = encodeURIComponent(previewEl?.value || "");
 
   if (!phone.trim()) {
     alert("Phone number required.");
@@ -125,17 +129,16 @@ function manualSMS() {
   }
 }
 
-// 📧 Email behavior (manual)
+// 📧 Manual Email behavior
 function manualEmail() {
-  let email = document.getElementById("email").value;
-  let message = encodeURIComponent(document.getElementById("preview").value);
+  const email = document.getElementById("email")?.value || "";
+  const message = encodeURIComponent(previewEl?.value || "");
 
   if (!email.trim()) {
     alert("Email required.");
     return;
   }
 
-  // Works on both mobile + desktop
   window.location.href = `mailto:${email}?subject=Reminder&body=${message}`;
 }
 
