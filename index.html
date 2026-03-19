@@ -7,21 +7,21 @@
 
   <style>
     :root {
-      --bg-top: #fef6e7;
-      --bg-bottom: #f3e0d2;
-      --card: rgba(255, 251, 247, 0.94);
-      --card-border: rgba(148, 93, 56, 0.16);
-      --text-main: #3f2619;
-      --text-soft: #856756;
-      --field-bg: #fffdfa;
-      --field-border: #dbc2b1;
-      --field-focus: #ba6c3f;
-      --accent: #b65a34;
-      --accent-2: #2d6f86;
-      --accent-3: #2d7a5b;
-      --accent-muted: #8b847d;
-      --preview-bg: #fff5ed;
-      --preview-border: #d89c6e;
+      --bg-top: #10141c;
+      --bg-bottom: #1a2230;
+      --card: rgba(246, 248, 252, 0.96);
+      --card-border: rgba(95, 118, 148, 0.22);
+      --text-main: #111827;
+      --text-soft: #5b6472;
+      --field-bg: #ffffff;
+      --field-border: #cbd5e1;
+      --field-focus: #2563eb;
+      --accent: #2563eb;
+      --accent-2: #3b82f6;
+      --accent-3: #1d4ed8;
+      --accent-muted: #6b7280;
+      --preview-bg: #eef4ff;
+      --preview-border: #8ab4ff;
     }
 
     * { box-sizing: border-box; }
@@ -31,7 +31,8 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.75), transparent 32%),
+        radial-gradient(circle at top left, rgba(59,130,246,0.22), transparent 32%),
+        radial-gradient(circle at right, rgba(148,163,184,0.18), transparent 28%),
         linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       display: flex;
       justify-content: center;
@@ -56,37 +57,25 @@
       content: "";
       position: absolute;
       inset: 0 0 auto 0;
-      height: 120px;
-      background: linear-gradient(135deg, rgba(239, 180, 132, 0.35), rgba(255, 255, 255, 0));
+      height: 110px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
 
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(182, 90, 52, 0.1);
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
     h2 {
-      margin: 14px 0 8px;
+      margin: 4px 0 8px;
       color: var(--text-main);
-      font-size: 32px;
+      font-size: 34px;
       line-height: 1.05;
     }
 
-    .subtitle {
-      margin: 0 0 22px;
+    .section-title {
+      margin: 0 0 8px;
       color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.5;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .grid {
@@ -123,7 +112,7 @@
 
     input:focus, textarea:focus {
       border-color: var(--field-focus);
-      box-shadow: 0 0 0 4px rgba(182, 90, 52, 0.12);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
       transform: translateY(-1px);
     }
 
@@ -132,7 +121,7 @@
       min-height: 108px;
     }
 
-    .required { background-color: #fff9eb; }
+    .required { background-color: #f8fbff; }
 
     #preview {
       border: 2px solid var(--preview-border);
@@ -170,19 +159,19 @@
     }
 
     .primary {
-      background: linear-gradient(135deg, #c8653c, #a94a28);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
     }
 
     .secondary {
-      background: linear-gradient(135deg, #3f85a4, #2d6885);
+      background: linear-gradient(135deg, #334155, #1f2937);
     }
 
     .tertiary {
-      background: linear-gradient(135deg, #3e8c67, #2b6d4d);
+      background: linear-gradient(135deg, #475569, #334155);
     }
 
     .ghost {
-      background: linear-gradient(135deg, #9a938d, #7d7771);
+      background: linear-gradient(135deg, #94a3b8, #64748b);
     }
 
     .hint {
@@ -218,19 +207,18 @@
 
 <div class="container">
 
-<div class="eyebrow">Client Outreach</div>
-<h2>Send Reminder</h2>
-<p class="subtitle">Build a polished reminder, then send it by email or text in the way that fits best.</p>
+<h2>Appointment Reminder</h2>
+<p class="section-title">Client Details</p>
 
 <div class="grid">
   <div class="full">
-    <label>Client Phone Number</label>
+    <label>Client Phone Number (required)</label>
     <input id="phone" class="required" placeholder="Enter client's phone number">
   </div>
 
   <div class="full">
-    <label>Client Email</label>
-    <input id="email" class="required" placeholder="Enter client's email">
+    <label>Client Email (optional)</label>
+    <input id="email" placeholder="Enter client's email">
   </div>
 
   <div class="full">
