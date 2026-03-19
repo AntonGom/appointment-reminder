@@ -110,6 +110,13 @@
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
+    input[type="date"],
+    input[type="time"] {
+      min-height: 50px;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
     input:focus, textarea:focus {
       border-color: var(--field-focus);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
@@ -253,10 +260,10 @@
 </div>
 
 <div class="actions">
-  <button class="primary" onclick="sendBrevoEmail()">Send Email via Brevo</button>
-  <button class="secondary" onclick="sendLocalEmail()">Send Email from This Device</button>
-  <button class="tertiary" onclick="sendLocalText()">Send Text from This Device</button>
-  <button class="ghost" onclick="sendTwilioText()">Send Text via Twilio</button>
+  <button class="primary" onclick="sendBrevoEmail()">Send Reminder Email</button>
+  <button class="secondary" onclick="sendLocalEmail()">Open Email App</button>
+  <button class="tertiary" onclick="sendLocalText()">Open Text Message App</button>
+  <button class="ghost" onclick="sendTwilioText()">Send Text Automatically</button>
 </div>
 
 <p class="hint">
