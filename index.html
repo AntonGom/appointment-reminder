@@ -9,30 +9,46 @@
     * { box-sizing: border-box; }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Segoe UI", Tahoma, sans-serif;
       margin: 0;
-      background-color: #f5f5f5;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, #fff2d8 0%, #f8ebe0 36%, #efe4da 100%);
       display: flex;
       justify-content: center;
+      align-items: flex-start;
     }
 
     .container {
-      background: white;
+      background: rgba(255,255,255,0.96);
       width: 100%;
-      max-width: 420px;
-      padding: 20px;
-      margin: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 460px;
+      padding: 24px;
+      margin: 24px;
+      border-radius: 20px;
+      box-shadow: 0 18px 42px rgba(87, 53, 36, 0.16);
+      border: 1px solid rgba(165, 113, 77, 0.16);
     }
 
-    h2 { text-align: center; }
+    h2 {
+      text-align: center;
+      margin: 0 0 6px;
+      color: #5d3726;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin: 0 0 18px;
+      color: #8a6451;
+      font-size: 14px;
+    }
 
     label {
       font-weight: bold;
       display: block;
       margin-top: 15px;
       font-size: 14px;
+      color: #5d3726;
     }
 
     input, textarea {
@@ -40,16 +56,28 @@
       padding: 12px;
       margin-top: 5px;
       border-radius: 8px;
-      border: 1px solid #ccc;
+      border: 1px solid #d7c1b3;
       font-size: 16px;
+      background: #fffdfb;
     }
 
-    .required { background-color: #fff9c4; }
+    textarea {
+      resize: vertical;
+      min-height: 88px;
+    }
+
+    .required { background-color: #fff7da; }
 
     #preview {
-      border: 2px solid #007bff;
-      background-color: #f1f8ff;
+      border: 2px solid #ce9e72;
+      background-color: #fff8f2;
       white-space: pre-line;
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
     }
 
     button {
@@ -59,9 +87,42 @@
       font-size: 16px;
       border: none;
       border-radius: 10px;
-      background-color: #007bff;
       color: white;
       cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .primary {
+      background-color: #b85c38;
+    }
+
+    .secondary {
+      background-color: #356f8f;
+    }
+
+    .tertiary {
+      background-color: #3d7f5d;
+    }
+
+    .ghost {
+      background-color: #8f8b86;
+    }
+
+    .hint {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #7b6a61;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -71,12 +132,19 @@
 <div class="container">
 
 <h2>Send Reminder</h2>
+<p class="subtitle">Prepare a reminder and send it by email or text.</p>
 
 <label>Client Email</label>
 <input id="email" class="required" placeholder="Enter client's email">
 
-<label>Client Name (optional)</label>
+<label>Client Name</label>
 <input id="name" placeholder="Enter client's name">
+
+<label>Client Phone Number</label>
+<input id="phone" placeholder="Enter client's phone number">
+
+<label>Service Address</label>
+<input id="address" placeholder="Enter service address">
 
 <label>Date of Service</label>
 <input type="date" id="date">
@@ -90,7 +158,16 @@
 <label>Message Preview (Editable)</label>
 <textarea id="preview"></textarea>
 
-<button onclick="sendReminder()">Send Reminder</button>
+<div class="actions">
+  <button class="primary" onclick="sendBrevoEmail()">Send Email via Brevo</button>
+  <button class="secondary" onclick="sendLocalEmail()">Send Email from This Device</button>
+  <button class="tertiary" onclick="sendLocalText()">Send Text from This Device</button>
+  <button class="ghost" onclick="sendTwilioText()">Send Text via Twilio</button>
+</div>
+
+<p class="hint">
+  Local email and text options will open your default app with the message filled in as much as your device allows.
+</p>
 
 </div>
 

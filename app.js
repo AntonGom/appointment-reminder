@@ -7,23 +7,37 @@ function formatTime(time) {
   return hour + ":" + minute + " " + ampm;
 }
 
+function formatDate(dateString) {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  return month && day && year ? month + "/" + day + "/" + year : dateString;
+}
+
+function getFieldValue(id) {
+  return document.getElementById(id).value.trim();
+}
+
 function generateMessage() {
-  let name = document.getElementById("name").value;
-  let date = document.getElementById("date").value;
-  let time = document.getElementById("time").value;
-  let notes = document.getElementById("notes").value;
+  let name = getFieldValue("name");
+  let phone = getFieldValue("phone");
+  let address = getFieldValue("address");
+  let date = getFieldValue("date");
+  let time = getFieldValue("time");
+  let notes = getFieldValue("notes");
 
-  let msg = "Reminder";
+  let lines = [];
+  let intro = "Reminder";
 
-  if (name) msg += " for " + name;
-  if (date || time) {
-    msg += ":\n";
-    if (date) msg += "Date: " + date + "\n";
-    if (time) msg += "Time: " + formatTime(time) + "\n";
-  }
-  if (notes) msg += "Note: " + notes;
+  if (name) intro += " for " + name;
+  lines.push(intro);
 
-  return msg;
+  if (date) lines.push("Date: " + formatDate(date));
+  if (time) lines.push("Time: " + formatTime(time));
+  if (address) lines.push("Service Address: " + address);
+  if (phone) lines.push("Phone: " + phone);
+  if (notes) lines.push("Notes: " + notes);
+
+  return lines.join("\n");
 }
 
 document.querySelectorAll("input, textarea").forEach(el => {
@@ -34,12 +48,31 @@ document.querySelectorAll("input, textarea").forEach(el => {
   }
 });
 
-async function sendReminder() {
-  let email = document.getElementById("email").value;
-  let message = document.getElementById("preview").value;
+document.getElementById("preview").value = generateMessage();
+
+function getMessage() {
+  return document.getElementById("preview").value.trim();
+}
+
+function getEmail() {
+  return getFieldValue("email");
+}
+
+function getPhone() {
+  return getFieldValue("phone");
+}
+
+async function sendBrevoEmail() {
+  let email = getEmail();
+  let message = getMessage();
 
   if (!email) {
     alert("Email is required");
+    return;
+  }
+
+  if (!message) {
+    alert("Message is required");
     return;
   }
 
@@ -61,4 +94,54 @@ async function sendReminder() {
   } else {
     alert(data.error || "Error sending email");
   }
+}
+
+function sendLocalEmail() {
+  let email = getEmail();
+  let message = getMessage();
+
+  if (!email) {
+    alert("Client email is required");
+    return;
+  }
+
+  if (!message) {
+    alert("Message is required");
+    return;
+  }
+
+  const subject = encodeURIComponent("Appointment Reminder");
+  const body = encodeURIComponent(message);
+  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+}
+
+async function sendLocalText() {
+  let phone = getPhone();
+  let message = getMessage();
+
+  if (!phone) {
+    alert("Client phone number is required");
+    return;
+  }
+
+  if (!message) {
+    alert("Message is required");
+    return;
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(message);
+    }
+  } catch (error) {
+    console.warn("Clipboard write failed", error);
+  }
+
+  const smsBody = encodeURIComponent(message);
+  const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
+  window.location.href = `sms:${encodeURIComponent(phone)}${separator}body=${smsBody}`;
+}
+
+function sendTwilioText() {
+  alert("Twilio text sending will be added later.");
 }
