@@ -21,6 +21,7 @@ function generateMessage() {
   let name = getFieldValue("name");
   let phone = getFieldValue("phone");
   let address = getFieldValue("address");
+  let businessContact = getFieldValue("businessContact");
   let date = getFieldValue("date");
   let time = getFieldValue("time");
   let notes = getFieldValue("notes");
@@ -44,8 +45,10 @@ function generateMessage() {
   }
 
   lines.push("");
-  lines.push("Please reply if you have any questions or need to make a change.");
-  lines.push("");
+  if (businessContact) {
+    lines.push("If you need to reach us before your appointment, please contact us at " + businessContact + ".");
+    lines.push("");
+  }
   lines.push("Thank you,");
   lines.push("Appointment Reminder");
 
