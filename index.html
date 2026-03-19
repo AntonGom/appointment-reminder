@@ -6,94 +6,161 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
+    :root {
+      --bg-top: #fef6e7;
+      --bg-bottom: #f3e0d2;
+      --card: rgba(255, 251, 247, 0.94);
+      --card-border: rgba(148, 93, 56, 0.16);
+      --text-main: #3f2619;
+      --text-soft: #856756;
+      --field-bg: #fffdfa;
+      --field-border: #dbc2b1;
+      --field-focus: #ba6c3f;
+      --accent: #b65a34;
+      --accent-2: #2d6f86;
+      --accent-3: #2d7a5b;
+      --accent-muted: #8b847d;
+      --preview-bg: #fff5ed;
+      --preview-border: #d89c6e;
+    }
+
     * { box-sizing: border-box; }
 
     body {
-      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at top, #fff2d8 0%, #f8ebe0 36%, #efe4da 100%);
+        radial-gradient(circle at top left, rgba(255,255,255,0.75), transparent 32%),
+        linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: center;
+      padding: 28px 14px;
     }
 
     .container {
-      background: rgba(255,255,255,0.96);
+      position: relative;
+      overflow: hidden;
+      background: var(--card);
       width: 100%;
-      max-width: 460px;
-      padding: 24px;
-      margin: 24px;
-      border-radius: 20px;
-      box-shadow: 0 18px 42px rgba(87, 53, 36, 0.16);
-      border: 1px solid rgba(165, 113, 77, 0.16);
+      max-width: 520px;
+      padding: 28px;
+      border-radius: 28px;
+      box-shadow: 0 26px 60px rgba(94, 58, 37, 0.18);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+    }
+
+    .container::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 120px;
+      background: linear-gradient(135deg, rgba(239, 180, 132, 0.35), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(182, 90, 52, 0.1);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     h2 {
-      text-align: center;
-      margin: 0 0 6px;
-      color: #5d3726;
+      margin: 14px 0 8px;
+      color: var(--text-main);
+      font-size: 32px;
+      line-height: 1.05;
     }
 
     .subtitle {
-      text-align: center;
-      margin: 0 0 18px;
-      color: #8a6451;
-      font-size: 14px;
+      margin: 0 0 22px;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
     }
 
     label {
-      font-weight: bold;
+      font-weight: 700;
       display: block;
-      margin-top: 15px;
-      font-size: 14px;
-      color: #5d3726;
+      margin-top: 14px;
+      font-size: 13px;
+      letter-spacing: 0.01em;
+      color: var(--text-main);
     }
 
     input, textarea {
       width: 100%;
-      padding: 12px;
-      margin-top: 5px;
-      border-radius: 8px;
-      border: 1px solid #d7c1b3;
+      padding: 13px 14px;
+      margin-top: 6px;
+      border-radius: 14px;
+      border: 1px solid var(--field-border);
       font-size: 16px;
-      background: #fffdfb;
+      background: var(--field-bg);
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--field-focus);
+      box-shadow: 0 0 0 4px rgba(182, 90, 52, 0.12);
+      transform: translateY(-1px);
     }
 
     textarea {
       resize: vertical;
-      min-height: 88px;
+      min-height: 108px;
     }
 
-    .required { background-color: #fff7da; }
+    .required { background-color: #fff9eb; }
 
     #preview {
-      border: 2px solid #ce9e72;
-      background-color: #fff8f2;
+      border: 2px solid var(--preview-border);
+      background-color: var(--preview-bg);
       white-space: pre-line;
     }
 
     .actions {
       display: grid;
-      gap: 10px;
-      margin-top: 18px;
+      gap: 12px;
+      margin-top: 22px;
     }
 
     button {
-      margin-top: 12px;
       width: 100%;
-      padding: 14px;
-      font-size: 16px;
+      padding: 15px 16px;
+      font-size: 15px;
+      font-weight: 700;
       border: none;
-      border-radius: 10px;
+      border-radius: 16px;
       color: white;
       cursor: pointer;
-      transition: transform 0.15s ease, opacity 0.15s ease;
+      transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
     }
 
     button:hover {
       transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(40, 32, 28, 0.14);
     }
 
     button:disabled {
@@ -103,26 +170,46 @@
     }
 
     .primary {
-      background-color: #b85c38;
+      background: linear-gradient(135deg, #c8653c, #a94a28);
     }
 
     .secondary {
-      background-color: #356f8f;
+      background: linear-gradient(135deg, #3f85a4, #2d6885);
     }
 
     .tertiary {
-      background-color: #3d7f5d;
+      background: linear-gradient(135deg, #3e8c67, #2b6d4d);
     }
 
     .ghost {
-      background-color: #8f8b86;
+      background: linear-gradient(135deg, #9a938d, #7d7771);
     }
 
     .hint {
-      margin-top: 14px;
+      margin-top: 16px;
       font-size: 12px;
-      color: #7b6a61;
+      color: var(--text-soft);
       line-height: 1.5;
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        padding: 22px;
+        border-radius: 22px;
+      }
+
+      h2 {
+        font-size: 28px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .full {
+        grid-column: auto;
+      }
     }
   </style>
 </head>
@@ -131,32 +218,51 @@
 
 <div class="container">
 
+<div class="eyebrow">Client Outreach</div>
 <h2>Send Reminder</h2>
-<p class="subtitle">Prepare a reminder and send it by email or text.</p>
+<p class="subtitle">Build a polished reminder, then send it by email or text in the way that fits best.</p>
 
-<label>Client Email</label>
-<input id="email" class="required" placeholder="Enter client's email">
+<div class="grid">
+  <div class="full">
+    <label>Client Phone Number</label>
+    <input id="phone" class="required" placeholder="Enter client's phone number">
+  </div>
 
-<label>Client Name</label>
-<input id="name" placeholder="Enter client's name">
+  <div class="full">
+    <label>Client Email</label>
+    <input id="email" class="required" placeholder="Enter client's email">
+  </div>
 
-<label>Client Phone Number</label>
-<input id="phone" placeholder="Enter client's phone number">
+  <div class="full">
+    <label>Client Name</label>
+    <input id="name" placeholder="Enter client's name">
+  </div>
 
-<label>Service Address</label>
-<input id="address" placeholder="Enter service address">
+  <div class="full">
+    <label>Service Address</label>
+    <input id="address" placeholder="Enter service address">
+  </div>
 
-<label>Date of Service</label>
-<input type="date" id="date">
+  <div>
+    <label>Date of Service</label>
+    <input type="date" id="date">
+  </div>
 
-<label>Time of Service</label>
-<input type="time" id="time">
+  <div>
+    <label>Time of Service</label>
+    <input type="time" id="time">
+  </div>
 
-<label>Notes (optional)</label>
-<textarea id="notes"></textarea>
+  <div class="full">
+    <label>Notes (optional)</label>
+    <textarea id="notes"></textarea>
+  </div>
 
-<label>Message Preview (Editable)</label>
-<textarea id="preview"></textarea>
+  <div class="full">
+    <label>Message Preview (Editable)</label>
+    <textarea id="preview"></textarea>
+  </div>
+</div>
 
 <div class="actions">
   <button class="primary" onclick="sendBrevoEmail()">Send Email via Brevo</button>
