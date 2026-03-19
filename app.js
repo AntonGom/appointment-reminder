@@ -1,19 +1,16 @@
-// app.js - FULL COPY & PASTE
+// app.js - FULL FIXED VERSION
 
 let userEdited = false;
-
-// Detect mobile devices
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-// Cache the preview textarea
 const previewEl = document.getElementById("preview");
+
 if (previewEl) {
   previewEl.addEventListener("input", () => {
     userEdited = true;
   });
 }
 
-// Update phone required styling
+// Phone required field highlight
 function updateRequiredField() {
   const phoneInput = document.getElementById("phone");
   if (!phoneInput) return;
@@ -37,7 +34,7 @@ function formatTime(time) {
   return hour + ":" + minute + " " + ampm;
 }
 
-// Generate message preview text
+// Generate message preview
 function generateMessage() {
   const name = document.getElementById("name")?.value || "";
   const date = document.getElementById("date")?.value || "";
@@ -63,21 +60,20 @@ function generateMessage() {
   return message;
 }
 
-// Update preview if user hasn't manually edited
+// Update preview unless manually edited
 function updatePreview() {
   if (!userEdited && previewEl) {
     previewEl.value = generateMessage();
   }
 }
 
-// Attach input listeners for automatic preview
 document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", updatePreview);
   }
 });
 
-// Send reminder using Brevo backend
+// Send reminder via backend (Brevo)
 async function sendReminder() {
   const phone = document.getElementById("phone")?.value || "";
   const email = document.getElementById("email")?.value || "";
@@ -96,12 +92,15 @@ async function sendReminder() {
         body: JSON.stringify({ clientEmail: email, message }),
       });
 
+      // Read response as text first
+      const text = await response.text();
+
       let data;
       try {
-        data = await response.json();
+        // Try parsing JSON if possible
+        data = JSON.parse(text);
       } catch (err) {
-        const text = await response.text();
-        console.error("Backend response was not JSON:", text);
+        console.error("Backend response not JSON:", text);
         alert("❌ Server error:\n" + text);
         return;
       }
@@ -150,5 +149,5 @@ function manualEmail() {
   window.location.href = `mailto:${email}?subject=Reminder&body=${message}`;
 }
 
-// Initialize required field styling
+// Initialize required field highlight
 updateRequiredField();
