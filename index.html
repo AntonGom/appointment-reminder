@@ -229,22 +229,22 @@
   </div>
 
   <div class="full">
-    <label>Client Name</label>
+    <label>Client Name (optional)</label>
     <input id="name" placeholder="Enter client's name">
   </div>
 
   <div class="full">
-    <label>Service Address</label>
+    <label>Service Address (optional)</label>
     <input id="address" placeholder="Enter service address">
   </div>
 
   <div>
-    <label>Date of Service</label>
+    <label>Date of Service (optional)</label>
     <input type="date" id="date">
   </div>
 
   <div>
-    <label>Time of Service</label>
+    <label>Time of Service (optional)</label>
     <input type="time" id="time">
   </div>
 
@@ -261,13 +261,13 @@
 
 <div class="actions">
   <button class="primary" onclick="sendBrevoEmail()">Send Reminder Email</button>
-  <button class="secondary" onclick="sendLocalEmail()">Open Email App</button>
-  <button class="tertiary" onclick="sendLocalText()">Open Text Message App</button>
+  <button class="secondary" onclick="sendLocalEmail()">Send Email From This Device</button>
+  <button class="tertiary" onclick="sendLocalText()">Send Text From This Device</button>
   <button class="ghost" onclick="sendTwilioText()">Send Text Automatically</button>
 </div>
 
 <p class="hint">
-  Local email and text options will open your default app with the message filled in as much as your device allows.
+  Only the phone number is required. Everything else is optional and can be added when needed.
 </p>
 
 </div>

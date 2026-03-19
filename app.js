@@ -26,16 +26,28 @@ function generateMessage() {
   let notes = getFieldValue("notes");
 
   let lines = [];
-  let intro = "Reminder";
+  let greeting = name ? "Hello " + name + "," : "Hello,";
 
-  if (name) intro += " for " + name;
-  lines.push(intro);
+  lines.push(greeting);
+  lines.push("");
+  lines.push("This is a friendly reminder about your upcoming appointment.");
 
   if (date) lines.push("Date: " + formatDate(date));
   if (time) lines.push("Time: " + formatTime(time));
-  if (address) lines.push("Service Address: " + address);
-  if (phone) lines.push("Phone: " + phone);
-  if (notes) lines.push("Notes: " + notes);
+  if (address) lines.push("Location: " + address);
+  if (phone) lines.push("Contact Number: " + phone);
+
+  if (notes) {
+    lines.push("");
+    lines.push("Additional Details:");
+    lines.push(notes);
+  }
+
+  lines.push("");
+  lines.push("Please reply if you have any questions or need to make a change.");
+  lines.push("");
+  lines.push("Thank you,");
+  lines.push("Appointment Reminder");
 
   return lines.join("\n");
 }

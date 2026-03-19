@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "clientEmail and message are required." });
     }
 
-    const htmlMessage = `<p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`;
+    const htmlMessage = buildEmailHtml(message);
 
     await sendBrevoEmail({
       apiKey,
@@ -84,4 +84,25 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function buildEmailHtml(message) {
+  const safeMessage = escapeHtml(message);
+  const formattedMessage = safeMessage
+    .split("\n\n")
+    .map(section => `<p style="margin:0 0 16px; line-height:1.65; color:#334155; font-size:15px;">${section.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
+  return `
+    <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
+      <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #dbe7ff; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(37,99,235,0.08);">
+        <div style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
+          <div style="color:#ffffff; font-size:22px; font-weight:700;">Appointment Reminder</div>
+        </div>
+        <div style="padding:28px 24px;">
+          ${formattedMessage}
+        </div>
+      </div>
+    </div>
+  `;
 }
