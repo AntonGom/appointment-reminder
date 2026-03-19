@@ -1,153 +1,64 @@
-// app.js - FULL FIXED VERSION
-
-let userEdited = false;
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const previewEl = document.getElementById("preview");
-
-if (previewEl) {
-  previewEl.addEventListener("input", () => {
-    userEdited = true;
-  });
-}
-
-// Phone required field highlight
-function updateRequiredField() {
-  const phoneInput = document.getElementById("phone");
-  if (!phoneInput) return;
-  if (phoneInput.value.trim() === "") {
-    phoneInput.classList.add("required");
-  } else {
-    phoneInput.classList.remove("required");
-  }
-}
-
-const phoneInputEl = document.getElementById("phone");
-if (phoneInputEl) phoneInputEl.addEventListener("input", updateRequiredField);
-
-// Format time to AM/PM
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
   hour = parseInt(hour);
-  const ampm = hour >= 12 ? "PM" : "AM";
+  let ampm = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
   return hour + ":" + minute + " " + ampm;
 }
 
-// Generate message preview
 function generateMessage() {
-  const name = document.getElementById("name")?.value || "";
-  const date = document.getElementById("date")?.value || "";
-  const time = document.getElementById("time")?.value || "";
-  const notes = document.getElementById("notes")?.value || "";
-  const address = document.getElementById("address")?.value || "";
+  let name = document.getElementById("name").value;
+  let date = document.getElementById("date").value;
+  let time = document.getElementById("time").value;
+  let notes = document.getElementById("notes").value;
 
-  let message = "Reminder";
+  let msg = "Reminder";
 
-  if (name) message += " for " + name;
-
+  if (name) msg += " for " + name;
   if (date || time) {
-    message += ":\n";
-    if (date) message += "Date: " + date + "\n";
-    if (time) message += "Time: " + formatTime(time) + "\n";
+    msg += ":\n";
+    if (date) msg += "Date: " + date + "\n";
+    if (time) msg += "Time: " + formatTime(time) + "\n";
   }
+  if (notes) msg += "Note: " + notes;
 
-  if (address) message += "Location: " + address + "\n";
-  if (notes) message += "Note: " + notes;
-
-  if (message === "Reminder") message = "Your message will appear here...";
-
-  return message;
-}
-
-// Update preview unless manually edited
-function updatePreview() {
-  if (!userEdited && previewEl) {
-    previewEl.value = generateMessage();
-  }
+  return msg;
 }
 
 document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
-    el.addEventListener("input", updatePreview);
+    el.addEventListener("input", () => {
+      document.getElementById("preview").value = generateMessage();
+    });
   }
 });
 
-// Send reminder via backend (Brevo)
 async function sendReminder() {
-  const phone = document.getElementById("phone")?.value || "";
-  const email = document.getElementById("email")?.value || "";
-  const message = previewEl?.value || "";
+  let email = document.getElementById("email").value;
+  let message = document.getElementById("preview").value;
 
-  if (!phone.trim() && !email.trim()) {
-    alert("Please provide at least a phone number or email.");
+  if (!email) {
+    alert("Email is required");
     return;
   }
 
-  try {
-    if (email.trim()) {
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientEmail: email, message }),
-      });
+  const res = await fetch("/api/send-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      clientEmail: email,
+      message: message
+    })
+  });
 
-      // Read response as text first
-      const text = await response.text();
+  const data = await res.json();
 
-      let data;
-      try {
-        // Try parsing JSON if possible
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error("Backend response not JSON:", text);
-        alert("❌ Server error:\n" + text);
-        return;
-      }
-
-      if (data.success) {
-        alert("✅ Email sent successfully!");
-      } else {
-        alert("❌ Failed to send email:\n" + (data.details || 'Unknown error'));
-      }
-    } else {
-      alert("No email provided, only phone number will be used for SMS.");
-    }
-  } catch (err) {
-    console.error("Frontend fetch error:", err);
-    alert("❌ Could not reach the server: " + err.message);
-  }
-}
-
-// Manual SMS button
-function manualSMS() {
-  const phone = document.getElementById("phone")?.value || "";
-  const message = encodeURIComponent(previewEl?.value || "");
-
-  if (!phone.trim()) {
-    alert("Phone number required.");
-    return;
-  }
-
-  if (isMobile) {
-    window.location.href = `sms:${phone}?body=${message}`;
+  if (res.ok && data.success) {
+    alert("Reminder sent!");
   } else {
-    alert("SMS can only be sent from a mobile device.");
+    alert(data.error || "Error sending email");
   }
 }
-
-// Manual Email button
-function manualEmail() {
-  const email = document.getElementById("email")?.value || "";
-  const message = encodeURIComponent(previewEl?.value || "");
-
-  if (!email.trim()) {
-    alert("Email required.");
-    return;
-  }
-
-  window.location.href = `mailto:${email}?subject=Reminder&body=${message}`;
-}
-
-// Initialize required field highlight
-updateRequiredField();
