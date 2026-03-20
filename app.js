@@ -105,6 +105,11 @@ async function sendBrevoEmail() {
     return;
   }
 
+  const confirmed = window.confirm("Are you sure you want to send this automated email?");
+  if (!confirmed) {
+    return;
+  }
+
   const res = await fetch("/api/send-email", {
     method: "POST",
     headers: {
