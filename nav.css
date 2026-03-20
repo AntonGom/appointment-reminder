@@ -1,0 +1,122 @@
+:root {
+  --nav-panel-bg: rgba(15, 23, 42, 0.96);
+  --nav-panel-border: rgba(148, 163, 184, 0.22);
+  --nav-text: #e5edf9;
+  --nav-muted: #94a3b8;
+  --nav-accent: #60a5fa;
+}
+
+.nav-toggle {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1001;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.26);
+}
+
+.nav-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.nav-toggle-bar {
+  display: block;
+  width: 20px;
+  height: 2px;
+  margin: 3px 0;
+  background: #f8fafc;
+  border-radius: 999px;
+}
+
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 84vw);
+  z-index: 1002;
+  padding: 84px 22px 22px;
+  background: var(--nav-panel-bg);
+  border-right: 1px solid var(--nav-panel-border);
+  box-shadow: 18px 0 40px rgba(0, 0, 0, 0.26);
+  transform: translateX(-104%);
+  transition: transform 0.2s ease;
+}
+
+.site-nav.open {
+  transform: translateX(0);
+}
+
+.site-nav-title {
+  margin: 0 0 8px;
+  color: var(--nav-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.site-nav-copy {
+  margin: 0 0 18px;
+  color: var(--nav-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.site-nav-links {
+  display: grid;
+  gap: 10px;
+}
+
+.site-nav-links a {
+  display: block;
+  padding: 13px 14px;
+  border-radius: 14px;
+  color: var(--nav-text);
+  text-decoration: none;
+  font-weight: 700;
+  background: rgba(30, 41, 59, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.site-nav-links a:hover,
+.site-nav-links a.active {
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.site-nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 6, 23, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.site-nav-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 560px) {
+  .nav-toggle {
+    top: 12px;
+    left: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+
+  .site-nav {
+    padding-top: 76px;
+  }
+}
