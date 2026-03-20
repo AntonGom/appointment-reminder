@@ -103,8 +103,49 @@ function requireConsent() {
   return true;
 }
 
+function validateMessageSafety() {
+  const notes = getFieldValue("notes");
+  const message = getMessage();
+  const combined = `${notes}\n${message}`.toLowerCase();
+
+  const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
+  if (linkPattern.test(notes) || linkPattern.test(message)) {
+    alert("Links are not allowed in Additional Details or Message Preview.");
+    return false;
+  }
+
+  const blockedPhrases = [
+    "kill yourself",
+    "go kill yourself",
+    "i will kill you",
+    "we will kill you",
+    "pay now or else",
+    "click here to claim",
+    "wire money",
+    "send gift cards",
+    "or else",
+    "you have been selected",
+    "act now",
+    "final warning",
+    "urgent action required"
+  ];
+
+  for (const phrase of blockedPhrases) {
+    if (combined.includes(phrase)) {
+      alert("This message contains content that is not allowed.");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 async function sendBrevoEmail() {
   if (!requireConsent()) {
+    return;
+  }
+
+  if (!validateMessageSafety()) {
     return;
   }
 
@@ -149,6 +190,10 @@ function sendLocalEmail() {
     return;
   }
 
+  if (!validateMessageSafety()) {
+    return;
+  }
+
   let email = getEmail();
   let message = getMessage();
 
@@ -169,6 +214,10 @@ function sendLocalEmail() {
 
 async function sendLocalText() {
   if (!requireConsent()) {
+    return;
+  }
+
+  if (!validateMessageSafety()) {
     return;
   }
 
