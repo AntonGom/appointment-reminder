@@ -247,7 +247,6 @@ function getBaseUrl(req) {
 
 function validateReminderPayload({ clientName, clientPhone, serviceAddress, businessContact, message }) {
   const messageLengthLimit = 1200;
-  const fieldLengthLimit = 300;
   const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
   const blockedPhrases = [
     "kill yourself",
@@ -266,10 +265,10 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
   ];
 
   const restrictedFields = [
-    { label: "Client Name", value: clientName || "" },
-    { label: "Client Phone Number", value: clientPhone || "" },
-    { label: "Service Address", value: serviceAddress || "" },
-    { label: "Your Contact Info", value: businessContact || "" },
+    { label: "Client Name", value: clientName || "", maxLength: 30 },
+    { label: "Client Phone Number", value: clientPhone || "", maxLength: 30 },
+    { label: "Service Address", value: serviceAddress || "", maxLength: 40 },
+    { label: "Your Contact Info", value: businessContact || "", maxLength: 30 },
     { label: "Message Preview", value: message || "" }
   ];
 
@@ -278,8 +277,8 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
   }
 
   for (const field of restrictedFields) {
-    if (String(field.value).length > fieldLengthLimit && field.label !== "Message Preview") {
-      return `${field.label} cannot be longer than ${fieldLengthLimit} characters.`;
+    if (field.maxLength && String(field.value).length > field.maxLength) {
+      return `${field.label} cannot be longer than ${field.maxLength} characters.`;
     }
 
     if (linkPattern.test(field.value)) {

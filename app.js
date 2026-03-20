@@ -112,21 +112,20 @@ function validateMessageSafety() {
   const message = getMessage();
   const combined = `${notes}\n${message}`.toLowerCase();
   const messageLengthLimit = 1200;
-  const fieldLengthLimit = 300;
 
   const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
   const restrictedFields = [
-    { label: "Client Name", value: name },
-    { label: "Client Phone Number", value: phone },
-    { label: "Service Address", value: address },
-    { label: "Your Contact Info", value: businessContact },
+    { label: "Client Name", value: name, maxLength: 30 },
+    { label: "Client Phone Number", value: phone, maxLength: 30 },
+    { label: "Service Address", value: address, maxLength: 40 },
+    { label: "Your Contact Info", value: businessContact, maxLength: 30 },
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
   ];
 
   for (const field of restrictedFields) {
-    if (field.label !== "Message Preview" && field.value.length > fieldLengthLimit) {
-      alert(`${field.label} cannot be longer than ${fieldLengthLimit} characters.`);
+    if (field.maxLength && field.value.length > field.maxLength) {
+      alert(`${field.label} cannot be longer than ${field.maxLength} characters.`);
       return false;
     }
 
