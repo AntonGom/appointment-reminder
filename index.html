@@ -142,6 +142,43 @@
       margin-top: 22px;
     }
 
+    .consent-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .consent-box label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .consent-box input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      flex: 0 0 auto;
+    }
+
+    .consent-box a {
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .consent-box a:hover {
+      text-decoration: underline;
+    }
+
     button {
       width: 100%;
       padding: 15px 16px;
@@ -262,6 +299,13 @@
     <label>Message Preview (Editable)</label>
     <textarea id="preview"></textarea>
   </div>
+</div>
+
+<div class="consent-box">
+  <label>
+    <input id="consent" type="checkbox">
+    <span>I confirm that I have permission to contact this client and agree to the <a href="terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>
+  </label>
 </div>
 
 <div class="actions">

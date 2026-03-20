@@ -90,7 +90,24 @@ function getReminderPayload() {
   };
 }
 
+function hasConsent() {
+  return document.getElementById("consent").checked;
+}
+
+function requireConsent() {
+  if (!hasConsent()) {
+    alert("Please confirm the consent checkbox before sending.");
+    return false;
+  }
+
+  return true;
+}
+
 async function sendBrevoEmail() {
+  if (!requireConsent()) {
+    return;
+  }
+
   let payload = getReminderPayload();
   let email = payload.clientEmail;
   let message = payload.message;
@@ -128,6 +145,10 @@ async function sendBrevoEmail() {
 }
 
 function sendLocalEmail() {
+  if (!requireConsent()) {
+    return;
+  }
+
   let email = getEmail();
   let message = getMessage();
 
@@ -147,6 +168,10 @@ function sendLocalEmail() {
 }
 
 async function sendLocalText() {
+  if (!requireConsent()) {
+    return;
+  }
+
   let phone = getPhone();
   let message = getMessage();
 
