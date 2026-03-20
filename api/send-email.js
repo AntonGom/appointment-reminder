@@ -4,7 +4,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { clientEmail, message } = req.body;
+    const {
+      clientEmail,
+      message,
+      clientName,
+      serviceAddress,
+      businessContact,
+      serviceDate,
+      serviceTime
+    } = req.body;
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "Appointment Reminder";
@@ -22,7 +30,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "clientEmail and message are required." });
     }
 
-    const htmlMessage = buildEmailHtml(message);
+    const baseUrl = getBaseUrl(req);
+    const calendarLinks = buildCalendarLinks({
+      baseUrl,
+      clientName,
+      message,
+      serviceAddress,
+      businessContact,
+      serviceDate,
+      serviceTime
+    });
+    const htmlMessage = buildEmailHtml(message, calendarLinks);
 
     await sendBrevoEmail({
       apiKey,
@@ -86,12 +104,23 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function buildEmailHtml(message) {
+function buildEmailHtml(message, calendarLinks) {
   const safeMessage = escapeHtml(message);
   const formattedMessage = safeMessage
     .split("\n\n")
     .map(section => `<p style="margin:0 0 16px; line-height:1.65; color:#334155; font-size:15px;">${section.replace(/\n/g, "<br>")}</p>`)
     .join("");
+  const calendarSection = calendarLinks ? `
+        <div style="padding:0 24px 28px;">
+          <div style="margin:0 0 12px; color:#0f172a; font-size:16px; font-weight:700;">Add to Calendar</div>
+          <div style="font-size:14px; color:#475569; margin-bottom:14px;">Save this appointment to your preferred calendar.</div>
+          <div>
+            <a href="${calendarLinks.apple}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#1f2937; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Apple Calendar</a>
+            <a href="${calendarLinks.outlook}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Outlook Calendar</a>
+            <a href="${calendarLinks.google}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#0f766e; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Google Calendar</a>
+          </div>
+        </div>
+  ` : "";
 
   return `
     <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
@@ -102,7 +131,103 @@ function buildEmailHtml(message) {
         <div style="padding:28px 24px;">
           ${formattedMessage}
         </div>
+        ${calendarSection}
       </div>
     </div>
   `;
+}
+
+function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, businessContact, serviceDate, serviceTime }) {
+  if (!serviceDate) {
+    return null;
+  }
+
+  const title = clientName ? `Appointment with ${clientName}` : "Appointment Reminder";
+  const details = businessContact
+    ? `${message}\n\nContact: ${businessContact}`
+    : message;
+  const dateRange = buildCalendarDateRange(serviceDate, serviceTime);
+  const appleUrl = `${baseUrl}/api/calendar-ics?${new URLSearchParams({
+    title,
+    description: details,
+    location: serviceAddress || "",
+    date: serviceDate,
+    time: serviceTime || ""
+  }).toString()}`;
+
+  const googleParams = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    details,
+    location: serviceAddress || "",
+    dates: `${dateRange.googleStart}/${dateRange.googleEnd}`
+  });
+
+  const outlookParams = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: title,
+    body: details,
+    location: serviceAddress || "",
+    startdt: dateRange.outlookStart,
+    enddt: dateRange.outlookEnd
+  });
+
+  return {
+    apple: appleUrl,
+    google: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+    outlook: `https://outlook.office.com/calendar/0/deeplink/compose?${outlookParams.toString()}`
+  };
+}
+
+function buildCalendarDateRange(serviceDate, serviceTime) {
+  if (!serviceTime) {
+    const nextDate = addDays(serviceDate, 1);
+    return {
+      googleStart: formatDateForCalendar(serviceDate),
+      googleEnd: formatDateForCalendar(nextDate),
+      outlookStart: serviceDate,
+      outlookEnd: nextDate
+    };
+  }
+
+  const endTime = addOneHour(serviceTime);
+
+  return {
+    googleStart: formatDateTimeForCalendar(serviceDate, serviceTime),
+    googleEnd: formatDateTimeForCalendar(serviceDate, endTime),
+    outlookStart: `${serviceDate}T${serviceTime}:00`,
+    outlookEnd: `${serviceDate}T${endTime}:00`
+  };
+}
+
+function addOneHour(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const totalMinutes = ((hours * 60) + minutes + 60) % (24 * 60);
+  const nextHours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const nextMinutes = String(totalMinutes % 60).padStart(2, "0");
+  return `${nextHours}:${nextMinutes}`;
+}
+
+function addDays(dateString, daysToAdd) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + daysToAdd);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateForCalendar(dateString) {
+  return dateString.replace(/-/g, "");
+}
+
+function formatDateTimeForCalendar(dateString, timeString) {
+  return `${dateString.replace(/-/g, "")}T${timeString.replace(":", "")}00`;
+}
+
+function getBaseUrl(req) {
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  return `${proto}://${host}`;
 }

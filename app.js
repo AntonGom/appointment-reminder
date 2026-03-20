@@ -77,9 +77,23 @@ function getPhone() {
   return getFieldValue("phone");
 }
 
+function getReminderPayload() {
+  return {
+    clientEmail: getEmail(),
+    message: getMessage(),
+    clientName: getFieldValue("name"),
+    clientPhone: getFieldValue("phone"),
+    serviceAddress: getFieldValue("address"),
+    businessContact: getFieldValue("businessContact"),
+    serviceDate: getFieldValue("date"),
+    serviceTime: getFieldValue("time")
+  };
+}
+
 async function sendBrevoEmail() {
-  let email = getEmail();
-  let message = getMessage();
+  let payload = getReminderPayload();
+  let email = payload.clientEmail;
+  let message = payload.message;
 
   if (!email) {
     alert("Email is required");
@@ -96,10 +110,7 @@ async function sendBrevoEmail() {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      clientEmail: email,
-      message: message
-    })
+    body: JSON.stringify(payload)
   });
 
   const data = await res.json();
