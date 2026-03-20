@@ -111,6 +111,8 @@ function validateMessageSafety() {
   const businessContact = getFieldValue("businessContact");
   const message = getMessage();
   const combined = `${notes}\n${message}`.toLowerCase();
+  const messageLengthLimit = 1200;
+  const fieldLengthLimit = 300;
 
   const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
   const restrictedFields = [
@@ -123,10 +125,20 @@ function validateMessageSafety() {
   ];
 
   for (const field of restrictedFields) {
+    if (field.label !== "Message Preview" && field.value.length > fieldLengthLimit) {
+      alert(`${field.label} cannot be longer than ${fieldLengthLimit} characters.`);
+      return false;
+    }
+
     if (linkPattern.test(field.value)) {
       alert(`Links are not allowed in ${field.label}.`);
       return false;
     }
+  }
+
+  if (message.length > messageLengthLimit) {
+    alert(`Message Preview cannot be longer than ${messageLengthLimit} characters.`);
+    return false;
   }
 
   const blockedPhrases = [

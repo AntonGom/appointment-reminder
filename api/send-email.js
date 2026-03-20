@@ -8,6 +8,7 @@ export default async function handler(req, res) {
       clientEmail,
       message,
       clientName,
+      clientPhone,
       serviceAddress,
       businessContact,
       serviceDate,
@@ -28,6 +29,18 @@ export default async function handler(req, res) {
 
     if (!clientEmail || !message) {
       return res.status(400).json({ error: "clientEmail and message are required." });
+    }
+
+    const validationError = validateReminderPayload({
+      clientName,
+      clientPhone,
+      serviceAddress,
+      businessContact,
+      message
+    });
+
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
 
     const baseUrl = getBaseUrl(req);
@@ -230,4 +243,56 @@ function getBaseUrl(req) {
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   const proto = req.headers["x-forwarded-proto"] || "https";
   return `${proto}://${host}`;
+}
+
+function validateReminderPayload({ clientName, clientPhone, serviceAddress, businessContact, message }) {
+  const messageLengthLimit = 1200;
+  const fieldLengthLimit = 300;
+  const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
+  const blockedPhrases = [
+    "kill yourself",
+    "go kill yourself",
+    "i will kill you",
+    "we will kill you",
+    "pay now or else",
+    "click here to claim",
+    "wire money",
+    "send gift cards",
+    "or else",
+    "you have been selected",
+    "act now",
+    "final warning",
+    "urgent action required"
+  ];
+
+  const restrictedFields = [
+    { label: "Client Name", value: clientName || "" },
+    { label: "Client Phone Number", value: clientPhone || "" },
+    { label: "Service Address", value: serviceAddress || "" },
+    { label: "Your Contact Info", value: businessContact || "" },
+    { label: "Message Preview", value: message || "" }
+  ];
+
+  if (String(message || "").length > messageLengthLimit) {
+    return `Message Preview cannot be longer than ${messageLengthLimit} characters.`;
+  }
+
+  for (const field of restrictedFields) {
+    if (String(field.value).length > fieldLengthLimit && field.label !== "Message Preview") {
+      return `${field.label} cannot be longer than ${fieldLengthLimit} characters.`;
+    }
+
+    if (linkPattern.test(field.value)) {
+      return `Links are not allowed in ${field.label}.`;
+    }
+  }
+
+  const combined = restrictedFields.map(field => field.value).join("\n").toLowerCase();
+  for (const phrase of blockedPhrases) {
+    if (combined.includes(phrase)) {
+      return "This message contains content that is not allowed.";
+    }
+  }
+
+  return null;
 }
