@@ -1,3 +1,10 @@
+const FIELD_LIMITS = {
+  name: { label: "Client Name", maxLength: 30 },
+  phone: { label: "Client Phone Number", maxLength: 30 },
+  address: { label: "Service Address", maxLength: 40 },
+  businessContact: { label: "Your Contact Info", maxLength: 30 }
+};
+
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
@@ -59,11 +66,13 @@ document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", () => {
       document.getElementById("preview").value = generateMessage();
+      syncFieldLimitErrors();
     });
   }
 });
 
 document.getElementById("preview").value = generateMessage();
+syncFieldLimitErrors();
 
 function getMessage() {
   return document.getElementById("preview").value.trim();
@@ -115,10 +124,10 @@ function validateMessageSafety() {
 
   const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
   const restrictedFields = [
-    { label: "Client Name", value: name, maxLength: 30 },
-    { label: "Client Phone Number", value: phone, maxLength: 30 },
-    { label: "Service Address", value: address, maxLength: 40 },
-    { label: "Your Contact Info", value: businessContact, maxLength: 30 },
+    { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
+    { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
+    { label: "Service Address", value: address, maxLength: FIELD_LIMITS.address.maxLength },
+    { label: "Your Contact Info", value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength },
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
   ];
@@ -164,6 +173,24 @@ function validateMessageSafety() {
   }
 
   return true;
+}
+
+function syncFieldLimitErrors() {
+  for (const [fieldId, config] of Object.entries(FIELD_LIMITS)) {
+    const value = getFieldValue(fieldId);
+    const errorElement = document.getElementById(`${fieldId}-error`);
+    if (!errorElement) {
+      continue;
+    }
+
+    if (value.length > config.maxLength) {
+      errorElement.textContent = `${config.label} cannot be longer than ${config.maxLength} characters.`;
+      errorElement.classList.add("visible");
+    } else {
+      errorElement.textContent = "";
+      errorElement.classList.remove("visible");
+    }
+  }
 }
 
 async function sendBrevoEmail() {

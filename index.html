@@ -154,6 +154,19 @@
       line-height: 1.5;
     }
 
+    .field-error {
+      display: none;
+      margin-top: 6px;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
     .consent-box label {
       display: flex;
       gap: 10px;
@@ -259,6 +272,7 @@
   <div class="full">
     <label>Client Phone Number (optional)</label>
     <input id="phone" placeholder="Enter client's phone number">
+    <div id="phone-error" class="field-error"></div>
   </div>
 
   <div class="full">
@@ -269,16 +283,19 @@
   <div class="full">
     <label>Client Name (optional)</label>
     <input id="name" placeholder="Enter client's name">
+    <div id="name-error" class="field-error"></div>
   </div>
 
   <div class="full">
     <label>Service Address (optional)</label>
     <input id="address" placeholder="Enter service address">
+    <div id="address-error" class="field-error"></div>
   </div>
 
   <div class="full">
     <label>Your Contact Info (optional)</label>
     <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
+    <div id="businessContact-error" class="field-error"></div>
   </div>
 
   <div>
