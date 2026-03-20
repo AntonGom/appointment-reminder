@@ -104,14 +104,29 @@ function requireConsent() {
 }
 
 function validateMessageSafety() {
+  const name = getFieldValue("name");
   const notes = getFieldValue("notes");
+  const phone = getFieldValue("phone");
+  const address = getFieldValue("address");
+  const businessContact = getFieldValue("businessContact");
   const message = getMessage();
   const combined = `${notes}\n${message}`.toLowerCase();
 
   const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
-  if (linkPattern.test(notes) || linkPattern.test(message)) {
-    alert("Links are not allowed in Additional Details or Message Preview.");
-    return false;
+  const restrictedFields = [
+    { label: "Client Name", value: name },
+    { label: "Client Phone Number", value: phone },
+    { label: "Service Address", value: address },
+    { label: "Your Contact Info", value: businessContact },
+    { label: "Additional Details", value: notes },
+    { label: "Message Preview", value: message }
+  ];
+
+  for (const field of restrictedFields) {
+    if (linkPattern.test(field.value)) {
+      alert(`Links are not allowed in ${field.label}.`);
+      return false;
+    }
   }
 
   const blockedPhrases = [
