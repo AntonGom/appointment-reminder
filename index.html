@@ -98,6 +98,44 @@
       color: var(--text-main);
     }
 
+    .label-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .label-badge.optional {
+      background: #e5e7eb;
+      color: #475569;
+    }
+
+    .label-badge.choice {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .contact-callout {
+      margin: 10px 0 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .contact-callout strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: #1d4ed8;
+    }
+
     input, textarea {
       width: 100%;
       padding: 13px 14px;
@@ -282,49 +320,53 @@
 
 <h2>Appointment Reminder</h2>
 <p class="section-title">Client Details</p>
+<div class="contact-callout">
+  <strong>Only one contact method is needed.</strong>
+  Enter either a phone number or an email address. Everything else is optional.
+</div>
 
 <div class="grid">
   <div class="full">
-    <label>Client Phone Number (optional)</label>
+    <label>Client Phone Number <span class="label-badge choice">Choose one</span></label>
     <input id="phone" placeholder="Enter client's phone number" inputmode="numeric" autocomplete="tel">
     <div id="phone-error" class="field-error"></div>
   </div>
 
   <div class="full">
-    <label>Client Email (optional)</label>
+    <label>Client Email <span class="label-badge choice">Choose one</span></label>
     <input id="email" placeholder="Enter client's email">
   </div>
 
   <div class="full">
-    <label>Client Name (optional)</label>
+    <label>Client Name <span class="label-badge optional">Optional</span></label>
     <input id="name" placeholder="Enter client's name">
     <div id="name-error" class="field-error"></div>
   </div>
 
   <div class="full">
-    <label>Service Address (optional)</label>
+    <label>Service Address <span class="label-badge optional">Optional</span></label>
     <input id="address" placeholder="Enter service address">
     <div id="address-error" class="field-error"></div>
   </div>
 
   <div class="full">
-    <label>Your Contact Info (optional)</label>
+    <label>Your Contact Info <span class="label-badge optional">Optional</span></label>
     <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
     <div id="businessContact-error" class="field-error"></div>
   </div>
 
   <div>
-    <label>Date of Service (optional)</label>
+    <label>Date of Service <span class="label-badge optional">Optional</span></label>
     <input type="date" id="date">
   </div>
 
   <div>
-    <label>Time of Service (optional)</label>
+    <label>Time of Service <span class="label-badge optional">Optional</span></label>
     <input type="time" id="time">
   </div>
 
   <div class="full">
-    <label>Additional Details (optional)</label>
+    <label>Additional Details <span class="label-badge optional">Optional</span></label>
     <textarea id="notes"></textarea>
   </div>
 
