@@ -124,12 +124,14 @@ function validateMessageSafety() {
   const combined = `${notes}\n${message}`.toLowerCase();
   const messageLengthLimit = 1200;
 
-  const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
+  const strictLinkPattern = /(https?:\/\/|www\.)/i;
+  const domainPattern = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
   const restrictedFields = [
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
     { label: "Service Address", value: address, maxLength: FIELD_LIMITS.address.maxLength },
-    { label: "Your Contact Info", value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength },
+    { label: "Your Contact Info", value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength, allowEmail: true },
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
   ];
@@ -140,7 +142,9 @@ function validateMessageSafety() {
       return false;
     }
 
-    if (linkPattern.test(field.value)) {
+    const hasLink = strictLinkPattern.test(field.value) || domainPattern.test(field.value);
+    const hasEmail = field.allowEmail && emailPattern.test(field.value);
+    if (hasLink && !hasEmail) {
       alert(`Links are not allowed in ${field.label}.`);
       return false;
     }

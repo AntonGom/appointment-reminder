@@ -247,7 +247,9 @@ function getBaseUrl(req) {
 
 function validateReminderPayload({ clientName, clientPhone, serviceAddress, businessContact, message }) {
   const messageLengthLimit = 1200;
-  const linkPattern = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz))/i;
+  const strictLinkPattern = /(https?:\/\/|www\.)/i;
+  const domainPattern = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
   const blockedPhrases = [
     "kill yourself",
     "go kill yourself",
@@ -268,7 +270,7 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
     { label: "Client Name", value: clientName || "", maxLength: 30 },
     { label: "Client Phone Number", value: clientPhone || "", maxLength: 30 },
     { label: "Service Address", value: serviceAddress || "", maxLength: 40 },
-    { label: "Your Contact Info", value: businessContact || "", maxLength: 30 },
+    { label: "Your Contact Info", value: businessContact || "", maxLength: 30, allowEmail: true },
     { label: "Message Preview", value: message || "" }
   ];
 
@@ -281,7 +283,9 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
       return `${field.label} cannot be longer than ${field.maxLength} characters.`;
     }
 
-    if (linkPattern.test(field.value)) {
+    const hasLink = strictLinkPattern.test(field.value) || domainPattern.test(field.value);
+    const hasEmail = field.allowEmail && emailPattern.test(field.value);
+    if (hasLink && !hasEmail) {
       return `Links are not allowed in ${field.label}.`;
     }
   }
