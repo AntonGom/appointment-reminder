@@ -66,12 +66,14 @@ document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", () => {
       document.getElementById("preview").value = generateMessage();
+      updatePreviewLayout();
       syncFieldLimitErrors();
     });
   }
 });
 
 document.getElementById("preview").value = generateMessage();
+updatePreviewLayout();
 syncFieldLimitErrors();
 
 function getMessage() {
@@ -189,6 +191,27 @@ function syncFieldLimitErrors() {
     } else {
       errorElement.textContent = "";
       errorElement.classList.remove("visible");
+    }
+  }
+}
+
+function updatePreviewLayout() {
+  const preview = document.getElementById("preview");
+  const previewHint = document.getElementById("preview-hint");
+
+  if (!preview) {
+    return;
+  }
+
+  preview.style.height = "auto";
+  const nextHeight = Math.min(preview.scrollHeight, 360);
+  preview.style.height = `${nextHeight}px`;
+
+  if (previewHint) {
+    if (preview.scrollHeight > 360) {
+      previewHint.classList.add("visible");
+    } else {
+      previewHint.classList.remove("visible");
     }
   }
 }

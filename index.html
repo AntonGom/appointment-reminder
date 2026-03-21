@@ -135,6 +135,8 @@
       border: 2px solid var(--preview-border);
       background-color: var(--preview-bg);
       white-space: pre-line;
+      max-height: 360px;
+      overflow-y: auto;
     }
 
     .actions {
@@ -239,6 +241,19 @@
       line-height: 1.5;
     }
 
+    .preview-hint {
+      display: none;
+      margin-top: 8px;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .preview-hint.visible {
+      display: block;
+    }
+
     @media (max-width: 560px) {
       .container {
         padding: 22px;
@@ -316,6 +331,7 @@
   <div class="full">
     <label>Message Preview</label>
     <textarea id="preview" readonly></textarea>
+    <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
   </div>
 </div>
 
