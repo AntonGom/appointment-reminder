@@ -4,6 +4,7 @@ const FIELD_LIMITS = {
   address: { label: "Service Address", maxLength: 40 },
   businessContact: { label: "Your Contact Info", maxLength: 30 }
 };
+const PHONE_DIGIT_LIMIT = 10;
 
 function formatTime(time) {
   if (!time) return "";
@@ -22,6 +23,33 @@ function formatDate(dateString) {
 
 function getFieldValue(id) {
   return document.getElementById(id).value.trim();
+}
+
+function normalizePhoneDigits(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, PHONE_DIGIT_LIMIT);
+}
+
+function formatPhoneNumber(value) {
+  const digits = normalizePhoneDigits(value);
+
+  if (digits.length <= 3) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function syncPhoneFieldFormatting() {
+  const phoneInput = document.getElementById("phone");
+  if (!phoneInput) {
+    return;
+  }
+
+  phoneInput.value = formatPhoneNumber(phoneInput.value);
 }
 
 function generateMessage() {
@@ -65,6 +93,10 @@ function generateMessage() {
 document.querySelectorAll("input, textarea").forEach(el => {
   if (el.id !== "preview") {
     el.addEventListener("input", () => {
+      if (el.id === "phone") {
+        syncPhoneFieldFormatting();
+      }
+
       document.getElementById("preview").value = generateMessage();
       updatePreviewLayout();
       syncFieldLimitErrors();
@@ -72,6 +104,7 @@ document.querySelectorAll("input, textarea").forEach(el => {
   }
 });
 
+syncPhoneFieldFormatting();
 document.getElementById("preview").value = generateMessage();
 updatePreviewLayout();
 syncFieldLimitErrors();
@@ -88,12 +121,16 @@ function getPhone() {
   return getFieldValue("phone");
 }
 
+function getPhoneDigits() {
+  return normalizePhoneDigits(getFieldValue("phone"));
+}
+
 function getReminderPayload() {
   return {
     clientEmail: getEmail(),
     message: getMessage(),
     clientName: getFieldValue("name"),
-    clientPhone: getFieldValue("phone"),
+    clientPhone: getPhoneDigits(),
     serviceAddress: getFieldValue("address"),
     businessContact: getFieldValue("businessContact"),
     serviceDate: getFieldValue("date"),
@@ -301,7 +338,7 @@ async function sendLocalText() {
     return;
   }
 
-  let phone = getPhone();
+  let phone = getPhoneDigits();
   let message = getMessage();
 
   if (!phone) {
