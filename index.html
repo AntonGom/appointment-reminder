@@ -113,6 +113,10 @@
       color: #475569;
     }
 
+    .label-badge.hidden {
+      display: none;
+    }
+
     .label-badge.choice {
       background: #dbeafe;
       color: #1d4ed8;
@@ -327,13 +331,13 @@
 
 <div class="grid">
   <div class="full">
-    <label>Client Phone Number <span class="label-badge choice">Choose one</span></label>
+    <label>Client Phone Number <span id="phone-badge" class="label-badge choice">Choose one</span></label>
     <input id="phone" placeholder="Enter client's phone number" inputmode="numeric" autocomplete="tel">
     <div id="phone-error" class="field-error"></div>
   </div>
 
   <div class="full">
-    <label>Client Email <span class="label-badge choice">Choose one</span></label>
+    <label>Client Email <span id="email-badge" class="label-badge choice">Choose one</span></label>
     <input id="email" placeholder="Enter client's email">
   </div>
 

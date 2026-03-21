@@ -100,6 +100,7 @@ document.querySelectorAll("input, textarea").forEach(el => {
       document.getElementById("preview").value = generateMessage();
       updatePreviewLayout();
       syncFieldLimitErrors();
+      syncContactBadges();
     });
   }
 });
@@ -108,6 +109,7 @@ syncPhoneFieldFormatting();
 document.getElementById("preview").value = generateMessage();
 updatePreviewLayout();
 syncFieldLimitErrors();
+syncContactBadges();
 
 function getMessage() {
   return document.getElementById("preview").value.trim();
@@ -233,6 +235,40 @@ function syncFieldLimitErrors() {
       errorElement.textContent = "";
       errorElement.classList.remove("visible");
     }
+  }
+}
+
+function syncContactBadges() {
+  const phoneBadge = document.getElementById("phone-badge");
+  const emailBadge = document.getElementById("email-badge");
+  const hasPhone = getPhoneDigits().length > 0;
+  const hasEmail = getEmail().length > 0;
+
+  if (!phoneBadge || !emailBadge) {
+    return;
+  }
+
+  if (hasPhone || hasEmail) {
+    if (hasPhone) {
+      phoneBadge.className = "label-badge hidden";
+      phoneBadge.textContent = "";
+    } else {
+      phoneBadge.className = "label-badge optional";
+      phoneBadge.textContent = "Optional";
+    }
+
+    if (hasEmail) {
+      emailBadge.className = "label-badge hidden";
+      emailBadge.textContent = "";
+    } else {
+      emailBadge.className = "label-badge optional";
+      emailBadge.textContent = "Optional";
+    }
+  } else {
+    phoneBadge.className = "label-badge choice";
+    phoneBadge.textContent = "Choose one";
+    emailBadge.className = "label-badge choice";
+    emailBadge.textContent = "Choose one";
   }
 }
 
