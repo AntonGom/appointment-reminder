@@ -237,6 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
     accountChipTier.classList.add(tierLabel === "Bronze" ? "bronze" : "free");
     accountChipTier.hidden = false;
     accountChip.hidden = false;
+    closeAccountMenu();
   }
 
   async function loadAccountChip() {
@@ -303,6 +304,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadEnvironmentBadge();
   loadAccountChip();
+  closeAccountMenu();
 
   document.body.appendChild(statusCluster);
   accountMenu.appendChild(accountChip);
