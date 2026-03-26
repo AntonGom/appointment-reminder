@@ -18,6 +18,7 @@ let visitedSteps = [];
 let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
+let suppressBeforeUnload = false;
 
 function formatTime(time) {
   if (!time) return "";
@@ -411,6 +412,26 @@ function getReminderPayload() {
     sendCopy: shouldSendCopy(),
     copyEmail: getCopyEmail()
   };
+}
+
+function hasUnsavedFormData() {
+  if (FORM_FIELD_IDS.some(fieldId => getFieldValue(fieldId).length > 0)) {
+    return true;
+  }
+
+  if (hasConsent() || shouldSendCopy() || getCopyEmail().length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+function temporarilySuppressBeforeUnload() {
+  suppressBeforeUnload = true;
+
+  window.setTimeout(() => {
+    suppressBeforeUnload = false;
+  }, 2000);
 }
 
 function hasConsent() {
@@ -812,6 +833,15 @@ document.addEventListener("keydown", event => {
   }
 });
 
+window.addEventListener("beforeunload", event => {
+  if (suppressBeforeUnload || !hasUnsavedFormData()) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 syncPhoneFieldFormatting();
 refreshFormState();
 initWizard();
@@ -1017,5 +1047,6 @@ async function sendLocalText() {
     alert("We detected you on a desktop device. This feature usually only works on mobile devices, but we will still try to open your default texting app.");
   }
 
+  temporarilySuppressBeforeUnload();
   window.location.href = `sms:${encodeURIComponent(phone)}${separator}body=${smsBody}`;
 }
