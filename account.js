@@ -332,6 +332,17 @@ async function handleSignUp(event) {
       throw error;
     }
 
+    const emailAlreadyRegistered =
+      !data.session &&
+      data.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0;
+
+    if (emailAlreadyRegistered) {
+      setStatus("That email already has an account. Use Sign In instead.", "error");
+      return;
+    }
+
     if (!data.session) {
       setStatus("Account created. Check your email to confirm your account, then sign in.", "success");
     } else {
