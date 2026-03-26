@@ -80,6 +80,7 @@
 
     .wizard-head {
       margin-bottom: 24px;
+      text-align: center;
     }
 
     .step-meta {
@@ -130,6 +131,95 @@
       margin-top: 18px;
     }
 
+    .stepper {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(104px, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+      padding: 4px 2px 8px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
+    }
+
+    .stepper::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .stepper::-webkit-scrollbar-thumb {
+      background: rgba(37, 99, 235, 0.34);
+      border-radius: 999px;
+    }
+
+    .stepper-button {
+      width: 100%;
+      min-height: 82px;
+      padding: 12px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--text-main);
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 8px;
+      box-shadow: none;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .stepper-button:hover {
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+    }
+
+    .stepper-button.active {
+      border-color: rgba(37, 99, 235, 0.42);
+      background: rgba(219, 234, 254, 0.88);
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.16);
+    }
+
+    .stepper-button.complete {
+      border-color: rgba(34, 197, 94, 0.34);
+      background: rgba(240, 253, 244, 0.95);
+    }
+
+    .stepper-circle {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 2px solid rgba(148, 163, 184, 0.44);
+      background: #ffffff;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .stepper-button.active .stepper-circle {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #ffffff;
+      transform: scale(1.04);
+    }
+
+    .stepper-button.complete .stepper-circle {
+      border-color: #16a34a;
+      background: #16a34a;
+      color: #ffffff;
+    }
+
+    .stepper-label {
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: center;
+      color: var(--text-main);
+    }
+
     .progress-status {
       margin: 0 0 8px;
       color: #1d4ed8;
@@ -158,7 +248,6 @@
     .wizard-step {
       display: none;
       min-height: 280px;
-      animation: fadeIn 0.18s ease;
     }
 
     .wizard-step.active {
@@ -171,10 +260,25 @@
       background: rgba(248, 250, 252, 0.88);
       border: 1px solid rgba(148, 163, 184, 0.22);
       min-height: 280px;
+      max-width: 470px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
     }
 
     .question-wrap.review-wrap {
       background: rgba(243, 246, 252, 0.92);
+      max-width: 100%;
+    }
+
+    .wizard-shell[data-direction="forward"] .wizard-step.active .question-wrap {
+      animation: slideInForward 0.26s ease both;
+    }
+
+    .wizard-shell[data-direction="backward"] .wizard-step.active .question-wrap {
+      animation: slideInBackward 0.26s ease both;
     }
 
     label {
@@ -415,6 +519,28 @@
       }
     }
 
+    @keyframes slideInForward {
+      from {
+        opacity: 0;
+        transform: translateX(18px) translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+      }
+    }
+
+    @keyframes slideInBackward {
+      from {
+        opacity: 0;
+        transform: translateX(-18px) translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+      }
+    }
+
     @media (max-width: 560px) {
       .container {
         padding: 22px;
@@ -428,6 +554,15 @@
       .question-wrap {
         padding: 18px;
         min-height: 248px;
+      }
+
+      .stepper {
+        grid-auto-columns: minmax(96px, 1fr);
+      }
+
+      .stepper-button {
+        min-height: 78px;
+        border-radius: 18px;
       }
 
       .wizard-controls {
@@ -456,10 +591,11 @@
         <div class="progress-track">
           <div id="progress-fill" class="progress-fill"></div>
         </div>
+        <div id="stepper" class="stepper" aria-label="Form progress"></div>
       </div>
     </div>
 
-    <div class="wizard-step active" data-title="Client Phone Number" data-copy="Add a phone number if you may want to text this client later." data-optional="true">
+    <div class="wizard-step active" data-title="Client Phone Number" data-nav="Phone" data-field="phone" data-copy="Add a phone number if you may want to text this client later." data-optional="true">
       <div class="question-wrap">
         <label for="phone">Client Phone Number <span class="label-badge">Optional</span></label>
         <input id="phone" placeholder="Enter client's phone number" inputmode="numeric" autocomplete="tel">
@@ -468,7 +604,7 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Client Email" data-copy="Add an email address if you may want to email this client later." data-optional="true">
+    <div class="wizard-step" data-title="Client Email" data-nav="Email" data-field="email" data-copy="Add an email address if you may want to email this client later." data-optional="true">
       <div class="question-wrap">
         <label for="email">Client Email <span class="label-badge">Optional</span></label>
         <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="Enter client's email">
@@ -476,7 +612,7 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Client Name" data-copy="Add the client's name if you want the reminder to feel more personal." data-optional="true">
+    <div class="wizard-step" data-title="Client Name" data-nav="Name" data-field="name" data-copy="Add the client's name if you want the reminder to feel more personal." data-optional="true">
       <div class="question-wrap">
         <label for="name">Client Name <span class="label-badge">Optional</span></label>
         <input id="name" placeholder="Enter client's name">
@@ -484,7 +620,7 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Service Address" data-copy="Add the service address if the reminder should include where the appointment takes place." data-optional="true">
+    <div class="wizard-step" data-title="Service Address" data-nav="Address" data-field="address" data-copy="Add the service address if the reminder should include where the appointment takes place." data-optional="true">
       <div class="question-wrap">
         <label for="address">Service Address <span class="label-badge">Optional</span></label>
         <input id="address" placeholder="Enter service address">
@@ -492,7 +628,7 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Your Contact Info" data-copy="Add the best phone number or email if you want clients to know how to reach you." data-optional="true">
+    <div class="wizard-step" data-title="Your Contact Info" data-nav="Contact" data-field="businessContact" data-copy="Add the best phone number or email if you want clients to know how to reach you." data-optional="true">
       <div class="question-wrap">
         <label for="businessContact">Your Contact Info <span class="label-badge">Optional</span></label>
         <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
@@ -500,28 +636,28 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Date of Service" data-copy="Add the appointment date if you want it included in the reminder." data-optional="true">
+    <div class="wizard-step" data-title="Date of Service" data-nav="Date" data-field="date" data-copy="Add the appointment date if you want it included in the reminder." data-optional="true">
       <div class="question-wrap">
         <label for="date">Date of Service <span class="label-badge">Optional</span></label>
         <input type="date" id="date">
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Time of Service" data-copy="Add the appointment time if you want it included in the reminder." data-optional="true">
+    <div class="wizard-step" data-title="Time of Service" data-nav="Time" data-field="time" data-copy="Add the appointment time if you want it included in the reminder." data-optional="true">
       <div class="question-wrap">
         <label for="time">Time of Service <span class="label-badge">Optional</span></label>
         <input type="time" id="time">
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Additional Details" data-copy="Add any extra details you want the client to see." data-optional="true">
+    <div class="wizard-step" data-title="Additional Details" data-nav="Details" data-field="notes" data-copy="Add any extra details you want the client to see." data-optional="true">
       <div class="question-wrap">
         <label for="notes">Additional Details <span class="label-badge">Optional</span></label>
         <textarea id="notes" placeholder="Parking instructions, gate code, or anything else the client should know"></textarea>
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Review and Send" data-copy="Check the message, confirm consent, and choose how you want to send it." data-optional="false">
+    <div class="wizard-step" data-title="Review and Send" data-nav="Review" data-field="consent" data-copy="Check the message, confirm consent, and choose how you want to send it." data-optional="false">
       <div class="question-wrap review-wrap">
         <div class="review-stack">
           <div class="review-panel">

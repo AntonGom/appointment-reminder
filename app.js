@@ -10,6 +10,7 @@ const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", 
 
 let currentStepIndex = 0;
 let wizardSteps = [];
+let visitedSteps = [];
 
 function formatTime(time) {
   if (!time) return "";
@@ -105,6 +106,7 @@ function refreshFormState() {
   }
 
   syncFieldLimitErrors();
+  renderStepNavigation();
 }
 
 function syncFieldLimitErrors() {
@@ -272,6 +274,72 @@ function getProgressStatus(index, totalSteps) {
   return "Just a few quick questions";
 }
 
+function hasValueForField(fieldId) {
+  if (!fieldId) {
+    return false;
+  }
+
+  if (fieldId === "phone") {
+    return getPhoneDigits().length > 0;
+  }
+
+  if (fieldId === "consent") {
+    return hasConsent();
+  }
+
+  return getFieldValue(fieldId).length > 0;
+}
+
+function isStepComplete(step, index) {
+  if (!step) {
+    return false;
+  }
+
+  const fieldId = step.dataset.field || "";
+  const isOptional = step.dataset.optional === "true";
+
+  if (isOptional) {
+    return Boolean(visitedSteps[index]) || hasValueForField(fieldId);
+  }
+
+  return hasValueForField(fieldId);
+}
+
+function renderStepNavigation() {
+  const stepper = document.getElementById("stepper");
+
+  if (!stepper || !wizardSteps.length) {
+    return;
+  }
+
+  stepper.innerHTML = "";
+
+  wizardSteps.forEach((step, index) => {
+    const button = document.createElement("button");
+    const label = step.dataset.nav || step.dataset.title || `Step ${index + 1}`;
+    const complete = isStepComplete(step, index);
+
+    button.type = "button";
+    button.className = "stepper-button";
+    button.setAttribute("aria-label", `Go to ${label}`);
+    button.innerHTML = `
+      <span class="stepper-circle">${complete ? "✓" : index + 1}</span>
+      <span class="stepper-label">${label}</span>
+    `;
+
+    if (index === currentStepIndex) {
+      button.classList.add("active");
+    }
+
+    if (complete) {
+      button.classList.add("complete");
+    }
+
+    button.addEventListener("click", () => setStep(index));
+    stepper.appendChild(button);
+  });
+}
+
 function focusStepField(step) {
   const field = step.querySelector("input, textarea");
 
@@ -291,6 +359,7 @@ function updateWizardUI() {
 
   const currentStep = wizardSteps[currentStepIndex];
   const totalSteps = wizardSteps.length;
+  const wizardShell = document.querySelector(".wizard-shell");
   const stepCount = document.getElementById("step-count");
   const stepTitle = document.getElementById("step-title");
   const stepCopy = document.getElementById("step-copy");
@@ -339,23 +408,54 @@ function updateWizardUI() {
   }
 
   focusStepField(currentStep);
+  renderStepNavigation();
+
+  if (wizardShell) {
+    const activeStepperButton = document.querySelector(".stepper-button.active");
+    if (activeStepperButton) {
+      activeStepperButton.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center"
+      });
+    }
+  }
 }
 
-function setStep(index) {
+function setStep(index, direction) {
   if (index < 0 || index >= wizardSteps.length) {
     return;
   }
 
+  const wizardShell = document.querySelector(".wizard-shell");
+  let nextDirection = direction;
+
+  if (!nextDirection) {
+    if (index > currentStepIndex) {
+      nextDirection = "forward";
+    } else if (index < currentStepIndex) {
+      nextDirection = "backward";
+    } else {
+      nextDirection = "forward";
+    }
+  }
+
+  if (wizardShell) {
+    wizardShell.dataset.direction = nextDirection;
+  }
+
   currentStepIndex = index;
+  visitedSteps[currentStepIndex] = true;
   updateWizardUI();
 }
 
 function moveToNextStep() {
-  setStep(currentStepIndex + 1);
+  setStep(currentStepIndex + 1, "forward");
 }
 
 function initWizard() {
   wizardSteps = Array.from(document.querySelectorAll(".wizard-step"));
+  visitedSteps = wizardSteps.map((_, index) => index === 0);
 
   if (!wizardSteps.length) {
     return;
@@ -365,7 +465,7 @@ function initWizard() {
   const skipButton = document.getElementById("skip-button");
   const nextButton = document.getElementById("next-button");
 
-  backButton.addEventListener("click", () => setStep(currentStepIndex - 1));
+  backButton.addEventListener("click", () => setStep(currentStepIndex - 1, "backward"));
   skipButton.addEventListener("click", moveToNextStep);
   nextButton.addEventListener("click", moveToNextStep);
 
@@ -387,6 +487,7 @@ function initWizard() {
     });
   });
 
+  renderStepNavigation();
   updateWizardUI();
 }
 
@@ -405,6 +506,11 @@ FORM_FIELD_IDS.forEach(fieldId => {
     refreshFormState();
   });
 });
+
+const consentInput = document.getElementById("consent");
+if (consentInput) {
+  consentInput.addEventListener("change", renderStepNavigation);
+}
 
 syncPhoneFieldFormatting();
 refreshFormState();
