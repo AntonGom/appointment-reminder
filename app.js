@@ -819,13 +819,21 @@ initWizard();
 function openEmailModal() {
   const modal = document.getElementById("email-modal");
   const sendCopyCheckbox = document.getElementById("sendCopy");
+  const copyEmailInput = document.getElementById("copyEmail");
+  const suggestedCopyEmail = getSuggestedCopyEmail();
 
   if (!modal) {
     return;
   }
 
-  if (sendCopyCheckbox && sendCopyCheckbox.checked && !getCopyEmail()) {
-    copyEmailDirty = false;
+  copyEmailDirty = false;
+
+  if (sendCopyCheckbox) {
+    sendCopyCheckbox.checked = Boolean(suggestedCopyEmail);
+  }
+
+  if (copyEmailInput) {
+    copyEmailInput.value = suggestedCopyEmail;
   }
 
   syncCopyEmailOption();
