@@ -761,38 +761,6 @@ async function sendBrevoEmail() {
   }
 }
 
-function sendLocalEmail() {
-  if (!requireConsent()) {
-    return;
-  }
-
-  if (!validateMessageSafety()) {
-    return;
-  }
-
-  const email = getEmail();
-  const message = getMessage();
-
-  if (!email) {
-    alert("Client email is required");
-    return;
-  }
-
-  if (!EMAIL_PATTERN.test(email)) {
-    alert("Enter a valid client email address.");
-    return;
-  }
-
-  if (!message) {
-    alert("Message is required");
-    return;
-  }
-
-  const subject = encodeURIComponent("Appointment Reminder");
-  const body = encodeURIComponent(message);
-  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
-}
-
 async function sendLocalText() {
   if (!requireConsent()) {
     return;
@@ -825,9 +793,11 @@ async function sendLocalText() {
 
   const smsBody = encodeURIComponent(message);
   const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";
-  window.location.href = `sms:${encodeURIComponent(phone)}${separator}body=${smsBody}`;
-}
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent);
 
-function sendTwilioText() {
-  alert("Twilio text sending will be added later.");
+  if (!isMobileDevice) {
+    alert("We detected you on a desktop device. This feature usually only works on mobile devices, but we will still try to open your default texting app.");
+  }
+
+  window.location.href = `sms:${encodeURIComponent(phone)}${separator}body=${smsBody}`;
 }
