@@ -14,12 +14,15 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   max-width: calc(100vw - 92px);
 }
 
 .account-menu {
   position: relative;
   display: inline-flex;
+  min-width: 0;
+  max-width: min(248px, calc(100vw - 112px));
 }
 
 .account-chip[hidden],
@@ -70,9 +73,10 @@
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
-  width: auto;
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
-  max-width: min(248px, calc(100vw - 112px));
+  max-width: 100%;
   padding: 9px 12px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -112,6 +116,9 @@
 }
 
 .account-chip-email {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -357,10 +364,14 @@
 
   .account-chip {
     min-height: 40px;
-    max-width: min(168px, calc(100vw - 104px));
+    max-width: 100%;
     padding: 8px 10px;
     border-radius: 12px;
     gap: 8px;
+  }
+
+  .account-menu {
+    max-width: min(168px, calc(100vw - 104px));
   }
 
   .account-chip.signed-out {
