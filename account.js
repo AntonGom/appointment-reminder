@@ -8,8 +8,7 @@ const billingSetupNotice = document.getElementById("billing-setup-notice");
 const accountEmail = document.getElementById("account-email");
 const accountPlan = document.getElementById("account-plan");
 const upgradeButton = document.getElementById("upgrade-button");
-const signUpForm = document.getElementById("sign-up-form");
-const signInForm = document.getElementById("sign-in-form");
+const magicLinkForm = document.getElementById("magic-link-form");
 const signOutButton = document.getElementById("sign-out-button");
 const pricePill = document.getElementById("price-pill");
 const clientForm = document.getElementById("client-form");
@@ -22,7 +21,7 @@ let savedClients = [];
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
-  [signUpForm, signInForm].forEach(form => {
+  [magicLinkForm].forEach(form => {
     if (!form) {
       return;
     }
@@ -280,7 +279,7 @@ async function initSupabase() {
   });
 }
 
-async function handleSignUp(event) {
+async function handleMagicLink(event) {
   event.preventDefault();
 
   if (!supabase) {
@@ -290,18 +289,17 @@ async function handleSignUp(event) {
 
   const formData = new FormData(event.currentTarget);
   const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
   const button = event.currentTarget.querySelector("button[type='submit']");
 
-  setButtonBusy(button, true, "Creating account...");
+  setButtonBusy(button, true, "Sending link...");
   setStatus("");
 
   try {
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        emailRedirectTo: `${window.location.origin}/account.html`
+        emailRedirectTo: `${window.location.origin}/account.html`,
+        shouldCreateUser: true
       }
     });
 
@@ -309,50 +307,10 @@ async function handleSignUp(event) {
       throw error;
     }
 
-    if (!data.session) {
-      setStatus("Account created. Check your email to confirm your account, then sign in.", "success");
-    } else {
-      setStatus("Account created and signed in.", "success");
-    }
-
+    setStatus("Check your email for your secure sign-in link.", "success");
     event.currentTarget.reset();
   } catch (error) {
-    setStatus(error.message || "Unable to create your account.", "error");
-  } finally {
-    setButtonBusy(button, false);
-  }
-}
-
-async function handleSignIn(event) {
-  event.preventDefault();
-
-  if (!supabase) {
-    setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
-    return;
-  }
-
-  const formData = new FormData(event.currentTarget);
-  const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
-  const button = event.currentTarget.querySelector("button[type='submit']");
-
-  setButtonBusy(button, true, "Signing in...");
-  setStatus("");
-
-  try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    setStatus("Signed in successfully.", "success");
-    event.currentTarget.reset();
-  } catch (error) {
-    setStatus(error.message || "Unable to sign in.", "error");
+    setStatus(error.message || "Unable to send the sign-in link.", "error");
   } finally {
     setButtonBusy(button, false);
   }
@@ -565,12 +523,8 @@ async function initAccountPage() {
     setStatus(error.message || "Unable to load the account page.", "error");
   }
 
-  if (signUpForm) {
-    signUpForm.addEventListener("submit", handleSignUp);
-  }
-
-  if (signInForm) {
-    signInForm.addEventListener("submit", handleSignIn);
+  if (magicLinkForm) {
+    magicLinkForm.addEventListener("submit", handleMagicLink);
   }
 
   if (signOutButton) {
