@@ -9,9 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
   envBadge.className = "env-badge";
   envBadge.hidden = true;
 
-  const accountChip = document.createElement("a");
+  const accountChip = document.createElement("button");
   accountChip.className = "account-chip";
-  accountChip.href = "account.html";
+  accountChip.type = "button";
   accountChip.hidden = true;
 
   const accountChipLabel = document.createElement("span");
@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   accountChip.addEventListener("click", event => {
     if (!isSignedIn) {
+      window.location.href = "account.html";
       return;
     }
 
@@ -211,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
     isSignedIn = false;
     accountChip.classList.remove("signed-in");
     accountChip.classList.add("signed-out");
-    accountChip.href = "account.html";
     accountChip.removeAttribute("aria-haspopup");
     accountChipLabel.textContent = "Sign Up";
     accountChipLabel.hidden = false;
@@ -225,7 +225,6 @@ document.addEventListener("DOMContentLoaded", () => {
     isSignedIn = true;
     accountChip.classList.remove("signed-out");
     accountChip.classList.add("signed-in");
-    accountChip.href = "account.html";
     accountChip.setAttribute("aria-haspopup", "menu");
     accountChipLabel.hidden = true;
     accountChipEmail.textContent = user?.email || "Account";
