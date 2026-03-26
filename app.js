@@ -11,6 +11,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
+const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -65,6 +66,39 @@ function syncPhoneFieldFormatting() {
   }
 
   phoneInput.value = formatPhoneNumber(phoneInput.value);
+}
+
+function applySavedClientPrefill() {
+  try {
+    const rawValue = window.sessionStorage.getItem(REMINDER_PREFILL_KEY);
+
+    if (!rawValue) {
+      return;
+    }
+
+    const client = JSON.parse(rawValue);
+
+    const mappedFields = {
+      name: client.name || "",
+      email: client.email || "",
+      phone: client.phone || "",
+      address: client.address || "",
+      notes: client.notes || ""
+    };
+
+    Object.entries(mappedFields).forEach(([fieldId, value]) => {
+      const element = document.getElementById(fieldId);
+
+      if (element && typeof value === "string") {
+        element.value = value;
+      }
+    });
+
+    window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+  } catch (error) {
+    window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+    console.warn("Saved client prefill failed", error);
+  }
 }
 
 function generateMessage() {
@@ -840,6 +874,8 @@ window.addEventListener("beforeunload", event => {
   event.preventDefault();
   event.returnValue = "";
 });
+syncPhoneFieldFormatting();
+applySavedClientPrefill();
 syncPhoneFieldFormatting();
 refreshFormState();
 initWizard();

@@ -12,9 +12,14 @@ const signUpForm = document.getElementById("sign-up-form");
 const signInForm = document.getElementById("sign-in-form");
 const signOutButton = document.getElementById("sign-out-button");
 const pricePill = document.getElementById("price-pill");
+const clientForm = document.getElementById("client-form");
+const saveClientButton = document.getElementById("save-client-button");
+const clientsList = document.getElementById("clients-list");
 
 let supabase = null;
 let appConfig = null;
+let savedClients = [];
+const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
   [signUpForm, signInForm].forEach(form => {
@@ -56,6 +61,132 @@ function setButtonBusy(button, isBusy, busyText) {
 
   button.disabled = isBusy;
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function formatPhone(value) {
+  const digits = normalizePhone(value);
+
+  if (digits.length <= 3) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function getClientDisplayLines(client) {
+  const lines = [];
+
+  if (client.client_email) {
+    lines.push(client.client_email);
+  }
+
+  if (client.client_phone) {
+    lines.push(formatPhone(client.client_phone));
+  }
+
+  if (client.service_address) {
+    lines.push(client.service_address);
+  }
+
+  if (client.notes) {
+    lines.push(`Notes: ${client.notes}`);
+  }
+
+  return lines;
+}
+
+function renderSavedClients() {
+  if (!clientsList) {
+    return;
+  }
+
+  if (!savedClients.length) {
+    clientsList.innerHTML = `<div class="empty-state">No saved clients yet.</div>`;
+    return;
+  }
+
+  clientsList.innerHTML = savedClients.map(client => {
+    const displayName = client.client_name || "Saved client";
+    const details = getClientDisplayLines(client)
+      .map(line => escapeHtml(line))
+      .join("\n");
+
+    return `
+      <div class="client-item">
+        <div class="client-item-head">
+          <div class="client-item-name">${escapeHtml(displayName)}</div>
+        </div>
+        <div class="client-item-meta">${details || "No extra details saved yet."}</div>
+        <div class="client-item-actions">
+          <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use in Reminder</button>
+          <button class="secondary-button" type="button" data-action="delete" data-client-id="${client.id}">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function ensureProfile(user) {
+  if (!supabase || !user?.id) {
+    return;
+  }
+
+  await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: user.email || ""
+    },
+    {
+      onConflict: "id"
+    }
+  );
+}
+
+async function loadSavedClients() {
+  if (!supabase) {
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    savedClients = [];
+    renderSavedClients();
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    setStatus(error.message || "Unable to load saved clients.", "error");
+    return;
+  }
+
+  savedClients = data || [];
+  renderSavedClients();
 }
 
 function updateSignedInView(user) {
@@ -128,8 +259,24 @@ async function initSupabase() {
 
   updateSignedInView(session?.user || null);
 
-  supabase.auth.onAuthStateChange((_event, nextSession) => {
+  if (session?.user) {
+    await ensureProfile(session.user);
+    await loadSavedClients();
+  } else {
+    savedClients = [];
+    renderSavedClients();
+  }
+
+  supabase.auth.onAuthStateChange(async (_event, nextSession) => {
     updateSignedInView(nextSession?.user || null);
+
+    if (nextSession?.user) {
+      await ensureProfile(nextSession.user);
+      await loadSavedClients();
+    } else {
+      savedClients = [];
+      renderSavedClients();
+    }
   });
 }
 
@@ -231,6 +378,125 @@ async function handleSignOut() {
   }
 }
 
+async function handleSaveClient(event) {
+  event.preventDefault();
+
+  if (!supabase) {
+    setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    setStatus("Please sign in before saving a client.", "error");
+    return;
+  }
+
+  const formData = new FormData(event.currentTarget);
+  const payload = {
+    owner_id: user.id,
+    client_name: String(formData.get("client_name") || "").trim().slice(0, 30),
+    client_email: String(formData.get("client_email") || "").trim(),
+    client_phone: normalizePhone(formData.get("client_phone") || ""),
+    service_address: String(formData.get("service_address") || "").trim().slice(0, 40),
+    notes: String(formData.get("notes") || "").trim().slice(0, 1200),
+    updated_at: new Date().toISOString()
+  };
+
+  if (!payload.client_name && !payload.client_email && !payload.client_phone) {
+    setStatus("Add at least a client name, email, or phone number before saving.", "error");
+    return;
+  }
+
+  if (payload.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(payload.client_email)) {
+    setStatus("Enter a valid client email address.", "error");
+    return;
+  }
+
+  setButtonBusy(saveClientButton, true, "Saving client...");
+  setStatus("");
+
+  const { error } = await supabase.from("clients").insert(payload);
+
+  setButtonBusy(saveClientButton, false);
+
+  if (error) {
+    setStatus(error.message || "Unable to save this client.", "error");
+    return;
+  }
+
+  event.currentTarget.reset();
+  setStatus("Client saved.", "success");
+  await loadSavedClients();
+}
+
+function useClientInReminder(clientId) {
+  const client = savedClients.find(entry => entry.id === clientId);
+
+  if (!client) {
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    REMINDER_PREFILL_KEY,
+    JSON.stringify({
+      name: client.client_name || "",
+      email: client.client_email || "",
+      phone: client.client_phone ? formatPhone(client.client_phone) : "",
+      address: client.service_address || "",
+      notes: client.notes || ""
+    })
+  );
+
+  window.location.href = "index.html";
+}
+
+async function deleteClient(clientId) {
+  if (!supabase) {
+    return;
+  }
+
+  const confirmed = window.confirm("Delete this saved client?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  const { error } = await supabase.from("clients").delete().eq("id", clientId);
+
+  if (error) {
+    setStatus(error.message || "Unable to delete this client.", "error");
+    return;
+  }
+
+  setStatus("Client deleted.", "success");
+  await loadSavedClients();
+}
+
+function handleClientsListClick(event) {
+  const button = event.target.closest("button[data-action]");
+
+  if (!button) {
+    return;
+  }
+
+  const clientId = button.dataset.clientId || "";
+  const action = button.dataset.action || "";
+
+  if (!clientId) {
+    return;
+  }
+
+  if (action === "use") {
+    useClientInReminder(clientId);
+  } else if (action === "delete") {
+    deleteClient(clientId);
+  }
+}
+
 async function handleUpgrade() {
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
@@ -313,6 +579,14 @@ async function initAccountPage() {
 
   if (upgradeButton) {
     upgradeButton.addEventListener("click", handleUpgrade);
+  }
+
+  if (clientForm) {
+    clientForm.addEventListener("submit", handleSaveClient);
+  }
+
+  if (clientsList) {
+    clientsList.addEventListener("click", handleClientsListClick);
   }
 }
 
