@@ -587,7 +587,22 @@
       }
 
       .wizard-controls {
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+
+      .wizard-controls.two-buttons {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .wizard-controls.one-button {
         grid-template-columns: 1fr;
+      }
+
+      .wizard-controls button {
+        min-height: 50px;
+        padding: 13px 10px;
+        font-size: 14px;
       }
     }
   </style>
