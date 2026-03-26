@@ -14,6 +14,7 @@ const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|a
 let currentStepIndex = 0;
 let wizardSteps = [];
 let visitedSteps = [];
+let mapPreviewTimeoutId = null;
 
 function formatTime(time) {
   if (!time) return "";
@@ -109,6 +110,7 @@ function refreshFormState() {
   }
 
   syncFieldValidationErrors();
+  updateAddressMapPreview();
   renderStepNavigation();
 }
 
@@ -351,6 +353,88 @@ function isStepInvalid(step) {
 
   const fieldId = step.dataset.field || "";
   return Boolean(getFieldValidationMessage(fieldId));
+}
+
+function setMapPreviewState({ visible, src = "", message = "" }) {
+  const container = document.getElementById("map-preview");
+  const frame = document.getElementById("map-preview-frame");
+  const caption = document.getElementById("map-preview-message");
+
+  if (!container || !frame || !caption) {
+    return;
+  }
+
+  container.classList.toggle("visible", visible);
+  caption.textContent = message;
+
+  if (src) {
+    frame.src = src;
+    frame.hidden = false;
+  } else {
+    frame.src = "";
+    frame.hidden = true;
+  }
+}
+
+async function loadAddressMapPreview(address) {
+  try {
+    const response = await fetch(`/api/maps-embed-url?address=${encodeURIComponent(address)}`, {
+      cache: "no-store"
+    });
+    const data = await response.json();
+
+    if (getFieldValue("address") !== address) {
+      return;
+    }
+
+    if (data.enabled && data.src) {
+      setMapPreviewState({
+        visible: true,
+        src: data.src,
+        message: "Map preview"
+      });
+      return;
+    }
+
+    setMapPreviewState({
+      visible: true,
+      src: "",
+      message: data.error || "Map preview is unavailable right now."
+    });
+  } catch (error) {
+    setMapPreviewState({
+      visible: true,
+      src: "",
+      message: "Map preview is unavailable right now."
+    });
+  }
+}
+
+function updateAddressMapPreview() {
+  const address = getFieldValue("address");
+
+  if (mapPreviewTimeoutId) {
+    window.clearTimeout(mapPreviewTimeoutId);
+  }
+
+  if (!address || getFieldValidationMessage("address")) {
+    setMapPreviewState({
+      visible: false,
+      src: "",
+      message: ""
+    });
+    return;
+  }
+
+  setMapPreviewState({
+    visible: true,
+    src: "",
+    message: "Loading map..."
+  });
+
+  mapPreviewTimeoutId = window.setTimeout(() => {
+    loadAddressMapPreview(address);
+  }, 320);
 }
 
 function renderStepNavigation() {
