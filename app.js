@@ -10,10 +10,12 @@ const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
+const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 
 let currentStepIndex = 0;
 let wizardSteps = [];
 let visitedSteps = [];
+let lastAddressLookup = "";
 
 function formatTime(time) {
   if (!time) return "";
@@ -63,16 +65,16 @@ function syncPhoneFieldFormatting() {
 }
 
 function generateMessage() {
-  let name = getFieldValue("name");
-  let phone = getFieldValue("phone");
-  let address = getFieldValue("address");
-  let businessContact = getFieldValue("businessContact");
-  let date = getFieldValue("date");
-  let time = getFieldValue("time");
-  let notes = getFieldValue("notes");
+  const name = getFieldValue("name");
+  const phone = getFieldValue("phone");
+  const address = getFieldValue("address");
+  const businessContact = getFieldValue("businessContact");
+  const date = getFieldValue("date");
+  const time = getFieldValue("time");
+  const notes = getFieldValue("notes");
 
-  let lines = [];
-  let greeting = name ? "Hello " + name + "," : "Hello,";
+  const lines = [];
+  const greeting = name ? "Hello " + name + "," : "Hello,";
 
   lines.push(greeting);
   lines.push("");
@@ -110,6 +112,133 @@ function refreshFormState() {
 
   syncFieldValidationErrors();
   renderStepNavigation();
+}
+
+function expandBoundingBox(result) {
+  const lat = parseFloat(result.lat);
+  const lon = parseFloat(result.lon);
+  const defaultDelta = 0.008;
+
+  if (!Array.isArray(result.boundingbox) || result.boundingbox.length !== 4) {
+    return {
+      left: lon - defaultDelta,
+      right: lon + defaultDelta,
+      top: lat + defaultDelta,
+      bottom: lat - defaultDelta
+    };
+  }
+
+  const south = parseFloat(result.boundingbox[0]);
+  const north = parseFloat(result.boundingbox[1]);
+  const west = parseFloat(result.boundingbox[2]);
+  const east = parseFloat(result.boundingbox[3]);
+  const latPadding = Math.max((north - south) * 0.35, 0.0035);
+  const lonPadding = Math.max((east - west) * 0.35, 0.0035);
+
+  return {
+    left: west - lonPadding,
+    right: east + lonPadding,
+    top: north + latPadding,
+    bottom: south - latPadding
+  };
+}
+
+function getOpenStreetMapEmbedUrl(result) {
+  const box = expandBoundingBox(result);
+  const bbox = [box.left, box.bottom, box.right, box.top]
+    .map(value => value.toFixed(6))
+    .join("%2C");
+  const marker = `${parseFloat(result.lat).toFixed(6)}%2C${parseFloat(result.lon).toFixed(6)}`;
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
+}
+
+function setAddressMapPreview({ visible, src = "", note = "" }) {
+  const container = document.getElementById("map-preview");
+  const frame = document.getElementById("map-preview-frame");
+  const previewNote = document.getElementById("map-preview-note");
+
+  if (!container || !frame || !previewNote) {
+    return;
+  }
+
+  container.classList.toggle("visible", visible);
+  previewNote.textContent = note;
+
+  if (src) {
+    frame.src = src;
+    frame.hidden = false;
+  } else {
+    frame.src = "";
+    frame.hidden = true;
+  }
+}
+
+async function loadAddressMapPreview() {
+  const address = getFieldValue("address");
+
+  if (!address || address.length < ADDRESS_PREVIEW_MIN_LENGTH || getFieldValidationMessage("address")) {
+    lastAddressLookup = "";
+    setAddressMapPreview({
+      visible: false,
+      src: "",
+      note: ""
+    });
+    return;
+  }
+
+  if (address === lastAddressLookup) {
+    return;
+  }
+
+  lastAddressLookup = address;
+  setAddressMapPreview({
+    visible: true,
+    src: "",
+    note: "Loading map..."
+  });
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+      {
+        headers: {
+          Accept: "application/json"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Lookup failed");
+    }
+
+    const results = await response.json();
+
+    if (getFieldValue("address") !== address) {
+      return;
+    }
+
+    if (!Array.isArray(results) || !results.length) {
+      setAddressMapPreview({
+        visible: true,
+        src: "",
+        note: "No map found for that address."
+      });
+      return;
+    }
+
+    setAddressMapPreview({
+      visible: true,
+      src: getOpenStreetMapEmbedUrl(results[0]),
+      note: "Map data by OpenStreetMap contributors."
+    });
+  } catch (error) {
+    setAddressMapPreview({
+      visible: true,
+      src: "",
+      note: "Map preview is unavailable right now."
+    });
+  }
 }
 
 function hasDisallowedLink(value, allowEmail) {
@@ -367,12 +496,13 @@ function renderStepNavigation() {
     const label = step.dataset.nav || step.dataset.title || `Step ${index + 1}`;
     const invalid = isStepInvalid(step);
     const complete = isStepComplete(step, index);
+    const stepIcon = invalid ? "X" : complete ? "&#10003;" : String(index + 1);
 
     button.type = "button";
     button.className = "stepper-button";
     button.setAttribute("aria-label", `Go to ${label}`);
     button.innerHTML = `
-      <span class="stepper-circle">${invalid ? "X" : complete ? "✓" : index + 1}</span>
+      <span class="stepper-circle">${stepIcon}</span>
       <span class="stepper-label">${label}</span>
     `;
 
@@ -554,9 +684,23 @@ FORM_FIELD_IDS.forEach(fieldId => {
       syncPhoneFieldFormatting();
     }
 
+    if (fieldId === "address") {
+      lastAddressLookup = "";
+      setAddressMapPreview({
+        visible: false,
+        src: "",
+        note: ""
+      });
+    }
+
     refreshFormState();
   });
 });
+
+const addressInput = document.getElementById("address");
+if (addressInput) {
+  addressInput.addEventListener("blur", loadAddressMapPreview);
+}
 
 const consentInput = document.getElementById("consent");
 if (consentInput) {
@@ -576,9 +720,9 @@ async function sendBrevoEmail() {
     return;
   }
 
-  let payload = getReminderPayload();
-  let email = payload.clientEmail;
-  let message = payload.message;
+  const payload = getReminderPayload();
+  const email = payload.clientEmail;
+  const message = payload.message;
 
   if (!email) {
     alert("Email is required");
@@ -626,8 +770,8 @@ function sendLocalEmail() {
     return;
   }
 
-  let email = getEmail();
-  let message = getMessage();
+  const email = getEmail();
+  const message = getMessage();
 
   if (!email) {
     alert("Client email is required");
@@ -658,8 +802,8 @@ async function sendLocalText() {
     return;
   }
 
-  let phone = getPhoneDigits();
-  let message = getMessage();
+  const phone = getPhoneDigits();
+  const message = getMessage();
 
   if (!phone) {
     alert("Client phone number is required");
