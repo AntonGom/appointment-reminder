@@ -11,7 +11,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
-const DRAFT_STORAGE_KEY = "appointment-reminder-draft-v1";
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -20,7 +19,6 @@ let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
 let suppressBeforeUnload = false;
-let restoredStepIndex = 0;
 
 function formatTime(time) {
   if (!time) return "";
@@ -119,7 +117,6 @@ function refreshFormState() {
 
   syncFieldValidationErrors();
   renderStepNavigation();
-  saveDraftState();
 }
 
 function expandBoundingBox(result) {
@@ -435,80 +432,6 @@ function temporarilySuppressBeforeUnload() {
   window.setTimeout(() => {
     suppressBeforeUnload = false;
   }, 2000);
-}
-
-function getDraftState() {
-  return {
-    fields: FORM_FIELD_IDS.reduce((accumulator, fieldId) => {
-      const element = document.getElementById(fieldId);
-      accumulator[fieldId] = element ? element.value : "";
-      return accumulator;
-    }, {}),
-    consent: hasConsent(),
-    sendCopy: shouldSendCopy(),
-    copyEmail: getCopyEmail(),
-    currentStepIndex
-  };
-}
-
-function saveDraftState() {
-  try {
-    window.sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(getDraftState()));
-  } catch (error) {
-    console.warn("Draft save failed", error);
-  }
-}
-
-function restoreDraftState() {
-  try {
-    const rawDraft = window.sessionStorage.getItem(DRAFT_STORAGE_KEY);
-
-    if (!rawDraft) {
-      return;
-    }
-
-    const draft = JSON.parse(rawDraft);
-    const fields = draft && draft.fields ? draft.fields : {};
-
-    FORM_FIELD_IDS.forEach(fieldId => {
-      const element = document.getElementById(fieldId);
-
-      if (!element || typeof fields[fieldId] !== "string") {
-        return;
-      }
-
-      element.value = fields[fieldId];
-    });
-
-    const consentInput = document.getElementById("consent");
-    if (consentInput) {
-      consentInput.checked = Boolean(draft.consent);
-    }
-
-    const sendCopyCheckbox = document.getElementById("sendCopy");
-    if (sendCopyCheckbox) {
-      sendCopyCheckbox.checked = Boolean(draft.sendCopy);
-    }
-
-    const copyEmailInput = document.getElementById("copyEmail");
-    if (copyEmailInput && typeof draft.copyEmail === "string") {
-      copyEmailInput.value = draft.copyEmail;
-      copyEmailDirty = draft.copyEmail.length > 0;
-    }
-
-    const parsedStepIndex = Number(draft.currentStepIndex);
-    restoredStepIndex = Number.isInteger(parsedStepIndex) && parsedStepIndex >= 0 ? parsedStepIndex : 0;
-  } catch (error) {
-    console.warn("Draft restore failed", error);
-  }
-}
-
-function clearDraftState() {
-  try {
-    window.sessionStorage.removeItem(DRAFT_STORAGE_KEY);
-  } catch (error) {
-    console.warn("Draft clear failed", error);
-  }
 }
 
 function hasConsent() {
@@ -839,10 +762,6 @@ function initWizard() {
 
   renderStepNavigation();
   updateWizardUI();
-
-  if (restoredStepIndex > 0 && restoredStepIndex < wizardSteps.length) {
-    setStep(restoredStepIndex);
-  }
 }
 
 FORM_FIELD_IDS.forEach(fieldId => {
@@ -922,20 +841,6 @@ window.addEventListener("beforeunload", event => {
   event.preventDefault();
   event.returnValue = "";
 });
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && hasUnsavedFormData()) {
-    saveDraftState();
-  }
-});
-
-window.addEventListener("pagehide", () => {
-  if (hasUnsavedFormData()) {
-    saveDraftState();
-  }
-});
-
-restoreDraftState();
 syncPhoneFieldFormatting();
 refreshFormState();
 initWizard();
@@ -1091,7 +996,6 @@ async function confirmSendBrevoEmail() {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      clearDraftState();
       setSendEmailButtonState("sent");
       alert("Reminder sent!");
     } else {
