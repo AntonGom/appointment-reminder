@@ -4,12 +4,17 @@ const FIELD_LIMITS = {
   address: { label: "Service Address", maxLength: 40 },
   businessContact: { label: "Your Contact Info", maxLength: 30 }
 };
+
 const PHONE_DIGIT_LIMIT = 10;
+const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
+
+let currentStepIndex = 0;
+let wizardSteps = [];
 
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
-  hour = parseInt(hour);
+  hour = parseInt(hour, 10);
   let ampm = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
   return hour + ":" + minute + " " + ampm;
@@ -22,7 +27,8 @@ function formatDate(dateString) {
 }
 
 function getFieldValue(id) {
-  return document.getElementById(id).value.trim();
+  const element = document.getElementById(id);
+  return element ? element.value.trim() : "";
 }
 
 function normalizePhoneDigits(value) {
@@ -90,26 +96,56 @@ function generateMessage() {
   return lines.join("\n");
 }
 
-document.querySelectorAll("input, textarea").forEach(el => {
-  if (el.id !== "preview") {
-    el.addEventListener("input", () => {
-      if (el.id === "phone") {
-        syncPhoneFieldFormatting();
-      }
+function refreshFormState() {
+  const preview = document.getElementById("preview");
 
-      document.getElementById("preview").value = generateMessage();
-      updatePreviewLayout();
-      syncFieldLimitErrors();
-      syncContactBadges();
-    });
+  if (preview) {
+    preview.value = generateMessage();
+    updatePreviewLayout();
   }
-});
 
-syncPhoneFieldFormatting();
-document.getElementById("preview").value = generateMessage();
-updatePreviewLayout();
-syncFieldLimitErrors();
-syncContactBadges();
+  syncFieldLimitErrors();
+}
+
+function syncFieldLimitErrors() {
+  for (const [fieldId, config] of Object.entries(FIELD_LIMITS)) {
+    const value = getFieldValue(fieldId);
+    const errorElement = document.getElementById(`${fieldId}-error`);
+
+    if (!errorElement) {
+      continue;
+    }
+
+    if (value.length > config.maxLength) {
+      errorElement.textContent = `${config.label} cannot be longer than ${config.maxLength} characters.`;
+      errorElement.classList.add("visible");
+    } else {
+      errorElement.textContent = "";
+      errorElement.classList.remove("visible");
+    }
+  }
+}
+
+function updatePreviewLayout() {
+  const preview = document.getElementById("preview");
+  const previewHint = document.getElementById("preview-hint");
+
+  if (!preview) {
+    return;
+  }
+
+  preview.style.height = "auto";
+  const nextHeight = Math.min(preview.scrollHeight, 360);
+  preview.style.height = `${nextHeight}px`;
+
+  if (previewHint) {
+    if (preview.scrollHeight > 360) {
+      previewHint.classList.add("visible");
+    } else {
+      previewHint.classList.remove("visible");
+    }
+  }
+}
 
 function getMessage() {
   return document.getElementById("preview").value.trim();
@@ -220,78 +256,159 @@ function validateMessageSafety() {
   return true;
 }
 
-function syncFieldLimitErrors() {
-  for (const [fieldId, config] of Object.entries(FIELD_LIMITS)) {
-    const value = getFieldValue(fieldId);
-    const errorElement = document.getElementById(`${fieldId}-error`);
-    if (!errorElement) {
-      continue;
-    }
-
-    if (value.length > config.maxLength) {
-      errorElement.textContent = `${config.label} cannot be longer than ${config.maxLength} characters.`;
-      errorElement.classList.add("visible");
-    } else {
-      errorElement.textContent = "";
-      errorElement.classList.remove("visible");
-    }
+function getProgressStatus(index, totalSteps) {
+  if (index === totalSteps - 1) {
+    return "Final step";
   }
+
+  if (index >= totalSteps - 2) {
+    return "Almost done";
+  }
+
+  if (index >= Math.floor(totalSteps / 2)) {
+    return "You are getting close";
+  }
+
+  return "Just a few quick questions";
 }
 
-function syncContactBadges() {
-  const phoneBadge = document.getElementById("phone-badge");
-  const emailBadge = document.getElementById("email-badge");
-  const hasPhone = getPhoneDigits().length > 0;
-  const hasEmail = getEmail().length > 0;
+function focusStepField(step) {
+  const field = step.querySelector("input, textarea");
 
-  if (!phoneBadge || !emailBadge) {
+  if (!field || field.id === "preview" || field.type === "checkbox") {
     return;
   }
 
-  if (hasPhone || hasEmail) {
-    if (hasPhone) {
-      phoneBadge.className = "label-badge hidden";
-      phoneBadge.textContent = "";
-    } else {
-      phoneBadge.className = "label-badge optional";
-      phoneBadge.textContent = "Optional";
-    }
+  window.setTimeout(() => {
+    field.focus({ preventScroll: true });
+  }, 60);
+}
 
-    if (hasEmail) {
-      emailBadge.className = "label-badge hidden";
-      emailBadge.textContent = "";
-    } else {
-      emailBadge.className = "label-badge optional";
-      emailBadge.textContent = "Optional";
-    }
+function updateWizardUI() {
+  if (!wizardSteps.length) {
+    return;
+  }
+
+  const currentStep = wizardSteps[currentStepIndex];
+  const totalSteps = wizardSteps.length;
+  const stepCount = document.getElementById("step-count");
+  const stepTitle = document.getElementById("step-title");
+  const stepCopy = document.getElementById("step-copy");
+  const stepPill = document.getElementById("step-pill");
+  const progressStatus = document.getElementById("progress-status");
+  const progressFill = document.getElementById("progress-fill");
+  const backButton = document.getElementById("back-button");
+  const skipButton = document.getElementById("skip-button");
+  const nextButton = document.getElementById("next-button");
+  const wizardControls = document.querySelector(".wizard-controls");
+  const isFinalStep = currentStepIndex === totalSteps - 1;
+  const isOptional = currentStep.dataset.optional === "true";
+
+  wizardSteps.forEach((step, index) => {
+    step.classList.toggle("active", index === currentStepIndex);
+  });
+
+  stepCount.textContent = `Step ${currentStepIndex + 1} of ${totalSteps}`;
+  stepTitle.textContent = currentStep.dataset.title || "";
+  stepCopy.textContent = currentStep.dataset.copy || "";
+  progressStatus.textContent = getProgressStatus(currentStepIndex, totalSteps);
+  progressFill.style.width = `${((currentStepIndex + 1) / totalSteps) * 100}%`;
+
+  if (isFinalStep) {
+    stepPill.textContent = "Final Step";
+    stepPill.className = "step-pill final";
   } else {
-    phoneBadge.className = "label-badge choice";
-    phoneBadge.textContent = "Choose one";
-    emailBadge.className = "label-badge choice";
-    emailBadge.textContent = "Choose one";
+    stepPill.textContent = isOptional ? "Optional" : "Required";
+    stepPill.className = "step-pill";
   }
+
+  backButton.hidden = currentStepIndex === 0;
+  skipButton.hidden = isFinalStep || !isOptional;
+  nextButton.hidden = isFinalStep;
+  nextButton.textContent = currentStepIndex === totalSteps - 2 ? "Review" : "Next";
+
+  if (wizardControls) {
+    const visibleButtons = [backButton, skipButton, nextButton].filter(button => !button.hidden).length;
+    wizardControls.classList.remove("one-button", "two-buttons");
+
+    if (visibleButtons === 1) {
+      wizardControls.classList.add("one-button");
+    } else if (visibleButtons === 2) {
+      wizardControls.classList.add("two-buttons");
+    }
+  }
+
+  focusStepField(currentStep);
 }
 
-function updatePreviewLayout() {
-  const preview = document.getElementById("preview");
-  const previewHint = document.getElementById("preview-hint");
-
-  if (!preview) {
+function setStep(index) {
+  if (index < 0 || index >= wizardSteps.length) {
     return;
   }
 
-  preview.style.height = "auto";
-  const nextHeight = Math.min(preview.scrollHeight, 360);
-  preview.style.height = `${nextHeight}px`;
-
-  if (previewHint) {
-    if (preview.scrollHeight > 360) {
-      previewHint.classList.add("visible");
-    } else {
-      previewHint.classList.remove("visible");
-    }
-  }
+  currentStepIndex = index;
+  updateWizardUI();
 }
+
+function moveToNextStep() {
+  setStep(currentStepIndex + 1);
+}
+
+function initWizard() {
+  wizardSteps = Array.from(document.querySelectorAll(".wizard-step"));
+
+  if (!wizardSteps.length) {
+    return;
+  }
+
+  const backButton = document.getElementById("back-button");
+  const skipButton = document.getElementById("skip-button");
+  const nextButton = document.getElementById("next-button");
+
+  backButton.addEventListener("click", () => setStep(currentStepIndex - 1));
+  skipButton.addEventListener("click", moveToNextStep);
+  nextButton.addEventListener("click", moveToNextStep);
+
+  wizardSteps.forEach((step, index) => {
+    step.querySelectorAll("input").forEach(input => {
+      if (input.type === "date" || input.type === "time" || input.type === "checkbox") {
+        return;
+      }
+
+      input.addEventListener("keydown", event => {
+        if (event.key === "Enter" && index === currentStepIndex) {
+          event.preventDefault();
+
+          if (currentStepIndex < wizardSteps.length - 1) {
+            moveToNextStep();
+          }
+        }
+      });
+    });
+  });
+
+  updateWizardUI();
+}
+
+FORM_FIELD_IDS.forEach(fieldId => {
+  const element = document.getElementById(fieldId);
+
+  if (!element) {
+    return;
+  }
+
+  element.addEventListener("input", () => {
+    if (fieldId === "phone") {
+      syncPhoneFieldFormatting();
+    }
+
+    refreshFormState();
+  });
+});
+
+syncPhoneFieldFormatting();
+refreshFormState();
+initWizard();
 
 async function sendBrevoEmail() {
   if (!requireConsent()) {

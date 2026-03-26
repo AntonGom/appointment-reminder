@@ -20,9 +20,10 @@
       --accent: #2563eb;
       --accent-2: #3b82f6;
       --accent-3: #1d4ed8;
-      --accent-muted: #6b7280;
+      --accent-muted: #64748b;
       --preview-bg: #eef4ff;
       --preview-border: #8ab4ff;
+      --panel-soft: #f8fafc;
     }
 
     * { box-sizing: border-box; }
@@ -32,8 +33,8 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at top left, rgba(59,130,246,0.22), transparent 32%),
-        radial-gradient(circle at right, rgba(148,163,184,0.18), transparent 28%),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
+        radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%),
         linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
       display: flex;
       justify-content: center;
@@ -46,11 +47,11 @@
       overflow: hidden;
       background: var(--card);
       width: 100%;
-      max-width: 520px;
+      max-width: 560px;
       padding: 28px;
       border-radius: 28px;
-      box-shadow: 0 26px 60px rgba(94, 58, 37, 0.18);
       border: 1px solid var(--card-border);
+      box-shadow: 0 26px 60px rgba(15, 23, 42, 0.22);
       backdrop-filter: blur(12px);
     }
 
@@ -58,109 +59,167 @@
       content: "";
       position: absolute;
       inset: 0 0 auto 0;
-      height: 110px;
+      height: 128px;
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
 
+    .wizard-shell {
+      position: relative;
+      z-index: 1;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .wizard-head {
+      margin-bottom: 24px;
+    }
+
+    .step-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .step-count {
+      color: var(--text-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .step-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .step-pill.final {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
     h2 {
-      margin: 4px 0 8px;
+      margin: 0 0 10px;
       color: var(--text-main);
       font-size: 34px;
       line-height: 1.05;
     }
 
-    .section-title {
-      margin: 0 0 8px;
+    .step-copy {
+      margin: 0;
       color: var(--text-soft);
-      font-size: 13px;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .progress-wrap {
+      margin-top: 18px;
+    }
+
+    .progress-status {
+      margin: 0 0 8px;
+      color: #1d4ed8;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.26);
+      overflow: hidden;
     }
 
-    .full {
-      grid-column: 1 / -1;
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      transition: width 0.22s ease;
+    }
+
+    .wizard-step {
+      display: none;
+      min-height: 280px;
+      animation: fadeIn 0.18s ease;
+    }
+
+    .wizard-step.active {
+      display: block;
+    }
+
+    .question-wrap {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(248, 250, 252, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      min-height: 280px;
+    }
+
+    .question-wrap.review-wrap {
+      background: rgba(243, 246, 252, 0.92);
     }
 
     label {
-      font-weight: 700;
       display: block;
-      margin-top: 14px;
-      font-size: 13px;
-      letter-spacing: 0.01em;
+      margin-bottom: 10px;
       color: var(--text-main);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
     }
 
     .label-badge {
       display: inline-block;
       margin-left: 8px;
-      padding: 3px 8px;
+      padding: 4px 9px;
       border-radius: 999px;
+      background: #e5e7eb;
+      color: #475569;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       vertical-align: middle;
     }
 
-    .label-badge.optional {
-      background: #e5e7eb;
-      color: #475569;
-    }
-
-    .label-badge.hidden {
-      display: none;
-    }
-
-    .label-badge.choice {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-    .contact-callout {
-      margin: 10px 0 18px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e3a8a;
-      line-height: 1.55;
-      font-size: 13px;
-    }
-
-    .contact-callout strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 13px;
-      color: #1d4ed8;
-    }
-
-    input, textarea {
+    input,
+    textarea {
       width: 100%;
-      padding: 13px 14px;
-      margin-top: 6px;
-      border-radius: 14px;
+      padding: 14px 15px;
+      border-radius: 16px;
       border: 1px solid var(--field-border);
-      font-size: 16px;
       background: var(--field-bg);
       color: var(--text-main);
+      font-size: 16px;
       outline: none;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
     input[type="date"],
     input[type="time"] {
-      min-height: 50px;
+      min-height: 52px;
       appearance: none;
       -webkit-appearance: none;
     }
 
-    input:focus, textarea:focus {
+    input:focus,
+    textarea:focus {
       border-color: var(--field-focus);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
       transform: translateY(-1px);
@@ -168,47 +227,71 @@
 
     textarea {
       resize: vertical;
-      min-height: 120px;
-    }
-
-    .required { background-color: #f8fbff; }
-
-    #preview {
-      border: 2px solid var(--preview-border);
-      background-color: var(--preview-bg);
-      white-space: pre-line;
-      max-height: 360px;
-      overflow-y: auto;
-    }
-
-    .actions {
-      display: grid;
-      gap: 12px;
-      margin-top: 22px;
-    }
-
-    .consent-box {
-      margin-top: 18px;
-      padding: 14px 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 14px;
-      background: #f8fafc;
-      color: var(--text-soft);
-      font-size: 13px;
-      line-height: 1.5;
+      min-height: 130px;
     }
 
     .field-error {
       display: none;
-      margin-top: 6px;
+      margin-top: 8px;
       color: #dc2626;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    .field-note {
+      margin-top: 10px;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .review-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .review-panel {
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--panel-soft);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    #preview {
+      min-height: 220px;
+      max-height: 360px;
+      border: 2px solid var(--preview-border);
+      background: var(--preview-bg);
+      white-space: pre-line;
+      overflow-y: auto;
+    }
+
+    .preview-hint {
+      display: none;
+      margin-top: 8px;
+      color: #1d4ed8;
       font-size: 12px;
       font-weight: 700;
       line-height: 1.4;
     }
 
-    .field-error.visible {
+    .preview-hint.visible {
       display: block;
+    }
+
+    .consent-box {
+      padding: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 18px;
+      background: #f8fafc;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.55;
     }
 
     .consent-box label {
@@ -216,8 +299,8 @@
       gap: 10px;
       align-items: flex-start;
       margin: 0;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--text-main);
     }
 
     .consent-box input[type="checkbox"] {
@@ -237,11 +320,16 @@
       text-decoration: underline;
     }
 
+    .actions {
+      display: grid;
+      gap: 12px;
+    }
+
     button {
       width: 100%;
       padding: 15px 16px;
       font-size: 15px;
-      font-weight: 700;
+      font-weight: 800;
       border: none;
       border-radius: 16px;
       color: white;
@@ -251,13 +339,14 @@
 
     button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(40, 32, 28, 0.14);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.14);
     }
 
     button:disabled {
       opacity: 0.65;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
 
     .primary {
@@ -276,24 +365,54 @@
       background: linear-gradient(135deg, #94a3b8, #64748b);
     }
 
+    .wizard-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .wizard-controls.two-buttons {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .wizard-controls.one-button {
+      grid-template-columns: 1fr;
+    }
+
+    .wizard-controls button {
+      min-height: 54px;
+    }
+
+    .wizard-back {
+      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+      color: #0f172a;
+    }
+
+    .wizard-skip {
+      background: linear-gradient(135deg, #94a3b8, #64748b);
+    }
+
+    .wizard-next {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
     .hint {
-      margin-top: 16px;
+      margin-top: 2px;
       font-size: 12px;
       color: var(--text-soft);
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
-    .preview-hint {
-      display: none;
-      margin-top: 8px;
-      color: #1d4ed8;
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .preview-hint.visible {
-      display: block;
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     @media (max-width: 560px) {
@@ -306,13 +425,13 @@
         font-size: 28px;
       }
 
-      .grid {
-        grid-template-columns: 1fr;
-        gap: 0;
+      .question-wrap {
+        padding: 18px;
+        min-height: 248px;
       }
 
-      .full {
-        grid-column: auto;
+      .wizard-controls {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -321,84 +440,123 @@
 <body data-page="home">
 
 <div class="container">
+  <div class="wizard-shell">
+    <p class="section-title">Appointment Reminder</p>
 
-<h2>Appointment Reminder</h2>
-<p class="section-title">Client Details</p>
-<div class="contact-callout">
-  <strong>Only one contact method is needed.</strong>
-  Enter either a phone number or an email address. Everything else is optional.
-</div>
+    <div class="wizard-head">
+      <div class="step-meta">
+        <span id="step-count" class="step-count">Step 1 of 9</span>
+        <span id="step-pill" class="step-pill">Optional</span>
+      </div>
+      <h2 id="step-title">Client Phone Number</h2>
+      <p id="step-copy" class="step-copy">Add a phone number if you may want to text this client later.</p>
 
-<div class="grid">
-  <div class="full">
-    <label>Client Phone Number <span id="phone-badge" class="label-badge choice">Choose one</span></label>
-    <input id="phone" placeholder="Enter client's phone number" inputmode="numeric" autocomplete="tel">
-    <div id="phone-error" class="field-error"></div>
+      <div class="progress-wrap">
+        <p id="progress-status" class="progress-status">Just a few quick questions</p>
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-step active" data-title="Client Phone Number" data-copy="Add a phone number if you may want to text this client later." data-optional="true">
+      <div class="question-wrap">
+        <label for="phone">Client Phone Number <span class="label-badge">Optional</span></label>
+        <input id="phone" placeholder="Enter client's phone number" inputmode="numeric" autocomplete="tel">
+        <div id="phone-error" class="field-error"></div>
+        <p class="field-note">You can skip this and use email instead.</p>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Client Email" data-copy="Add an email address if you may want to email this client later." data-optional="true">
+      <div class="question-wrap">
+        <label for="email">Client Email <span class="label-badge">Optional</span></label>
+        <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="Enter client's email">
+        <p class="field-note">You can skip this and use a phone number instead.</p>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Client Name" data-copy="Add the client's name if you want the reminder to feel more personal." data-optional="true">
+      <div class="question-wrap">
+        <label for="name">Client Name <span class="label-badge">Optional</span></label>
+        <input id="name" placeholder="Enter client's name">
+        <div id="name-error" class="field-error"></div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Service Address" data-copy="Add the service address if the reminder should include where the appointment takes place." data-optional="true">
+      <div class="question-wrap">
+        <label for="address">Service Address <span class="label-badge">Optional</span></label>
+        <input id="address" placeholder="Enter service address">
+        <div id="address-error" class="field-error"></div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Your Contact Info" data-copy="Add the best phone number or email if you want clients to know how to reach you." data-optional="true">
+      <div class="question-wrap">
+        <label for="businessContact">Your Contact Info <span class="label-badge">Optional</span></label>
+        <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
+        <div id="businessContact-error" class="field-error"></div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Date of Service" data-copy="Add the appointment date if you want it included in the reminder." data-optional="true">
+      <div class="question-wrap">
+        <label for="date">Date of Service <span class="label-badge">Optional</span></label>
+        <input type="date" id="date">
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Time of Service" data-copy="Add the appointment time if you want it included in the reminder." data-optional="true">
+      <div class="question-wrap">
+        <label for="time">Time of Service <span class="label-badge">Optional</span></label>
+        <input type="time" id="time">
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Additional Details" data-copy="Add any extra details you want the client to see." data-optional="true">
+      <div class="question-wrap">
+        <label for="notes">Additional Details <span class="label-badge">Optional</span></label>
+        <textarea id="notes" placeholder="Parking instructions, gate code, or anything else the client should know"></textarea>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-title="Review and Send" data-copy="Check the message, confirm consent, and choose how you want to send it." data-optional="false">
+      <div class="question-wrap review-wrap">
+        <div class="review-stack">
+          <div class="review-panel">
+            <label for="preview">Message Preview</label>
+            <textarea id="preview" readonly></textarea>
+            <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
+          </div>
+
+          <div class="consent-box">
+            <label>
+              <input id="consent" type="checkbox">
+              <span>I confirm that I have permission to contact this client and agree to the <a href="terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="secondary" onclick="sendLocalEmail()">Send Email From This Device</button>
+            <button class="tertiary" onclick="sendLocalText()">Send Text From This Device</button>
+            <button class="primary" onclick="sendBrevoEmail()">Send Reminder Email</button>
+            <button class="ghost" onclick="sendTwilioText()">Send Text Automatically</button>
+          </div>
+
+          <p class="hint">
+            Phone and email are both optional until you choose how to send. Text options need a phone number, and email options need an email address.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-controls">
+      <button id="back-button" class="wizard-back" type="button">Back</button>
+      <button id="skip-button" class="wizard-skip" type="button">Skip</button>
+      <button id="next-button" class="wizard-next" type="button">Next</button>
+    </div>
   </div>
-
-  <div class="full">
-    <label>Client Email <span id="email-badge" class="label-badge choice">Choose one</span></label>
-    <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="Enter client's email">
-  </div>
-
-  <div class="full">
-    <label>Client Name <span class="label-badge optional">Optional</span></label>
-    <input id="name" placeholder="Enter client's name">
-    <div id="name-error" class="field-error"></div>
-  </div>
-
-  <div class="full">
-    <label>Service Address <span class="label-badge optional">Optional</span></label>
-    <input id="address" placeholder="Enter service address">
-    <div id="address-error" class="field-error"></div>
-  </div>
-
-  <div class="full">
-    <label>Your Contact Info <span class="label-badge optional">Optional</span></label>
-    <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
-    <div id="businessContact-error" class="field-error"></div>
-  </div>
-
-  <div>
-    <label>Date of Service <span class="label-badge optional">Optional</span></label>
-    <input type="date" id="date">
-  </div>
-
-  <div>
-    <label>Time of Service <span class="label-badge optional">Optional</span></label>
-    <input type="time" id="time">
-  </div>
-
-  <div class="full">
-    <label>Additional Details <span class="label-badge optional">Optional</span></label>
-    <textarea id="notes"></textarea>
-  </div>
-
-  <div class="full">
-    <label>Message Preview</label>
-    <textarea id="preview" readonly></textarea>
-    <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
-  </div>
-</div>
-
-<div class="consent-box">
-  <label>
-    <input id="consent" type="checkbox">
-    <span>I confirm that I have permission to contact this client and agree to the <a href="terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>
-  </label>
-</div>
-
-<div class="actions">
-  <button class="secondary" onclick="sendLocalEmail()">Send Email From This Device</button>
-  <button class="tertiary" onclick="sendLocalText()">Send Text From This Device</button>
-  <button class="primary" onclick="sendBrevoEmail()">Send Reminder Email</button>
-  <button class="ghost" onclick="sendTwilioText()">Send Text Automatically</button>
-</div>
-
-<p class="hint">
-  Phone and email are both optional until you choose how to send. Text options need a phone number, and email options need an email address.
-</p>
-
 </div>
 
 <script src="app.js"></script>
