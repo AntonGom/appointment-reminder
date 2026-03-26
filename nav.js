@@ -60,14 +60,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function showBadge(label) {
     const normalized = String(label || "").trim().toLowerCase();
+    const isDev = normalized === "qa" || normalized === "dev";
 
     if (!normalized) {
       return;
     }
 
-    envBadge.textContent = normalized === "production" ? "Production" : normalized === "qa" ? "QA" : "Local";
+    envBadge.textContent = normalized === "production" ? "Production" : isDev ? "DEV" : "Local";
     envBadge.classList.remove("qa", "production", "local");
-    envBadge.classList.add(normalized === "production" ? "production" : normalized === "qa" ? "qa" : "local");
+    envBadge.classList.add(normalized === "production" ? "production" : isDev ? "qa" : "local");
     envBadge.hidden = false;
   }
 

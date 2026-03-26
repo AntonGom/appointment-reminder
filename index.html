@@ -672,8 +672,8 @@
 
     .email-modal {
       width: 100%;
-      max-width: 460px;
-      padding: 24px;
+      max-width: 500px;
+      padding: 28px;
       border-radius: 24px;
       background: rgba(248, 250, 252, 0.98);
       border: 1px solid rgba(148, 163, 184, 0.28);
@@ -683,15 +683,15 @@
     .email-modal h3 {
       margin: 0 0 10px;
       color: var(--text-main);
-      font-size: 28px;
-      line-height: 1.08;
+      font-size: 32px;
+      line-height: 1.12;
     }
 
     .email-modal p {
       margin: 0;
       color: var(--text-soft);
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 17px;
+      line-height: 1.7;
     }
 
     .email-modal-option {
@@ -707,23 +707,16 @@
       gap: 10px;
       align-items: flex-start;
       margin: 0;
-      font-size: 14px;
+      font-size: 17px;
       font-weight: 700;
-      line-height: 1.45;
+      line-height: 1.55;
     }
 
     .email-modal-option input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       margin: 2px 0 0;
       flex: 0 0 auto;
-    }
-
-    .email-modal-note {
-      margin-top: 10px;
-      color: var(--text-soft);
-      font-size: 13px;
-      line-height: 1.55;
     }
 
     .copy-email-wrap {
@@ -737,7 +730,7 @@
 
     .copy-email-wrap label {
       margin-bottom: 10px;
-      font-size: 15px;
+      font-size: 17px;
     }
 
     .email-modal-actions {
@@ -809,12 +802,12 @@
       }
 
       .email-modal {
-        padding: 20px;
+        padding: 22px;
         border-radius: 20px;
       }
 
       .email-modal h3 {
-        font-size: 24px;
+        font-size: 28px;
       }
 
       .email-modal-actions {
@@ -950,14 +943,13 @@
 <div id="email-modal" class="email-modal-backdrop" hidden>
   <div class="email-modal" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
     <h3 id="email-modal-title">Before you send</h3>
-    <p>Sending yourself a copy is highly recommended so you do not lose track of this appointment.</p>
+    <p>Sending yourself a copy is recommended so you have a clear record of this appointment.</p>
 
     <div class="email-modal-option">
       <label>
         <input id="sendCopy" type="checkbox">
         <span>Send appointment copy to my email address</span>
       </label>
-      <p class="email-modal-note">This will also send you the same email the client receives for your records and documentation.</p>
       <div id="copy-email-wrap" class="copy-email-wrap">
         <label for="copyEmail">Copy Email Address</label>
         <input id="copyEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" disabled>

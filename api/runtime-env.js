@@ -6,7 +6,7 @@ export default function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   res.status(200).json({
-    label: isQa ? "QA" : env === "production" ? "Production" : "Local",
+    label: isQa ? "DEV" : env === "production" ? "Production" : "Local",
     env,
     branch
   });
