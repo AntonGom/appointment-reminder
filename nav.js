@@ -1,8 +1,31 @@
 document.addEventListener("DOMContentLoaded", () => {
   const currentPage = document.body.dataset.page || "";
+  const statusCluster = document.createElement("div");
+  statusCluster.className = "status-cluster";
+
   const envBadge = document.createElement("div");
   envBadge.className = "env-badge";
   envBadge.hidden = true;
+
+  const accountChip = document.createElement("a");
+  accountChip.className = "account-chip";
+  accountChip.href = "account.html";
+  accountChip.hidden = true;
+
+  const accountChipLabel = document.createElement("span");
+  accountChipLabel.className = "account-chip-label";
+
+  const accountChipEmail = document.createElement("span");
+  accountChipEmail.className = "account-chip-email";
+  accountChipEmail.hidden = true;
+
+  const accountChipTier = document.createElement("span");
+  accountChipTier.className = "account-chip-tier";
+  accountChipTier.hidden = true;
+
+  accountChip.appendChild(accountChipLabel);
+  accountChip.appendChild(accountChipEmail);
+  accountChip.appendChild(accountChipTier);
 
   const toggle = document.createElement("button");
   toggle.className = "nav-toggle";
@@ -80,6 +103,102 @@ document.addEventListener("DOMContentLoaded", () => {
     envBadge.hidden = false;
   }
 
+  function formatTierLabel(user) {
+    const candidates = [
+      user?.user_metadata?.tier,
+      user?.user_metadata?.plan,
+      user?.app_metadata?.tier,
+      user?.app_metadata?.plan,
+      user?.app_metadata?.subscription_tier
+    ];
+
+    const rawValue = candidates.find(value => typeof value === "string" && value.trim());
+    const normalized = String(rawValue || "free").trim().toLowerCase();
+
+    if (normalized === "free") {
+      return "FREE";
+    }
+
+    if (normalized === "bronze") {
+      return "Bronze";
+    }
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  function renderSignedOutChip() {
+    accountChip.classList.remove("signed-in");
+    accountChip.classList.add("signed-out");
+    accountChip.href = "account.html";
+    accountChipLabel.textContent = "Sign Up";
+    accountChipLabel.hidden = false;
+    accountChipEmail.hidden = true;
+    accountChipTier.hidden = true;
+    accountChip.hidden = false;
+  }
+
+  function renderSignedInChip(user) {
+    accountChip.classList.remove("signed-out");
+    accountChip.classList.add("signed-in");
+    accountChip.href = "account.html";
+    accountChipLabel.hidden = true;
+    accountChipEmail.textContent = user?.email || "Account";
+    accountChipEmail.title = user?.email || "";
+    accountChipEmail.hidden = false;
+
+    const tierLabel = formatTierLabel(user);
+    accountChipTier.textContent = tierLabel;
+    accountChipTier.classList.remove("free", "bronze");
+    accountChipTier.classList.add(tierLabel === "Bronze" ? "bronze" : "free");
+    accountChipTier.hidden = false;
+    accountChip.hidden = false;
+  }
+
+  async function loadAccountChip() {
+    renderSignedOutChip();
+
+    try {
+      const configResponse = await fetch("/api/public-config", { cache: "no-store" });
+
+      if (!configResponse.ok) {
+        throw new Error("Unable to load account configuration.");
+      }
+
+      const config = await configResponse.json();
+
+      if (!config.accountsEnabled || !config.supabaseUrl || !config.supabasePublishableKey) {
+        return;
+      }
+
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+      const supabase = createClient(config.supabaseUrl, config.supabasePublishableKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      });
+
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        renderSignedInChip(session.user);
+      }
+
+      supabase.auth.onAuthStateChange((_event, nextSession) => {
+        if (nextSession?.user) {
+          renderSignedInChip(nextSession.user);
+        } else {
+          renderSignedOutChip();
+        }
+      });
+    } catch (error) {
+      renderSignedOutChip();
+    }
+  }
+
   async function loadEnvironmentBadge() {
     try {
       const response = await fetch("/api/runtime-env", { cache: "no-store" });
@@ -98,8 +217,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   loadEnvironmentBadge();
+  loadAccountChip();
 
-  document.body.appendChild(envBadge);
+  statusCluster.appendChild(accountChip);
+  statusCluster.appendChild(envBadge);
+  document.body.appendChild(statusCluster);
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
   document.body.appendChild(nav);

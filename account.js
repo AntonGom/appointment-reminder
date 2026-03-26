@@ -90,6 +90,29 @@ function formatPhone(value) {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
+function getTierLabel(user) {
+  const candidates = [
+    user?.user_metadata?.tier,
+    user?.user_metadata?.plan,
+    user?.app_metadata?.tier,
+    user?.app_metadata?.plan,
+    user?.app_metadata?.subscription_tier
+  ];
+
+  const rawValue = candidates.find(value => typeof value === "string" && value.trim());
+  const normalized = String(rawValue || "free").trim().toLowerCase();
+
+  if (normalized === "free") {
+    return "FREE";
+  }
+
+  if (normalized === "bronze") {
+    return "Bronze";
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function getClientDisplayLines(client) {
   const lines = [];
 
@@ -205,7 +228,7 @@ function updateSignedInView(user) {
   }
 
   if (accountPlan) {
-    accountPlan.textContent = "Free plan";
+    accountPlan.textContent = isSignedIn ? getTierLabel(user) : "FREE";
   }
 
   if (upgradeButton) {
