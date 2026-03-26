@@ -186,9 +186,21 @@
       background: rgba(240, 253, 244, 0.95);
     }
 
+    .stepper-button.invalid {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(254, 242, 242, 0.96);
+      box-shadow: 0 12px 24px rgba(239, 68, 68, 0.12);
+    }
+
     .stepper-button.active.complete {
       border-color: rgba(37, 99, 235, 0.42);
       background: rgba(219, 234, 254, 0.88);
+    }
+
+    .stepper-button.active.invalid {
+      border-color: rgba(220, 38, 38, 0.46);
+      background: rgba(254, 226, 226, 0.98);
+      box-shadow: 0 14px 28px rgba(220, 38, 38, 0.14);
     }
 
     .stepper-circle {
@@ -220,9 +232,21 @@
       color: #ffffff;
     }
 
+    .stepper-button.invalid .stepper-circle {
+      border-color: #dc2626;
+      background: #dc2626;
+      color: #ffffff;
+    }
+
     .stepper-button.active.complete .stepper-circle {
       border-color: #2563eb;
       background: #2563eb;
+      color: #ffffff;
+    }
+
+    .stepper-button.active.invalid .stepper-circle {
+      border-color: #dc2626;
+      background: #dc2626;
       color: #ffffff;
     }
 
@@ -644,6 +668,7 @@
       <div class="question-wrap">
         <label for="email">Client Email <span class="label-badge">Optional</span></label>
         <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="Enter client's email">
+        <div id="email-error" class="field-error"></div>
         <p class="field-note">You can skip this and use a phone number instead.</p>
       </div>
     </div>
@@ -690,6 +715,7 @@
       <div class="question-wrap">
         <label for="notes">Additional Details <span class="label-badge">Optional</span></label>
         <textarea id="notes" placeholder="Parking instructions, gate code, or anything else the client should know"></textarea>
+        <div id="notes-error" class="field-error"></div>
       </div>
     </div>
 

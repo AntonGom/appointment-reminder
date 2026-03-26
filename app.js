@@ -7,6 +7,9 @@ const FIELD_LIMITS = {
 
 const PHONE_DIGIT_LIMIT = 10;
 const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
+const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -105,27 +108,66 @@ function refreshFormState() {
     updatePreviewLayout();
   }
 
-  syncFieldLimitErrors();
+  syncFieldValidationErrors();
   renderStepNavigation();
 }
 
-function syncFieldLimitErrors() {
-  for (const [fieldId, config] of Object.entries(FIELD_LIMITS)) {
-    const value = getFieldValue(fieldId);
+function hasDisallowedLink(value, allowEmail) {
+  const hasLink = STRICT_LINK_PATTERN.test(value) || DOMAIN_PATTERN.test(value);
+  const hasEmail = allowEmail && EMAIL_PATTERN.test(value);
+  return hasLink && !hasEmail;
+}
+
+function getFieldValidationMessage(fieldId) {
+  const value = getFieldValue(fieldId);
+
+  if (!value) {
+    return "";
+  }
+
+  if (fieldId === "email" && !EMAIL_PATTERN.test(value)) {
+    return "Enter a valid email address.";
+  }
+
+  if (FIELD_LIMITS[fieldId] && value.length > FIELD_LIMITS[fieldId].maxLength) {
+    return `${FIELD_LIMITS[fieldId].label} cannot be longer than ${FIELD_LIMITS[fieldId].maxLength} characters.`;
+  }
+
+  if (fieldId === "notes" && hasDisallowedLink(value, false)) {
+    return "Links are not allowed here.";
+  }
+
+  if ((fieldId === "name" || fieldId === "address" || fieldId === "phone") && hasDisallowedLink(value, false)) {
+    return "Links are not allowed here.";
+  }
+
+  if (fieldId === "businessContact" && hasDisallowedLink(value, true)) {
+    return "Enter a phone number or email address only.";
+  }
+
+  return "";
+}
+
+function syncFieldValidationErrors() {
+  const fieldIds = ["phone", "email", "name", "address", "businessContact", "notes"];
+
+  fieldIds.forEach(fieldId => {
     const errorElement = document.getElementById(`${fieldId}-error`);
 
     if (!errorElement) {
-      continue;
+      return;
     }
 
-    if (value.length > config.maxLength) {
-      errorElement.textContent = `${config.label} cannot be longer than ${config.maxLength} characters.`;
+    const message = getFieldValidationMessage(fieldId);
+
+    if (message) {
+      errorElement.textContent = message;
       errorElement.classList.add("visible");
     } else {
       errorElement.textContent = "";
       errorElement.classList.remove("visible");
     }
-  }
+  });
 }
 
 function updatePreviewLayout() {
@@ -201,9 +243,6 @@ function validateMessageSafety() {
   const combined = `${notes}\n${message}`.toLowerCase();
   const messageLengthLimit = 1200;
 
-  const strictLinkPattern = /(https?:\/\/|www\.)/i;
-  const domainPattern = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
   const restrictedFields = [
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
@@ -219,8 +258,8 @@ function validateMessageSafety() {
       return false;
     }
 
-    const hasLink = strictLinkPattern.test(field.value) || domainPattern.test(field.value);
-    const hasEmail = field.allowEmail && emailPattern.test(field.value);
+    const hasLink = STRICT_LINK_PATTERN.test(field.value) || DOMAIN_PATTERN.test(field.value);
+    const hasEmail = field.allowEmail && EMAIL_PATTERN.test(field.value);
     if (hasLink && !hasEmail) {
       alert(`Links are not allowed in ${field.label}.`);
       return false;
@@ -305,6 +344,15 @@ function isStepComplete(step, index) {
   return hasValueForField(fieldId);
 }
 
+function isStepInvalid(step) {
+  if (!step) {
+    return false;
+  }
+
+  const fieldId = step.dataset.field || "";
+  return Boolean(getFieldValidationMessage(fieldId));
+}
+
 function renderStepNavigation() {
   const stepper = document.getElementById("stepper");
 
@@ -317,13 +365,14 @@ function renderStepNavigation() {
   wizardSteps.forEach((step, index) => {
     const button = document.createElement("button");
     const label = step.dataset.nav || step.dataset.title || `Step ${index + 1}`;
+    const invalid = isStepInvalid(step);
     const complete = isStepComplete(step, index);
 
     button.type = "button";
     button.className = "stepper-button";
     button.setAttribute("aria-label", `Go to ${label}`);
     button.innerHTML = `
-      <span class="stepper-circle">${complete ? "✓" : index + 1}</span>
+      <span class="stepper-circle">${invalid ? "X" : complete ? "✓" : index + 1}</span>
       <span class="stepper-label">${label}</span>
     `;
 
@@ -331,7 +380,9 @@ function renderStepNavigation() {
       button.classList.add("active");
     }
 
-    if (complete) {
+    if (invalid) {
+      button.classList.add("invalid");
+    } else if (complete) {
       button.classList.add("complete");
     }
 
@@ -534,6 +585,11 @@ async function sendBrevoEmail() {
     return;
   }
 
+  if (!EMAIL_PATTERN.test(email)) {
+    alert("Enter a valid client email address.");
+    return;
+  }
+
   if (!message) {
     alert("Message is required");
     return;
@@ -575,6 +631,11 @@ function sendLocalEmail() {
 
   if (!email) {
     alert("Client email is required");
+    return;
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    alert("Enter a valid client email address.");
     return;
   }
 
