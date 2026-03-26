@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentPage = document.body.dataset.page || "";
   const statusCluster = document.createElement("div");
   statusCluster.className = "status-cluster";
+  const accountMenu = document.createElement("div");
+  accountMenu.className = "account-menu";
 
   const envBadge = document.createElement("div");
   envBadge.className = "env-badge";
@@ -23,9 +25,25 @@ document.addEventListener("DOMContentLoaded", () => {
   accountChipTier.className = "account-chip-tier";
   accountChipTier.hidden = true;
 
+  const accountDropdown = document.createElement("div");
+  accountDropdown.className = "account-dropdown";
+  accountDropdown.hidden = true;
+
+  const accountDropdownLink = document.createElement("a");
+  accountDropdownLink.className = "account-dropdown-link";
+  accountDropdownLink.href = "account.html";
+  accountDropdownLink.textContent = "Account";
+
+  const accountDropdownSignOut = document.createElement("button");
+  accountDropdownSignOut.className = "account-dropdown-action";
+  accountDropdownSignOut.type = "button";
+  accountDropdownSignOut.textContent = "Sign Out";
+
   accountChip.appendChild(accountChipLabel);
   accountChip.appendChild(accountChipEmail);
   accountChip.appendChild(accountChipTier);
+  accountDropdown.appendChild(accountDropdownLink);
+  accountDropdown.appendChild(accountDropdownSignOut);
 
   const toggle = document.createElement("button");
   toggle.className = "nav-toggle";
@@ -57,6 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
     </nav>
   `;
 
+  let supabaseClient = null;
+  let isSignedIn = false;
+
   function closeNav() {
     nav.classList.remove("open");
     overlay.classList.remove("open");
@@ -73,6 +94,18 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle.setAttribute("aria-expanded", "true");
   }
 
+  function closeAccountMenu() {
+    accountMenu.classList.remove("open");
+    accountDropdown.hidden = true;
+    accountChip.setAttribute("aria-expanded", "false");
+  }
+
+  function openAccountMenu() {
+    accountMenu.classList.add("open");
+    accountDropdown.hidden = false;
+    accountChip.setAttribute("aria-expanded", "true");
+  }
+
   toggle.addEventListener("click", () => {
     if (nav.classList.contains("open")) {
       closeNav();
@@ -86,6 +119,54 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
       closeNav();
+      closeAccountMenu();
+    }
+  });
+
+  document.addEventListener("click", event => {
+    if (!accountMenu.contains(event.target)) {
+      closeAccountMenu();
+    }
+  });
+
+  accountChip.addEventListener("click", event => {
+    if (!isSignedIn) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (accountMenu.classList.contains("open")) {
+      closeAccountMenu();
+    } else {
+      openAccountMenu();
+    }
+  });
+
+  accountDropdownLink.addEventListener("click", () => {
+    closeAccountMenu();
+  });
+
+  accountDropdownSignOut.addEventListener("click", async () => {
+    if (!supabaseClient) {
+      window.location.href = "account.html";
+      return;
+    }
+
+    accountDropdownSignOut.disabled = true;
+
+    try {
+      const { error } = await supabaseClient.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
+      closeAccountMenu();
+    } catch (error) {
+      window.alert("We could not sign you out right now. Please try again.");
+    } finally {
+      accountDropdownSignOut.disabled = false;
     }
   });
 
@@ -127,20 +208,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderSignedOutChip() {
+    isSignedIn = false;
     accountChip.classList.remove("signed-in");
     accountChip.classList.add("signed-out");
     accountChip.href = "account.html";
+    accountChip.removeAttribute("aria-haspopup");
     accountChipLabel.textContent = "Sign Up";
     accountChipLabel.hidden = false;
     accountChipEmail.hidden = true;
     accountChipTier.hidden = true;
     accountChip.hidden = false;
+    closeAccountMenu();
   }
 
   function renderSignedInChip(user) {
+    isSignedIn = true;
     accountChip.classList.remove("signed-out");
     accountChip.classList.add("signed-in");
     accountChip.href = "account.html";
+    accountChip.setAttribute("aria-haspopup", "menu");
     accountChipLabel.hidden = true;
     accountChipEmail.textContent = user?.email || "Account";
     accountChipEmail.title = user?.email || "";
@@ -171,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-      const supabase = createClient(config.supabaseUrl, config.supabasePublishableKey, {
+      supabaseClient = createClient(config.supabaseUrl, config.supabasePublishableKey, {
         auth: {
           autoRefreshToken: true,
           persistSession: true,
@@ -181,13 +267,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const {
         data: { session }
-      } = await supabase.auth.getSession();
+      } = await supabaseClient.auth.getSession();
 
       if (session?.user) {
         renderSignedInChip(session.user);
       }
 
-      supabase.auth.onAuthStateChange((_event, nextSession) => {
+      supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
         if (nextSession?.user) {
           renderSignedInChip(nextSession.user);
         } else {
@@ -220,7 +306,9 @@ document.addEventListener("DOMContentLoaded", () => {
   loadAccountChip();
 
   document.body.appendChild(statusCluster);
-  statusCluster.appendChild(accountChip);
+  accountMenu.appendChild(accountChip);
+  accountMenu.appendChild(accountDropdown);
+  statusCluster.appendChild(accountMenu);
   document.body.appendChild(envBadge);
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
