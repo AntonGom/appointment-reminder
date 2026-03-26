@@ -100,7 +100,6 @@ function generateMessage() {
     lines.push("");
   }
   lines.push("Thank you,");
-  lines.push("Appointment Reminder");
 
   return lines.join("\n");
 }
