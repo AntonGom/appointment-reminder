@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
   const currentPage = document.body.dataset.page || "";
+  const envBadge = document.createElement("div");
+  envBadge.className = "env-badge";
+  envBadge.hidden = true;
 
   const toggle = document.createElement("button");
   toggle.className = "nav-toggle";
@@ -55,6 +58,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  function showBadge(label) {
+    const normalized = String(label || "").trim().toLowerCase();
+
+    if (!normalized) {
+      return;
+    }
+
+    envBadge.textContent = normalized === "production" ? "Production" : normalized === "qa" ? "QA" : "Local";
+    envBadge.classList.remove("qa", "production", "local");
+    envBadge.classList.add(normalized === "production" ? "production" : normalized === "qa" ? "qa" : "local");
+    envBadge.hidden = false;
+  }
+
+  async function loadEnvironmentBadge() {
+    try {
+      const response = await fetch("/api/runtime-env", { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error("Unable to load runtime environment.");
+      }
+
+      const data = await response.json();
+      showBadge(data.label);
+    } catch (error) {
+      if (window.location.hostname.includes("git-codex-qa")) {
+        showBadge("QA");
+      }
+    }
+  }
+
+  loadEnvironmentBadge();
+
+  document.body.appendChild(envBadge);
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
   document.body.appendChild(nav);
