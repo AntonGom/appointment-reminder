@@ -492,6 +492,51 @@
       text-decoration: underline;
     }
 
+    .copy-option-box {
+      padding: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 18px;
+      background: #f8fafc;
+    }
+
+    .copy-option-box label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .copy-option-box input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      flex: 0 0 auto;
+    }
+
+    .copy-option-note {
+      margin: 10px 0 0;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .copy-email-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .copy-email-wrap.visible {
+      display: block;
+    }
+
+    .copy-email-wrap label {
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
     .actions {
       display: grid;
       gap: 12px;
@@ -767,8 +812,21 @@
             </label>
           </div>
 
+          <div class="copy-option-box">
+            <label>
+              <input id="sendCopy" type="checkbox">
+              <span>Send Appointment copy to my email address</span>
+            </label>
+            <p class="copy-option-note">This will also send you the email the client is receiving for your records and documentation.</p>
+            <div id="copy-email-wrap" class="copy-email-wrap">
+              <label for="copyEmail">Copy Email Address</label>
+              <input id="copyEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" disabled>
+              <div id="copyEmail-error" class="field-error"></div>
+            </div>
+          </div>
+
           <div class="actions">
-            <button class="tertiary" onclick="sendLocalText()">Send Text From This Device</button>
+            <button class="tertiary" onclick="sendLocalText()">Send Text Message From This Device</button>
             <button class="primary" onclick="sendBrevoEmail()">Send Automated Email</button>
           </div>
 

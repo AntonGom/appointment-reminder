@@ -6,7 +6,7 @@ const FIELD_LIMITS = {
 };
 
 const PHONE_DIGIT_LIMIT = 10;
-const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
+const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes", "copyEmail"];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
@@ -16,6 +16,7 @@ let currentStepIndex = 0;
 let wizardSteps = [];
 let visitedSteps = [];
 let lastAddressLookup = "";
+let copyEmailDirty = false;
 
 function formatTime(time) {
   if (!time) return "";
@@ -103,6 +104,8 @@ function generateMessage() {
 }
 
 function refreshFormState() {
+  syncCopyEmailOption();
+
   const preview = document.getElementById("preview");
 
   if (preview) {
@@ -250,6 +253,10 @@ function hasDisallowedLink(value, allowEmail) {
 function getFieldValidationMessage(fieldId) {
   const value = getFieldValue(fieldId);
 
+  if (fieldId === "copyEmail") {
+    return getCopyEmailValidationMessage();
+  }
+
   if (!value) {
     return "";
   }
@@ -278,7 +285,7 @@ function getFieldValidationMessage(fieldId) {
 }
 
 function syncFieldValidationErrors() {
-  const fieldIds = ["phone", "email", "name", "address", "businessContact", "notes"];
+  const fieldIds = ["phone", "email", "name", "address", "businessContact", "notes", "copyEmail"];
 
   fieldIds.forEach(fieldId => {
     const errorElement = document.getElementById(`${fieldId}-error`);
@@ -336,6 +343,60 @@ function getPhoneDigits() {
   return normalizePhoneDigits(getFieldValue("phone"));
 }
 
+function shouldSendCopy() {
+  const checkbox = document.getElementById("sendCopy");
+  return Boolean(checkbox && checkbox.checked);
+}
+
+function getCopyEmail() {
+  return getFieldValue("copyEmail");
+}
+
+function getSuggestedCopyEmail() {
+  const businessContact = getFieldValue("businessContact");
+  return EMAIL_PATTERN.test(businessContact) ? businessContact : "";
+}
+
+function syncCopyEmailOption() {
+  const checkbox = document.getElementById("sendCopy");
+  const copyEmailWrap = document.getElementById("copy-email-wrap");
+  const copyEmailInput = document.getElementById("copyEmail");
+
+  if (!checkbox || !copyEmailWrap || !copyEmailInput) {
+    return;
+  }
+
+  const enabled = checkbox.checked;
+  copyEmailWrap.classList.toggle("visible", enabled);
+  copyEmailInput.disabled = !enabled;
+
+  if (!enabled) {
+    return;
+  }
+
+  if (!copyEmailDirty) {
+    copyEmailInput.value = getSuggestedCopyEmail();
+  }
+}
+
+function getCopyEmailValidationMessage() {
+  if (!shouldSendCopy()) {
+    return "";
+  }
+
+  const copyEmail = getCopyEmail();
+
+  if (!copyEmail) {
+    return "Enter the email address where you want the appointment copy sent.";
+  }
+
+  if (!EMAIL_PATTERN.test(copyEmail)) {
+    return "Enter a valid email address.";
+  }
+
+  return "";
+}
+
 function getReminderPayload() {
   return {
     clientEmail: getEmail(),
@@ -345,7 +406,9 @@ function getReminderPayload() {
     serviceAddress: getFieldValue("address"),
     businessContact: getFieldValue("businessContact"),
     serviceDate: getFieldValue("date"),
-    serviceTime: getFieldValue("time")
+    serviceTime: getFieldValue("time"),
+    sendCopy: shouldSendCopy(),
+    copyEmail: getCopyEmail()
   };
 }
 
@@ -371,6 +434,12 @@ function validateMessageSafety() {
   const message = getMessage();
   const combined = `${notes}\n${message}`.toLowerCase();
   const messageLengthLimit = 1200;
+  const copyEmailMessage = getCopyEmailValidationMessage();
+
+  if (copyEmailMessage) {
+    alert(copyEmailMessage);
+    return false;
+  }
 
   const restrictedFields = [
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
@@ -479,6 +548,11 @@ function isStepInvalid(step) {
   }
 
   const fieldId = step.dataset.field || "";
+
+  if (fieldId === "consent") {
+    return Boolean(getCopyEmailValidationMessage());
+  }
+
   return Boolean(getFieldValidationMessage(fieldId));
 }
 
@@ -684,6 +758,10 @@ FORM_FIELD_IDS.forEach(fieldId => {
       syncPhoneFieldFormatting();
     }
 
+    if (fieldId === "copyEmail") {
+      copyEmailDirty = true;
+    }
+
     if (fieldId === "address") {
       lastAddressLookup = "";
       setAddressMapPreview({
@@ -705,6 +783,17 @@ if (addressInput) {
 const consentInput = document.getElementById("consent");
 if (consentInput) {
   consentInput.addEventListener("change", renderStepNavigation);
+}
+
+const sendCopyInput = document.getElementById("sendCopy");
+if (sendCopyInput) {
+  sendCopyInput.addEventListener("change", () => {
+    if (sendCopyInput.checked && !getCopyEmail()) {
+      copyEmailDirty = false;
+    }
+
+    refreshFormState();
+  });
 }
 
 syncPhoneFieldFormatting();

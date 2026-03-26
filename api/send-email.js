@@ -12,12 +12,15 @@ export default async function handler(req, res) {
       serviceAddress,
       businessContact,
       serviceDate,
-      serviceTime
+      serviceTime,
+      sendCopy,
+      copyEmail
     } = req.body;
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "Appointment Reminder";
-    const copyEmail = process.env.BREVO_COPY_EMAIL || "";
+    const wantsCopy = sendCopy === true || sendCopy === "true";
+    const normalizedCopyEmail = String(copyEmail || "").trim();
 
     if (!apiKey) {
       return res.status(500).json({ error: "Missing BREVO_API_KEY in Vercel environment variables." });
@@ -29,6 +32,20 @@ export default async function handler(req, res) {
 
     if (!clientEmail || !message) {
       return res.status(400).json({ error: "clientEmail and message are required." });
+    }
+
+    if (!EMAIL_PATTERN.test(clientEmail)) {
+      return res.status(400).json({ error: "Enter a valid client email address." });
+    }
+
+    if (wantsCopy) {
+      if (!normalizedCopyEmail) {
+        return res.status(400).json({ error: "Enter the email address where you want the appointment copy sent." });
+      }
+
+      if (!EMAIL_PATTERN.test(normalizedCopyEmail)) {
+        return res.status(400).json({ error: "Enter a valid email address." });
+      }
     }
 
     const validationError = validateReminderPayload({
@@ -64,13 +81,13 @@ export default async function handler(req, res) {
       htmlContent: htmlMessage
     });
 
-    if (copyEmail && copyEmail !== clientEmail) {
+    if (wantsCopy && normalizedCopyEmail && normalizedCopyEmail !== clientEmail) {
       await sendBrevoEmail({
         apiKey,
         senderEmail,
         senderName,
-        toEmail: copyEmail,
-        subject: "Copy of Reminder",
+        toEmail: normalizedCopyEmail,
+        subject: "Copy of Appointment Reminder",
         htmlContent: htmlMessage
       });
     }
@@ -244,6 +261,8 @@ function getBaseUrl(req) {
   const proto = req.headers["x-forwarded-proto"] || "https";
   return `${proto}://${host}`;
 }
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 function validateReminderPayload({ clientName, clientPhone, serviceAddress, businessContact, message }) {
   const messageLengthLimit = 1200;
