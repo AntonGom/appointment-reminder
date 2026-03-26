@@ -1,3 +1,24 @@
+(() => {
+  const currentPath = window.location.pathname || "/";
+  const isAccountPage = /\/account\.html$/i.test(currentPath);
+
+  if (isAccountPage) {
+    return;
+  }
+
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+  const looksLikeAuthCallback =
+    /access_token=|refresh_token=|type=(signup|magiclink|recovery|invite)/i.test(hash) ||
+    /(^|[?&])(code|token_hash|type)=/i.test(search);
+
+  if (!looksLikeAuthCallback) {
+    return;
+  }
+
+  window.location.replace(`${window.location.origin}/account.html${search}${hash}`);
+})();
+
 const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
