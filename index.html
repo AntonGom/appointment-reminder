@@ -394,38 +394,6 @@
       line-height: 1.55;
     }
 
-    .map-preview {
-      display: none;
-      margin-top: 14px;
-      padding: 10px;
-      border-radius: 18px;
-      background: #eef4ff;
-      border: 1px solid rgba(96, 165, 250, 0.26);
-    }
-
-    .map-preview.visible {
-      display: block;
-    }
-
-    .map-preview-frame {
-      width: 100%;
-      height: 220px;
-      border: 0;
-      border-radius: 14px;
-      background: #dbeafe;
-    }
-
-    .map-preview-message {
-      margin: 0;
-      color: #475569;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .map-preview.visible .map-preview-message {
-      margin-top: 10px;
-    }
-
     .review-stack {
       display: grid;
       gap: 18px;
@@ -718,10 +686,6 @@
         <label for="address">Service Address <span class="label-badge">Optional</span></label>
         <input id="address" placeholder="Enter service address">
         <div id="address-error" class="field-error"></div>
-        <div id="map-preview" class="map-preview" aria-live="polite">
-          <iframe id="map-preview-frame" class="map-preview-frame" title="Service address map preview" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-          <p id="map-preview-message" class="map-preview-message"></p>
-        </div>
       </div>
     </div>
 
