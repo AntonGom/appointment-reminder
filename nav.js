@@ -219,9 +219,9 @@ document.addEventListener("DOMContentLoaded", () => {
   loadEnvironmentBadge();
   loadAccountChip();
 
-  statusCluster.appendChild(accountChip);
-  statusCluster.appendChild(envBadge);
   document.body.appendChild(statusCluster);
+  statusCluster.appendChild(accountChip);
+  document.body.appendChild(envBadge);
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
   document.body.appendChild(nav);

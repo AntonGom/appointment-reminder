@@ -36,6 +36,10 @@
 }
 
 .env-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 995;
   min-width: 84px;
   padding: 10px 14px;
   border-radius: 14px;
@@ -279,6 +283,8 @@
   }
 
   .env-badge {
+    right: 12px;
+    bottom: 12px;
     min-width: 76px;
     padding: 9px 12px;
     border-radius: 12px;
