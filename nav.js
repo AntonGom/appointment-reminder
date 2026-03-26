@@ -210,6 +210,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderSignedOutChip() {
     isSignedIn = false;
+    accountMenu.classList.remove("signed-in");
+    accountMenu.classList.add("signed-out");
     accountChip.classList.remove("signed-in");
     accountChip.classList.add("signed-out");
     accountChip.removeAttribute("aria-haspopup");
@@ -223,6 +225,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderSignedInChip(user) {
     isSignedIn = true;
+    accountMenu.classList.remove("signed-out");
+    accountMenu.classList.add("signed-in");
     accountChip.classList.remove("signed-out");
     accountChip.classList.add("signed-in");
     accountChip.setAttribute("aria-haspopup", "menu");

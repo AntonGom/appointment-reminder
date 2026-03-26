@@ -26,6 +26,11 @@
   max-width: min(220px, calc(100vw - 112px));
 }
 
+.account-menu.signed-out {
+  width: auto;
+  max-width: max-content;
+}
+
 .account-chip[hidden],
 .account-dropdown[hidden],
 .env-badge[hidden] {
@@ -382,6 +387,11 @@
   .account-menu {
     width: min(164px, calc(100vw - 104px));
     max-width: min(164px, calc(100vw - 104px));
+  }
+
+  .account-menu.signed-out {
+    width: auto;
+    max-width: max-content;
   }
 
   .account-chip.signed-out {
