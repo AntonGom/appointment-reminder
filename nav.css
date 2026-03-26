@@ -20,9 +20,10 @@
 
 .account-menu {
   position: relative;
-  display: inline-flex;
+  display: flex;
   min-width: 0;
-  max-width: min(248px, calc(100vw - 112px));
+  width: min(220px, calc(100vw - 112px));
+  max-width: min(220px, calc(100vw - 112px));
 }
 
 .account-chip[hidden],
@@ -83,6 +84,7 @@
   background: rgba(15, 23, 42, 0.88);
   color: #f8fafc;
   text-decoration: none;
+  overflow: hidden;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.26);
   backdrop-filter: blur(10px);
   display: inline-flex;
@@ -371,7 +373,8 @@
   }
 
   .account-menu {
-    max-width: min(168px, calc(100vw - 104px));
+    width: min(164px, calc(100vw - 104px));
+    max-width: min(164px, calc(100vw - 104px));
   }
 
   .account-chip.signed-out {
