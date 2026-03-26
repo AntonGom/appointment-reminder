@@ -106,6 +106,10 @@
 }
 
 .account-chip.signed-out {
+  width: auto;
+  min-width: unset;
+  max-width: max-content;
+  flex: 0 0 auto;
   padding: 10px 14px;
 }
 
@@ -381,6 +385,10 @@
   }
 
   .account-chip.signed-out {
+    width: auto;
+    min-width: unset;
+    max-width: max-content;
+    flex: 0 0 auto;
     padding: 8px 12px;
   }
 
