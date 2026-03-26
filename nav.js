@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <p class="site-nav-copy">Simple reminders for small businesses that want fewer no-shows without a complicated scheduling system.</p>
     <nav class="site-nav-links">
       <a href="index.html"${currentPage === "home" ? ' class="active"' : ""}>Home</a>
+      <a href="account.html"${currentPage === "account" ? ' class="active"' : ""}>Account</a>
       <a href="about.html"${currentPage === "about" ? ' class="active"' : ""}>About</a>
       <a href="terms.html"${currentPage === "terms" ? ' class="active"' : ""}>Terms</a>
       <a href="privacy.html"${currentPage === "privacy" ? ' class="active"' : ""}>Privacy</a>
