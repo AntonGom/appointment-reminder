@@ -67,8 +67,12 @@
 }
 
 .account-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: auto;
   min-height: 44px;
-  max-width: min(280px, calc(100vw - 196px));
+  max-width: min(248px, calc(100vw - 112px));
   padding: 9px 12px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -79,7 +83,11 @@
   backdrop-filter: blur(10px);
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
 }
 
 .account-chip:hover {
@@ -349,7 +357,7 @@
 
   .account-chip {
     min-height: 40px;
-    max-width: min(180px, calc(100vw - 168px));
+    max-width: min(168px, calc(100vw - 104px));
     padding: 8px 10px;
     border-radius: 12px;
     gap: 8px;
