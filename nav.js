@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   toggle.className = "nav-toggle";
   toggle.type = "button";
   toggle.setAttribute("aria-label", "Open navigation");
+  toggle.setAttribute("aria-expanded", "false");
   toggle.innerHTML = `
     <span>
       <span class="nav-toggle-bar"></span>
@@ -35,11 +36,17 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeNav() {
     nav.classList.remove("open");
     overlay.classList.remove("open");
+    toggle.classList.remove("open");
+    toggle.setAttribute("aria-label", "Open navigation");
+    toggle.setAttribute("aria-expanded", "false");
   }
 
   function openNav() {
     nav.classList.add("open");
     overlay.classList.add("open");
+    toggle.classList.add("open");
+    toggle.setAttribute("aria-label", "Close navigation");
+    toggle.setAttribute("aria-expanded", "true");
   }
 
   toggle.addEventListener("click", () => {
