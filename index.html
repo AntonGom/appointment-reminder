@@ -492,51 +492,6 @@
       text-decoration: underline;
     }
 
-    .copy-option-box {
-      padding: 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 18px;
-      background: #f8fafc;
-    }
-
-    .copy-option-box label {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      margin: 0;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.45;
-    }
-
-    .copy-option-box input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      margin: 2px 0 0;
-      flex: 0 0 auto;
-    }
-
-    .copy-option-note {
-      margin: 10px 0 0;
-      color: var(--text-soft);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .copy-email-wrap {
-      display: none;
-      margin-top: 14px;
-    }
-
-    .copy-email-wrap.visible {
-      display: block;
-    }
-
-    .copy-email-wrap label {
-      margin-bottom: 10px;
-      font-size: 15px;
-    }
-
     .actions {
       display: grid;
       gap: 12px;
@@ -568,6 +523,36 @@
 
     .primary {
       background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
+    #send-email-button {
+      position: relative;
+    }
+
+    #send-email-button.loading {
+      padding-right: 46px;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
+      animation: emailPulse 1s ease infinite;
+    }
+
+    #send-email-button.loading::after {
+      content: "";
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      margin-top: -8px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.38);
+      border-top-color: #ffffff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    #send-email-button.sent {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      box-shadow: 0 14px 30px rgba(22, 163, 74, 0.24);
+      transform: translateY(-1px) scale(1.01);
     }
 
     .secondary {
@@ -614,13 +599,6 @@
       background: linear-gradient(135deg, #2563eb, #1d4ed8);
     }
 
-    .hint {
-      margin-top: 2px;
-      font-size: 12px;
-      color: var(--text-soft);
-      line-height: 1.55;
-    }
-
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -652,6 +630,134 @@
         opacity: 1;
         transform: translateX(0) translateY(0);
       }
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes emailPulse {
+      0%,
+      100% {
+        transform: translateY(0);
+        box-shadow: 0 14px 30px rgba(37, 99, 235, 0.2);
+      }
+      50% {
+        transform: translateY(-1px) scale(1.01);
+        box-shadow: 0 18px 34px rgba(37, 99, 235, 0.28);
+      }
+    }
+
+    .email-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(15, 23, 42, 0.58);
+      backdrop-filter: blur(8px);
+    }
+
+    .email-modal-backdrop.visible {
+      display: flex;
+      animation: fadeIn 0.18s ease;
+    }
+
+    .email-modal {
+      width: 100%;
+      max-width: 460px;
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(248, 250, 252, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
+    }
+
+    .email-modal h3 {
+      margin: 0 0 10px;
+      color: var(--text-main);
+      font-size: 28px;
+      line-height: 1.08;
+    }
+
+    .email-modal p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .email-modal-option {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 18px;
+      background: #ffffff;
+    }
+
+    .email-modal-option label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .email-modal-option input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 2px 0 0;
+      flex: 0 0 auto;
+    }
+
+    .email-modal-note {
+      margin-top: 10px;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .copy-email-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .copy-email-wrap.visible {
+      display: block;
+    }
+
+    .copy-email-wrap label {
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    .email-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .email-modal-cancel {
+      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+      color: #0f172a;
+    }
+
+    .email-modal-continue {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
+
+    body.modal-open {
+      overflow: hidden;
     }
 
     @media (max-width: 560px) {
@@ -700,6 +806,19 @@
         min-height: 50px;
         padding: 13px 10px;
         font-size: 14px;
+      }
+
+      .email-modal {
+        padding: 20px;
+        border-radius: 20px;
+      }
+
+      .email-modal h3 {
+        font-size: 24px;
+      }
+
+      .email-modal-actions {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -812,27 +931,10 @@
             </label>
           </div>
 
-          <div class="copy-option-box">
-            <label>
-              <input id="sendCopy" type="checkbox">
-              <span>Send Appointment copy to my email address</span>
-            </label>
-            <p class="copy-option-note">This will also send you the email the client is receiving for your records and documentation.</p>
-            <div id="copy-email-wrap" class="copy-email-wrap">
-              <label for="copyEmail">Copy Email Address</label>
-              <input id="copyEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" disabled>
-              <div id="copyEmail-error" class="field-error"></div>
-            </div>
-          </div>
-
           <div class="actions">
             <button class="tertiary" onclick="sendLocalText()">Send Text Message From This Device</button>
-            <button class="primary" onclick="sendBrevoEmail()">Send Automated Email</button>
+            <button id="send-email-button" class="primary" onclick="sendBrevoEmail()">Send Automated Email</button>
           </div>
-
-          <p class="hint">
-            Text needs a phone number. Automated email needs an email address.
-          </p>
         </div>
       </div>
     </div>
@@ -841,6 +943,31 @@
       <button id="back-button" class="wizard-back" type="button">Back</button>
       <button id="skip-button" class="wizard-skip" type="button">Skip</button>
       <button id="next-button" class="wizard-next" type="button">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="email-modal" class="email-modal-backdrop" hidden>
+  <div class="email-modal" role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
+    <h3 id="email-modal-title">Before you send</h3>
+    <p>Sending yourself a copy is highly recommended so you do not lose track of this appointment.</p>
+
+    <div class="email-modal-option">
+      <label>
+        <input id="sendCopy" type="checkbox">
+        <span>Send appointment copy to my email address</span>
+      </label>
+      <p class="email-modal-note">This will also send you the same email the client receives for your records and documentation.</p>
+      <div id="copy-email-wrap" class="copy-email-wrap">
+        <label for="copyEmail">Copy Email Address</label>
+        <input id="copyEmail" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com" disabled>
+        <div id="copyEmail-error" class="field-error"></div>
+      </div>
+    </div>
+
+    <div class="email-modal-actions">
+      <button class="email-modal-cancel" type="button" onclick="closeEmailModal()">Cancel</button>
+      <button class="email-modal-continue" type="button" onclick="confirmSendBrevoEmail()">Continue Sending</button>
     </div>
   </div>
 </div>

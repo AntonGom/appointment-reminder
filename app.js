@@ -6,7 +6,7 @@ const FIELD_LIMITS = {
 };
 
 const PHONE_DIGIT_LIMIT = 10;
-const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes", "copyEmail"];
+const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
@@ -17,6 +17,7 @@ let wizardSteps = [];
 let visitedSteps = [];
 let lastAddressLookup = "";
 let copyEmailDirty = false;
+let sendEmailResetTimer = null;
 
 function formatTime(time) {
   if (!time) return "";
@@ -425,7 +426,8 @@ function requireConsent() {
   return true;
 }
 
-function validateMessageSafety() {
+function validateMessageSafety(options = {}) {
+  const { includeCopyEmailValidation = true } = options;
   const name = getFieldValue("name");
   const notes = getFieldValue("notes");
   const phone = getFieldValue("phone");
@@ -436,7 +438,7 @@ function validateMessageSafety() {
   const messageLengthLimit = 1200;
   const copyEmailMessage = getCopyEmailValidationMessage();
 
-  if (copyEmailMessage) {
+  if (includeCopyEmailValidation && copyEmailMessage) {
     alert(copyEmailMessage);
     return false;
   }
@@ -548,11 +550,6 @@ function isStepInvalid(step) {
   }
 
   const fieldId = step.dataset.field || "";
-
-  if (fieldId === "consent") {
-    return Boolean(getCopyEmailValidationMessage());
-  }
-
   return Boolean(getFieldValidationMessage(fieldId));
 }
 
@@ -758,10 +755,6 @@ FORM_FIELD_IDS.forEach(fieldId => {
       syncPhoneFieldFormatting();
     }
 
-    if (fieldId === "copyEmail") {
-      copyEmailDirty = true;
-    }
-
     if (fieldId === "address") {
       lastAddressLookup = "";
       setAddressMapPreview({
@@ -796,17 +789,121 @@ if (sendCopyInput) {
   });
 }
 
+const copyEmailInput = document.getElementById("copyEmail");
+if (copyEmailInput) {
+  copyEmailInput.addEventListener("input", () => {
+    copyEmailDirty = true;
+    refreshFormState();
+  });
+}
+
+const emailModal = document.getElementById("email-modal");
+if (emailModal) {
+  emailModal.addEventListener("click", event => {
+    if (event.target === emailModal) {
+      closeEmailModal();
+    }
+  });
+}
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && emailModal && !emailModal.hidden) {
+    closeEmailModal();
+  }
+});
+
 syncPhoneFieldFormatting();
 refreshFormState();
 initWizard();
 
-async function sendBrevoEmail() {
-  if (!requireConsent()) {
+function openEmailModal() {
+  const modal = document.getElementById("email-modal");
+  const sendCopyCheckbox = document.getElementById("sendCopy");
+
+  if (!modal) {
     return;
   }
 
-  if (!validateMessageSafety()) {
+  if (sendCopyCheckbox && sendCopyCheckbox.checked && !getCopyEmail()) {
+    copyEmailDirty = false;
+  }
+
+  syncCopyEmailOption();
+  modal.hidden = false;
+  modal.classList.add("visible");
+  document.body.classList.add("modal-open");
+
+  window.setTimeout(() => {
+    const focusTarget = sendCopyCheckbox && sendCopyCheckbox.checked
+      ? document.getElementById("copyEmail")
+      : sendCopyCheckbox;
+    if (focusTarget) {
+      focusTarget.focus({ preventScroll: true });
+    }
+  }, 40);
+}
+
+function closeEmailModal() {
+  const modal = document.getElementById("email-modal");
+
+  if (!modal) {
     return;
+  }
+
+  modal.classList.remove("visible");
+  modal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function setSendEmailButtonState(state) {
+  const button = document.getElementById("send-email-button");
+
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent;
+  }
+
+  window.clearTimeout(sendEmailResetTimer);
+  button.classList.remove("loading", "sent");
+  button.disabled = false;
+
+  if (state === "loading") {
+    button.disabled = true;
+    button.classList.add("loading");
+    button.textContent = "Sending...";
+    return;
+  }
+
+  if (state === "sent") {
+    button.classList.add("sent");
+    button.textContent = "Email Sent";
+    sendEmailResetTimer = window.setTimeout(() => {
+      setSendEmailButtonState("idle");
+    }, 1800);
+    return;
+  }
+
+  button.textContent = button.dataset.defaultText;
+}
+
+function getBrevoPayloadOrAlert() {
+  return getBrevoPayloadOrAlertInternal(true);
+}
+
+function getBrevoPayloadOrAlertForModalOpen() {
+  return getBrevoPayloadOrAlertInternal(false);
+}
+
+function getBrevoPayloadOrAlertInternal(includeCopyEmailValidation) {
+  if (!requireConsent()) {
+    return null;
+  }
+
+  if (!validateMessageSafety({ includeCopyEmailValidation })) {
+    return null;
   }
 
   const payload = getReminderPayload();
@@ -815,38 +912,62 @@ async function sendBrevoEmail() {
 
   if (!email) {
     alert("Email is required");
-    return;
+    return null;
   }
 
   if (!EMAIL_PATTERN.test(email)) {
     alert("Enter a valid client email address.");
-    return;
+    return null;
   }
 
   if (!message) {
     alert("Message is required");
+    return null;
+  }
+
+  return payload;
+}
+
+function sendBrevoEmail() {
+  const payload = getBrevoPayloadOrAlertForModalOpen();
+
+  if (!payload) {
     return;
   }
 
-  const confirmed = window.confirm("Are you sure you want to send this automated email?");
-  if (!confirmed) {
+  openEmailModal();
+}
+
+async function confirmSendBrevoEmail() {
+  const payload = getBrevoPayloadOrAlert();
+
+  if (!payload) {
     return;
   }
 
-  const res = await fetch("/api/send-email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
+  closeEmailModal();
+  setSendEmailButtonState("loading");
+  try {
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (res.ok && data.success) {
-    alert("Reminder sent!");
-  } else {
-    alert(data.error || "Error sending email");
+    if (res.ok && data.success) {
+      setSendEmailButtonState("sent");
+      alert("Reminder sent!");
+    } else {
+      setSendEmailButtonState("idle");
+      alert(data.error || "Error sending email");
+    }
+  } catch (error) {
+    setSendEmailButtonState("idle");
+    alert("Error sending email");
   }
 }
 
@@ -855,7 +976,7 @@ async function sendLocalText() {
     return;
   }
 
-  if (!validateMessageSafety()) {
+  if (!validateMessageSafety({ includeCopyEmailValidation: false })) {
     return;
   }
 
