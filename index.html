@@ -434,6 +434,76 @@
       border: 1px solid rgba(148, 163, 184, 0.24);
     }
 
+    .bronze-panel {
+      display: none;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff7ed;
+      border: 1px solid rgba(251, 146, 60, 0.28);
+      gap: 16px;
+    }
+
+    .bronze-panel.visible {
+      display: grid;
+    }
+
+    .bronze-panel-head h3 {
+      margin: 0 0 8px;
+      color: #9a3412;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .bronze-panel-head p {
+      margin: 0;
+      color: #7c2d12;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .bronze-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .bronze-option-group {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(251, 146, 60, 0.2);
+    }
+
+    .bronze-option-group h4 {
+      margin: 0 0 10px;
+      color: #111827;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .bronze-checks {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bronze-checks label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      color: #1f2937;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .bronze-checks input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 1px 0 0;
+      flex: 0 0 auto;
+    }
+
     #preview {
       min-height: 220px;
       max-height: 360px;
@@ -813,6 +883,10 @@
       .email-modal-actions {
         grid-template-columns: 1fr;
       }
+
+      .bronze-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -924,6 +998,31 @@
             </label>
           </div>
 
+          <div id="bronze-reminder-panel" class="bronze-panel" hidden>
+            <div class="bronze-panel-head">
+              <h3>Bronze reminder timing</h3>
+              <p>These Bronze timing preferences are saved to your account now and will be used when automated reminder scheduling goes live.</p>
+            </div>
+            <div class="bronze-grid">
+              <div class="bronze-option-group">
+                <h4>Automated email reminders</h4>
+                <div class="bronze-checks">
+                  <label><input type="checkbox" data-channel="email" value="24h"> 24 hours before</label>
+                  <label><input type="checkbox" data-channel="email" value="3h"> 3 hours before</label>
+                  <label><input type="checkbox" data-channel="email" value="1h"> 1 hour before</label>
+                </div>
+              </div>
+              <div class="bronze-option-group">
+                <h4>Automated text reminders</h4>
+                <div class="bronze-checks">
+                  <label><input type="checkbox" data-channel="sms" value="24h"> 24 hours before</label>
+                  <label><input type="checkbox" data-channel="sms" value="3h"> 3 hours before</label>
+                  <label><input type="checkbox" data-channel="sms" value="1h"> 1 hour before</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="actions">
             <button class="tertiary" onclick="sendLocalText()">Send Text Message From This Device</button>
             <button id="send-email-button" class="primary" onclick="sendBrevoEmail()">Send Automated Email</button>
@@ -964,7 +1063,7 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=20260326k"></script>
 <script src="nav.js?v=20260326j"></script>
 
 </body>

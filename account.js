@@ -12,12 +12,17 @@ const signUpForm = document.getElementById("sign-up-form");
 const signInForm = document.getElementById("sign-in-form");
 const signOutButton = document.getElementById("sign-out-button");
 const pricePill = document.getElementById("price-pill");
+const tierPreviewShell = document.getElementById("tier-preview-shell");
+const setFreeTierButton = document.getElementById("set-free-tier-button");
+const setBronzeTierButton = document.getElementById("set-bronze-tier-button");
+const bronzeContactsShell = document.getElementById("bronze-contacts-shell");
 const clientForm = document.getElementById("client-form");
 const saveClientButton = document.getElementById("save-client-button");
 const clientsList = document.getElementById("clients-list");
 
 let supabase = null;
 let appConfig = null;
+let runtimeConfig = null;
 let savedClients = [];
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
@@ -76,6 +81,20 @@ function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
 
+function getTierKey(user) {
+  const candidates = [
+    user?.user_metadata?.tier,
+    user?.user_metadata?.plan,
+    user?.app_metadata?.tier,
+    user?.app_metadata?.plan,
+    user?.app_metadata?.subscription_tier
+  ];
+
+  return String(candidates.find(value => typeof value === "string" && value.trim()) || "free")
+    .trim()
+    .toLowerCase();
+}
+
 function formatPhone(value) {
   const digits = normalizePhone(value);
 
@@ -91,16 +110,7 @@ function formatPhone(value) {
 }
 
 function getTierLabel(user) {
-  const candidates = [
-    user?.user_metadata?.tier,
-    user?.user_metadata?.plan,
-    user?.app_metadata?.tier,
-    user?.app_metadata?.plan,
-    user?.app_metadata?.subscription_tier
-  ];
-
-  const rawValue = candidates.find(value => typeof value === "string" && value.trim());
-  const normalized = String(rawValue || "free").trim().toLowerCase();
+  const normalized = getTierKey(user);
 
   if (normalized === "free") {
     return "FREE";
@@ -111,6 +121,27 @@ function getTierLabel(user) {
   }
 
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function isBronzeUser(user) {
+  return getTierKey(user) === "bronze";
+}
+
+function sortContacts(contacts) {
+  return [...(contacts || [])].sort((left, right) => {
+    const leftName = String(left.client_name || "").trim().toLowerCase();
+    const rightName = String(right.client_name || "").trim().toLowerCase();
+    const leftEmail = String(left.client_email || "").trim().toLowerCase();
+    const rightEmail = String(right.client_email || "").trim().toLowerCase();
+    const leftPhone = String(left.client_phone || "").trim().toLowerCase();
+    const rightPhone = String(right.client_phone || "").trim().toLowerCase();
+
+    return (
+      leftName.localeCompare(rightName) ||
+      leftEmail.localeCompare(rightEmail) ||
+      leftPhone.localeCompare(rightPhone)
+    );
+  });
 }
 
 function getClientDisplayLines(client) {
@@ -141,7 +172,7 @@ function renderSavedClients() {
   }
 
   if (!savedClients.length) {
-    clientsList.innerHTML = `<div class="empty-state">No saved clients yet.</div>`;
+    clientsList.innerHTML = `<div class="empty-state">No contacts saved yet.</div>`;
     return;
   }
 
@@ -199,21 +230,21 @@ async function loadSavedClients() {
 
   const { data, error } = await supabase
     .from("clients")
-    .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
-    .order("updated_at", { ascending: false })
-    .order("created_at", { ascending: false });
+    .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at");
 
   if (error) {
     setStatus(error.message || "Unable to load saved clients.", "error");
     return;
   }
 
-  savedClients = data || [];
+  savedClients = sortContacts(data || []);
   renderSavedClients();
 }
 
 function updateSignedInView(user) {
   const isSignedIn = Boolean(user);
+  const tierKey = isSignedIn ? getTierKey(user) : "free";
+  const isBronze = isSignedIn && tierKey === "bronze";
 
   if (signedOutPanel) {
     signedOutPanel.hidden = isSignedIn;
@@ -232,11 +263,36 @@ function updateSignedInView(user) {
   }
 
   if (upgradeButton) {
-    upgradeButton.disabled = !isSignedIn || !appConfig?.paymentsEnabled;
+    if (!isSignedIn) {
+      upgradeButton.textContent = "Upgrade to Bronze";
+      upgradeButton.disabled = true;
+    } else if (isBronze) {
+      upgradeButton.textContent = "Bronze Active";
+      upgradeButton.disabled = true;
+    } else {
+      upgradeButton.textContent = "Upgrade to Bronze";
+      upgradeButton.disabled = !appConfig?.paymentsEnabled;
+    }
   }
 
   if (billingSetupNotice) {
-    billingSetupNotice.hidden = !(isSignedIn && !appConfig?.paymentsEnabled);
+    billingSetupNotice.hidden = !(isSignedIn && !isBronze && !appConfig?.paymentsEnabled);
+  }
+
+  if (tierPreviewShell) {
+    tierPreviewShell.hidden = !(isSignedIn && runtimeConfig?.label === "DEV");
+  }
+
+  if (bronzeContactsShell) {
+    bronzeContactsShell.hidden = !isBronze;
+  }
+
+  if (setFreeTierButton) {
+    setFreeTierButton.disabled = !isSignedIn || tierKey === "free";
+  }
+
+  if (setBronzeTierButton) {
+    setBronzeTierButton.disabled = !isSignedIn || tierKey === "bronze";
   }
 }
 
@@ -250,8 +306,19 @@ async function getPublicConfig() {
   return response.json();
 }
 
+async function getRuntimeConfig() {
+  const response = await fetch("/api/runtime-env", { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error("Unable to load runtime environment.");
+  }
+
+  return response.json();
+}
+
 async function initSupabase() {
   appConfig = await getPublicConfig();
+  runtimeConfig = await getRuntimeConfig().catch(() => null);
 
   if (pricePill) {
     pricePill.textContent = appConfig.stripePriceLabel || "$9/month";
@@ -284,7 +351,12 @@ async function initSupabase() {
 
   if (session?.user) {
     await ensureProfile(session.user);
-    await loadSavedClients();
+    if (isBronzeUser(session.user)) {
+      await loadSavedClients();
+    } else {
+      savedClients = [];
+      renderSavedClients();
+    }
   } else {
     savedClients = [];
     renderSavedClients();
@@ -295,7 +367,12 @@ async function initSupabase() {
 
     if (nextSession?.user) {
       await ensureProfile(nextSession.user);
-      await loadSavedClients();
+      if (isBronzeUser(nextSession.user)) {
+        await loadSavedClients();
+      } else {
+        savedClients = [];
+        renderSavedClients();
+      }
     } else {
       savedClients = [];
       renderSavedClients();
@@ -427,6 +504,11 @@ async function handleSaveClient(event) {
     return;
   }
 
+  if (!isBronzeUser(user)) {
+    setStatus("Bronze is required to save contacts.", "error");
+    return;
+  }
+
   const formData = new FormData(event.currentTarget);
   const payload = {
     owner_id: user.id,
@@ -463,6 +545,59 @@ async function handleSaveClient(event) {
   event.currentTarget.reset();
   setStatus("Client saved.", "success");
   await loadSavedClients();
+}
+
+async function handleTierPreview(nextTier) {
+  if (!supabase) {
+    setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setStatus("Please sign in first.", "error");
+    return;
+  }
+
+  const nextValue = String(nextTier || "free").trim().toLowerCase();
+  const metadata = {
+    ...(user.user_metadata || {}),
+    tier: nextValue
+  };
+
+  const activeButton = nextValue === "bronze" ? setBronzeTierButton : setFreeTierButton;
+  setButtonBusy(activeButton, true, nextValue === "bronze" ? "Switching..." : "Updating...");
+  setStatus("");
+
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      data: metadata
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    updateSignedInView(data.user || null);
+
+    if (isBronzeUser(data.user)) {
+      await ensureProfile(data.user);
+      await loadSavedClients();
+    } else {
+      savedClients = [];
+      renderSavedClients();
+    }
+
+    setStatus(nextValue === "bronze" ? "Bronze preview is now active on this account." : "Your account is back on FREE.", "success");
+  } catch (error) {
+    setStatus(error.message || "Unable to change the test tier.", "error");
+  } finally {
+    setButtonBusy(setFreeTierButton, false);
+    setButtonBusy(setBronzeTierButton, false);
+  }
 }
 
 function useClientInReminder(clientId) {
@@ -619,6 +754,14 @@ async function initAccountPage() {
 
   if (clientsList) {
     clientsList.addEventListener("click", handleClientsListClick);
+  }
+
+  if (setFreeTierButton) {
+    setFreeTierButton.addEventListener("click", () => handleTierPreview("free"));
+  }
+
+  if (setBronzeTierButton) {
+    setBronzeTierButton.addEventListener("click", () => handleTierPreview("bronze"));
   }
 }
 

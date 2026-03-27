@@ -41,6 +41,107 @@ let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
 let suppressBeforeUnload = false;
+let appSupabase = null;
+let appPublicConfig = null;
+let currentSignedInUser = null;
+let currentUserTier = "free";
+
+function getTierKey(user) {
+  const candidates = [
+    user?.user_metadata?.tier,
+    user?.user_metadata?.plan,
+    user?.app_metadata?.tier,
+    user?.app_metadata?.plan,
+    user?.app_metadata?.subscription_tier
+  ];
+
+  return String(candidates.find(value => typeof value === "string" && value.trim()) || "free")
+    .trim()
+    .toLowerCase();
+}
+
+function isBronzeUser(user = currentSignedInUser) {
+  return getTierKey(user) === "bronze";
+}
+
+function getBronzeReminderPanel() {
+  return document.getElementById("bronze-reminder-panel");
+}
+
+function getBronzeReminderPreferences(user = currentSignedInUser) {
+  const stored = user?.user_metadata?.reminder_preferences;
+  return {
+    email: Array.isArray(stored?.email) ? stored.email : [],
+    sms: Array.isArray(stored?.sms) ? stored.sms : []
+  };
+}
+
+function syncBronzeReminderPreferencesFromUser(user = currentSignedInUser) {
+  const preferences = getBronzeReminderPreferences(user);
+  document.querySelectorAll("#bronze-reminder-panel input[type='checkbox'][data-channel]").forEach(input => {
+    const channel = input.dataset.channel || "";
+    const value = input.value || "";
+    const selectedValues = channel === "sms" ? preferences.sms : preferences.email;
+    input.checked = selectedValues.includes(value);
+  });
+}
+
+function renderBronzeFeatures() {
+  currentUserTier = getTierKey(currentSignedInUser);
+  const bronzePanel = getBronzeReminderPanel();
+  const isBronze = isBronzeUser();
+
+  if (bronzePanel) {
+    bronzePanel.hidden = !isBronze;
+    bronzePanel.classList.toggle("visible", isBronze);
+  }
+
+  if (isBronze) {
+    syncBronzeReminderPreferencesFromUser();
+  }
+}
+
+async function initAccountTierState() {
+  try {
+    const response = await fetch("/api/public-config", { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error("Unable to load account configuration.");
+    }
+
+    appPublicConfig = await response.json();
+
+    if (!appPublicConfig.accountsEnabled || !appPublicConfig.supabaseUrl || !appPublicConfig.supabasePublishableKey) {
+      renderBronzeFeatures();
+      return;
+    }
+
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    appSupabase = createClient(appPublicConfig.supabaseUrl, appPublicConfig.supabasePublishableKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    });
+
+    const {
+      data: { session }
+    } = await appSupabase.auth.getSession();
+
+    currentSignedInUser = session?.user || null;
+    renderBronzeFeatures();
+
+    appSupabase.auth.onAuthStateChange((_event, nextSession) => {
+      currentSignedInUser = nextSession?.user || null;
+      renderBronzeFeatures();
+    });
+  } catch (error) {
+    currentSignedInUser = null;
+    currentUserTier = "free";
+    renderBronzeFeatures();
+  }
+}
 
 function formatTime(time) {
   if (!time) return "";
@@ -468,6 +569,125 @@ function getReminderPayload() {
   };
 }
 
+function getSelectedReminderOffsets(channel) {
+  return Array.from(document.querySelectorAll(`#bronze-reminder-panel input[type='checkbox'][data-channel='${channel}']`))
+    .filter(input => input.checked)
+    .map(input => input.value);
+}
+
+async function persistBronzeReminderPreferences() {
+  if (!appSupabase || !currentSignedInUser || !isBronzeUser()) {
+    return;
+  }
+
+  const nextMetadata = {
+    ...(currentSignedInUser.user_metadata || {}),
+    reminder_preferences: {
+      email: getSelectedReminderOffsets("email"),
+      sms: getSelectedReminderOffsets("sms")
+    }
+  };
+
+  try {
+    const { data, error } = await appSupabase.auth.updateUser({
+      data: nextMetadata
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    currentSignedInUser = data.user || currentSignedInUser;
+    renderBronzeFeatures();
+  } catch (error) {
+    console.warn("Unable to save Bronze reminder preferences.", error);
+  }
+}
+
+function buildBronzeContactPayload() {
+  const payload = {
+    owner_id: currentSignedInUser?.id || "",
+    client_name: getFieldValue("name").slice(0, 30),
+    client_email: getFieldValue("email"),
+    client_phone: getPhoneDigits(),
+    service_address: getFieldValue("address").slice(0, 40),
+    notes: getFieldValue("notes").slice(0, 1200),
+    updated_at: new Date().toISOString()
+  };
+
+  if (!payload.client_name && !payload.client_email && !payload.client_phone) {
+    return null;
+  }
+
+  return payload;
+}
+
+async function findExistingBronzeContactId(payload) {
+  if (!appSupabase || !payload?.owner_id) {
+    return null;
+  }
+
+  const lookupRules = [
+    payload.client_email ? { column: "client_email", value: payload.client_email } : null,
+    payload.client_phone ? { column: "client_phone", value: payload.client_phone } : null,
+    payload.client_name ? { column: "client_name", value: payload.client_name } : null
+  ].filter(Boolean);
+
+  for (const rule of lookupRules) {
+    const { data, error } = await appSupabase
+      .from("clients")
+      .select("id")
+      .eq("owner_id", payload.owner_id)
+      .eq(rule.column, rule.value)
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  return null;
+}
+
+async function autoSaveBronzeContact() {
+  if (!appSupabase || !currentSignedInUser || !isBronzeUser()) {
+    return;
+  }
+
+  const payload = buildBronzeContactPayload();
+
+  if (!payload) {
+    return;
+  }
+
+  try {
+    const existingId = await findExistingBronzeContactId(payload);
+
+    if (existingId) {
+      const { error } = await appSupabase
+        .from("clients")
+        .update(payload)
+        .eq("id", existingId)
+        .eq("owner_id", payload.owner_id);
+
+      if (error) {
+        throw error;
+      }
+
+      return;
+    }
+
+    const { error } = await appSupabase.from("clients").insert(payload);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn("Unable to auto-save Bronze contact.", error);
+  }
+}
+
 function hasUnsavedFormData() {
   if (FORM_FIELD_IDS.some(fieldId => getFieldValue(fieldId).length > 0)) {
     return true;
@@ -872,6 +1092,12 @@ if (copyEmailInput) {
   });
 }
 
+document.querySelectorAll("#bronze-reminder-panel input[type='checkbox'][data-channel]").forEach(input => {
+  input.addEventListener("change", () => {
+    persistBronzeReminderPreferences();
+  });
+});
+
 const emailModal = document.getElementById("email-modal");
 if (emailModal) {
   emailModal.addEventListener("click", event => {
@@ -900,6 +1126,8 @@ applySavedClientPrefill();
 syncPhoneFieldFormatting();
 refreshFormState();
 initWizard();
+renderBronzeFeatures();
+initAccountTierState();
 
 function openEmailModal() {
   const modal = document.getElementById("email-modal");
@@ -1052,6 +1280,7 @@ async function confirmSendBrevoEmail() {
     const data = await res.json();
 
     if (res.ok && data.success) {
+      await autoSaveBronzeContact();
       setSendEmailButtonState("sent");
       alert("Reminder sent!");
     } else {
@@ -1093,6 +1322,8 @@ async function sendLocalText() {
   } catch (error) {
     console.warn("Clipboard write failed", error);
   }
+
+  await autoSaveBronzeContact();
 
   const smsBody = encodeURIComponent(message);
   const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";

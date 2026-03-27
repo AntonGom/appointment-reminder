@@ -345,6 +345,27 @@
       margin-top: 18px;
     }
 
+    .tier-preview-shell {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .tier-preview-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tier-preview-actions button {
+      width: auto;
+      min-width: 150px;
+    }
+
     .clients-card {
       padding: 18px;
       border-radius: 22px;
@@ -557,7 +578,7 @@
               <div class="account-row">
                 <div>
                   <div class="account-label">Current plan</div>
-                  <div id="account-plan" class="account-value">Free plan</div>
+                  <div id="account-plan" class="account-value">FREE</div>
                 </div>
                 <button id="upgrade-button" class="primary-button" type="button">Upgrade to Pro</button>
               </div>
@@ -573,10 +594,19 @@
 
             <div id="billing-setup-notice" class="notice" hidden>Add `STRIPE_SECRET_KEY` and `STRIPE_PRO_MONTHLY_PRICE_ID` in Vercel to turn on Stripe checkout.</div>
 
-            <div class="clients-shell">
+            <div id="tier-preview-shell" class="tier-preview-shell" hidden>
+              <h3>DEV tier preview</h3>
+              <p>Use these buttons on QA to test the FREE and Bronze experiences before billing is connected.</p>
+              <div class="tier-preview-actions">
+                <button id="set-free-tier-button" class="secondary-button" type="button">Use FREE</button>
+                <button id="set-bronze-tier-button" class="primary-button" type="button">Use Bronze</button>
+              </div>
+            </div>
+
+            <div id="bronze-contacts-shell" class="clients-shell" hidden>
               <div class="clients-card">
-                <h3>Saved clients</h3>
-                <p>Save client details once, then pull them back into the reminder form any time.</p>
+                <h3>Contacts</h3>
+                <p>Bronze keeps your contacts attached to your account so you can send again without retyping their details.</p>
                 <form id="client-form">
                   <div class="client-form-grid">
                     <div>
@@ -600,15 +630,15 @@
                       <textarea id="client-notes" name="notes" maxlength="1200"></textarea>
                     </div>
                   </div>
-                  <button id="save-client-button" class="primary-button" type="submit">Save Client</button>
+                  <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
                 </form>
               </div>
 
               <div class="clients-card">
-                <h3>Your client list</h3>
-                <p>Use a saved client to prefill the reminder tool, or delete them from your list.</p>
+                <h3>Your contacts</h3>
+                <p>Contacts are sorted by name, email, and phone number so they stay easy to find.</p>
                 <div id="clients-list" class="clients-list">
-                  <div class="empty-state">No saved clients yet.</div>
+                  <div class="empty-state">No contacts saved yet.</div>
                 </div>
               </div>
             </div>
@@ -643,6 +673,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260326j"></script>
+  <script type="module" src="account.js?v=20260326k"></script>
 </body>
 </html>
