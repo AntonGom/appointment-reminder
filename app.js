@@ -225,7 +225,6 @@ function applySavedClientPrefill() {
 
 function generateMessage() {
   const name = getFieldValue("name");
-  const phone = getFieldValue("phone");
   const address = getFieldValue("address");
   const businessContact = getFieldValue("businessContact");
   const date = getFieldValue("date");
@@ -242,7 +241,6 @@ function generateMessage() {
   if (date) lines.push("Date: " + formatDate(date));
   if (time) lines.push("Time: " + formatTime(time));
   if (address) lines.push("Location: " + address);
-  if (phone) lines.push("Contact Number: " + phone);
 
   if (notes) {
     lines.push("");
@@ -255,7 +253,7 @@ function generateMessage() {
     lines.push("If you need to reach us before your appointment, please contact us at " + businessContact + ".");
     lines.push("");
   }
-  lines.push("Thank you,");
+  lines.push("Thank you.");
 
   return lines.join("\n");
 }
