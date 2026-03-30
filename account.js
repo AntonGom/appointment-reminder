@@ -408,7 +408,7 @@ function renderSavedClients() {
             <th>Address</th>
             <th>Details</th>
             <th>Reminder History</th>
-            <th>Updated</th>
+            <th>Last Edited</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -471,7 +471,7 @@ function renderSavedClients() {
                 <div class="client-mobile-value">${renderReminderHistory(client)}</div>
               </div>
               <div class="client-mobile-row">
-                <div class="client-mobile-label">Updated</div>
+                <div class="client-mobile-label">Last Edited</div>
                 <div class="client-mobile-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
               </div>
             </div>
