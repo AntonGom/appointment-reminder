@@ -288,7 +288,7 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
   const restrictedFields = [
     { label: "Client Name", value: clientName || "", maxLength: 30 },
     { label: "Client Phone Number", value: clientPhone || "", maxLength: 30 },
-    { label: "Location or Meeting Link", value: serviceAddress || "", maxLength: 160, allowLink: true },
+    { label: "Service Location", value: serviceAddress || "", maxLength: 160, allowLink: true },
     { label: "Business Phone or Email", value: businessContact || "", maxLength: 60, allowEmail: true },
     { label: "Message Preview", value: message || "" }
   ];

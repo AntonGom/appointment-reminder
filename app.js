@@ -22,7 +22,7 @@
 const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
-  address: { label: "Location or Meeting Link", maxLength: 160 },
+  address: { label: "Service Location", maxLength: 160 },
   businessContact: { label: "Business Phone or Email", maxLength: 60 }
 };
 
@@ -364,7 +364,7 @@ async function loadAddressMapPreview() {
     setAddressMapPreview({
       visible: true,
       src: "",
-      note: "Meeting link will be included in the reminder."
+      note: "Location details will be included in the reminder."
     });
     return;
   }

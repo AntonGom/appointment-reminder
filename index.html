@@ -344,12 +344,13 @@
     .label-badge {
       display: inline-block;
       margin-left: 8px;
-      padding: 4px 10px;
+      padding: 6px 14px;
       border-radius: 999px;
       background: #dbeafe;
       color: #1d4ed8;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
+      letter-spacing: 0.01em;
       vertical-align: middle;
     }
 
@@ -1057,10 +1058,10 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Location or Meeting Link" data-nav="Location" data-field="address" data-copy="Add the address or meeting link you want included in the reminder." data-optional="true">
+    <div class="wizard-step" data-title="Service Location" data-nav="Location" data-field="address" data-copy="Add the service location if you want it included in the reminder." data-optional="true">
       <div class="question-wrap">
-        <label for="address">Location or Meeting Link <span class="label-badge">Optional</span></label>
-        <input id="address" placeholder="Enter address or Zoom link">
+        <label for="address">Service Location <span class="label-badge">Optional</span></label>
+        <input id="address" placeholder="Enter service location">
         <div id="address-error" class="field-error"></div>
         <div id="map-preview" class="map-preview" aria-live="polite">
           <iframe id="map-preview-frame" class="map-preview-frame" title="Location map preview" loading="lazy"></iframe>
@@ -1167,7 +1168,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260330e"></script>
+<script src="app.js?v=20260330f"></script>
 <script src="nav.js?v=20260326j"></script>
 
 </body>
