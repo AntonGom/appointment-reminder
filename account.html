@@ -441,6 +441,18 @@
       white-space: nowrap;
     }
 
+    .section-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .section-actions button {
+      width: auto;
+      min-width: 150px;
+    }
+
     .client-form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -681,6 +693,59 @@
       color: var(--info);
     }
 
+    .contact-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(15, 23, 42, 0.58);
+      backdrop-filter: blur(8px);
+    }
+
+    .contact-modal-backdrop.visible {
+      display: flex;
+      animation: fadeIn 0.18s ease;
+    }
+
+    .contact-modal {
+      width: 100%;
+      max-width: 680px;
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(248, 250, 252, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
+    }
+
+    .contact-modal h3 {
+      margin: 0 0 10px;
+      color: var(--text-main);
+      font-size: 30px;
+      line-height: 1.15;
+    }
+
+    .contact-modal p {
+      margin: 0 0 18px;
+      color: var(--text-soft);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .contact-modal-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .contact-modal-actions button {
+      width: auto;
+      min-width: 160px;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -712,6 +777,14 @@
       .count-badge {
         width: 100%;
         justify-content: center;
+      }
+
+      .section-actions {
+        width: 100%;
+      }
+
+      .section-actions button {
+        width: 100%;
       }
     }
 
@@ -746,6 +819,18 @@
 
       .client-mobile-actions {
         grid-template-columns: 1fr;
+      }
+
+      .contact-modal {
+        padding: 22px;
+      }
+
+      .contact-modal h3 {
+        font-size: 26px;
+      }
+
+      .contact-modal-actions button {
+        width: 100%;
       }
     }
   </style>
@@ -841,49 +926,13 @@
               <div class="clients-card">
                 <div class="section-head">
                   <div>
-                    <h3>Add a contact</h3>
-                    <p>Save client details here so they are ready to use again later.</p>
-                  </div>
-                </div>
-                <form id="client-form">
-                  <div id="client-form-mode" class="form-mode-badge" hidden>Editing contact</div>
-                  <div class="client-form-grid">
-                    <div>
-                      <label for="client-name">Client Name</label>
-                      <input id="client-name" name="client_name" maxlength="30" autocomplete="off">
-                    </div>
-                    <div>
-                      <label for="client-email">Client Email</label>
-                      <input id="client-email" name="client_email" type="email" inputmode="email" autocomplete="email">
-                    </div>
-                    <div>
-                      <label for="client-phone">Client Phone Number</label>
-                      <input id="client-phone" name="client_phone" inputmode="tel" autocomplete="tel">
-                    </div>
-                    <div>
-                      <label for="client-address">Service Address</label>
-                      <input id="client-address" name="service_address" maxlength="40" autocomplete="street-address">
-                    </div>
-                    <div class="full">
-                      <label for="client-notes">Additional Details</label>
-                      <textarea id="client-notes" name="notes" maxlength="1200"></textarea>
-                    </div>
-                  </div>
-                  <div class="form-actions">
-                    <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
-                    <button id="cancel-edit-client-button" class="secondary-button" type="button" hidden>Cancel Edit</button>
-                  </div>
-                  <div id="client-form-status" class="inline-status" hidden></div>
-                </form>
-              </div>
-
-              <div class="clients-card">
-                <div class="section-head">
-                  <div>
                     <h3>Saved contacts</h3>
                     <p>This is the full contact list for this account. Contacts are sorted by name, email, and phone number.</p>
                   </div>
-                  <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                  <div class="section-actions">
+                    <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                    <button id="open-add-client-button" class="primary-button" type="button">Add Contact</button>
+                  </div>
                 </div>
                 <div class="clients-toolbar">
                   <div class="toolbar-field">
@@ -945,7 +994,44 @@
     </div>
   </div>
 
+  <div id="client-modal" class="contact-modal-backdrop" hidden>
+    <div class="contact-modal" role="dialog" aria-modal="true" aria-labelledby="client-modal-title">
+      <h3 id="client-modal-title">Add contact</h3>
+      <p id="client-modal-copy">Enter the client details you want saved to this account.</p>
+      <form id="client-form">
+        <div id="client-form-mode" class="form-mode-badge" hidden>Editing contact</div>
+        <div class="client-form-grid">
+          <div>
+            <label for="client-name">Client Name</label>
+            <input id="client-name" name="client_name" maxlength="30" autocomplete="off">
+          </div>
+          <div>
+            <label for="client-email">Client Email</label>
+            <input id="client-email" name="client_email" type="email" inputmode="email" autocomplete="email">
+          </div>
+          <div>
+            <label for="client-phone">Client Phone Number</label>
+            <input id="client-phone" name="client_phone" inputmode="tel" autocomplete="tel">
+          </div>
+          <div>
+            <label for="client-address">Service Address</label>
+            <input id="client-address" name="service_address" maxlength="40" autocomplete="street-address">
+          </div>
+          <div class="full">
+            <label for="client-notes">Additional Details</label>
+            <textarea id="client-notes" name="notes" maxlength="1200"></textarea>
+          </div>
+        </div>
+        <div class="contact-modal-actions">
+          <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
+          <button id="cancel-edit-client-button" class="secondary-button" type="button">Cancel</button>
+        </div>
+        <div id="client-form-status" class="inline-status" hidden></div>
+      </form>
+    </div>
+  </div>
+
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330g"></script>
+  <script type="module" src="account.js?v=20260330h"></script>
 </body>
 </html>

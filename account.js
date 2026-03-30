@@ -22,9 +22,13 @@ const freeContactsShell = document.getElementById("free-contacts-shell");
 const bronzeContactsShell = document.getElementById("bronze-contacts-shell");
 const clientForm = document.getElementById("client-form");
 const saveClientButton = document.getElementById("save-client-button");
+const openAddClientButton = document.getElementById("open-add-client-button");
 const cancelEditClientButton = document.getElementById("cancel-edit-client-button");
 const clientFormStatus = document.getElementById("client-form-status");
 const clientFormMode = document.getElementById("client-form-mode");
+const clientModal = document.getElementById("client-modal");
+const clientModalTitle = document.getElementById("client-modal-title");
+const clientModalCopy = document.getElementById("client-modal-copy");
 const clientsSearchInput = document.getElementById("clients-search");
 const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
@@ -83,6 +87,31 @@ function setClientFormStatus(message, type = "info") {
   clientFormStatus.textContent = message;
   clientFormStatus.className = `inline-status ${type}`;
   clientFormStatus.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function openClientModal() {
+  if (!clientModal) {
+    return;
+  }
+
+  clientModal.hidden = false;
+  clientModal.classList.add("visible");
+
+  window.setTimeout(() => {
+    const firstField = document.getElementById("client-name");
+    if (firstField) {
+      firstField.focus({ preventScroll: true });
+    }
+  }, 40);
+}
+
+function closeClientModal() {
+  if (!clientModal) {
+    return;
+  }
+
+  clientModal.classList.remove("visible");
+  clientModal.hidden = true;
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -357,6 +386,16 @@ function setClientEditMode(client = null) {
     clientFormMode.textContent = editingClientId ? `Editing ${client.client_name || "contact"}` : "Editing contact";
   }
 
+  if (clientModalTitle) {
+    clientModalTitle.textContent = editingClientId ? "Edit contact" : "Add contact";
+  }
+
+  if (clientModalCopy) {
+    clientModalCopy.textContent = editingClientId
+      ? "Update the saved contact details below."
+      : "Enter the client details you want saved to this account.";
+  }
+
   if (saveClientButton) {
     saveClientButton.textContent = editingClientId ? "Update Contact" : "Save Contact";
     saveClientButton.dataset.defaultText = saveClientButton.textContent;
@@ -382,7 +421,7 @@ function populateClientForm(clientId) {
 
   setClientEditMode(client);
   setClientFormStatus("");
-  clientForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  openClientModal();
 }
 
 function resetClientForm() {
@@ -392,6 +431,17 @@ function resetClientForm() {
 
   setClientEditMode(null);
   setClientFormStatus("");
+  closeClientModal();
+}
+
+function openBlankClientForm() {
+  if (clientForm) {
+    clientForm.reset();
+  }
+
+  setClientEditMode(null);
+  setClientFormStatus("");
+  openClientModal();
 }
 
 async function ensureProfile(user) {
@@ -784,7 +834,6 @@ async function handleSaveClient(event) {
     await loadSavedClients();
     resetClientForm();
     setStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");
-    setClientFormStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");
   } catch (error) {
     setStatus(error.message || "Unable to save this client.", "error");
     setClientFormStatus(error.message || "Unable to save this contact.", "error");
@@ -1004,9 +1053,27 @@ async function initAccountPage() {
     clientForm.addEventListener("submit", handleSaveClient);
   }
 
+  if (openAddClientButton) {
+    openAddClientButton.addEventListener("click", openBlankClientForm);
+  }
+
   if (cancelEditClientButton) {
     cancelEditClientButton.addEventListener("click", resetClientForm);
   }
+
+  if (clientModal) {
+    clientModal.addEventListener("click", event => {
+      if (event.target === clientModal) {
+        resetClientForm();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && clientModal && !clientModal.hidden) {
+      resetClientForm();
+    }
+  });
 
   if (clientsList) {
     clientsList.addEventListener("click", handleClientsListClick);
