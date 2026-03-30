@@ -40,6 +40,7 @@ let visitedSteps = [];
 let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
+let sendEmailLockedAfterSuccess = false;
 let suppressBeforeUnload = false;
 let appSupabase = null;
 let appPublicConfig = null;
@@ -259,6 +260,10 @@ function generateMessage() {
 }
 
 function refreshFormState() {
+  if (sendEmailLockedAfterSuccess) {
+    setSendEmailButtonState("idle");
+  }
+
   syncCopyEmailOption();
 
   const preview = document.getElementById("preview");
@@ -1192,6 +1197,7 @@ function setSendEmailButtonState(state) {
   window.clearTimeout(sendEmailResetTimer);
   button.classList.remove("loading", "sent");
   button.disabled = false;
+  sendEmailLockedAfterSuccess = false;
 
   if (state === "loading") {
     button.disabled = true;
@@ -1202,10 +1208,9 @@ function setSendEmailButtonState(state) {
 
   if (state === "sent") {
     button.classList.add("sent");
+    button.disabled = true;
+    sendEmailLockedAfterSuccess = true;
     button.textContent = "Email Sent";
-    sendEmailResetTimer = window.setTimeout(() => {
-      setSendEmailButtonState("idle");
-    }, 1800);
     return;
   }
 
@@ -1284,7 +1289,6 @@ async function confirmSendBrevoEmail() {
     if (res.ok && data.success) {
       await autoSaveBronzeContact();
       setSendEmailButtonState("sent");
-      alert("Reminder sent!");
     } else {
       setSendEmailButtonState("idle");
       alert(data.error || "Error sending email");
