@@ -526,6 +526,30 @@
       border: 1px solid rgba(96, 165, 250, 0.24);
     }
 
+    .inline-status {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .inline-status.success {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .inline-status.error {
+      background: var(--error-bg);
+      color: var(--error);
+    }
+
+    .inline-status.info {
+      background: var(--info-bg);
+      color: var(--info);
+    }
+
     .info-list {
       display: grid;
       gap: 12px;
@@ -748,6 +772,7 @@
                     </div>
                   </div>
                   <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
+                  <div id="client-form-status" class="inline-status" hidden></div>
                 </form>
               </div>
 

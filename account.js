@@ -22,6 +22,7 @@ const freeContactsShell = document.getElementById("free-contacts-shell");
 const bronzeContactsShell = document.getElementById("bronze-contacts-shell");
 const clientForm = document.getElementById("client-form");
 const saveClientButton = document.getElementById("save-client-button");
+const clientFormStatus = document.getElementById("client-form-status");
 const clientsList = document.getElementById("clients-list");
 
 let supabase = null;
@@ -57,6 +58,24 @@ function setStatus(message, type = "info") {
   statusBanner.hidden = false;
   statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
+}
+
+function setClientFormStatus(message, type = "info") {
+  if (!clientFormStatus) {
+    return;
+  }
+
+  if (!message) {
+    clientFormStatus.hidden = true;
+    clientFormStatus.textContent = "";
+    clientFormStatus.className = "inline-status";
+    return;
+  }
+
+  clientFormStatus.hidden = false;
+  clientFormStatus.textContent = message;
+  clientFormStatus.className = `inline-status ${type}`;
+  clientFormStatus.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -452,6 +471,7 @@ async function handleSignUp(event) {
 
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
+    setClientFormStatus("Accounts are not configured yet.", "error");
     return;
   }
 
@@ -568,11 +588,13 @@ async function handleSaveClient(event) {
 
   if (!user?.id) {
     setStatus("Please sign in before saving a client.", "error");
+    setClientFormStatus("Please sign in before saving a contact.", "error");
     return;
   }
 
   if (!isBronzeUser(user)) {
     setStatus("Bronze is required to save contacts.", "error");
+    setClientFormStatus("Bronze is required before contacts can be saved here.", "error");
     return;
   }
 
@@ -589,38 +611,36 @@ async function handleSaveClient(event) {
 
   if (!payload.client_name && !payload.client_email && !payload.client_phone) {
     setStatus("Add at least a client name, email, or phone number before saving.", "error");
+    setClientFormStatus("Add at least a name, email, or phone number before saving.", "error");
     return;
   }
 
   if (payload.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(payload.client_email)) {
     setStatus("Enter a valid client email address.", "error");
+    setClientFormStatus("Enter a valid client email address.", "error");
     return;
   }
 
   setButtonBusy(saveClientButton, true, "Saving client...");
   setStatus("");
+  setClientFormStatus("Saving contact...", "info");
 
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("clients")
-      .insert(payload)
-      .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at");
+      .insert(payload);
 
     if (error) {
       throw error;
     }
 
-    if (Array.isArray(data) && data.length) {
-      savedClients = sortContacts([...savedClients, ...data]);
-      renderSavedClients();
-    } else {
-      await loadSavedClients();
-    }
-
+    await loadSavedClients();
     event.currentTarget.reset();
     setStatus("Contact saved to your account.", "success");
+    setClientFormStatus("Contact saved to your account.", "success");
   } catch (error) {
     setStatus(error.message || "Unable to save this client.", "error");
+    setClientFormStatus(error.message || "Unable to save this contact.", "error");
   } finally {
     setButtonBusy(saveClientButton, false);
   }
