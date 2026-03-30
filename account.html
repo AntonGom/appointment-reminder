@@ -648,6 +648,36 @@
       border-radius: 12px;
     }
 
+    .history-stack {
+      display: grid;
+      gap: 8px;
+      min-width: 180px;
+    }
+
+    .history-entry {
+      display: grid;
+      gap: 3px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: rgba(239, 246, 255, 0.92);
+      border: 1px solid rgba(191, 219, 254, 0.9);
+    }
+
+    .history-channel {
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .history-time {
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
     .empty-state {
       padding: 18px;
       border-radius: 18px;
@@ -819,6 +849,10 @@
 
       .client-mobile-actions {
         grid-template-columns: 1fr;
+      }
+
+      .history-stack {
+        min-width: 0;
       }
 
       .contact-modal {
@@ -1032,6 +1066,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330h"></script>
+  <script type="module" src="account.js?v=20260330i"></script>
 </body>
 </html>

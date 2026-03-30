@@ -659,13 +659,13 @@ async function findExistingBronzeContactId(payload) {
 
 async function autoSaveBronzeContact() {
   if (!appSupabase || !currentSignedInUser || !isBronzeUser()) {
-    return;
+    return null;
   }
 
   const payload = buildBronzeContactPayload();
 
   if (!payload) {
-    return;
+    return null;
   }
 
   try {
@@ -682,16 +682,45 @@ async function autoSaveBronzeContact() {
         throw error;
       }
 
-      return;
+      return existingId;
     }
 
-    const { error } = await appSupabase.from("clients").insert(payload);
+    const { data, error } = await appSupabase
+      .from("clients")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.id || null;
+  } catch (error) {
+    console.warn("Unable to auto-save Bronze contact.", error);
+    return null;
+  }
+}
+
+async function logBronzeReminderHistory({ clientId, channel, source }) {
+  if (!appSupabase || !currentSignedInUser || !isBronzeUser() || !clientId || !channel) {
+    return;
+  }
+
+  try {
+    const { error } = await appSupabase.from("client_reminder_history").insert({
+      owner_id: currentSignedInUser.id,
+      client_id: clientId,
+      channel,
+      source: source || "",
+      sent_at: new Date().toISOString()
+    });
 
     if (error) {
       throw error;
     }
   } catch (error) {
-    console.warn("Unable to auto-save Bronze contact.", error);
+    console.warn("Unable to log Bronze reminder history.", error);
   }
 }
 
@@ -1287,7 +1316,12 @@ async function confirmSendBrevoEmail() {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      await autoSaveBronzeContact();
+      const clientId = await autoSaveBronzeContact();
+      await logBronzeReminderHistory({
+        clientId,
+        channel: "email",
+        source: "automated_email"
+      });
       setSendEmailButtonState("sent");
     } else {
       setSendEmailButtonState("idle");
@@ -1329,7 +1363,12 @@ async function sendLocalText() {
     console.warn("Clipboard write failed", error);
   }
 
-  await autoSaveBronzeContact();
+  const clientId = await autoSaveBronzeContact();
+  await logBronzeReminderHistory({
+    clientId,
+    channel: "sms",
+    source: "device_sms"
+  });
 
   const smsBody = encodeURIComponent(message);
   const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";

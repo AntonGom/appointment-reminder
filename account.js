@@ -40,6 +40,7 @@ let savedClients = [];
 let editingClientId = "";
 let clientsSearchQuery = "";
 let clientsSortMode = "az";
+let reminderHistoryReady = true;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
@@ -223,6 +224,108 @@ function formatSavedDate(value) {
   }).format(date);
 }
 
+function formatReminderHistoryDateTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function getReminderHistoryChannelLabel(entry) {
+  if (entry?.channel === "email") {
+    return "Email reminder";
+  }
+
+  if (entry?.channel === "sms") {
+    return "Text reminder";
+  }
+
+  return "Reminder";
+}
+
+function attachReminderHistory(clients, historyRows) {
+  const historyByClientId = new Map();
+
+  (historyRows || []).forEach(entry => {
+    const clientId = String(entry?.client_id || "").trim();
+
+    if (!clientId) {
+      return;
+    }
+
+    if (!historyByClientId.has(clientId)) {
+      historyByClientId.set(clientId, []);
+    }
+
+    historyByClientId.get(clientId).push(entry);
+  });
+
+  return (clients || []).map(client => ({
+    ...client,
+    reminder_history: historyByClientId.get(client.id) || []
+  }));
+}
+
+async function loadReminderHistory(ownerId) {
+  if (!supabase || !ownerId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("client_reminder_history")
+    .select("client_id, channel, source, sent_at")
+    .eq("owner_id", ownerId)
+    .order("sent_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    if (error.code === "42P01") {
+      reminderHistoryReady = false;
+      return [];
+    }
+
+    console.warn("Unable to load reminder history.", error);
+    return [];
+  }
+
+  reminderHistoryReady = true;
+  return data || [];
+}
+
+function renderReminderHistory(client) {
+  const historyEntries = Array.isArray(client?.reminder_history)
+    ? client.reminder_history.slice(0, 4)
+    : [];
+
+  if (!historyEntries.length) {
+    return `<span class="table-muted">${reminderHistoryReady ? "No reminders yet" : "History setup needed"}</span>`;
+  }
+
+  return `
+    <div class="history-stack">
+      ${historyEntries.map(entry => `
+        <div class="history-entry">
+          <div class="history-channel">${escapeHtml(getReminderHistoryChannelLabel(entry))}</div>
+          <div class="history-time">${escapeHtml(formatReminderHistoryDateTime(entry.sent_at) || "Not available")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function getClientSearchText(client) {
   return [
     client.client_name,
@@ -304,6 +407,7 @@ function renderSavedClients() {
             <th>Phone</th>
             <th>Address</th>
             <th>Details</th>
+            <th>Reminder History</th>
             <th>Updated</th>
             <th>Actions</th>
           </tr>
@@ -321,6 +425,7 @@ function renderSavedClients() {
                 <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</td>
+                <td>${renderReminderHistory(client)}</td>
                 <td>${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</td>
                 <td>
                   <div class="table-actions">
@@ -360,6 +465,10 @@ function renderSavedClients() {
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Details</div>
                 <div class="client-mobile-value">${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</div>
+              </div>
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Reminder History</div>
+                <div class="client-mobile-value">${renderReminderHistory(client)}</div>
               </div>
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Updated</div>
@@ -484,7 +593,9 @@ async function loadSavedClients() {
     return;
   }
 
-  savedClients = data || [];
+  const clientsData = data || [];
+  const historyRows = await loadReminderHistory(user.id);
+  savedClients = attachReminderHistory(clientsData, historyRows);
   renderSavedClients();
 }
 
