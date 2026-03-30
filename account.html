@@ -455,6 +455,10 @@
       min-width: 150px;
     }
 
+    .qa-seed-button {
+      min-width: 190px !important;
+    }
+
     .button-with-icon {
       display: inline-flex;
       align-items: center;
@@ -732,6 +736,46 @@
       line-height: 1.6;
     }
 
+    .loading-state {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      text-align: center;
+      padding: 24px 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: var(--text-main);
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid rgba(37, 99, 235, 0.2);
+      border-top-color: var(--accent);
+      animation: spin 0.85s linear infinite;
+    }
+
+    .loading-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .loading-copy {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .notice {
       margin-top: 16px;
       padding: 15px 16px;
@@ -1005,6 +1049,7 @@
                   </div>
                   <div class="section-actions">
                     <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                    <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
                     <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
                       <span class="button-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" focusable="false">
@@ -1116,6 +1161,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330k"></script>
+  <script type="module" src="account.js?v=20260330l"></script>
 </body>
 </html>

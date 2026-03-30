@@ -32,6 +32,7 @@ const clientModalCopy = document.getElementById("client-modal-copy");
 const clientsSearchInput = document.getElementById("clients-search");
 const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
+const seedClientsButton = document.getElementById("seed-clients-button");
 
 let supabase = null;
 let appConfig = null;
@@ -41,6 +42,7 @@ let editingClientId = "";
 let clientsSearchQuery = "";
 let clientsSortMode = "newest";
 let reminderHistoryReady = true;
+let isLoadingClients = false;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
@@ -204,6 +206,34 @@ function updateContactsCount(visibleCount = savedClients.length) {
       ? formatCountLabel(count)
       : `${visibleCount} of ${count} contacts`;
   }
+}
+
+function renderContactsLoadingState() {
+  if (!clientsList) {
+    return;
+  }
+
+  clientsList.innerHTML = `
+    <div class="loading-state" role="status" aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-title">Loading contacts...</p>
+      <p class="loading-copy">Pulling your saved clients and reminder history.</p>
+    </div>
+  `;
+}
+
+function setClientsLoadingState(isLoading) {
+  isLoadingClients = isLoading;
+
+  if (isLoading) {
+    if (contactsCountBadge) {
+      contactsCountBadge.textContent = "Loading contacts...";
+    }
+    renderContactsLoadingState();
+    return;
+  }
+
+  updateContactsCount();
 }
 
 function formatSavedDate(value) {
@@ -381,6 +411,11 @@ function getVisibleClients() {
 
 function renderSavedClients() {
   if (!clientsList) {
+    return;
+  }
+
+  if (isLoadingClients) {
+    renderContactsLoadingState();
     return;
   }
 
@@ -574,29 +609,37 @@ async function loadSavedClients() {
     return;
   }
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  setClientsLoadingState(true);
 
-  if (!user?.id) {
+  try {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      savedClients = [];
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const clientsData = data || [];
+    const historyRows = await loadReminderHistory(user.id);
+    savedClients = attachReminderHistory(clientsData, historyRows);
+  } catch (error) {
     savedClients = [];
-    renderSavedClients();
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from("clients")
-    .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at");
-
-  if (error) {
     setStatus(error.message || "Unable to load saved clients.", "error");
-    return;
+  } finally {
+    setClientsLoadingState(false);
+    renderSavedClients();
   }
-
-  const clientsData = data || [];
-  const historyRows = await loadReminderHistory(user.id);
-  savedClients = attachReminderHistory(clientsData, historyRows);
-  renderSavedClients();
 }
 
 function updateSignedInView(user) {
@@ -667,6 +710,10 @@ function updateSignedInView(user) {
 
   if (bronzeContactsShell) {
     bronzeContactsShell.hidden = !isBronze;
+  }
+
+  if (seedClientsButton) {
+    seedClientsButton.hidden = !(isBronze && runtimeConfig?.label === "DEV");
   }
 
   if (setFreeTierButton) {
@@ -1006,6 +1053,100 @@ async function handleTierPreview(nextTier) {
   }
 }
 
+function pickRandom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function randomDigits(length) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 10)).join("");
+}
+
+function generateTestClient(index, seed) {
+  const firstNames = ["Mia", "Olivia", "Ava", "Liam", "Noah", "Lucas", "Sofia", "Emma", "Mateo", "Elena"];
+  const lastNames = ["Rivera", "Martinez", "Lopez", "Gomez", "Perez", "Diaz", "Torres", "Alvarez", "Santos", "Reed"];
+  const streets = ["Ocean Dr", "Biscayne Blvd", "Coral Way", "Bird Rd", "Flagler St", "Sunset Dr", "Pine Tree Dr", "Alton Rd"];
+  const notes = [
+    "Gate code needed before arrival.",
+    "Please call when you're on the way.",
+    "Customer requested a morning appointment.",
+    "Parking is easiest in the side driveway.",
+    "Please bring the standard service checklist."
+  ];
+  const first = pickRandom(firstNames);
+  const last = pickRandom(lastNames);
+  const name = `${first} ${last}`;
+  const email = `${first}.${last}.${seed}${index}@example.com`.toLowerCase();
+  const areaCode = pickRandom(["305", "786", "954"]);
+  const phone = `${areaCode}${randomDigits(7)}`;
+  const address = `${100 + Math.floor(Math.random() * 8900)} ${pickRandom(streets)}`.slice(0, 40);
+  const createdAt = new Date(Date.now() - index * 86400000).toISOString();
+
+  return {
+    client_name: name.slice(0, 30),
+    client_email: email,
+    client_phone: phone,
+    service_address: address,
+    notes: pickRandom(notes),
+    created_at: createdAt,
+    updated_at: createdAt
+  };
+}
+
+async function handleSeedClients() {
+  if (!supabase || !seedClientsButton) {
+    return;
+  }
+
+  if (runtimeConfig?.label !== "DEV") {
+    setStatus("This quick-fill tool is only available in QA.", "error");
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    setStatus("Please sign in first.", "error");
+    return;
+  }
+
+  if (!isBronzeUser(user)) {
+    setStatus("Switch to Bronze first so test contacts can be saved.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm("Add 10 random QA contacts to this account?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  const seed = Date.now();
+  const payload = Array.from({ length: 10 }, (_, index) => ({
+    owner_id: user.id,
+    ...generateTestClient(index, seed)
+  }));
+
+  setButtonBusy(seedClientsButton, true, "Adding test contacts...");
+  setStatus("");
+
+  try {
+    const { error } = await supabase.from("clients").insert(payload);
+
+    if (error) {
+      throw error;
+    }
+
+    await loadSavedClients();
+    setStatus("10 QA test contacts added.", "success");
+  } catch (error) {
+    setStatus(error.message || "Unable to add test contacts.", "error");
+  } finally {
+    setButtonBusy(seedClientsButton, false);
+  }
+}
+
 function useClientInReminder(clientId) {
   const client = savedClients.find(entry => entry.id === clientId);
 
@@ -1211,6 +1352,10 @@ async function initAccountPage() {
 
   if (setBronzeTierButton) {
     setBronzeTierButton.addEventListener("click", () => handleTierPreview("bronze"));
+  }
+
+  if (seedClientsButton) {
+    seedClientsButton.addEventListener("click", handleSeedClients);
   }
 }
 
