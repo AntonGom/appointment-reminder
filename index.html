@@ -311,14 +311,6 @@
       max-width: 560px;
     }
 
-    .question-wrap.sleek-wrap {
-      max-width: 560px;
-      background: linear-gradient(180deg, rgba(232, 241, 255, 0.78), rgba(248, 250, 252, 0.62));
-      border-color: rgba(96, 165, 250, 0.18);
-      box-shadow: 0 22px 48px rgba(15, 23, 42, 0.08);
-      backdrop-filter: blur(8px);
-    }
-
     .question-wrap.review-wrap {
       background: rgba(243, 246, 252, 0.92);
       max-width: 100%;
@@ -365,12 +357,6 @@
       font-size: 18px;
       outline: none;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-    }
-
-    .sleek-input {
-      background: rgba(255, 255, 255, 0.7);
-      border-color: rgba(96, 165, 250, 0.2);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
     }
 
     input[type="date"],
@@ -1070,12 +1056,12 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Business Phone or Email" data-nav="Business" data-field="businessContact" data-copy="The client will see this in the reminder if you add it." data-optional="true">
-      <div class="question-wrap wide-wrap sleek-wrap">
-        <label for="businessContact">Business Phone or Email <span class="label-badge">Optional</span></label>
-        <input id="businessContact" class="sleek-input" placeholder="Business phone or email">
+    <div class="wizard-step" data-title="Bussiness Contact Infoformation" data-nav="Contact" data-field="businessContact" data-copy="This is the contact information your client will see in the reminder." data-optional="true">
+      <div class="question-wrap wide-wrap">
+        <label for="businessContact">Bussiness Contact Infoformation <span class="label-badge">Optional</span></label>
+        <input id="businessContact" placeholder="Business phone or email">
         <div id="businessContact-error" class="field-error"></div>
-        <p class="field-note visible">Use your business contact info, not the client's.</p>
+        <p class="field-note visible">Use the phone number or email the client should use if they need to reschedule or reach you.</p>
       </div>
     </div>
 
@@ -1168,7 +1154,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260330f"></script>
+<script src="app.js?v=20260330g"></script>
 <script src="nav.js?v=20260326j"></script>
 
 </body>

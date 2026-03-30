@@ -23,7 +23,7 @@ const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
   address: { label: "Service Location", maxLength: 160 },
-  businessContact: { label: "Business Phone or Email", maxLength: 60 }
+  businessContact: { label: "Bussiness Contact Infoformation", maxLength: 60 }
 };
 
 const PHONE_DIGIT_LIMIT = 10;
