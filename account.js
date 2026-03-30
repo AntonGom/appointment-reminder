@@ -576,9 +576,11 @@ async function handleSignOut() {
 
 async function handleSaveClient(event) {
   event.preventDefault();
+  const form = event.currentTarget;
 
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
+    setClientFormStatus("Accounts are not configured yet.", "error");
     return;
   }
 
@@ -598,7 +600,13 @@ async function handleSaveClient(event) {
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  if (!(form instanceof HTMLFormElement)) {
+    setStatus("Unable to read the contact form.", "error");
+    setClientFormStatus("Unable to read the contact form. Please refresh and try again.", "error");
+    return;
+  }
+
+  const formData = new FormData(form);
   const payload = {
     owner_id: user.id,
     client_name: String(formData.get("client_name") || "").trim().slice(0, 30),
@@ -635,7 +643,7 @@ async function handleSaveClient(event) {
     }
 
     await loadSavedClients();
-    event.currentTarget.reset();
+    form.reset();
     setStatus("Contact saved to your account.", "success");
     setClientFormStatus("Contact saved to your account.", "success");
   } catch (error) {
