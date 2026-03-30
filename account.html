@@ -451,6 +451,41 @@
       grid-column: 1 / -1;
     }
 
+    .clients-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toolbar-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .toolbar-label {
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .toolbar-select {
+      width: 100%;
+      padding: 15px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--field-border);
+      background: var(--field-bg);
+      color: var(--text-main);
+      font-size: 17px;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .toolbar-select:focus {
+      border-color: var(--field-focus);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
     .form-actions {
       display: flex;
       gap: 10px;
@@ -654,7 +689,8 @@
       .grid,
       .auth-grid,
       .account-summary-grid,
-      .client-form-grid {
+      .client-form-grid,
+      .clients-toolbar {
         grid-template-columns: 1fr;
       }
 
@@ -849,6 +885,21 @@
                   </div>
                   <div id="contacts-count-badge" class="count-badge">0 contacts</div>
                 </div>
+                <div class="clients-toolbar">
+                  <div class="toolbar-field">
+                    <label class="toolbar-label" for="clients-search">Search clients</label>
+                    <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
+                  </div>
+                  <div class="toolbar-field">
+                    <label class="toolbar-label" for="clients-sort">Sort contacts</label>
+                    <select id="clients-sort" class="toolbar-select">
+                      <option value="az">Alphabetical (A to Z)</option>
+                      <option value="newest">Recently added</option>
+                      <option value="oldest">Oldest added</option>
+                      <option value="updated">Recently updated</option>
+                    </select>
+                  </div>
+                </div>
                 <div id="clients-list" class="clients-list">
                   <div class="empty-state">No contacts saved yet.</div>
                 </div>
@@ -895,6 +946,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330f"></script>
+  <script type="module" src="account.js?v=20260330g"></script>
 </body>
 </html>

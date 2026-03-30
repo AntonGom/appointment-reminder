@@ -25,6 +25,8 @@ const saveClientButton = document.getElementById("save-client-button");
 const cancelEditClientButton = document.getElementById("cancel-edit-client-button");
 const clientFormStatus = document.getElementById("client-form-status");
 const clientFormMode = document.getElementById("client-form-mode");
+const clientsSearchInput = document.getElementById("clients-search");
+const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
 
 let supabase = null;
@@ -32,6 +34,8 @@ let appConfig = null;
 let runtimeConfig = null;
 let savedClients = [];
 let editingClientId = "";
+let clientsSearchQuery = "";
+let clientsSortMode = "az";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
@@ -153,29 +157,12 @@ function isBronzeUser(user) {
   return getTierKey(user) === "bronze";
 }
 
-function sortContacts(contacts) {
-  return [...(contacts || [])].sort((left, right) => {
-    const leftName = String(left.client_name || "").trim().toLowerCase();
-    const rightName = String(right.client_name || "").trim().toLowerCase();
-    const leftEmail = String(left.client_email || "").trim().toLowerCase();
-    const rightEmail = String(right.client_email || "").trim().toLowerCase();
-    const leftPhone = String(left.client_phone || "").trim().toLowerCase();
-    const rightPhone = String(right.client_phone || "").trim().toLowerCase();
-
-    return (
-      leftName.localeCompare(rightName) ||
-      leftEmail.localeCompare(rightEmail) ||
-      leftPhone.localeCompare(rightPhone)
-    );
-  });
-}
-
 function formatCountLabel(count) {
   const safeCount = Number.isFinite(count) ? count : 0;
   return safeCount === 1 ? "1 contact" : `${safeCount} contacts`;
 }
 
-function updateContactsCount() {
+function updateContactsCount(visibleCount = savedClients.length) {
   const count = savedClients.length;
 
   if (contactsCount) {
@@ -183,7 +170,9 @@ function updateContactsCount() {
   }
 
   if (contactsCountBadge) {
-    contactsCountBadge.textContent = formatCountLabel(count);
+    contactsCountBadge.textContent = visibleCount === count
+      ? formatCountLabel(count)
+      : `${visibleCount} of ${count} contacts`;
   }
 }
 
@@ -205,15 +194,74 @@ function formatSavedDate(value) {
   }).format(date);
 }
 
+function getClientSearchText(client) {
+  return [
+    client.client_name,
+    client.client_email,
+    client.client_phone,
+    client.service_address,
+    client.notes
+  ]
+    .map(value => String(value || "").trim().toLowerCase())
+    .join(" ");
+}
+
+function sortContacts(contacts, mode = clientsSortMode) {
+  const normalizedMode = String(mode || "az").trim().toLowerCase();
+  const list = [...(contacts || [])];
+
+  if (normalizedMode === "newest") {
+    return list.sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
+  }
+
+  if (normalizedMode === "oldest") {
+    return list.sort((left, right) => new Date(left.created_at || 0) - new Date(right.created_at || 0));
+  }
+
+  if (normalizedMode === "updated") {
+    return list.sort((left, right) => new Date(right.updated_at || right.created_at || 0) - new Date(left.updated_at || left.created_at || 0));
+  }
+
+  return list.sort((left, right) => {
+    const leftName = String(left.client_name || "").trim().toLowerCase();
+    const rightName = String(right.client_name || "").trim().toLowerCase();
+    const leftEmail = String(left.client_email || "").trim().toLowerCase();
+    const rightEmail = String(right.client_email || "").trim().toLowerCase();
+    const leftPhone = String(left.client_phone || "").trim().toLowerCase();
+    const rightPhone = String(right.client_phone || "").trim().toLowerCase();
+
+    return (
+      leftName.localeCompare(rightName) ||
+      leftEmail.localeCompare(rightEmail) ||
+      leftPhone.localeCompare(rightPhone)
+    );
+  });
+}
+
+function getVisibleClients() {
+  const query = clientsSearchQuery.trim().toLowerCase();
+  const filteredClients = query
+    ? savedClients.filter(client => getClientSearchText(client).includes(query))
+    : [...savedClients];
+
+  return sortContacts(filteredClients, clientsSortMode);
+}
+
 function renderSavedClients() {
   if (!clientsList) {
     return;
   }
 
-  updateContactsCount();
+  const visibleClients = getVisibleClients();
+  updateContactsCount(visibleClients.length);
 
   if (!savedClients.length) {
     clientsList.innerHTML = `<div class="empty-state">No contacts saved yet.</div>`;
+    return;
+  }
+
+  if (!visibleClients.length) {
+    clientsList.innerHTML = `<div class="empty-state">No contacts match that search.</div>`;
     return;
   }
 
@@ -232,7 +280,7 @@ function renderSavedClients() {
           </tr>
         </thead>
         <tbody>
-          ${savedClients.map(client => {
+          ${visibleClients.map(client => {
             const displayName = client.client_name || "Saved client";
             const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
             const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
@@ -259,7 +307,7 @@ function renderSavedClients() {
       </table>
     </div>
     <div class="clients-mobile-list">
-      ${savedClients.map(client => {
+      ${visibleClients.map(client => {
         const displayName = client.client_name || "Saved client";
         const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
         const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
@@ -386,7 +434,7 @@ async function loadSavedClients() {
     return;
   }
 
-  savedClients = sortContacts(data || []);
+  savedClients = data || [];
   renderSavedClients();
 }
 
@@ -962,6 +1010,20 @@ async function initAccountPage() {
 
   if (clientsList) {
     clientsList.addEventListener("click", handleClientsListClick);
+  }
+
+  if (clientsSearchInput) {
+    clientsSearchInput.addEventListener("input", event => {
+      clientsSearchQuery = String(event.target.value || "");
+      renderSavedClients();
+    });
+  }
+
+  if (clientsSortSelect) {
+    clientsSortSelect.addEventListener("change", event => {
+      clientsSortMode = String(event.target.value || "az");
+      renderSavedClients();
+    });
   }
 
   if (setFreeTierButton) {
