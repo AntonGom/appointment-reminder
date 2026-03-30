@@ -702,7 +702,8 @@
     .clients-table {
       width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
+      min-width: 1160px;
+      table-layout: auto;
     }
 
     .clients-table th,
@@ -711,7 +712,8 @@
       border-bottom: 1px solid rgba(226, 232, 240, 0.92);
       vertical-align: middle;
       text-align: center;
-      word-break: break-word;
+      word-break: normal;
+      overflow-wrap: anywhere;
     }
 
     .clients-table th {
@@ -734,6 +736,7 @@
       color: var(--text-main);
       font-size: 15px;
       line-height: 1.55;
+      white-space: normal;
     }
 
     .clients-table th:nth-child(6),
