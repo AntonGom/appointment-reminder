@@ -39,7 +39,7 @@ let runtimeConfig = null;
 let savedClients = [];
 let editingClientId = "";
 let clientsSearchQuery = "";
-let clientsSortMode = "az";
+let clientsSortMode = "newest";
 let reminderHistoryReady = true;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
@@ -1198,8 +1198,9 @@ async function initAccountPage() {
   }
 
   if (clientsSortSelect) {
+    clientsSortSelect.value = clientsSortMode;
     clientsSortSelect.addEventListener("change", event => {
-      clientsSortMode = String(event.target.value || "az");
+      clientsSortMode = String(event.target.value || "newest");
       renderSavedClients();
     });
   }

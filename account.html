@@ -597,8 +597,8 @@
     .clients-table td {
       padding: 13px 12px;
       border-bottom: 1px solid rgba(226, 232, 240, 0.92);
-      vertical-align: top;
-      text-align: left;
+      vertical-align: middle;
+      text-align: center;
       word-break: break-word;
     }
 
@@ -643,6 +643,7 @@
       display: block;
       font-size: 16px;
       color: var(--text-main);
+      text-align: center;
     }
 
     .table-muted {
@@ -679,6 +680,7 @@
       border-radius: 12px;
       background: rgba(239, 246, 255, 0.92);
       border: 1px solid rgba(191, 219, 254, 0.9);
+      text-align: center;
     }
 
     .history-channel {
@@ -991,7 +993,7 @@
                     <label class="toolbar-label" for="clients-sort">Sort contacts</label>
                     <select id="clients-sort" class="toolbar-select">
                       <option value="az">Alphabetical (A to Z)</option>
-                      <option value="newest">Recently added</option>
+                      <option value="newest" selected>Recently added</option>
                       <option value="oldest">Oldest added</option>
                       <option value="updated">Recently edited</option>
                     </select>
@@ -1080,6 +1082,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330j"></script>
+  <script type="module" src="account.js?v=20260330k"></script>
 </body>
 </html>
