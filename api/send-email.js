@@ -289,7 +289,7 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
     { label: "Client Name", value: clientName || "", maxLength: 30 },
     { label: "Client Phone Number", value: clientPhone || "", maxLength: 30 },
     { label: "Service Address", value: serviceAddress || "", maxLength: 40 },
-    { label: "Your Contact Info", value: businessContact || "", maxLength: 30, allowEmail: true },
+    { label: "Business Phone or Email", value: businessContact || "", maxLength: 60, allowEmail: true },
     { label: "Message Preview", value: message || "" }
   ];
 

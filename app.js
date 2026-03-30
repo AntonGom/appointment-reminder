@@ -23,7 +23,7 @@ const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
   address: { label: "Service Address", maxLength: 40 },
-  businessContact: { label: "Your Contact Info", maxLength: 30 }
+  businessContact: { label: "Business Phone or Email", maxLength: 60 }
 };
 
 const PHONE_DIGIT_LIMIT = 10;
@@ -787,7 +787,7 @@ function validateMessageSafety(options = {}) {
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
     { label: "Service Address", value: address, maxLength: FIELD_LIMITS.address.maxLength },
-    { label: "Your Contact Info", value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength, allowEmail: true },
+    { label: FIELD_LIMITS.businessContact.label, value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength, allowEmail: true },
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
   ];

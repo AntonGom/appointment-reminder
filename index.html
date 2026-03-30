@@ -307,6 +307,10 @@
       transition: box-shadow 0.2s ease, transform 0.2s ease;
     }
 
+    .question-wrap.wide-wrap {
+      max-width: 560px;
+    }
+
     .question-wrap.review-wrap {
       background: rgba(243, 246, 252, 0.92);
       max-width: 100%;
@@ -392,6 +396,11 @@
       color: var(--text-soft);
       font-size: 13px;
       line-height: 1.55;
+    }
+
+    .field-note.visible {
+      display: block;
+      font-size: 14px;
     }
 
     .map-preview {
@@ -1046,11 +1055,12 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Your Contact Info" data-nav="Contact" data-field="businessContact" data-copy="Add the best phone number or email if you want clients to know how to reach you." data-optional="true">
-      <div class="question-wrap">
-        <label for="businessContact">Your Contact Info <span class="label-badge">Optional</span></label>
-        <input id="businessContact" placeholder="Phone number or email clients can use to reach you">
+    <div class="wizard-step" data-title="Business Phone or Email" data-nav="Business" data-field="businessContact" data-copy="The client will see this in the reminder if you add it." data-optional="true">
+      <div class="question-wrap wide-wrap">
+        <label for="businessContact">Business Phone or Email <span class="label-badge">Optional</span></label>
+        <input id="businessContact" placeholder="Business phone or email">
         <div id="businessContact-error" class="field-error"></div>
+        <p class="field-note visible">Use your business contact info, not the client's.</p>
       </div>
     </div>
 
@@ -1143,7 +1153,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260330c"></script>
+<script src="app.js?v=20260330d"></script>
 <script src="nav.js?v=20260326j"></script>
 
 </body>
