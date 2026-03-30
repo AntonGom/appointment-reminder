@@ -7,6 +7,9 @@ const authSetupNotice = document.getElementById("auth-setup-notice");
 const billingSetupNotice = document.getElementById("billing-setup-notice");
 const accountEmail = document.getElementById("account-email");
 const accountPlan = document.getElementById("account-plan");
+const planSummaryCopy = document.getElementById("plan-summary-copy");
+const contactsCount = document.getElementById("contacts-count");
+const contactsCountBadge = document.getElementById("contacts-count-badge");
 const upgradeButton = document.getElementById("upgrade-button");
 const signUpForm = document.getElementById("sign-up-form");
 const signInForm = document.getElementById("sign-in-form");
@@ -15,6 +18,7 @@ const pricePill = document.getElementById("price-pill");
 const tierPreviewShell = document.getElementById("tier-preview-shell");
 const setFreeTierButton = document.getElementById("set-free-tier-button");
 const setBronzeTierButton = document.getElementById("set-bronze-tier-button");
+const freeContactsShell = document.getElementById("free-contacts-shell");
 const bronzeContactsShell = document.getElementById("bronze-contacts-shell");
 const clientForm = document.getElementById("client-form");
 const saveClientButton = document.getElementById("save-client-button");
@@ -166,10 +170,47 @@ function getClientDisplayLines(client) {
   return lines;
 }
 
+function formatCountLabel(count) {
+  const safeCount = Number.isFinite(count) ? count : 0;
+  return safeCount === 1 ? "1 contact" : `${safeCount} contacts`;
+}
+
+function updateContactsCount() {
+  const count = savedClients.length;
+
+  if (contactsCount) {
+    contactsCount.textContent = String(count);
+  }
+
+  if (contactsCountBadge) {
+    contactsCountBadge.textContent = formatCountLabel(count);
+  }
+}
+
+function formatSavedDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+}
+
 function renderSavedClients() {
   if (!clientsList) {
     return;
   }
+
+  updateContactsCount();
 
   if (!savedClients.length) {
     clientsList.innerHTML = `<div class="empty-state">No contacts saved yet.</div>`;
@@ -181,6 +222,7 @@ function renderSavedClients() {
     const details = getClientDisplayLines(client)
       .map(line => escapeHtml(line))
       .join("\n");
+    const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
 
     return `
       <div class="client-item">
@@ -188,6 +230,7 @@ function renderSavedClients() {
           <div class="client-item-name">${escapeHtml(displayName)}</div>
         </div>
         <div class="client-item-meta">${details || "No extra details saved yet."}</div>
+        ${updatedLabel ? `<div class="client-item-date">Last updated ${escapeHtml(updatedLabel)}</div>` : ""}
         <div class="client-item-actions">
           <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use in Reminder</button>
           <button class="secondary-button" type="button" data-action="delete" data-client-id="${client.id}">Delete</button>
@@ -262,6 +305,26 @@ function updateSignedInView(user) {
     accountPlan.textContent = isSignedIn ? getTierLabel(user) : "FREE";
   }
 
+  if (pricePill) {
+    if (!isSignedIn) {
+      pricePill.textContent = "Optional Bronze";
+    } else if (isBronze) {
+      pricePill.textContent = "Bronze Active";
+    } else {
+      pricePill.textContent = "Free Account";
+    }
+  }
+
+  if (planSummaryCopy) {
+    if (!isSignedIn || tierKey === "free") {
+      planSummaryCopy.textContent = "Free works the same as using the reminder tool signed out.";
+    } else if (tierKey === "bronze") {
+      planSummaryCopy.textContent = "Bronze can save contacts and store reminder timing preferences.";
+    } else {
+      planSummaryCopy.textContent = "This account has access to saved features tied to the active plan.";
+    }
+  }
+
   if (upgradeButton) {
     if (!isSignedIn) {
       upgradeButton.textContent = "Upgrade to Bronze";
@@ -281,6 +344,10 @@ function updateSignedInView(user) {
 
   if (tierPreviewShell) {
     tierPreviewShell.hidden = !(isSignedIn && runtimeConfig?.label === "DEV");
+  }
+
+  if (freeContactsShell) {
+    freeContactsShell.hidden = !(isSignedIn && !isBronze);
   }
 
   if (bronzeContactsShell) {
@@ -321,7 +388,7 @@ async function initSupabase() {
   runtimeConfig = await getRuntimeConfig().catch(() => null);
 
   if (pricePill) {
-    pricePill.textContent = appConfig.stripePriceLabel || "$9/month";
+    pricePill.textContent = "Optional Bronze";
   }
 
   if (!appConfig.accountsEnabled) {
@@ -533,18 +600,30 @@ async function handleSaveClient(event) {
   setButtonBusy(saveClientButton, true, "Saving client...");
   setStatus("");
 
-  const { error } = await supabase.from("clients").insert(payload);
+  try {
+    const { data, error } = await supabase
+      .from("clients")
+      .insert(payload)
+      .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at");
 
-  setButtonBusy(saveClientButton, false);
+    if (error) {
+      throw error;
+    }
 
-  if (error) {
+    if (Array.isArray(data) && data.length) {
+      savedClients = sortContacts([...savedClients, ...data]);
+      renderSavedClients();
+    } else {
+      await loadSavedClients();
+    }
+
+    event.currentTarget.reset();
+    setStatus("Contact saved to your account.", "success");
+  } catch (error) {
     setStatus(error.message || "Unable to save this client.", "error");
-    return;
+  } finally {
+    setButtonBusy(saveClientButton, false);
   }
-
-  event.currentTarget.reset();
-  setStatus("Client saved.", "success");
-  await loadSavedClients();
 }
 
 async function handleTierPreview(nextTier) {

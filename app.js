@@ -625,11 +625,15 @@ async function findExistingBronzeContactId(payload) {
     return null;
   }
 
-  const lookupRules = [
-    payload.client_email ? { column: "client_email", value: payload.client_email } : null,
-    payload.client_phone ? { column: "client_phone", value: payload.client_phone } : null,
-    payload.client_name ? { column: "client_name", value: payload.client_name } : null
-  ].filter(Boolean);
+  const lookupRules = [];
+
+  if (payload.client_email) {
+    lookupRules.push({ column: "client_email", value: payload.client_email });
+  }
+
+  if (payload.client_phone) {
+    lookupRules.push({ column: "client_phone", value: payload.client_phone });
+  }
 
   for (const rule of lookupRules) {
     const { data, error } = await appSupabase

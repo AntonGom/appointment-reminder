@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Account & Pro</title>
+  <title>My Account</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
   <style>
     :root {
@@ -184,7 +184,7 @@
     }
 
     .auth-card h3,
-    .feature-card h3 {
+    .info-card h3 {
       margin: 0 0 8px;
       font-size: 22px;
       color: var(--text-main);
@@ -280,34 +280,41 @@
       color: #0f172a;
     }
 
-    .pro-list {
+    .account-summary-grid {
       display: grid;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .feature-card {
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .feature-card p {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .account-box {
-      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       margin-top: 18px;
+    }
+
+    .summary-card,
+    .account-box {
+      display: grid;
       padding: 18px;
       border-radius: 22px;
       background: rgba(248, 250, 252, 0.92);
       border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .summary-card {
+      gap: 8px;
+      align-content: start;
+      min-height: 150px;
+    }
+
+    .summary-value {
+      color: var(--text-main);
+      font-size: 26px;
+      line-height: 1.2;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .summary-copy {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.6;
     }
 
     .account-row {
@@ -337,6 +344,18 @@
       color: var(--text-main);
       font-size: 18px;
       font-weight: 800;
+    }
+
+    .account-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .account-actions button {
+      width: auto;
+      min-width: 180px;
     }
 
     .clients-shell {
@@ -386,6 +405,42 @@
       line-height: 1.6;
     }
 
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .section-head h3 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      color: var(--text-main);
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
     .client-form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -430,6 +485,14 @@
       white-space: pre-line;
     }
 
+    .client-item-date {
+      margin-top: 10px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
     .client-item-actions {
       display: flex;
       gap: 10px;
@@ -463,6 +526,26 @@
       border: 1px solid rgba(96, 165, 250, 0.24);
     }
 
+    .info-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .info-card {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -470,6 +553,7 @@
     @media (max-width: 860px) {
       .grid,
       .auth-grid,
+      .account-summary-grid,
       .client-form-grid {
         grid-template-columns: 1fr;
       }
@@ -501,8 +585,12 @@
       }
 
       .auth-card h3,
-      .feature-card h3 {
+      .info-card h3 {
         font-size: 20px;
+      }
+
+      .account-actions button {
+        width: 100%;
       }
     }
   </style>
@@ -512,11 +600,11 @@
     <section class="hero">
       <div class="hero-content">
         <div class="eyebrow">
-          Account & Pro
-          <span id="price-pill" class="price-pill">$9/month</span>
+          Account
+          <span id="price-pill" class="price-pill">Optional Bronze</span>
         </div>
-        <h1>Keep the reminder tool free. Unlock Pro only when you need it.</h1>
-        <p class="lead">The free reminder flow stays open to everyone. Create an account only if you want paid features like saved clients, automated reminders, and future SMS tools.</p>
+        <h1>Manage your account and saved contacts.</h1>
+        <p class="lead">The reminder tool stays free. This page is where you sign in, check your plan, and keep client details ready to use again later.</p>
       </div>
     </section>
 
@@ -525,16 +613,34 @@
     <div class="grid">
       <section class="panel">
         <div class="panel-content">
-          <h2>Your account</h2>
-          <p class="panel-copy">Use one page for both account creation and sign in. When you are signed in, payment is unlocked for Pro.</p>
+          <h2>Account</h2>
+          <p class="panel-copy">Create an account or sign in to manage your plan and saved client details in one place.</p>
 
           <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
 
             <div id="signed-out-panel" class="stack">
+              <div class="account-summary-grid">
+                <div class="summary-card">
+                  <div class="account-label">Free account</div>
+                  <div class="summary-value">Same reminder tool</div>
+                  <p class="summary-copy">Signing in does not change the free reminder flow. It simply gives you an account for saved features later.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="account-label">Bronze</div>
+                  <div class="summary-value">Saved contacts</div>
+                  <p class="summary-copy">Bronze can keep client details on your account and store reminder timing preferences for future automation.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="account-label">Good to know</div>
+                  <div class="summary-value">One account page</div>
+                  <p class="summary-copy">You can create an account now, keep using the free tool, and only upgrade if you decide you need the extra features.</p>
+                </div>
+              </div>
+
               <div class="auth-grid">
                 <div class="auth-card">
                   <h3>Create account</h3>
-                  <p>Create a login so your future Pro data can stay tied to your business.</p>
+                  <p>Create a login so your future saved data stays attached to your account.</p>
                   <form id="sign-up-form">
                     <div>
                       <label for="sign-up-email">Email</label>
@@ -550,7 +656,7 @@
 
                 <div class="auth-card">
                   <h3>Sign in</h3>
-                  <p>Already have an account? Sign in here to upgrade or manage future Pro tools.</p>
+                  <p>Already have an account? Sign in here to manage your plan and contacts.</p>
                   <form id="sign-in-form">
                     <div>
                       <label for="sign-in-email">Email</label>
@@ -567,29 +673,27 @@
             </div>
 
           <div id="signed-in-panel" hidden>
-            <div class="account-box">
-              <div class="account-row">
-                <div>
-                  <div class="account-label">Signed in as</div>
-                  <div id="account-email" class="account-value"></div>
-                </div>
+            <div class="account-summary-grid">
+              <div class="summary-card">
+                <div class="account-label">Signed in as</div>
+                <div id="account-email" class="summary-value"></div>
+                <p class="summary-copy">This is the account your saved features will stay attached to.</p>
               </div>
+              <div class="summary-card">
+                <div class="account-label">Current plan</div>
+                <div id="account-plan" class="summary-value">FREE</div>
+                <p id="plan-summary-copy" class="summary-copy">Free works the same as using the reminder tool signed out.</p>
+              </div>
+              <div class="summary-card">
+                <div class="account-label">Saved contacts</div>
+                <div id="contacts-count" class="summary-value">0</div>
+                <p class="summary-copy">Every client saved to this account appears below.</p>
+              </div>
+            </div>
 
-              <div class="account-row">
-                <div>
-                  <div class="account-label">Current plan</div>
-                  <div id="account-plan" class="account-value">FREE</div>
-                </div>
-                <button id="upgrade-button" class="primary-button" type="button">Upgrade to Pro</button>
-              </div>
-
-              <div class="account-row">
-                <div>
-                  <div class="account-label">Need to leave?</div>
-                  <div class="mini-note">You can sign back in later before using paid features.</div>
-                </div>
-                <button id="sign-out-button" class="secondary-button" type="button">Sign Out</button>
-              </div>
+            <div class="account-actions">
+              <button id="upgrade-button" class="primary-button" type="button">Upgrade to Bronze</button>
+              <button id="sign-out-button" class="secondary-button" type="button">Sign Out</button>
             </div>
 
             <div id="billing-setup-notice" class="notice" hidden>Add `STRIPE_SECRET_KEY` and `STRIPE_PRO_MONTHLY_PRICE_ID` in Vercel to turn on Stripe checkout.</div>
@@ -603,10 +707,23 @@
               </div>
             </div>
 
+            <div id="free-contacts-shell" class="clients-card" hidden>
+              <div class="section-head">
+                <div>
+                  <h3>Saved contacts are not turned on yet</h3>
+                  <p>Your free account works like the regular reminder tool. Bronze turns on saved contacts and reminder timing preferences.</p>
+                </div>
+              </div>
+            </div>
+
             <div id="bronze-contacts-shell" class="clients-shell" hidden>
               <div class="clients-card">
-                <h3>Contacts</h3>
-                <p>Bronze keeps your contacts attached to your account so you can send again without retyping their details.</p>
+                <div class="section-head">
+                  <div>
+                    <h3>Add a contact</h3>
+                    <p>Save client details here so they are ready to use again later.</p>
+                  </div>
+                </div>
                 <form id="client-form">
                   <div class="client-form-grid">
                     <div>
@@ -635,8 +752,13 @@
               </div>
 
               <div class="clients-card">
-                <h3>Your contacts</h3>
-                <p>Contacts are sorted by name, email, and phone number so they stay easy to find.</p>
+                <div class="section-head">
+                  <div>
+                    <h3>Saved contacts</h3>
+                    <p>This is the full contact list for this account. Contacts are sorted by name, email, and phone number.</p>
+                  </div>
+                  <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                </div>
                 <div id="clients-list" class="clients-list">
                   <div class="empty-state">No contacts saved yet.</div>
                 </div>
@@ -648,23 +770,23 @@
 
       <aside class="panel">
         <div class="panel-content">
-          <h2>What Pro will unlock</h2>
-          <p class="feature-copy">This is the account layer we need before we can store business data and bill for advanced features.</p>
+          <h2>Account Notes</h2>
+          <p class="feature-copy">This page is meant to manage your account, not replace the main reminder screen.</p>
 
-          <div class="pro-list">
-            <div class="feature-card">
-              <h3>Saved clients</h3>
-              <p>Keep client details attached to the signed-in business owner so reminders can be sent again without retyping everything.</p>
+          <div class="info-list">
+            <div class="info-card">
+              <h3>Free</h3>
+              <p>A signed-in free account works the same as using the reminder tool normally. It just gives you a place to manage your login.</p>
             </div>
 
-            <div class="feature-card">
-              <h3>Scheduled reminders</h3>
-              <p>Let the business owner choose when reminders send before or after the appointment.</p>
+            <div class="info-card">
+              <h3>Bronze</h3>
+              <p>Bronze adds saved contacts and stores reminder timing preferences so future automation can be tied to your account.</p>
             </div>
 
-            <div class="feature-card">
-              <h3>SMS and tracking</h3>
-              <p>Unlock future SMS tools and view more advanced delivery details once the account system is in place.</p>
+            <div class="info-card">
+              <h3>Privacy</h3>
+              <p>Saved contacts stay attached to the signed-in account so you can pull them back into a reminder later without retyping them.</p>
             </div>
           </div>
         </div>
@@ -673,6 +795,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260326k"></script>
+  <script type="module" src="account.js?v=20260330a"></script>
 </body>
 </html>
