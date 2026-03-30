@@ -33,6 +33,7 @@ const clientsSearchInput = document.getElementById("clients-search");
 const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
 const seedClientsButton = document.getElementById("seed-clients-button");
+const contactsCard = document.getElementById("contacts-card");
 
 let supabase = null;
 let appConfig = null;
@@ -41,9 +42,11 @@ let savedClients = [];
 let editingClientId = "";
 let clientsSearchQuery = "";
 let clientsSortMode = "newest";
+let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
+const CLIENTS_PER_PAGE = 10;
 
 function setAuthFormsEnabled(enabled) {
   [signUpForm, signInForm].forEach(form => {
@@ -225,6 +228,10 @@ function renderContactsLoadingState() {
 function setClientsLoadingState(isLoading) {
   isLoadingClients = isLoading;
 
+  if (contactsCard) {
+    contactsCard.classList.toggle("is-loading", isLoading);
+  }
+
   if (isLoading) {
     if (contactsCountBadge) {
       contactsCountBadge.textContent = "Loading contacts...";
@@ -400,13 +407,54 @@ function sortContacts(contacts, mode = clientsSortMode) {
   });
 }
 
-function getVisibleClients() {
+function getFilteredClients() {
   const query = clientsSearchQuery.trim().toLowerCase();
   const filteredClients = query
     ? savedClients.filter(client => getClientSearchText(client).includes(query))
     : [...savedClients];
 
   return sortContacts(filteredClients, clientsSortMode);
+}
+
+function getClientsPageCount(totalCount) {
+  return Math.max(1, Math.ceil((Number(totalCount) || 0) / CLIENTS_PER_PAGE));
+}
+
+function clampClientsPage(totalCount) {
+  const totalPages = getClientsPageCount(totalCount);
+  clientsPage = Math.min(Math.max(clientsPage, 1), totalPages);
+  return totalPages;
+}
+
+function renderPagination(totalCount, pageCount, pageStart, pageEnd) {
+  if (pageCount <= 1) {
+    return "";
+  }
+
+  const pageButtons = Array.from({ length: pageCount }, (_, index) => {
+    const pageNumber = index + 1;
+    return `
+      <button
+        class="pagination-button ${pageNumber === clientsPage ? "active" : ""}"
+        type="button"
+        data-pagination="page"
+        data-page="${pageNumber}"
+        aria-label="Go to page ${pageNumber}"
+        aria-current="${pageNumber === clientsPage ? "page" : "false"}"
+      >${pageNumber}</button>
+    `;
+  }).join("");
+
+  return `
+    <div class="pagination-bar">
+      <div class="pagination-summary">Showing ${pageStart}-${pageEnd} of ${totalCount} contacts</div>
+      <div class="pagination-actions">
+        <button class="pagination-button" type="button" data-pagination="prev" ${clientsPage === 1 ? "disabled" : ""}>Prev</button>
+        ${pageButtons}
+        <button class="pagination-button" type="button" data-pagination="next" ${clientsPage === pageCount ? "disabled" : ""}>Next</button>
+      </div>
+    </div>
+  `;
 }
 
 function renderSavedClients() {
@@ -419,18 +467,26 @@ function renderSavedClients() {
     return;
   }
 
-  const visibleClients = getVisibleClients();
-  updateContactsCount(visibleClients.length);
+  const filteredClients = getFilteredClients();
+  const totalFiltered = filteredClients.length;
+  const pageCount = clampClientsPage(totalFiltered);
+  const pageStartIndex = (clientsPage - 1) * CLIENTS_PER_PAGE;
+  const pagedClients = filteredClients.slice(pageStartIndex, pageStartIndex + CLIENTS_PER_PAGE);
+  const pageStart = totalFiltered ? pageStartIndex + 1 : 0;
+  const pageEnd = pageStartIndex + pagedClients.length;
+  updateContactsCount(totalFiltered);
 
   if (!savedClients.length) {
     clientsList.innerHTML = `<div class="empty-state">No contacts saved yet.</div>`;
     return;
   }
 
-  if (!visibleClients.length) {
+  if (!totalFiltered) {
     clientsList.innerHTML = `<div class="empty-state">No contacts match that search.</div>`;
     return;
   }
+
+  const paginationMarkup = renderPagination(totalFiltered, pageCount, pageStart, pageEnd);
 
   clientsList.innerHTML = `
     <div class="clients-table-shell">
@@ -448,7 +504,7 @@ function renderSavedClients() {
           </tr>
         </thead>
         <tbody>
-          ${visibleClients.map(client => {
+          ${pagedClients.map(client => {
             const displayName = client.client_name || "Saved client";
             const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
             const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
@@ -476,7 +532,7 @@ function renderSavedClients() {
       </table>
     </div>
     <div class="clients-mobile-list">
-      ${visibleClients.map(client => {
+      ${pagedClients.map(client => {
         const displayName = client.client_name || "Saved client";
         const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
         const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
@@ -519,6 +575,7 @@ function renderSavedClients() {
         `;
       }).join("")}
     </div>
+    ${paginationMarkup}
   `;
 }
 
@@ -1195,6 +1252,29 @@ async function deleteClient(clientId) {
 }
 
 function handleClientsListClick(event) {
+  const paginationButton = event.target.closest("button[data-pagination]");
+
+  if (paginationButton) {
+    const paginationAction = paginationButton.dataset.pagination || "";
+
+    if (paginationAction === "prev" && clientsPage > 1) {
+      clientsPage -= 1;
+      renderSavedClients();
+    } else if (paginationAction === "next") {
+      clientsPage += 1;
+      renderSavedClients();
+    } else if (paginationAction === "page") {
+      const requestedPage = Number.parseInt(paginationButton.dataset.page || "1", 10);
+
+      if (Number.isFinite(requestedPage) && requestedPage > 0) {
+        clientsPage = requestedPage;
+        renderSavedClients();
+      }
+    }
+
+    return;
+  }
+
   const button = event.target.closest("button[data-action]");
 
   if (!button) {
@@ -1334,6 +1414,7 @@ async function initAccountPage() {
   if (clientsSearchInput) {
     clientsSearchInput.addEventListener("input", event => {
       clientsSearchQuery = String(event.target.value || "");
+      clientsPage = 1;
       renderSavedClients();
     });
   }
@@ -1342,6 +1423,7 @@ async function initAccountPage() {
     clientsSortSelect.value = clientsSortMode;
     clientsSortSelect.addEventListener("change", event => {
       clientsSortMode = String(event.target.value || "newest");
+      clientsPage = 1;
       renderSavedClients();
     });
   }
