@@ -482,6 +482,64 @@
       background: #ffffff;
     }
 
+    .clients-mobile-list {
+      display: none;
+      gap: 12px;
+    }
+
+    .client-mobile-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid rgba(203, 213, 225, 0.9);
+    }
+
+    .client-mobile-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      line-height: 1.3;
+      color: var(--text-main);
+    }
+
+    .client-mobile-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .client-mobile-row {
+      display: grid;
+      gap: 4px;
+    }
+
+    .client-mobile-label {
+      color: #1e3a8a;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .client-mobile-value {
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    .client-mobile-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .client-mobile-actions button {
+      min-width: 0;
+      padding: 11px 10px;
+      font-size: 14px;
+      border-radius: 12px;
+    }
+
     .clients-table {
       width: 100%;
       min-width: 980px;
@@ -599,6 +657,26 @@
       .client-form-grid {
         grid-template-columns: 1fr;
       }
+
+      .account-actions button,
+      .form-actions button {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .clients-table-shell {
+        display: none;
+      }
+
+      .clients-mobile-list {
+        display: grid;
+      }
+
+      .count-badge {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     @media (max-width: 560px) {
@@ -630,12 +708,8 @@
         font-size: 20px;
       }
 
-      .account-actions button {
-        width: 100%;
-      }
-
-      .form-actions button {
-        width: 100%;
+      .client-mobile-actions {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -715,43 +789,9 @@
                   </form>
                 </div>
               </div>
-            </div>
+          </div>
 
           <div id="signed-in-panel" hidden>
-            <div class="account-summary-grid">
-              <div class="summary-card">
-                <div class="account-label">Signed in as</div>
-                <div id="account-email" class="summary-value"></div>
-                <p class="summary-copy">This is the account your saved features will stay attached to.</p>
-              </div>
-              <div class="summary-card">
-                <div class="account-label">Current plan</div>
-                <div id="account-plan" class="summary-value">FREE</div>
-                <p id="plan-summary-copy" class="summary-copy">Free works the same as using the reminder tool signed out.</p>
-              </div>
-              <div class="summary-card">
-                <div class="account-label">Saved contacts</div>
-                <div id="contacts-count" class="summary-value">0</div>
-                <p class="summary-copy">Every client saved to this account appears below.</p>
-              </div>
-            </div>
-
-            <div class="account-actions">
-              <button id="upgrade-button" class="primary-button" type="button">Upgrade to Bronze</button>
-              <button id="sign-out-button" class="secondary-button" type="button">Sign Out</button>
-            </div>
-
-            <div id="billing-setup-notice" class="notice" hidden>Add `STRIPE_SECRET_KEY` and `STRIPE_PRO_MONTHLY_PRICE_ID` in Vercel to turn on Stripe checkout.</div>
-
-            <div id="tier-preview-shell" class="tier-preview-shell" hidden>
-              <h3>DEV tier preview</h3>
-              <p>Use these buttons on QA to test the FREE and Bronze experiences before billing is connected.</p>
-              <div class="tier-preview-actions">
-                <button id="set-free-tier-button" class="secondary-button" type="button">Use FREE</button>
-                <button id="set-bronze-tier-button" class="primary-button" type="button">Use Bronze</button>
-              </div>
-            </div>
-
             <div id="free-contacts-shell" class="clients-card" hidden>
               <div class="section-head">
                 <div>
@@ -814,6 +854,40 @@
                 </div>
               </div>
             </div>
+
+            <div class="account-summary-grid">
+              <div class="summary-card">
+                <div class="account-label">Signed in as</div>
+                <div id="account-email" class="summary-value"></div>
+                <p class="summary-copy">This is the account your saved features will stay attached to.</p>
+              </div>
+              <div class="summary-card">
+                <div class="account-label">Current plan</div>
+                <div id="account-plan" class="summary-value">FREE</div>
+                <p id="plan-summary-copy" class="summary-copy">Free works the same as using the reminder tool signed out.</p>
+              </div>
+              <div class="summary-card">
+                <div class="account-label">Saved contacts</div>
+                <div id="contacts-count" class="summary-value">0</div>
+                <p class="summary-copy">Every client saved to this account appears below.</p>
+              </div>
+            </div>
+
+            <div class="account-actions">
+              <button id="upgrade-button" class="primary-button" type="button">Upgrade to Bronze</button>
+              <button id="sign-out-button" class="secondary-button" type="button">Sign Out</button>
+            </div>
+
+            <div id="billing-setup-notice" class="notice" hidden>Add `STRIPE_SECRET_KEY` and `STRIPE_PRO_MONTHLY_PRICE_ID` in Vercel to turn on Stripe checkout.</div>
+
+            <div id="tier-preview-shell" class="tier-preview-shell" hidden>
+              <h3>DEV tier preview</h3>
+              <p>Use these buttons on QA to test the FREE and Bronze experiences before billing is connected.</p>
+              <div class="tier-preview-actions">
+                <button id="set-free-tier-button" class="secondary-button" type="button">Use FREE</button>
+                <button id="set-bronze-tier-button" class="primary-button" type="button">Use Bronze</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -821,6 +895,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330e"></script>
+  <script type="module" src="account.js?v=20260330f"></script>
 </body>
 </html>

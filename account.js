@@ -258,6 +258,46 @@ function renderSavedClients() {
         </tbody>
       </table>
     </div>
+    <div class="clients-mobile-list">
+      ${savedClients.map(client => {
+        const displayName = client.client_name || "Saved client";
+        const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
+        const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
+
+        return `
+          <div class="client-mobile-card">
+            <h4 class="client-mobile-title">${escapeHtml(displayName)}</h4>
+            <div class="client-mobile-grid">
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Email</div>
+                <div class="client-mobile-value">${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</div>
+              </div>
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Phone</div>
+                <div class="client-mobile-value">${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</div>
+              </div>
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Address</div>
+                <div class="client-mobile-value">${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</div>
+              </div>
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Details</div>
+                <div class="client-mobile-value">${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</div>
+              </div>
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Updated</div>
+                <div class="client-mobile-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
+              </div>
+            </div>
+            <div class="client-mobile-actions">
+              <button class="secondary-button" type="button" data-action="edit" data-client-id="${client.id}">Edit</button>
+              <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use</button>
+              <button class="secondary-button" type="button" data-action="delete" data-client-id="${client.id}">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
   `;
 }
 
