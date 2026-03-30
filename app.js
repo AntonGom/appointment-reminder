@@ -41,6 +41,7 @@ let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
 let sendEmailLockedAfterSuccess = false;
+let safeToLeaveAfterSend = false;
 let suppressBeforeUnload = false;
 let appSupabase = null;
 let appPublicConfig = null;
@@ -262,6 +263,10 @@ function generateMessage() {
 function refreshFormState() {
   if (sendEmailLockedAfterSuccess) {
     setSendEmailButtonState("idle");
+  }
+
+  if (safeToLeaveAfterSend) {
+    safeToLeaveAfterSend = false;
   }
 
   syncCopyEmailOption();
@@ -725,6 +730,10 @@ async function logBronzeReminderHistory({ clientId, channel, source }) {
 }
 
 function hasUnsavedFormData() {
+  if (safeToLeaveAfterSend) {
+    return false;
+  }
+
   if (FORM_FIELD_IDS.some(fieldId => getFieldValue(fieldId).length > 0)) {
     return true;
   }
@@ -1322,6 +1331,7 @@ async function confirmSendBrevoEmail() {
         channel: "email",
         source: "automated_email"
       });
+      safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
     } else {
       setSendEmailButtonState("idle");
@@ -1369,6 +1379,7 @@ async function sendLocalText() {
     channel: "sms",
     source: "device_sms"
   });
+  safeToLeaveAfterSend = true;
 
   const smsBody = encodeURIComponent(message);
   const separator = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "&" : "?";

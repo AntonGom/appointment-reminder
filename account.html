@@ -589,16 +589,17 @@
 
     .clients-table {
       width: 100%;
-      min-width: 980px;
       border-collapse: collapse;
+      table-layout: fixed;
     }
 
     .clients-table th,
     .clients-table td {
-      padding: 14px 16px;
+      padding: 13px 12px;
       border-bottom: 1px solid rgba(226, 232, 240, 0.92);
       vertical-align: top;
       text-align: left;
+      word-break: break-word;
     }
 
     .clients-table th {
@@ -634,24 +635,24 @@
     }
 
     .table-actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
-      flex-wrap: wrap;
-      min-width: 250px;
+      min-width: 0;
     }
 
     .table-actions button {
-      width: auto;
+      width: 100%;
       min-width: 0;
-      padding: 10px 12px;
-      font-size: 14px;
+      padding: 10px 8px;
+      font-size: 13px;
       border-radius: 12px;
     }
 
     .history-stack {
       display: grid;
       gap: 8px;
-      min-width: 180px;
+      min-width: 0;
     }
 
     .history-entry {
@@ -849,10 +850,6 @@
 
       .client-mobile-actions {
         grid-template-columns: 1fr;
-      }
-
-      .history-stack {
-        min-width: 0;
       }
 
       .contact-modal {
