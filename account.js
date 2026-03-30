@@ -375,6 +375,16 @@ function getClientSearchText(client) {
     .join(" ");
 }
 
+function getLatestReminderSentAt(client) {
+  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+  const latestTimestamp = historyEntries.reduce((latest, entry) => {
+    const timestamp = new Date(entry?.sent_at || 0).getTime();
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, 0);
+
+  return latestTimestamp;
+}
+
 function sortContacts(contacts, mode = clientsSortMode) {
   const normalizedMode = String(mode || "az").trim().toLowerCase();
   const list = [...(contacts || [])];
@@ -389,6 +399,19 @@ function sortContacts(contacts, mode = clientsSortMode) {
 
   if (normalizedMode === "updated") {
     return list.sort((left, right) => new Date(right.updated_at || right.created_at || 0) - new Date(left.updated_at || left.created_at || 0));
+  }
+
+  if (normalizedMode === "reminded") {
+    return list.sort((left, right) => {
+      const rightLatest = getLatestReminderSentAt(right);
+      const leftLatest = getLatestReminderSentAt(left);
+
+      if (rightLatest !== leftLatest) {
+        return rightLatest - leftLatest;
+      }
+
+      return new Date(right.created_at || 0) - new Date(left.created_at || 0);
+    });
   }
 
   return list.sort((left, right) => {
