@@ -516,10 +516,13 @@ function renderSavedClients() {
       <table class="clients-table">
         <thead>
           <tr>
-            <th>Client</th>
-            <th>Contact</th>
-            <th>Service</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Details</th>
             <th>Reminder History</th>
+            <th>Last Edited</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -531,38 +534,14 @@ function renderSavedClients() {
 
             return `
               <tr>
-                <td>
-                  <div class="table-stack centered">
-                    <strong>${escapeHtml(displayName)}</strong>
-                  </div>
-                </td>
-                <td>
-                  <div class="table-stack">
-                    <div class="table-line">
-                      <div class="table-line-label">Email</div>
-                      <div class="table-line-value">${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</div>
-                    </div>
-                    <div class="table-line">
-                      <div class="table-line-label">Phone</div>
-                      <div class="table-line-value">${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="table-stack">
-                    <div class="table-line">
-                      <div class="table-line-label">Address</div>
-                      <div class="table-line-value">${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</div>
-                    </div>
-                    <div class="table-line">
-                      <div class="table-line-label">Details</div>
-                      <div class="table-line-value">${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</div>
-                    </div>
-                  </div>
-                </td>
+                <td><strong>${escapeHtml(displayName)}</strong></td>
+                <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</td>
                 <td>${renderReminderHistory(client)}</td>
+                <td>${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</td>
                 <td>
-                  <div class="table-meta">Last edited: ${updatedLabel ? escapeHtml(updatedLabel) : "Not available"}</div>
                   <div class="table-actions">
                     <button class="secondary-button" type="button" data-action="edit" data-client-id="${client.id}">Edit</button>
                     <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use</button>

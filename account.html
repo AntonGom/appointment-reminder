@@ -43,7 +43,7 @@
     }
 
     .page {
-      max-width: 1040px;
+      max-width: 1240px;
       margin: 0 auto;
       display: grid;
       gap: 18px;
@@ -358,44 +358,19 @@
       min-width: 180px;
     }
 
-    .account-shell {
-      display: grid;
-      grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
-      margin-top: 18px;
-    }
-
-    .account-sidebar {
-      position: sticky;
-      top: 96px;
-    }
-
-    .sidebar-card {
-      display: grid;
-      gap: 12px;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .sidebar-eyebrow {
-      color: #1d4ed8;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .sidebar-nav {
-      display: grid;
+    .account-page-nav {
+      display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+      margin-bottom: 18px;
     }
 
-    .sidebar-link {
-      display: block;
-      padding: 14px 16px;
+    .account-page-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 16px;
       border-radius: 16px;
       background: rgba(239, 246, 255, 0.75);
       border: 1px solid rgba(191, 219, 254, 0.9);
@@ -407,26 +382,17 @@
       transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
-    .sidebar-link:hover {
+    .account-page-link:hover {
       transform: translateY(-1px);
       border-color: rgba(37, 99, 235, 0.46);
       background: rgba(219, 234, 254, 0.82);
     }
 
-    .sidebar-link.is-active {
+    .account-page-link.is-active {
       background: linear-gradient(135deg, var(--accent), var(--accent-3));
       border-color: transparent;
       color: #ffffff;
       box-shadow: 0 14px 28px rgba(37, 99, 235, 0.2);
-    }
-
-    .account-main {
-      display: grid;
-      gap: 18px;
-    }
-
-    .account-section {
-      scroll-margin-top: 104px;
     }
 
     .clients-shell {
@@ -740,27 +706,42 @@
 
     .clients-table th:nth-child(1),
     .clients-table td:nth-child(1) {
-      width: 18%;
+      width: 11%;
     }
 
     .clients-table th:nth-child(2),
     .clients-table td:nth-child(2) {
-      width: 20%;
+      width: 17%;
     }
 
     .clients-table th:nth-child(3),
     .clients-table td:nth-child(3) {
-      width: 22%;
+      width: 12%;
     }
 
     .clients-table th:nth-child(4),
     .clients-table td:nth-child(4) {
-      width: 22%;
+      width: 15%;
     }
 
     .clients-table th:nth-child(5),
     .clients-table td:nth-child(5) {
-      width: 18%;
+      width: 13%;
+    }
+
+    .clients-table th:nth-child(6),
+    .clients-table td:nth-child(6) {
+      width: 17%;
+    }
+
+    .clients-table th:nth-child(7),
+    .clients-table td:nth-child(7) {
+      width: 7%;
+    }
+
+    .clients-table th:nth-child(8),
+    .clients-table td:nth-child(8) {
+      width: 12%;
     }
 
     .clients-table strong {
@@ -772,46 +753,6 @@
 
     .table-muted {
       color: var(--text-soft);
-    }
-
-    .table-stack {
-      display: grid;
-      gap: 8px;
-      text-align: left;
-    }
-
-    .table-stack.centered {
-      text-align: center;
-    }
-
-    .table-line {
-      display: grid;
-      gap: 2px;
-    }
-
-    .table-line-label {
-      color: #1d4ed8;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .table-line-value {
-      color: var(--text-main);
-      font-size: 14px;
-      line-height: 1.45;
-      word-break: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .table-meta {
-      margin-bottom: 8px;
-      color: var(--text-soft);
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.4;
-      text-align: center;
     }
 
     .table-actions {
@@ -1091,16 +1032,8 @@
         justify-content: center;
       }
 
-      .account-shell {
-        grid-template-columns: 1fr;
-      }
-
-      .account-sidebar {
-        position: static;
-      }
-
-      .sidebar-nav {
-        grid-template-columns: 1fr 1fr;
+      .account-page-nav {
+        justify-content: center;
       }
     }
 
@@ -1126,8 +1059,8 @@
         width: 100%;
       }
 
-      .sidebar-nav {
-        grid-template-columns: 1fr;
+      .account-page-link {
+        width: 100%;
       }
     }
 
@@ -1201,6 +1134,13 @@
 
           <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
 
+          <nav class="account-page-nav" aria-label="Account pages">
+            <a class="account-page-link is-active" href="account.html">Client Details</a>
+            <a class="account-page-link" href="account-info.html">Account Info</a>
+            <a class="account-page-link" href="settings.html">Settings</a>
+            <a class="account-page-link" href="form-creator.html">Form Creator</a>
+          </nav>
+
             <div id="signed-out-panel" class="stack">
               <div class="account-summary-grid">
                 <div class="summary-card">
@@ -1256,72 +1196,56 @@
           </div>
 
           <div id="signed-in-panel" hidden>
-            <div class="account-shell">
-              <aside class="account-sidebar">
-                <div class="sidebar-card">
-                  <div class="sidebar-eyebrow">Account menu</div>
-                  <nav class="sidebar-nav" aria-label="Account sections">
-                    <a class="sidebar-link is-active" href="account.html">Client Details</a>
-                    <a class="sidebar-link" href="account-info.html">Account Info</a>
-                    <a class="sidebar-link" href="settings.html">Settings</a>
-                    <a class="sidebar-link" href="form-creator.html">Form Creator</a>
-                  </nav>
+            <div id="free-contacts-shell" class="clients-card" hidden>
+              <div class="section-head">
+                <div>
+                  <h3>Saved contacts are not turned on yet</h3>
+                  <p>Free works the same as using the reminder form signed out. Bronze turns on saved contacts.</p>
                 </div>
-              </aside>
+              </div>
+            </div>
 
-              <div class="account-main">
-                <div id="free-contacts-shell" class="clients-card" hidden>
-                  <div class="section-head">
-                    <div>
-                      <h3>Saved contacts are not turned on yet</h3>
-                      <p>Free works the same as using the reminder form signed out. Bronze turns on saved contacts.</p>
-                    </div>
+            <div id="bronze-contacts-shell" class="clients-shell" hidden>
+              <div id="contacts-card" class="clients-card">
+                <div class="section-head">
+                  <div>
+                    <h3>Saved contacts</h3>
+                    <p>Search, sort, and reuse saved client details.</p>
+                  </div>
+                  <div class="section-actions">
+                    <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                    <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
+                    <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
+                      <span class="button-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                          <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" stroke-width="2"></circle>
+                          <path d="M3.5 18C3.5 14.9624 5.96243 12.5 9 12.5C12.0376 12.5 14.5 14.9624 14.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                          <path d="M18 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                          <path d="M14 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                        </svg>
+                      </span>
+                      <span>Add Contact</span>
+                    </button>
                   </div>
                 </div>
-
-                <div id="bronze-contacts-shell" class="clients-shell" hidden>
-                  <div id="contacts-card" class="clients-card">
-                    <div class="section-head">
-                      <div>
-                        <h3>Saved contacts</h3>
-                        <p>Search, sort, and reuse saved client details.</p>
-                      </div>
-                      <div class="section-actions">
-                        <div id="contacts-count-badge" class="count-badge">0 contacts</div>
-                        <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
-                        <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
-                          <span class="button-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" focusable="false">
-                              <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" stroke-width="2"></circle>
-                              <path d="M3.5 18C3.5 14.9624 5.96243 12.5 9 12.5C12.0376 12.5 14.5 14.9624 14.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                              <path d="M18 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                              <path d="M14 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                            </svg>
-                          </span>
-                          <span>Add Contact</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="clients-toolbar">
-                      <div class="toolbar-field">
-                        <label class="toolbar-label" for="clients-search">Search clients</label>
-                        <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
-                      </div>
-                      <div class="toolbar-field">
-                        <label class="toolbar-label" for="clients-sort">Sort contacts</label>
-                        <select id="clients-sort" class="toolbar-select">
-                          <option value="az">Alphabetical (A to Z)</option>
-                          <option value="newest" selected>Recently added</option>
-                          <option value="reminded">Recently reminded</option>
-                          <option value="oldest">Oldest added</option>
-                          <option value="updated">Recently edited</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div id="clients-list" class="clients-list">
-                      <div class="empty-state">No contacts saved yet.</div>
-                    </div>
+                <div class="clients-toolbar">
+                  <div class="toolbar-field">
+                    <label class="toolbar-label" for="clients-search">Search clients</label>
+                    <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
                   </div>
+                  <div class="toolbar-field">
+                    <label class="toolbar-label" for="clients-sort">Sort contacts</label>
+                    <select id="clients-sort" class="toolbar-select">
+                      <option value="az">Alphabetical (A to Z)</option>
+                      <option value="newest" selected>Recently added</option>
+                      <option value="reminded">Recently reminded</option>
+                      <option value="oldest">Oldest added</option>
+                      <option value="updated">Recently edited</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="clients-list" class="clients-list">
+                  <div class="empty-state">No contacts saved yet.</div>
                 </div>
               </div>
             </div>
@@ -1369,6 +1293,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330o"></script>
+  <script type="module" src="account.js?v=20260330p"></script>
 </body>
 </html>

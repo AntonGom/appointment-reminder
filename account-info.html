@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Account Info</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260330a">
+  <link rel="stylesheet" href="account-sections.css?v=20260330b">
 </head>
 <body data-page="account-info">
   <div class="page">
@@ -26,20 +26,14 @@
       <div class="panel-content">
         <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
 
-        <div class="account-layout">
-          <aside class="account-sidebar">
-            <div class="sidebar-card">
-              <div class="sidebar-eyebrow">Account menu</div>
-              <nav class="sidebar-nav" aria-label="Account pages">
-                <a class="sidebar-link" href="account.html">Client Details</a>
-                <a class="sidebar-link is-active" href="account-info.html">Account Info</a>
-                <a class="sidebar-link" href="settings.html">Settings</a>
-                <a class="sidebar-link" href="form-creator.html">Form Creator</a>
-              </nav>
-            </div>
-          </aside>
+        <nav class="account-page-nav" aria-label="Account pages">
+          <a class="account-page-link" href="account.html">Client Details</a>
+          <a class="account-page-link is-active" href="account-info.html">Account Info</a>
+          <a class="account-page-link" href="settings.html">Settings</a>
+          <a class="account-page-link" href="form-creator.html">Form Creator</a>
+        </nav>
 
-          <div class="content-stack">
+        <div class="content-stack">
             <div id="signed-out-shell" class="section-card">
               <h2 class="section-title">Sign in to view your account</h2>
               <p class="signed-out-copy">Go to the Client Details page to sign in. Then come back here to view your plan and saved contact count.</p>
@@ -72,13 +66,12 @@
                 <p class="card-copy">Use Client Details to manage contacts. Use Settings to upgrade or sign out. Form Creator will be added later.</p>
               </div>
             </div>
-          </div>
         </div>
       </div>
     </section>
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account-sections.js?v=20260330a"></script>
+  <script type="module" src="account-sections.js?v=20260330b"></script>
 </body>
 </html>
