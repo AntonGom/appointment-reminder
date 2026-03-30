@@ -413,6 +413,13 @@
       background: rgba(219, 234, 254, 0.82);
     }
 
+    .sidebar-link.is-active {
+      background: linear-gradient(135deg, var(--accent), var(--accent-3));
+      border-color: transparent;
+      color: #ffffff;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.2);
+    }
+
     .account-main {
       display: grid;
       gap: 18px;
@@ -1124,11 +1131,11 @@
     <section class="hero">
       <div class="hero-content">
         <div class="eyebrow">
-          Account
+          Client Details
           <span id="price-pill" class="price-pill">Optional Bronze</span>
         </div>
-        <h1>Manage your account and saved contacts.</h1>
-        <p class="lead">The reminder tool stays free. This page is where you sign in, check your plan, and keep client details ready to use again later.</p>
+        <h1>Client details</h1>
+        <p class="lead">Save, search, and reuse client details in one simple place.</p>
       </div>
     </section>
 
@@ -1137,8 +1144,8 @@
     <div class="grid">
       <section class="panel">
         <div class="panel-content">
-          <h2>Account</h2>
-          <p class="panel-copy">Create an account or sign in to manage your plan and saved client details in one place.</p>
+          <h2>Client details</h2>
+          <p class="panel-copy">Create an account or sign in to manage saved client details.</p>
 
           <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
 
@@ -1202,136 +1209,68 @@
                 <div class="sidebar-card">
                   <div class="sidebar-eyebrow">Account menu</div>
                   <nav class="sidebar-nav" aria-label="Account sections">
-                    <a class="sidebar-link" href="#client-details-section">Client Details</a>
-                    <a class="sidebar-link" href="#account-info-section">Account Info</a>
-                    <a class="sidebar-link" href="#settings-section">Settings</a>
-                    <a class="sidebar-link" href="#form-creator-section">Form Creator</a>
+                    <a class="sidebar-link is-active" href="account.html">Client Details</a>
+                    <a class="sidebar-link" href="account-info.html">Account Info</a>
+                    <a class="sidebar-link" href="settings.html">Settings</a>
+                    <a class="sidebar-link" href="form-creator.html">Form Creator</a>
                   </nav>
                 </div>
               </aside>
 
               <div class="account-main">
-                <section id="client-details-section" class="account-section">
-                  <div id="free-contacts-shell" class="clients-card" hidden>
+                <div id="free-contacts-shell" class="clients-card" hidden>
+                  <div class="section-head">
+                    <div>
+                      <h3>Saved contacts are not turned on yet</h3>
+                      <p>Free works the same as using the reminder form signed out. Bronze turns on saved contacts.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="bronze-contacts-shell" class="clients-shell" hidden>
+                  <div id="contacts-card" class="clients-card">
                     <div class="section-head">
                       <div>
-                        <h3>Saved contacts are not turned on yet</h3>
-                        <p>Your free account works like the regular reminder tool. Bronze turns on saved contacts and reminder timing preferences.</p>
+                        <h3>Saved contacts</h3>
+                        <p>Search, sort, and reuse saved client details.</p>
                       </div>
+                      <div class="section-actions">
+                        <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                        <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
+                        <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
+                          <span class="button-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                              <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" stroke-width="2"></circle>
+                              <path d="M3.5 18C3.5 14.9624 5.96243 12.5 9 12.5C12.0376 12.5 14.5 14.9624 14.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                              <path d="M18 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                              <path d="M14 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            </svg>
+                          </span>
+                          <span>Add Contact</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="clients-toolbar">
+                      <div class="toolbar-field">
+                        <label class="toolbar-label" for="clients-search">Search clients</label>
+                        <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
+                      </div>
+                      <div class="toolbar-field">
+                        <label class="toolbar-label" for="clients-sort">Sort contacts</label>
+                        <select id="clients-sort" class="toolbar-select">
+                          <option value="az">Alphabetical (A to Z)</option>
+                          <option value="newest" selected>Recently added</option>
+                          <option value="reminded">Recently reminded</option>
+                          <option value="oldest">Oldest added</option>
+                          <option value="updated">Recently edited</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div id="clients-list" class="clients-list">
+                      <div class="empty-state">No contacts saved yet.</div>
                     </div>
                   </div>
-
-                  <div id="bronze-contacts-shell" class="clients-shell" hidden>
-                    <div id="contacts-card" class="clients-card">
-                      <div class="section-head">
-                        <div>
-                          <h3>Saved contacts</h3>
-                          <p>This is the full contact list for this account. Contacts are sorted by name, email, and phone number.</p>
-                        </div>
-                        <div class="section-actions">
-                          <div id="contacts-count-badge" class="count-badge">0 contacts</div>
-                          <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
-                          <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
-                            <span class="button-icon" aria-hidden="true">
-                              <svg viewBox="0 0 24 24" fill="none" focusable="false">
-                                <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" stroke-width="2"></circle>
-                                <path d="M3.5 18C3.5 14.9624 5.96243 12.5 9 12.5C12.0376 12.5 14.5 14.9624 14.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                <path d="M18 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                <path d="M14 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                              </svg>
-                            </span>
-                            <span>Add Contact</span>
-                          </button>
-                        </div>
-                      </div>
-                      <div class="clients-toolbar">
-                        <div class="toolbar-field">
-                          <label class="toolbar-label" for="clients-search">Search clients</label>
-                          <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
-                        </div>
-                        <div class="toolbar-field">
-                          <label class="toolbar-label" for="clients-sort">Sort contacts</label>
-                          <select id="clients-sort" class="toolbar-select">
-                            <option value="az">Alphabetical (A to Z)</option>
-                            <option value="newest" selected>Recently added</option>
-                            <option value="reminded">Recently reminded</option>
-                            <option value="oldest">Oldest added</option>
-                            <option value="updated">Recently edited</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div id="clients-list" class="clients-list">
-                        <div class="empty-state">No contacts saved yet.</div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <section id="account-info-section" class="account-section">
-                  <div class="clients-card">
-                    <div class="section-head">
-                      <div>
-                        <h3>Account info</h3>
-                        <p>See the login, plan, and contact count currently tied to this account.</p>
-                      </div>
-                    </div>
-                    <div class="account-summary-grid">
-                      <div class="summary-card">
-                        <div class="account-label">Signed in as</div>
-                        <div id="account-email" class="summary-value"></div>
-                        <p class="summary-copy">This is the account your saved features will stay attached to.</p>
-                      </div>
-                      <div class="summary-card">
-                        <div class="account-label">Current plan</div>
-                        <div id="account-plan" class="summary-value">FREE</div>
-                        <p id="plan-summary-copy" class="summary-copy">Free works the same as using the reminder tool signed out.</p>
-                      </div>
-                      <div class="summary-card">
-                        <div class="account-label">Saved contacts</div>
-                        <div id="contacts-count" class="summary-value">0</div>
-                        <p class="summary-copy">Every client saved to this account appears below.</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <section id="settings-section" class="account-section">
-                  <div class="clients-card">
-                    <div class="section-head">
-                      <div>
-                        <h3>Settings</h3>
-                        <p>Upgrade, sign out, or use the QA preview controls while billing is still being connected.</p>
-                      </div>
-                    </div>
-                    <div class="account-actions">
-                      <button id="upgrade-button" class="primary-button" type="button">Upgrade to Bronze</button>
-                      <button id="sign-out-button" class="secondary-button" type="button">Sign Out</button>
-                    </div>
-
-                    <div id="billing-setup-notice" class="notice" hidden>Add `STRIPE_SECRET_KEY` and `STRIPE_PRO_MONTHLY_PRICE_ID` in Vercel to turn on Stripe checkout.</div>
-
-                    <div id="tier-preview-shell" class="tier-preview-shell" hidden>
-                      <h3>DEV tier preview</h3>
-                      <p>Use these buttons on QA to test the FREE and Bronze experiences before billing is connected.</p>
-                      <div class="tier-preview-actions">
-                        <button id="set-free-tier-button" class="secondary-button" type="button">Use FREE</button>
-                        <button id="set-bronze-tier-button" class="primary-button" type="button">Use Bronze</button>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <section id="form-creator-section" class="account-section">
-                  <div class="clients-card">
-                    <div class="section-head">
-                      <div>
-                        <h3>Form creator</h3>
-                        <p>This area is reserved for building reusable reminder forms for each business later on.</p>
-                      </div>
-                    </div>
-                    <div class="empty-state">Form Creator is coming soon.</div>
-                  </div>
-                </section>
+                </div>
               </div>
             </div>
           </div>

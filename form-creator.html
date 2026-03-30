@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Creator</title>
+  <link rel="stylesheet" href="nav.css?v=20260326j">
+  <link rel="stylesheet" href="account-sections.css?v=20260330a">
+</head>
+<body data-page="form-creator">
+  <div class="page">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">
+          Form Creator
+          <span id="price-pill" class="price-pill">Optional Bronze</span>
+        </div>
+        <h1>Form Creator</h1>
+        <p class="lead">This page will be used later to build reusable reminder forms for each business.</p>
+      </div>
+    </section>
+
+    <div id="status-banner" class="status-banner" hidden></div>
+
+    <section class="panel">
+      <div class="panel-content">
+        <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
+
+        <div class="account-layout">
+          <aside class="account-sidebar">
+            <div class="sidebar-card">
+              <div class="sidebar-eyebrow">Account menu</div>
+              <nav class="sidebar-nav" aria-label="Account pages">
+                <a class="sidebar-link" href="account.html">Client Details</a>
+                <a class="sidebar-link" href="account-info.html">Account Info</a>
+                <a class="sidebar-link" href="settings.html">Settings</a>
+                <a class="sidebar-link is-active" href="form-creator.html">Form Creator</a>
+              </nav>
+            </div>
+          </aside>
+
+          <div class="content-stack">
+            <div id="signed-out-shell" class="section-card">
+              <h2 class="section-title">Sign in to use future tools</h2>
+              <p class="signed-out-copy">You can sign in now from the Client Details page. This page is still being built.</p>
+              <div class="button-row" style="margin-top:16px;">
+                <a class="primary-link" href="account.html">Go to Sign In</a>
+              </div>
+            </div>
+
+            <div id="signed-in-shell" hidden>
+              <div class="section-card">
+                <h2 class="section-title">Coming soon</h2>
+                <p class="card-copy">Form Creator is not ready yet. When it is ready, this page will let you build a reusable reminder form for your business.</p>
+              </div>
+
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <div class="summary-label">Signed in as</div>
+                  <div class="summary-value" data-account-email>Signed in</div>
+                  <p class="summary-copy">This is the account that will own your future saved forms.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-label">Plan</div>
+                  <div class="summary-value" data-account-plan>FREE</div>
+                  <p class="summary-copy" data-plan-copy>Free works the same as using the reminder tool signed out.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-label">Saved contacts</div>
+                  <div class="summary-value" data-contacts-count>0</div>
+                  <p class="summary-copy">Your saved contacts will still be ready once Form Creator is added.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="nav.js?v=20260326j"></script>
+  <script type="module" src="account-sections.js?v=20260330a"></script>
+</body>
+</html>

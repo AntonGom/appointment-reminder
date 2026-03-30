@@ -11,17 +11,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email } = req.body || {};
+    const { email, returnPath } = req.body || {};
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(email)) {
       return res.status(400).json({ error: "A valid signed-in email address is required." });
     }
 
     const baseUrl = getBaseUrl(req);
+    const safeReturnPath = typeof returnPath === "string" && /^\/[a-z0-9-]+\.html$/i.test(returnPath)
+      ? returnPath
+      : "/account.html";
     const form = new URLSearchParams();
     form.set("mode", "subscription");
-    form.set("success_url", `${baseUrl}/account.html?checkout=success`);
-    form.set("cancel_url", `${baseUrl}/account.html?checkout=cancel`);
+    form.set("success_url", `${baseUrl}${safeReturnPath}?checkout=success`);
+    form.set("cancel_url", `${baseUrl}${safeReturnPath}?checkout=cancel`);
     form.set("allow_promotion_codes", "true");
     form.set("customer_email", email);
     form.set("line_items[0][price]", stripePriceId);

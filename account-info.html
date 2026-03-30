@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Info</title>
+  <link rel="stylesheet" href="nav.css?v=20260326j">
+  <link rel="stylesheet" href="account-sections.css?v=20260330a">
+</head>
+<body data-page="account-info">
+  <div class="page">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">
+          Account Info
+          <span id="price-pill" class="price-pill">Optional Bronze</span>
+        </div>
+        <h1>Account info</h1>
+        <p class="lead">See your login, your plan, and how many contacts are saved on your account.</p>
+      </div>
+    </section>
+
+    <div id="status-banner" class="status-banner" hidden></div>
+
+    <section class="panel">
+      <div class="panel-content">
+        <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
+
+        <div class="account-layout">
+          <aside class="account-sidebar">
+            <div class="sidebar-card">
+              <div class="sidebar-eyebrow">Account menu</div>
+              <nav class="sidebar-nav" aria-label="Account pages">
+                <a class="sidebar-link" href="account.html">Client Details</a>
+                <a class="sidebar-link is-active" href="account-info.html">Account Info</a>
+                <a class="sidebar-link" href="settings.html">Settings</a>
+                <a class="sidebar-link" href="form-creator.html">Form Creator</a>
+              </nav>
+            </div>
+          </aside>
+
+          <div class="content-stack">
+            <div id="signed-out-shell" class="section-card">
+              <h2 class="section-title">Sign in to view your account</h2>
+              <p class="signed-out-copy">Go to the Client Details page to sign in. Then come back here to view your plan and saved contact count.</p>
+              <div class="button-row" style="margin-top:16px;">
+                <a class="primary-link" href="account.html">Go to Sign In</a>
+              </div>
+            </div>
+
+            <div id="signed-in-shell" hidden>
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <div class="summary-label">Email</div>
+                  <div class="summary-value" data-account-email>Signed in</div>
+                  <p class="summary-copy">This is the login tied to your account.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-label">Plan</div>
+                  <div class="summary-value" data-account-plan>FREE</div>
+                  <p class="summary-copy" data-plan-copy>Free works the same as using the reminder tool signed out.</p>
+                </div>
+                <div class="summary-card">
+                  <div class="summary-label">Saved Contacts</div>
+                  <div class="summary-value" data-contacts-count>0</div>
+                  <p class="summary-copy">This is how many client details are saved on this account.</p>
+                </div>
+              </div>
+
+              <div class="section-card">
+                <h2 class="section-title">Quick summary</h2>
+                <p class="card-copy">Use Client Details to manage contacts. Use Settings to upgrade or sign out. Form Creator will be added later.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="nav.js?v=20260326j"></script>
+  <script type="module" src="account-sections.js?v=20260330a"></script>
+</body>
+</html>
