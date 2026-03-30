@@ -288,7 +288,7 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
   const restrictedFields = [
     { label: "Client Name", value: clientName || "", maxLength: 30 },
     { label: "Client Phone Number", value: clientPhone || "", maxLength: 30 },
-    { label: "Service Address", value: serviceAddress || "", maxLength: 40 },
+    { label: "Location or Meeting Link", value: serviceAddress || "", maxLength: 160, allowLink: true },
     { label: "Business Phone or Email", value: businessContact || "", maxLength: 60, allowEmail: true },
     { label: "Message Preview", value: message || "" }
   ];
@@ -304,7 +304,7 @@ function validateReminderPayload({ clientName, clientPhone, serviceAddress, busi
 
     const hasLink = strictLinkPattern.test(field.value) || domainPattern.test(field.value);
     const hasEmail = field.allowEmail && emailPattern.test(field.value);
-    if (hasLink && !hasEmail) {
+    if (hasLink && !hasEmail && !field.allowLink) {
       return `Links are not allowed in ${field.label}.`;
     }
   }

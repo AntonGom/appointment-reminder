@@ -22,7 +22,7 @@
 const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
-  address: { label: "Service Address", maxLength: 40 },
+  address: { label: "Location or Meeting Link", maxLength: 160 },
   businessContact: { label: "Business Phone or Email", maxLength: 60 }
 };
 
@@ -359,6 +359,16 @@ async function loadAddressMapPreview() {
     return;
   }
 
+  if (hasWebLink(address)) {
+    lastAddressLookup = address;
+    setAddressMapPreview({
+      visible: true,
+      src: "",
+      note: "Meeting link will be included in the reminder."
+    });
+    return;
+  }
+
   lastAddressLookup = address;
   setAddressMapPreview({
     visible: true,
@@ -415,6 +425,10 @@ function hasDisallowedLink(value, allowEmail) {
   return hasLink && !hasEmail;
 }
 
+function hasWebLink(value) {
+  return STRICT_LINK_PATTERN.test(value) || DOMAIN_PATTERN.test(value);
+}
+
 function getFieldValidationMessage(fieldId) {
   const value = getFieldValue(fieldId);
 
@@ -438,7 +452,7 @@ function getFieldValidationMessage(fieldId) {
     return "Links are not allowed here.";
   }
 
-  if ((fieldId === "name" || fieldId === "address" || fieldId === "phone") && hasDisallowedLink(value, false)) {
+  if ((fieldId === "name" || fieldId === "phone") && hasDisallowedLink(value, false)) {
     return "Links are not allowed here.";
   }
 
@@ -618,7 +632,7 @@ function buildBronzeContactPayload() {
     client_name: getFieldValue("name").slice(0, 30),
     client_email: getFieldValue("email"),
     client_phone: getPhoneDigits(),
-    service_address: getFieldValue("address").slice(0, 40),
+    service_address: getFieldValue("address").slice(0, FIELD_LIMITS.address.maxLength),
     notes: getFieldValue("notes").slice(0, 1200),
     updated_at: new Date().toISOString()
   };
@@ -786,7 +800,7 @@ function validateMessageSafety(options = {}) {
   const restrictedFields = [
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
-    { label: "Service Address", value: address, maxLength: FIELD_LIMITS.address.maxLength },
+    { label: FIELD_LIMITS.address.label, value: address, maxLength: FIELD_LIMITS.address.maxLength, allowLink: true },
     { label: FIELD_LIMITS.businessContact.label, value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength, allowEmail: true },
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
@@ -800,7 +814,7 @@ function validateMessageSafety(options = {}) {
 
     const hasLink = STRICT_LINK_PATTERN.test(field.value) || DOMAIN_PATTERN.test(field.value);
     const hasEmail = field.allowEmail && EMAIL_PATTERN.test(field.value);
-    if (hasLink && !hasEmail) {
+    if (hasLink && !hasEmail && !field.allowLink) {
       alert(`Links are not allowed in ${field.label}.`);
       return false;
     }
