@@ -144,7 +144,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
+      grid-template-columns: 1fr;
       gap: 18px;
     }
 
@@ -451,58 +451,96 @@
       grid-column: 1 / -1;
     }
 
-    .clients-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .client-item {
-      padding: 16px;
-      border-radius: 18px;
-      background: #ffffff;
-      border: 1px solid rgba(203, 213, 225, 0.9);
-    }
-
-    .client-item-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
-    }
-
-    .client-item-name {
-      color: var(--text-main);
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    .client-item-meta {
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-      white-space: pre-line;
-    }
-
-    .client-item-date {
-      margin-top: 10px;
-      color: #64748b;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .client-item-actions {
+    .form-actions {
       display: flex;
       gap: 10px;
-      margin-top: 14px;
       flex-wrap: wrap;
     }
 
-    .client-item-actions button {
+    .form-actions button {
       width: auto;
-      min-width: 152px;
+      min-width: 160px;
+    }
+
+    .form-mode-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .clients-table-shell {
+      overflow-x: auto;
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      border-radius: 18px;
+      background: #ffffff;
+    }
+
+    .clients-table {
+      width: 100%;
+      min-width: 980px;
+      border-collapse: collapse;
+    }
+
+    .clients-table th,
+    .clients-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .clients-table th {
+      position: sticky;
+      top: 0;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+
+    .clients-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .clients-table td {
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .clients-table strong {
+      display: block;
+      font-size: 16px;
+      color: var(--text-main);
+    }
+
+    .table-muted {
+      color: var(--text-soft);
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 250px;
+    }
+
+    .table-actions button {
+      width: auto;
+      min-width: 0;
+      padding: 10px 12px;
+      font-size: 14px;
+      border-radius: 12px;
     }
 
     .empty-state {
@@ -550,26 +588,6 @@
       color: var(--info);
     }
 
-    .info-list {
-      display: grid;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .info-card {
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .info-card p {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
     [hidden] {
       display: none !important;
     }
@@ -608,12 +626,15 @@
         font-size: 17px;
       }
 
-      .auth-card h3,
-      .info-card h3 {
+      .auth-card h3 {
         font-size: 20px;
       }
 
       .account-actions button {
+        width: 100%;
+      }
+
+      .form-actions button {
         width: 100%;
       }
     }
@@ -749,6 +770,7 @@
                   </div>
                 </div>
                 <form id="client-form">
+                  <div id="client-form-mode" class="form-mode-badge" hidden>Editing contact</div>
                   <div class="client-form-grid">
                     <div>
                       <label for="client-name">Client Name</label>
@@ -771,7 +793,10 @@
                       <textarea id="client-notes" name="notes" maxlength="1200"></textarea>
                     </div>
                   </div>
-                  <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
+                  <div class="form-actions">
+                    <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
+                    <button id="cancel-edit-client-button" class="secondary-button" type="button" hidden>Cancel Edit</button>
+                  </div>
                   <div id="client-form-status" class="inline-status" hidden></div>
                 </form>
               </div>
@@ -792,34 +817,10 @@
           </div>
         </div>
       </section>
-
-      <aside class="panel">
-        <div class="panel-content">
-          <h2>Account Notes</h2>
-          <p class="feature-copy">This page is meant to manage your account, not replace the main reminder screen.</p>
-
-          <div class="info-list">
-            <div class="info-card">
-              <h3>Free</h3>
-              <p>A signed-in free account works the same as using the reminder tool normally. It just gives you a place to manage your login.</p>
-            </div>
-
-            <div class="info-card">
-              <h3>Bronze</h3>
-              <p>Bronze adds saved contacts and stores reminder timing preferences so future automation can be tied to your account.</p>
-            </div>
-
-            <div class="info-card">
-              <h3>Privacy</h3>
-              <p>Saved contacts stay attached to the signed-in account so you can pull them back into a reminder later without retyping them.</p>
-            </div>
-          </div>
-        </div>
-      </aside>
     </div>
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="account.js?v=20260330c"></script>
+  <script type="module" src="account.js?v=20260330e"></script>
 </body>
 </html>

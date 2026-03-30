@@ -22,13 +22,16 @@ const freeContactsShell = document.getElementById("free-contacts-shell");
 const bronzeContactsShell = document.getElementById("bronze-contacts-shell");
 const clientForm = document.getElementById("client-form");
 const saveClientButton = document.getElementById("save-client-button");
+const cancelEditClientButton = document.getElementById("cancel-edit-client-button");
 const clientFormStatus = document.getElementById("client-form-status");
+const clientFormMode = document.getElementById("client-form-mode");
 const clientsList = document.getElementById("clients-list");
 
 let supabase = null;
 let appConfig = null;
 let runtimeConfig = null;
 let savedClients = [];
+let editingClientId = "";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 
 function setAuthFormsEnabled(enabled) {
@@ -167,28 +170,6 @@ function sortContacts(contacts) {
   });
 }
 
-function getClientDisplayLines(client) {
-  const lines = [];
-
-  if (client.client_email) {
-    lines.push(client.client_email);
-  }
-
-  if (client.client_phone) {
-    lines.push(formatPhone(client.client_phone));
-  }
-
-  if (client.service_address) {
-    lines.push(client.service_address);
-  }
-
-  if (client.notes) {
-    lines.push(`Notes: ${client.notes}`);
-  }
-
-  return lines;
-}
-
 function formatCountLabel(count) {
   const safeCount = Number.isFinite(count) ? count : 0;
   return safeCount === 1 ? "1 contact" : `${safeCount} contacts`;
@@ -236,27 +217,93 @@ function renderSavedClients() {
     return;
   }
 
-  clientsList.innerHTML = savedClients.map(client => {
-    const displayName = client.client_name || "Saved client";
-    const details = getClientDisplayLines(client)
-      .map(line => escapeHtml(line))
-      .join("\n");
-    const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
+  clientsList.innerHTML = `
+    <div class="clients-table-shell">
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Details</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${savedClients.map(client => {
+            const displayName = client.client_name || "Saved client";
+            const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
+            const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
 
-    return `
-      <div class="client-item">
-        <div class="client-item-head">
-          <div class="client-item-name">${escapeHtml(displayName)}</div>
-        </div>
-        <div class="client-item-meta">${details || "No extra details saved yet."}</div>
-        ${updatedLabel ? `<div class="client-item-date">Last updated ${escapeHtml(updatedLabel)}</div>` : ""}
-        <div class="client-item-actions">
-          <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use in Reminder</button>
-          <button class="secondary-button" type="button" data-action="delete" data-client-id="${client.id}">Delete</button>
-        </div>
-      </div>
-    `;
-  }).join("");
+            return `
+              <tr>
+                <td><strong>${escapeHtml(displayName)}</strong></td>
+                <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</td>
+                <td>${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</td>
+                <td>${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</td>
+                <td>
+                  <div class="table-actions">
+                    <button class="secondary-button" type="button" data-action="edit" data-client-id="${client.id}">Edit</button>
+                    <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use</button>
+                    <button class="secondary-button" type="button" data-action="delete" data-client-id="${client.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function setClientEditMode(client = null) {
+  editingClientId = client?.id || "";
+
+  if (clientFormMode) {
+    clientFormMode.hidden = !editingClientId;
+    clientFormMode.textContent = editingClientId ? `Editing ${client.client_name || "contact"}` : "Editing contact";
+  }
+
+  if (saveClientButton) {
+    saveClientButton.textContent = editingClientId ? "Update Contact" : "Save Contact";
+    saveClientButton.dataset.defaultText = saveClientButton.textContent;
+  }
+
+  if (cancelEditClientButton) {
+    cancelEditClientButton.hidden = !editingClientId;
+  }
+}
+
+function populateClientForm(clientId) {
+  const client = savedClients.find(entry => entry.id === clientId);
+
+  if (!client || !clientForm) {
+    return;
+  }
+
+  document.getElementById("client-name").value = client.client_name || "";
+  document.getElementById("client-email").value = client.client_email || "";
+  document.getElementById("client-phone").value = client.client_phone ? formatPhone(client.client_phone) : "";
+  document.getElementById("client-address").value = client.service_address || "";
+  document.getElementById("client-notes").value = client.notes || "";
+
+  setClientEditMode(client);
+  setClientFormStatus("");
+  clientForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetClientForm() {
+  if (clientForm) {
+    clientForm.reset();
+  }
+
+  setClientEditMode(null);
+  setClientFormStatus("");
 }
 
 async function ensureProfile(user) {
@@ -634,18 +681,22 @@ async function handleSaveClient(event) {
   setClientFormStatus("Saving contact...", "info");
 
   try {
-    const { error } = await supabase
-      .from("clients")
-      .insert(payload);
+    const isEditing = Boolean(editingClientId);
+    const activeEditingId = editingClientId;
+    const query = isEditing
+      ? supabase.from("clients").update(payload).eq("id", activeEditingId).eq("owner_id", user.id)
+      : supabase.from("clients").insert(payload);
+
+    const { error } = await query;
 
     if (error) {
       throw error;
     }
 
     await loadSavedClients();
-    form.reset();
-    setStatus("Contact saved to your account.", "success");
-    setClientFormStatus("Contact saved to your account.", "success");
+    resetClientForm();
+    setStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");
+    setClientFormStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");
   } catch (error) {
     setStatus(error.message || "Unable to save this client.", "error");
     setClientFormStatus(error.message || "Unable to save this contact.", "error");
@@ -746,6 +797,10 @@ async function deleteClient(clientId) {
     return;
   }
 
+  if (editingClientId === clientId) {
+    resetClientForm();
+  }
+
   setStatus("Client deleted.", "success");
   await loadSavedClients();
 }
@@ -766,6 +821,8 @@ function handleClientsListClick(event) {
 
   if (action === "use") {
     useClientInReminder(clientId);
+  } else if (action === "edit") {
+    populateClientForm(clientId);
   } else if (action === "delete") {
     deleteClient(clientId);
   }
@@ -857,6 +914,10 @@ async function initAccountPage() {
 
   if (clientForm) {
     clientForm.addEventListener("submit", handleSaveClient);
+  }
+
+  if (cancelEditClientButton) {
+    cancelEditClientButton.addEventListener("click", resetClientForm);
   }
 
   if (clientsList) {
