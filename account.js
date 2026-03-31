@@ -47,6 +47,7 @@ let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
 let currentAuthUserId = "";
+let expandedClientId = "";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 
@@ -295,6 +296,131 @@ function getReminderHistoryChannelLabel(entry) {
   return "Reminder";
 }
 
+function getReminderStatusLabel(entry) {
+  const rawStatus = String(
+    entry?.status ||
+    entry?.event_type ||
+    entry?.event ||
+    ""
+  ).trim().toLowerCase();
+
+  if (rawStatus.includes("delivered")) {
+    return "Delivered";
+  }
+
+  if (rawStatus.includes("open") && rawStatus.includes("likely")) {
+    return "Likely opened";
+  }
+
+  if (rawStatus.includes("proxy")) {
+    return "Likely opened";
+  }
+
+  if (rawStatus.includes("open")) {
+    return "Opened";
+  }
+
+  if (rawStatus.includes("calendar")) {
+    return "Calendar clicked";
+  }
+
+  if (rawStatus.includes("click")) {
+    return "Clicked";
+  }
+
+  if (rawStatus.includes("send")) {
+    return "Sent";
+  }
+
+  if (entry?.delivered_at) {
+    return "Delivered";
+  }
+
+  if (entry?.opened_at || entry?.open_at) {
+    return "Opened";
+  }
+
+  return "Sent";
+}
+
+function getReminderStatusClass(label) {
+  const normalized = String(label || "").trim().toLowerCase();
+
+  if (normalized.includes("delivered")) {
+    return "delivered";
+  }
+
+  if (normalized.includes("opened")) {
+    return "opened";
+  }
+
+  if (normalized.includes("clicked")) {
+    return "clicked";
+  }
+
+  return "sent";
+}
+
+function getReminderEventTimestamp(entry) {
+  const candidates = [
+    entry?.occurred_at,
+    entry?.event_at,
+    entry?.opened_at,
+    entry?.delivered_at,
+    entry?.clicked_at,
+    entry?.sent_at,
+    entry?.created_at
+  ];
+
+  for (const candidate of candidates) {
+    const timestamp = new Date(candidate || 0).getTime();
+    if (Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp;
+    }
+  }
+
+  return 0;
+}
+
+function getReminderEventTimeLabel(entry) {
+  const candidates = [
+    entry?.occurred_at,
+    entry?.event_at,
+    entry?.opened_at,
+    entry?.delivered_at,
+    entry?.clicked_at,
+    entry?.sent_at,
+    entry?.created_at
+  ];
+
+  for (const candidate of candidates) {
+    const formatted = formatReminderHistoryDateTime(candidate);
+    if (formatted) {
+      return formatted;
+    }
+  }
+
+  return "Not available";
+}
+
+function getReminderSourceLabel(entry) {
+  const source = String(entry?.source || "").trim().toLowerCase();
+
+  if (!source) {
+    return "";
+  }
+
+  if (source === "manual") {
+    return "Manual send";
+  }
+
+  if (source === "automatic") {
+    return "Automatic send";
+  }
+
+  return source.charAt(0).toUpperCase() + source.slice(1);
+}
+
 function attachReminderHistory(clients, historyRows) {
   const historyByClientId = new Map();
 
@@ -325,7 +451,7 @@ async function loadReminderHistory(ownerId) {
 
   const { data, error } = await supabase
     .from("client_reminder_history")
-    .select("client_id, channel, source, sent_at")
+    .select("*")
     .eq("owner_id", ownerId)
     .order("sent_at", { ascending: false })
     .limit(500);
@@ -344,6 +470,34 @@ async function loadReminderHistory(ownerId) {
   return data || [];
 }
 
+function getLatestReminderEntry(client) {
+  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+
+  if (!historyEntries.length) {
+    return null;
+  }
+
+  return [...historyEntries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left))[0] || null;
+}
+
+function renderReminderStatus(client) {
+  const latestEntry = getLatestReminderEntry(client);
+
+  if (!latestEntry) {
+    return `<span class="table-muted">${reminderHistoryReady ? "No status yet" : "History setup needed"}</span>`;
+  }
+
+  const label = getReminderStatusLabel(latestEntry);
+  const statusClass = getReminderStatusClass(label);
+
+  return `
+    <div class="status-stack">
+      <span class="status-pill ${statusClass}">${escapeHtml(label)}</span>
+      <span class="status-time">${escapeHtml(getReminderEventTimeLabel(latestEntry))}</span>
+    </div>
+  `;
+}
+
 function renderReminderHistory(client) {
   const historyEntries = Array.isArray(client?.reminder_history)
     ? client.reminder_history.slice(0, 4)
@@ -357,10 +511,39 @@ function renderReminderHistory(client) {
     <div class="history-stack">
       ${historyEntries.map(entry => `
         <div class="history-entry">
-          <div class="history-channel">${escapeHtml(getReminderHistoryChannelLabel(entry))}</div>
-          <div class="history-time">${escapeHtml(formatReminderHistoryDateTime(entry.sent_at) || "Not available")}</div>
+          <div class="history-channel">${escapeHtml(getReminderStatusLabel(entry))}</div>
+          <div class="history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</div>
         </div>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderExpandedReminderHistory(client) {
+  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+
+  if (!historyEntries.length) {
+    return `<div class="expanded-empty">${reminderHistoryReady ? "No reminder activity for this client yet." : "Reminder history setup is still needed."}</div>`;
+  }
+
+  return `
+    <div class="expanded-history-list">
+      ${historyEntries.map(entry => {
+        const statusLabel = getReminderStatusLabel(entry);
+        const channelLabel = getReminderHistoryChannelLabel(entry);
+        const sourceLabel = getReminderSourceLabel(entry);
+        const metaParts = [channelLabel, sourceLabel].filter(Boolean);
+
+        return `
+          <div class="expanded-history-entry">
+            <div class="expanded-history-top">
+              <span class="status-pill ${getReminderStatusClass(statusLabel)}">${escapeHtml(statusLabel)}</span>
+              <span class="expanded-history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
+            </div>
+            <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -380,11 +563,39 @@ function getClientSearchText(client) {
 function getLatestReminderSentAt(client) {
   const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
   const latestTimestamp = historyEntries.reduce((latest, entry) => {
-    const timestamp = new Date(entry?.sent_at || 0).getTime();
+    const timestamp = getReminderEventTimestamp(entry);
     return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
   }, 0);
 
   return latestTimestamp;
+}
+
+function renderExpandedClientDetails(client) {
+  const serviceLocation = client.service_address
+    ? escapeHtml(client.service_address)
+    : `<span class="table-muted">Not added</span>`;
+  const additionalDetails = client.notes
+    ? escapeHtml(client.notes)
+    : `<span class="table-muted">No additional details saved.</span>`;
+
+  return `
+    <div class="expanded-client-panel">
+      <div class="expanded-client-grid">
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Service Location</div>
+          <div class="expanded-client-value">${serviceLocation}</div>
+        </div>
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Additional Details</div>
+          <div class="expanded-client-value">${additionalDetails}</div>
+        </div>
+      </div>
+      <div class="expanded-client-block">
+        <div class="expanded-client-label">Full Reminder Activity</div>
+        ${renderExpandedReminderHistory(client)}
+      </div>
+    </div>
+  `;
 }
 
 function sortContacts(contacts, mode = clientsSortMode) {
@@ -521,8 +732,7 @@ function renderSavedClients() {
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Address</th>
-            <th>Details</th>
+            <th>Reminder Status</th>
             <th>Reminder History</th>
             <th>Last Edited</th>
             <th>Actions</th>
@@ -533,14 +743,19 @@ function renderSavedClients() {
             const displayName = client.client_name || "Saved client";
             const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
             const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
+            const isExpanded = expandedClientId === client.id;
 
             return `
               <tr>
-                <td><strong>${escapeHtml(displayName)}</strong></td>
+                <td>
+                  <button class="client-name-button" type="button" data-action="toggle-details" data-client-id="${client.id}" aria-expanded="${isExpanded ? "true" : "false"}">
+                    <strong>${escapeHtml(displayName)}</strong>
+                    <span class="client-name-hint">${isExpanded ? "Hide details" : "View details"}</span>
+                  </button>
+                </td>
                 <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
-                <td>${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</td>
-                <td>${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</td>
+                <td>${renderReminderStatus(client)}</td>
                 <td>${renderReminderHistory(client)}</td>
                 <td>${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</td>
                 <td>
@@ -551,6 +766,13 @@ function renderSavedClients() {
                   </div>
                 </td>
               </tr>
+              ${isExpanded ? `
+                <tr class="client-expanded-row">
+                  <td colspan="7">
+                    ${renderExpandedClientDetails(client)}
+                  </td>
+                </tr>
+              ` : ""}
             `;
           }).join("")}
         </tbody>
@@ -564,7 +786,10 @@ function renderSavedClients() {
 
         return `
           <div class="client-mobile-card">
-            <h4 class="client-mobile-title">${escapeHtml(displayName)}</h4>
+            <button class="client-mobile-title-button" type="button" data-action="toggle-details" data-client-id="${client.id}" aria-expanded="${expandedClientId === client.id ? "true" : "false"}">
+              <span class="client-mobile-title">${escapeHtml(displayName)}</span>
+              <span class="client-name-hint">${expandedClientId === client.id ? "Hide details" : "View details"}</span>
+            </button>
             <div class="client-mobile-grid">
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Email</div>
@@ -575,12 +800,8 @@ function renderSavedClients() {
                 <div class="client-mobile-value">${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</div>
               </div>
               <div class="client-mobile-row">
-                <div class="client-mobile-label">Address</div>
-                <div class="client-mobile-value">${client.service_address ? escapeHtml(client.service_address) : `<span class="table-muted">Not added</span>`}</div>
-              </div>
-              <div class="client-mobile-row">
-                <div class="client-mobile-label">Details</div>
-                <div class="client-mobile-value">${client.notes ? escapeHtml(client.notes) : `<span class="table-muted">No details</span>`}</div>
+                <div class="client-mobile-label">Reminder Status</div>
+                <div class="client-mobile-value">${renderReminderStatus(client)}</div>
               </div>
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Reminder History</div>
@@ -591,6 +812,7 @@ function renderSavedClients() {
                 <div class="client-mobile-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
               </div>
             </div>
+            ${expandedClientId === client.id ? renderExpandedClientDetails(client) : ""}
             <div class="client-mobile-actions">
               <button class="secondary-button" type="button" data-action="edit" data-client-id="${client.id}">Edit</button>
               <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use</button>
@@ -1366,6 +1588,9 @@ function handleClientsListClick(event) {
 
   if (action === "use") {
     useClientInReminder(clientId);
+  } else if (action === "toggle-details") {
+    expandedClientId = expandedClientId === clientId ? "" : clientId;
+    renderSavedClients();
   } else if (action === "edit") {
     populateClientForm(clientId);
   } else if (action === "delete") {
