@@ -285,6 +285,42 @@ h1 {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.calendar-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(226, 232, 240, 0.92);
+  border: 1px solid rgba(203, 213, 225, 0.92);
+}
+
+.calendar-view-button {
+  min-width: 86px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.calendar-view-button.is-active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+}
+
+.calendar-month-jump {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .calendar-select {
@@ -307,6 +343,11 @@ h1 {
 .calendar-toolbar-actions button {
   width: auto;
   min-width: 110px;
+}
+
+.calendar-view-shell {
+  display: grid;
+  gap: 10px;
 }
 
 .selected-day-card {
@@ -469,6 +510,140 @@ h1 {
   color: var(--text-soft);
   font-size: 13px;
   font-weight: 700;
+}
+
+.calendar-week-grid {
+  display: grid;
+  grid-template-columns: 92px repeat(7, minmax(0, 1fr));
+  gap: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.calendar-week-corner,
+.calendar-week-header,
+.calendar-week-time,
+.calendar-week-slot {
+  border-right: 1px solid rgba(226, 232, 240, 0.92);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+}
+
+.calendar-week-header {
+  width: auto;
+  min-width: 0;
+  display: block;
+  padding: 14px 10px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.95), rgba(255, 255, 255, 0.95));
+  text-align: center;
+  cursor: pointer;
+}
+
+.calendar-week-header:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.calendar-week-header.is-selected {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.16), rgba(219, 234, 254, 0.94));
+}
+
+.calendar-week-header.is-today {
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.calendar-week-day {
+  display: block;
+  color: var(--accent-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calendar-week-date {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-main);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.calendar-week-corner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.calendar-week-time {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 8px;
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.calendar-week-slot {
+  min-height: 92px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.calendar-week-slot.is-selected {
+  background: rgba(239, 246, 255, 0.92);
+}
+
+.calendar-week-slot.is-today {
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.calendar-week-slot.is-anytime {
+  min-height: 86px;
+  background: rgba(248, 250, 252, 0.98);
+}
+
+.calendar-week-slot.is-empty {
+  background-image: linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+  background-size: 100% 20px;
+  background-position: top;
+  background-repeat: repeat-y;
+}
+
+.calendar-week-appointment {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(29, 78, 216, 0.96));
+  color: #ffffff;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
+}
+
+.calendar-week-appointment-title {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.calendar-week-appointment-meta {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.92;
 }
 
 .appointments-card {
@@ -728,7 +903,13 @@ button:disabled {
     width: 100%;
   }
 
+  .calendar-view-toggle,
+  .calendar-month-jump {
+    width: 100%;
+  }
+
   .calendar-select,
+  .calendar-view-button,
   .calendar-toolbar-actions button {
     width: 100%;
   }
@@ -740,6 +921,11 @@ button:disabled {
   .calendar-weekdays,
   .calendar-month-grid {
     gap: 8px;
+  }
+
+  .calendar-week-grid {
+    grid-template-columns: 70px repeat(7, minmax(120px, 1fr));
+    overflow-x: auto;
   }
 
   .calendar-day {

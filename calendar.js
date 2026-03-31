@@ -11,6 +11,12 @@ const calendarLoading = document.getElementById("calendar-loading");
 const calendarLayout = document.getElementById("calendar-layout");
 const calendarMonthLabel = document.getElementById("calendar-month-label");
 const calendarMonthGrid = document.getElementById("calendar-month-grid");
+const calendarMonthShell = document.getElementById("calendar-month-shell");
+const calendarWeekShell = document.getElementById("calendar-week-shell");
+const calendarWeekGrid = document.getElementById("calendar-week-grid");
+const monthViewButton = document.getElementById("calendar-month-view");
+const weekViewButton = document.getElementById("calendar-week-view");
+const calendarMonthJump = document.getElementById("calendar-month-jump");
 const selectedDayTitle = document.getElementById("selected-day-title");
 const selectedDayCopy = document.getElementById("selected-day-copy");
 const selectedDayList = document.getElementById("selected-day-list");
@@ -33,6 +39,8 @@ let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = "";
 let currentAuthUserId = "";
+let currentCalendarView = "month";
+const WEEK_HOURS = Array.from({ length: 13 }, (_value, index) => index + 7);
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -157,11 +165,38 @@ function addMonths(date, amount) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
+function addDays(date, amount) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+}
+
+function startOfWeek(date) {
+  const nextDate = new Date(date);
+  nextDate.setHours(0, 0, 0, 0);
+  nextDate.setDate(nextDate.getDate() - nextDate.getDay());
+  return nextDate;
+}
+
+function addWeeks(date, amount) {
+  return addDays(date, amount * 7);
+}
+
 function formatMonthLabel(date) {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     year: "numeric"
   }).format(date);
+}
+
+function formatWeekLabel(startDate, endDate) {
+  const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+
+  if (sameMonth) {
+    return `${new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(startDate)} | ${startDate.getDate()}-${endDate.getDate()}`;
+  }
+
+  return `${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(startDate)} - ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(endDate)}`;
 }
 
 function formatDateKey(date) {
@@ -323,6 +358,18 @@ function getTodayKey() {
   return formatDateKey(new Date());
 }
 
+function getActiveDate() {
+  if (selectedDateKey) {
+    const date = new Date(`${selectedDateKey}T00:00:00`);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  return new Date(viewMonth);
+}
+
 function getMonthAppointments(targetMonth) {
   return appointments.filter(appointment => {
     const date = parseAppointmentDateTime(appointment);
@@ -355,8 +402,26 @@ function getSelectedDateForMonth(monthAppointments) {
   return formatDateKey(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
 }
 
+function getSelectedDateKeyForCurrentView(monthAppointments) {
+  if (currentCalendarView === "week") {
+    return formatDateKey(getActiveDate());
+  }
+
+  return getSelectedDateForMonth(monthAppointments);
+}
+
 function getAppointmentsSortedNewestFirst() {
   return [...appointments].sort((left, right) => parseAppointmentDateTime(right) - parseAppointmentDateTime(left));
+}
+
+function getWeekDates(anchorDate) {
+  const weekStart = startOfWeek(anchorDate);
+  return Array.from({ length: 7 }, (_value, index) => addDays(weekStart, index));
+}
+
+function getWeekAppointments(weekDates) {
+  const validKeys = new Set(weekDates.map(formatDateKey));
+  return appointments.filter(appointment => validKeys.has(String(appointment?.service_date || "").trim()));
 }
 
 function getUpcomingAppointments() {
@@ -455,6 +520,32 @@ function renderMonthSelectors() {
   yearSelect.value = String(viewMonth.getFullYear());
 }
 
+function renderViewMode() {
+  const isWeek = currentCalendarView === "week";
+
+  if (monthViewButton) {
+    monthViewButton.classList.toggle("is-active", !isWeek);
+    monthViewButton.setAttribute("aria-pressed", String(!isWeek));
+  }
+
+  if (weekViewButton) {
+    weekViewButton.classList.toggle("is-active", isWeek);
+    weekViewButton.setAttribute("aria-pressed", String(isWeek));
+  }
+
+  if (calendarMonthShell) {
+    calendarMonthShell.hidden = isWeek;
+  }
+
+  if (calendarWeekShell) {
+    calendarWeekShell.hidden = !isWeek;
+  }
+
+  if (calendarMonthJump) {
+    calendarMonthJump.hidden = isWeek;
+  }
+}
+
 function renderCounts() {
   const upcoming = getUpcomingAppointments();
   const previous = getPreviousAppointments();
@@ -481,7 +572,7 @@ function renderSelectedDay(monthAppointments) {
     return;
   }
 
-  selectedDateKey = getSelectedDateForMonth(monthAppointments);
+  selectedDateKey = getSelectedDateKeyForCurrentView(monthAppointments);
   const selectedDate = new Date(`${selectedDateKey}T00:00:00`);
   const dateAppointments = getAppointmentsByDateKey(selectedDateKey)
     .sort((left, right) => parseAppointmentDateTime(left) - parseAppointmentDateTime(right));
@@ -602,12 +693,130 @@ function renderMonthGrid() {
   calendarMonthGrid.innerHTML = cells.join("");
 }
 
+function renderWeekGrid() {
+  if (!calendarWeekGrid) {
+    return;
+  }
+
+  const activeDate = getActiveDate();
+  const weekDates = getWeekDates(activeDate);
+  const weekAppointments = getWeekAppointments(weekDates);
+  const appointmentsByDateKey = new Map();
+  const todayKey = getTodayKey();
+
+  weekDates.forEach(date => {
+    appointmentsByDateKey.set(formatDateKey(date), []);
+  });
+
+  weekAppointments.forEach(appointment => {
+    const dateKey = String(appointment?.service_date || "").trim();
+
+    if (!appointmentsByDateKey.has(dateKey)) {
+      appointmentsByDateKey.set(dateKey, []);
+    }
+
+    appointmentsByDateKey.get(dateKey).push(appointment);
+  });
+
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[6];
+
+  if (calendarMonthLabel) {
+    calendarMonthLabel.textContent = formatWeekLabel(weekStart, weekEnd);
+  }
+
+  const headerMarkup = [
+    `<div class="calendar-week-corner">Time</div>`,
+    ...weekDates.map(date => {
+      const dateKey = formatDateKey(date);
+      const isSelected = dateKey === selectedDateKey;
+      const isToday = dateKey === todayKey;
+
+      return `
+        <button class="calendar-week-header ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}" type="button" data-date-key="${dateKey}">
+          <span class="calendar-week-day">${new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date)}</span>
+          <span class="calendar-week-date">${date.getDate()}</span>
+        </button>
+      `;
+    })
+  ];
+
+  const anyTimeRow = [
+    `<div class="calendar-week-time">Any time</div>`,
+    ...weekDates.map(date => {
+      const dateKey = formatDateKey(date);
+      const isSelected = dateKey === selectedDateKey;
+      const isToday = dateKey === todayKey;
+      const dayAppointments = appointmentsByDateKey.get(dateKey) || [];
+      const anyTimeAppointments = dayAppointments.filter(appointment => !String(appointment?.service_time || "").trim());
+
+      return `
+        <div class="calendar-week-slot is-anytime ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}" data-date-key="${dateKey}">
+          ${anyTimeAppointments.length ? anyTimeAppointments.map(appointment => `
+            <div class="calendar-week-appointment">
+              <div class="calendar-week-appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
+              <div class="calendar-week-appointment-meta">${escapeHtml(appointment.service_location || "Appointment saved")}</div>
+            </div>
+          `).join("") : `<div class="selected-day-empty">No anytime appointments</div>`}
+        </div>
+      `;
+    })
+  ];
+
+  const slotRows = WEEK_HOURS.flatMap(hour => {
+    const timeLabel = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric"
+    }).format(new Date(2000, 0, 1, hour, 0));
+
+    const rowMarkup = [`<div class="calendar-week-time">${timeLabel}</div>`];
+
+    weekDates.forEach(date => {
+      const dateKey = formatDateKey(date);
+      const isSelected = dateKey === selectedDateKey;
+      const isToday = dateKey === todayKey;
+      const dayAppointments = appointmentsByDateKey.get(dateKey) || [];
+      const slotAppointments = dayAppointments.filter(appointment => {
+        const timeText = String(appointment?.service_time || "").trim();
+
+        if (!timeText) {
+          return false;
+        }
+
+        return Number(timeText.split(":")[0]) === hour;
+      });
+
+      rowMarkup.push(`
+        <div class="calendar-week-slot ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""} ${slotAppointments.length ? "" : "is-empty"}" data-date-key="${dateKey}">
+          ${slotAppointments.map(appointment => `
+            <div class="calendar-week-appointment">
+              <div class="calendar-week-appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
+              <div class="calendar-week-appointment-meta">${escapeHtml(formatAppointmentChipMeta(appointment))}</div>
+            </div>
+          `).join("")}
+        </div>
+      `);
+    });
+
+    return rowMarkup;
+  });
+
+  calendarWeekGrid.innerHTML = [...headerMarkup, ...anyTimeRow, ...slotRows].join("");
+}
+
 function renderCalendar() {
   const monthAppointments = getMonthAppointments(viewMonth);
   renderCounts();
   renderMonthSelectors();
+  renderViewMode();
   renderSelectedDay(monthAppointments);
-  renderMonthGrid();
+  if (currentCalendarView === "week") {
+    renderWeekGrid();
+  } else {
+    if (calendarMonthLabel) {
+      calendarMonthLabel.textContent = formatMonthLabel(viewMonth);
+    }
+    renderMonthGrid();
+  }
   renderAllAppointments();
 
   if (calendarLayout && appointmentsReady) {
@@ -709,21 +918,49 @@ function bindCalendarControls() {
 
   if (prevButton) {
     prevButton.addEventListener("click", () => {
-      viewMonth = addMonths(viewMonth, -1);
+      if (currentCalendarView === "week") {
+        const nextDate = addWeeks(getActiveDate(), -1);
+        selectedDateKey = formatDateKey(nextDate);
+        viewMonth = startOfMonth(nextDate);
+      } else {
+        viewMonth = addMonths(viewMonth, -1);
+      }
       renderCalendar();
     });
   }
 
   if (todayButton) {
     todayButton.addEventListener("click", () => {
-      viewMonth = startOfMonth(new Date());
+      const today = new Date();
+      selectedDateKey = formatDateKey(today);
+      viewMonth = startOfMonth(today);
       renderCalendar();
     });
   }
 
   if (nextButton) {
     nextButton.addEventListener("click", () => {
-      viewMonth = addMonths(viewMonth, 1);
+      if (currentCalendarView === "week") {
+        const nextDate = addWeeks(getActiveDate(), 1);
+        selectedDateKey = formatDateKey(nextDate);
+        viewMonth = startOfMonth(nextDate);
+      } else {
+        viewMonth = addMonths(viewMonth, 1);
+      }
+      renderCalendar();
+    });
+  }
+
+  if (monthViewButton) {
+    monthViewButton.addEventListener("click", () => {
+      currentCalendarView = "month";
+      renderCalendar();
+    });
+  }
+
+  if (weekViewButton) {
+    weekViewButton.addEventListener("click", () => {
+      currentCalendarView = "week";
       renderCalendar();
     });
   }
@@ -731,6 +968,32 @@ function bindCalendarControls() {
   if (calendarMonthGrid) {
     calendarMonthGrid.addEventListener("click", event => {
       const dayElement = event.target.closest(".calendar-day[data-date-key]");
+
+      if (!dayElement) {
+        return;
+      }
+
+      const nextDateKey = String(dayElement.dataset.dateKey || "").trim();
+
+      if (!nextDateKey) {
+        return;
+      }
+
+      const nextDate = new Date(`${nextDateKey}T00:00:00`);
+
+      if (Number.isNaN(nextDate.getTime())) {
+        return;
+      }
+
+      selectedDateKey = nextDateKey;
+      viewMonth = startOfMonth(nextDate);
+      renderCalendar();
+    });
+  }
+
+  if (calendarWeekGrid) {
+    calendarWeekGrid.addEventListener("click", event => {
+      const dayElement = event.target.closest("[data-date-key]");
 
       if (!dayElement) {
         return;
