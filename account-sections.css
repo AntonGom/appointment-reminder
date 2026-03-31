@@ -350,8 +350,20 @@ h1 {
   gap: 10px;
 }
 
+.calendar-month-strip-copy {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .calendar-weekdays,
 .calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-month-strip {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
@@ -394,6 +406,18 @@ h1 {
 .calendar-day.is-selected {
   border-color: rgba(37, 99, 235, 0.72);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.calendar-day.is-anchor-day {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0.98));
+}
+
+.calendar-day-month-label {
+  color: var(--accent-3);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .calendar-day-head {
@@ -865,6 +889,10 @@ button:disabled {
   .calendar-week-grid {
     grid-template-columns: 70px repeat(7, minmax(120px, 1fr));
     overflow-x: auto;
+  }
+
+  .calendar-month-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .calendar-day {

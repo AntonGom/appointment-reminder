@@ -408,9 +408,21 @@ function getWeekDates(anchorDate) {
   return Array.from({ length: 7 }, (_value, index) => addDays(weekStart, index));
 }
 
+function getMonthStripDates(anchorDate) {
+  return Array.from({ length: 7 }, (_value, index) => addDays(anchorDate, index - 2));
+}
+
 function getWeekAppointments(weekDates) {
   const validKeys = new Set(weekDates.map(formatDateKey));
   return appointments.filter(appointment => validKeys.has(String(appointment?.service_date || "").trim()));
+}
+
+function setActiveDateMonthYear(nextYear, nextMonth) {
+  const activeDate = getActiveDate();
+  const nextDate = new Date(nextYear, nextMonth, activeDate.getDate());
+
+  selectedDateKey = formatDateKey(nextDate);
+  viewMonth = startOfMonth(nextDate);
 }
 
 function getUpcomingAppointments() {
@@ -561,48 +573,38 @@ function renderMonthGrid() {
     return;
   }
 
-  if (calendarMonthLabel) {
-    calendarMonthLabel.textContent = formatMonthLabel(viewMonth);
-  }
-
-  const monthAppointments = getMonthAppointments(viewMonth);
-  selectedDateKey = getSelectedDateForMonth(monthAppointments);
+  const activeDate = getActiveDate();
+  const stripDates = getMonthStripDates(activeDate);
+  selectedDateKey = formatDateKey(activeDate);
   const appointmentsByDay = new Map();
 
-  monthAppointments.forEach(appointment => {
+  stripDates.forEach(date => {
+    appointmentsByDay.set(formatDateKey(date), []);
+  });
+
+  appointments.forEach(appointment => {
     const key = String(appointment.service_date || "").trim();
 
-    if (!key) {
+    if (!key || !appointmentsByDay.has(key)) {
       return;
-    }
-
-    if (!appointmentsByDay.has(key)) {
-      appointmentsByDay.set(key, []);
     }
 
     appointmentsByDay.get(key).push(appointment);
   });
 
-  const firstDay = startOfMonth(viewMonth);
-  const gridStart = new Date(firstDay);
-  gridStart.setDate(firstDay.getDate() - firstDay.getDay());
-
   const todayKey = getTodayKey();
-  const cells = [];
-
-  for (let index = 0; index < 42; index += 1) {
-    const cellDate = new Date(gridStart);
-    cellDate.setDate(gridStart.getDate() + index);
-
+  const cells = stripDates.map(cellDate => {
     const dateKey = formatDateKey(cellDate);
     const dayAppointments = appointmentsByDay.get(dateKey) || [];
     const visibleAppointments = dayAppointments.slice(0, 2);
-    const isOtherMonth = cellDate.getMonth() !== viewMonth.getMonth();
+    const isOtherMonth = cellDate.getMonth() !== activeDate.getMonth();
     const isToday = dateKey === todayKey;
     const isSelected = dateKey === selectedDateKey;
+    const showMonthLabel = cellDate.getDate() === 1 || dateKey === selectedDateKey || cellDate.getMonth() !== activeDate.getMonth();
 
-    cells.push(`
+    return `
       <div class="calendar-day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""} ${dayAppointments.length ? "has-appointments" : ""} ${isSelected ? "is-selected" : ""}" data-date-key="${dateKey}">
+        ${showMonthLabel ? `<div class="calendar-day-month-label">${escapeHtml(new Intl.DateTimeFormat("en-US", { month: "short" }).format(cellDate))}</div>` : ""}
         <div class="calendar-day-head">
           <div class="calendar-day-number">${cellDate.getDate()}</div>
           ${dayAppointments.length ? `<div class="calendar-day-count">${dayAppointments.length}</div>` : ""}
@@ -617,8 +619,8 @@ function renderMonthGrid() {
           ${dayAppointments.length > visibleAppointments.length ? `<div class="calendar-chip-more">+${dayAppointments.length - visibleAppointments.length} more</div>` : ""}
         </div>
       </div>
-    `);
-  }
+    `;
+  });
 
   calendarMonthGrid.innerHTML = cells.join("");
 }
@@ -828,7 +830,7 @@ function bindCalendarControls() {
         return;
       }
 
-      viewMonth = new Date(viewMonth.getFullYear(), nextMonth, 1);
+      setActiveDateMonthYear(viewMonth.getFullYear(), nextMonth);
       renderCalendar();
     });
   }
@@ -841,7 +843,7 @@ function bindCalendarControls() {
         return;
       }
 
-      viewMonth = new Date(nextYear, viewMonth.getMonth(), 1);
+      setActiveDateMonthYear(nextYear, viewMonth.getMonth());
       renderCalendar();
     });
   }
@@ -853,7 +855,9 @@ function bindCalendarControls() {
         selectedDateKey = formatDateKey(nextDate);
         viewMonth = startOfMonth(nextDate);
       } else {
-        viewMonth = addMonths(viewMonth, -1);
+        const nextDate = addMonths(getActiveDate(), -1);
+        selectedDateKey = formatDateKey(nextDate);
+        viewMonth = startOfMonth(nextDate);
       }
       renderCalendar();
     });
@@ -875,7 +879,9 @@ function bindCalendarControls() {
         selectedDateKey = formatDateKey(nextDate);
         viewMonth = startOfMonth(nextDate);
       } else {
-        viewMonth = addMonths(viewMonth, 1);
+        const nextDate = addMonths(getActiveDate(), 1);
+        selectedDateKey = formatDateKey(nextDate);
+        viewMonth = startOfMonth(nextDate);
       }
       renderCalendar();
     });
