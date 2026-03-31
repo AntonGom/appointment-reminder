@@ -498,6 +498,27 @@ function getReminderEventTimeLabel(entry) {
   return "Not available";
 }
 
+function getDedupedReminderHistoryEntries(client) {
+  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+  const sortedEntries = [...historyEntries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left));
+  const seenKeys = new Set();
+
+  return sortedEntries.filter(entry => {
+    const dedupeKey = [
+      String(entry?.channel || "").trim().toLowerCase(),
+      getReminderStatusLabel(entry),
+      getReminderEventTimeLabel(entry)
+    ].join("|");
+
+    if (seenKeys.has(dedupeKey)) {
+      return false;
+    }
+
+    seenKeys.add(dedupeKey);
+    return true;
+  });
+}
+
 function getReminderSourceLabel(entry) {
   const source = String(entry?.source || "").trim().toLowerCase();
 
@@ -574,9 +595,7 @@ async function loadReminderHistory(ownerId) {
 }
 
 function renderReminderHistory(client) {
-  const historyEntries = Array.isArray(client?.reminder_history)
-    ? client.reminder_history.slice(0, 4)
-    : [];
+  const historyEntries = getDedupedReminderHistoryEntries(client).slice(0, 4);
 
   if (!historyEntries.length) {
     return `<span class="table-muted">${reminderHistoryReady ? "No reminders yet" : "History setup needed"}</span>`;
@@ -595,7 +614,7 @@ function renderReminderHistory(client) {
 }
 
 function renderExpandedReminderHistory(client) {
-  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+  const historyEntries = getDedupedReminderHistoryEntries(client);
 
   if (!historyEntries.length) {
     return `<div class="expanded-empty">${reminderHistoryReady ? "No reminder activity for this client yet." : "Reminder history setup is still needed."}</div>`;

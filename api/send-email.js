@@ -408,10 +408,42 @@ function getBrevoMessageId(payload) {
   return "";
 }
 
+function normalizeReminderEventKeyType(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  if (!normalized || normalized === "request" || normalized === "sent") {
+    return "sent";
+  }
+
+  if (normalized.includes("delivered")) {
+    return "delivered";
+  }
+
+  if (normalized.includes("proxy")) {
+    return "likely_opened";
+  }
+
+  if (normalized.includes("open")) {
+    return "opened";
+  }
+
+  return normalized;
+}
+
 function buildReminderHistoryEventKey({ messageId, eventType, occurredAt, recipientEmail }) {
+  const normalizedMessageId = String(messageId || "").trim();
+
+  if (normalizedMessageId) {
+    return [
+      normalizedMessageId,
+      normalizeReminderEventKeyType(eventType),
+      String(recipientEmail || "").trim().toLowerCase()
+    ].join(":");
+  }
+
   return [
-    String(messageId || "").trim() || "no-message-id",
-    String(eventType || "").trim() || "sent",
+    "no-message-id",
+    normalizeReminderEventKeyType(eventType),
     String(occurredAt || "").trim() || new Date().toISOString(),
     String(recipientEmail || "").trim().toLowerCase()
   ].join(":");
