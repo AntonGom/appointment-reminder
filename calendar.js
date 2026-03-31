@@ -409,7 +409,8 @@ function getWeekDates(anchorDate) {
 }
 
 function getMonthStripDates(anchorDate) {
-  return Array.from({ length: 7 }, (_value, index) => addDays(anchorDate, index - 2));
+  const startDate = addDays(anchorDate, -2);
+  return Array.from({ length: 35 }, (_value, index) => addDays(startDate, index));
 }
 
 function getWeekAppointments(weekDates) {
