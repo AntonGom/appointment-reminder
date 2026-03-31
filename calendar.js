@@ -29,10 +29,19 @@ const prevButton = document.getElementById("calendar-prev");
 const todayButton = document.getElementById("calendar-today");
 const nextButton = document.getElementById("calendar-next");
 const allAppointmentsList = document.getElementById("all-appointments-list");
+const appointmentDetailModal = document.getElementById("appointment-detail-modal");
+const appointmentDetailTitle = document.getElementById("appointment-detail-title");
+const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
+const appointmentDetailBody = document.getElementById("appointment-detail-body");
+const closeAppointmentDetailButton = document.getElementById("close-appointment-detail-button");
+const statusHelpModal = document.getElementById("status-help-modal");
+const statusHelpCopy = document.getElementById("status-help-copy");
+const closeStatusHelpButton = document.getElementById("close-status-help-button");
 
 let supabase = null;
 let appConfig = null;
 let appointments = [];
+let reminderHistory = [];
 let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = getTodayKey();
@@ -306,6 +315,421 @@ function getAppointmentTags(appointment) {
   return tags;
 }
 
+function getReminderHistoryChannelLabel(entry) {
+  if (entry?.channel === "email") {
+    return "Email reminder";
+  }
+
+  if (entry?.channel === "sms") {
+    return "Text reminder";
+  }
+
+  return "Reminder";
+}
+
+function getReminderStatusLabel(entry) {
+  const rawStatus = String(
+    entry?.status ||
+    entry?.event_type ||
+    entry?.event ||
+    ""
+  ).trim().toLowerCase();
+
+  if (rawStatus.includes("delivered")) {
+    return "Delivered";
+  }
+
+  if (rawStatus.includes("request") || rawStatus.includes("send")) {
+    return "Sent";
+  }
+
+  if (rawStatus.includes("proxy") || rawStatus.includes("open")) {
+    return "Likely opened";
+  }
+
+  if (rawStatus.includes("calendar")) {
+    return "Calendar clicked";
+  }
+
+  if (rawStatus.includes("click")) {
+    return "Clicked";
+  }
+
+  return "Sent";
+}
+
+function getReminderStatusClass(label) {
+  const normalized = String(label || "").trim().toLowerCase();
+
+  if (normalized.includes("delivered")) {
+    return "delivered";
+  }
+
+  if (normalized.includes("opened")) {
+    return "opened";
+  }
+
+  if (normalized.includes("clicked")) {
+    return "clicked";
+  }
+
+  return "sent";
+}
+
+function getStatusHelpText(label) {
+  const normalized = String(label || "").trim().toLowerCase();
+
+  if (normalized === "likely opened") {
+    return "We highly believe the client has opened this message from the return information we received, but we cannot 100% guarantee they opened this email.";
+  }
+
+  return "";
+}
+
+function renderStatusLabelWithHelp(label) {
+  const helpText = getStatusHelpText(label);
+  const iconMarkup = helpText
+    ? `<button class="status-help-button" type="button" data-status-help="${escapeHtml(helpText)}" aria-label="What does ${escapeHtml(label)} mean?" title="${escapeHtml(helpText)}">?</button>`
+    : "";
+
+  return `
+    <span class="status-pill ${getReminderStatusClass(label)}">
+      <span>${escapeHtml(label)}</span>
+      ${iconMarkup}
+    </span>
+  `;
+}
+
+function formatReminderHistoryDateTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function getReminderEventTimestamp(entry) {
+  const candidates = [
+    entry?.occurred_at,
+    entry?.event_at,
+    entry?.opened_at,
+    entry?.delivered_at,
+    entry?.clicked_at,
+    entry?.sent_at,
+    entry?.created_at
+  ];
+
+  for (const candidate of candidates) {
+    const timestamp = new Date(candidate || 0).getTime();
+    if (Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp;
+    }
+  }
+
+  return 0;
+}
+
+function getReminderEventTimeLabel(entry) {
+  const candidates = [
+    entry?.occurred_at,
+    entry?.event_at,
+    entry?.opened_at,
+    entry?.delivered_at,
+    entry?.clicked_at,
+    entry?.sent_at,
+    entry?.created_at
+  ];
+
+  for (const candidate of candidates) {
+    const formatted = formatReminderHistoryDateTime(candidate);
+    if (formatted) {
+      return formatted;
+    }
+  }
+
+  return "Not available";
+}
+
+function getReminderMessagePreview(entry) {
+  const directPreview = String(entry?.message_preview || "").trim();
+
+  if (directPreview) {
+    return directPreview;
+  }
+
+  return String(entry?.raw_event?.message_preview || entry?.raw_event?.message || "").trim();
+}
+
+function normalizeReminderPreview(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function getDedupedReminderHistoryEntries(entries) {
+  const sortedEntries = [...(entries || [])].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left));
+  const seenKeys = new Set();
+
+  return sortedEntries.filter(entry => {
+    const dedupeKey = [
+      String(entry?.channel || "").trim().toLowerCase(),
+      getReminderStatusLabel(entry),
+      getReminderEventTimeLabel(entry)
+    ].join("|");
+
+    if (seenKeys.has(dedupeKey)) {
+      return false;
+    }
+
+    seenKeys.add(dedupeKey);
+    return true;
+  });
+}
+
+function getGroupedReminderHistory(entries) {
+  const dedupedEntries = getDedupedReminderHistoryEntries(entries);
+  const groups = [];
+  const reminderWindowMs = 15 * 60 * 1000;
+
+  dedupedEntries.forEach(entry => {
+    const messageId = String(entry?.message_id || "").trim();
+    const messagePreview = String(getReminderMessagePreview(entry) || "").trim();
+    const normalizedPreview = normalizeReminderPreview(messagePreview);
+    const entryChannel = String(entry?.channel || "").trim().toLowerCase();
+    const entryTimestamp = getReminderEventTimestamp(entry);
+
+    const matchingGroup = groups.find(group => {
+      const groupMessageId = String(group.messageId || "").trim();
+      if (messageId && groupMessageId && messageId === groupMessageId) {
+        return true;
+      }
+
+      const sameChannel = entryChannel === group.channel;
+      const samePreview = normalizedPreview && normalizedPreview === group.normalizedPreview;
+      const closeToEarliest = Math.abs(entryTimestamp - group.earliestTimestamp) <= reminderWindowMs;
+      const closeToLatest = Math.abs(entryTimestamp - group.latestTimestamp) <= reminderWindowMs;
+      return sameChannel && samePreview && (closeToEarliest || closeToLatest);
+    });
+
+    if (!matchingGroup) {
+      groups.push({
+        entries: [entry],
+        latestEntry: entry,
+        earliestEntry: entry,
+        messagePreview,
+        messageId,
+        channel: entryChannel,
+        normalizedPreview,
+        earliestTimestamp: entryTimestamp,
+        latestTimestamp: entryTimestamp
+      });
+      return;
+    }
+
+    matchingGroup.entries.push(entry);
+    if (messageId && !matchingGroup.messageId) {
+      matchingGroup.messageId = messageId;
+    }
+    if (!matchingGroup.messagePreview && messagePreview) {
+      matchingGroup.messagePreview = messagePreview;
+    }
+    if (entryTimestamp > getReminderEventTimestamp(matchingGroup.latestEntry)) {
+      matchingGroup.latestEntry = entry;
+      matchingGroup.latestTimestamp = entryTimestamp;
+    }
+    if (entryTimestamp < getReminderEventTimestamp(matchingGroup.earliestEntry)) {
+      matchingGroup.earliestEntry = entry;
+      matchingGroup.earliestTimestamp = entryTimestamp;
+    }
+  });
+
+  return groups
+    .map(group => ({
+      ...group,
+      entries: [...group.entries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left))
+    }))
+    .sort((left, right) => getReminderEventTimestamp(right.latestEntry) - getReminderEventTimestamp(left.latestEntry));
+}
+
+function getReminderSourceLabel(entry) {
+  const source = String(entry?.source || "").trim().toLowerCase();
+
+  if (!source) {
+    return "";
+  }
+
+  if (source === "automated_email") {
+    return "Automated email";
+  }
+
+  if (source === "device_sms") {
+    return "Text from device";
+  }
+
+  if (source === "manual") {
+    return "Manual send";
+  }
+
+  return source.charAt(0).toUpperCase() + source.slice(1);
+}
+
+function getReminderHistoryForAppointment(appointment) {
+  if (!appointment) {
+    return [];
+  }
+
+  const clientId = String(appointment.client_id || "").trim();
+  const clientEmail = String(appointment.client_email || "").trim().toLowerCase();
+  const clientPhone = normalizePhone(appointment.client_phone || "");
+
+  return reminderHistory.filter(entry => {
+    const entryClientId = String(entry?.client_id || "").trim();
+    const entryEmail = String(entry?.recipient_email || "").trim().toLowerCase();
+    const entryPhone = normalizePhone(entry?.client_phone || "");
+
+    if (clientId && entryClientId && clientId === entryClientId) {
+      return true;
+    }
+
+    if (clientEmail && entryEmail && clientEmail === entryEmail) {
+      return true;
+    }
+
+    return Boolean(clientPhone && entryPhone && clientPhone === entryPhone);
+  });
+}
+
+function renderExpandedReminderHistory(entries) {
+  const reminderGroups = getGroupedReminderHistory(entries);
+
+  if (!reminderGroups.length) {
+    return `<div class="expanded-empty">No reminder activity for this appointment yet.</div>`;
+  }
+
+  return `
+    <div class="expanded-history-list">
+      ${reminderGroups.map(group => {
+        const statusLabel = getReminderStatusLabel(group.latestEntry);
+        const channelLabel = getReminderHistoryChannelLabel(group.latestEntry);
+        const sourceLabel = getReminderSourceLabel(group.latestEntry);
+        const metaParts = [channelLabel, sourceLabel].filter(Boolean);
+        const sentOnLabel = getReminderEventTimeLabel(group.earliestEntry);
+        const latestUpdateLabel = getReminderEventTimeLabel(group.latestEntry);
+        const priorTimelineEntries = group.entries.slice(1);
+        const timelineMarkup = priorTimelineEntries.map(entry => {
+          const entryStatusLabel = getReminderStatusLabel(entry);
+          return `
+            <div class="expanded-history-timeline-entry">
+              ${renderStatusLabelWithHelp(entryStatusLabel)}
+              <span class="expanded-history-timeline-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div class="expanded-history-entry">
+            <div class="expanded-history-top">
+              ${renderStatusLabelWithHelp(statusLabel)}
+              <span class="expanded-history-time">${escapeHtml(latestUpdateLabel)}</span>
+            </div>
+            <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
+            <div class="expanded-history-dates">
+              <div><strong>Sent on:</strong> ${escapeHtml(sentOnLabel)}</div>
+              <div><strong>Latest update:</strong> ${escapeHtml(latestUpdateLabel)}</div>
+            </div>
+            ${group.messagePreview ? `<div class="expanded-message-preview">${escapeHtml(group.messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
+            ${timelineMarkup ? `<div class="expanded-history-timeline">${timelineMarkup}</div>` : ""}
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function openStatusHelpModal(message) {
+  if (!statusHelpModal || !statusHelpCopy) {
+    return;
+  }
+
+  statusHelpCopy.textContent = message || "This status is estimated.";
+  statusHelpModal.hidden = false;
+  statusHelpModal.classList.add("visible");
+}
+
+function closeStatusHelpModal() {
+  if (!statusHelpModal) {
+    return;
+  }
+
+  statusHelpModal.classList.remove("visible");
+  statusHelpModal.hidden = true;
+}
+
+function openAppointmentDetailModal(appointmentId) {
+  const appointment = appointments.find(entry => String(entry.id || "") === String(appointmentId || ""));
+
+  if (!appointment || !appointmentDetailModal || !appointmentDetailBody) {
+    return;
+  }
+
+  if (appointmentDetailTitle) {
+    appointmentDetailTitle.textContent = getAppointmentTitle(appointment);
+  }
+
+  if (appointmentDetailCopy) {
+    const summaryParts = [
+      appointment.client_email || "",
+      appointment.client_phone ? formatPhone(appointment.client_phone) : ""
+    ].filter(Boolean);
+    appointmentDetailCopy.textContent = summaryParts.join(" | ") || "Saved appointment details and reminder activity.";
+  }
+
+  const reminderEntries = getReminderHistoryForAppointment(appointment);
+  const appointmentDateLabel = formatAppointmentDate(appointment);
+
+  appointmentDetailBody.innerHTML = `
+    <div class="expanded-client-panel modal-client-panel">
+      <div class="expanded-client-block">
+        <div class="expanded-client-label">Appointment Details</div>
+        <div class="expanded-history-dates">
+          <div><strong>Scheduled for:</strong> ${escapeHtml(appointmentDateLabel)}</div>
+          ${appointment.service_location ? `<div><strong>Location:</strong> ${escapeHtml(appointment.service_location)}</div>` : ""}
+          ${appointment.notes ? `<div><strong>Notes:</strong> ${escapeHtml(appointment.notes)}</div>` : ""}
+        </div>
+      </div>
+      <div class="expanded-client-block">
+        <div class="expanded-client-label">Full Reminder Activity</div>
+        ${renderExpandedReminderHistory(reminderEntries)}
+      </div>
+    </div>
+  `;
+
+  appointmentDetailModal.hidden = false;
+  appointmentDetailModal.classList.add("visible");
+}
+
+function closeAppointmentDetailModal() {
+  if (!appointmentDetailModal) {
+    return;
+  }
+
+  appointmentDetailModal.classList.remove("visible");
+  appointmentDetailModal.hidden = true;
+}
+
 function renderAppointmentRow(appointment) {
   const details = [];
 
@@ -322,7 +746,7 @@ function renderAppointmentRow(appointment) {
   }
 
   return `
-    <div class="appointment-row">
+    <div class="appointment-row" data-appointment-id="${escapeHtml(appointment.id)}">
       <div class="appointment-row-head">
         <h4 class="appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</h4>
         <div class="appointment-date">${escapeHtml(formatAppointmentDate(appointment))}</div>
@@ -630,9 +1054,9 @@ function renderMonthGrid() {
           <div class="calendar-day-number">${cellDate.getDate()}</div>
           ${dayAppointments.length && !isMobile ? `<div class="calendar-day-count">${dayAppointments.length}</div>` : ""}
         </div>
-        <div class="calendar-day-items">
-          ${visibleAppointments.map(appointment => `
-            <div class="calendar-chip">
+          <div class="calendar-day-items">
+            ${visibleAppointments.map(appointment => `
+            <div class="calendar-chip" data-appointment-id="${escapeHtml(appointment.id)}">
               <strong>${escapeHtml(getAppointmentTitle(appointment))}</strong>
               <span>${escapeHtml(formatAppointmentChipMeta(appointment))}</span>
             </div>
@@ -711,7 +1135,7 @@ function renderMobileWeekGrid() {
       return `
         <div class="calendar-week-mobile-row">
           <div class="calendar-week-mobile-time">${escapeHtml(hasTime ? formatAppointmentChipMeta(appointment) : "Any time")}</div>
-          <div class="calendar-week-mobile-entry">
+          <div class="calendar-week-mobile-entry" data-appointment-id="${escapeHtml(appointment.id)}">
             <div class="calendar-week-mobile-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
             <div class="calendar-week-mobile-meta">${escapeHtml(appointment.service_location || appointment.client_email || appointment.client_phone || "Appointment saved")}</div>
             ${appointment.notes ? `<div class="calendar-week-mobile-note">${escapeHtml(appointment.notes)}</div>` : ""}
@@ -798,7 +1222,7 @@ function renderWeekGrid() {
       return `
         <div class="calendar-week-slot is-anytime ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}" data-date-key="${dateKey}">
           ${anyTimeAppointments.length ? anyTimeAppointments.map(appointment => `
-            <div class="calendar-week-appointment">
+            <div class="calendar-week-appointment" data-appointment-id="${escapeHtml(appointment.id)}">
               <div class="calendar-week-appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
               <div class="calendar-week-appointment-meta">${escapeHtml(appointment.service_location || "Appointment saved")}</div>
             </div>
@@ -833,7 +1257,7 @@ function renderWeekGrid() {
       rowMarkup.push(`
         <div class="calendar-week-slot ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""} ${slotAppointments.length ? "" : "is-empty"}" data-date-key="${dateKey}">
           ${slotAppointments.map(appointment => `
-            <div class="calendar-week-appointment">
+            <div class="calendar-week-appointment" data-appointment-id="${escapeHtml(appointment.id)}">
               <div class="calendar-week-appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
               <div class="calendar-week-appointment-meta">${escapeHtml(formatAppointmentChipMeta(appointment))}</div>
             </div>
@@ -872,6 +1296,7 @@ function renderCalendar() {
 async function loadAppointments(user) {
   if (!supabase || !user?.id || !isBronzeUser(user)) {
     appointments = [];
+    reminderHistory = [];
     appointmentsReady = true;
     renderCalendar();
     return;
@@ -881,17 +1306,29 @@ async function loadAppointments(user) {
   setStatus("");
 
   try {
-    const { data, error } = await supabase
-      .from("appointments")
-      .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
-      .eq("owner_id", user.id)
-      .order("service_date", { ascending: true })
-      .order("service_time", { ascending: true });
+    const [appointmentsResult, historyResult] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
+        .eq("owner_id", user.id)
+        .order("service_date", { ascending: true })
+        .order("service_time", { ascending: true }),
+      supabase
+        .from("client_reminder_history")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("sent_at", { ascending: false })
+        .limit(500)
+    ]);
+
+    const { data, error } = appointmentsResult;
+    const { data: historyData, error: historyError } = historyResult;
 
     if (error) {
       if (error.code === "42P01") {
         appointmentsReady = false;
         appointments = [];
+        reminderHistory = [];
         if (appointmentsSetupNotice) {
           appointmentsSetupNotice.hidden = false;
         }
@@ -910,8 +1347,13 @@ async function loadAppointments(user) {
       throw error;
     }
 
+    if (historyError && historyError.code !== "42P01") {
+      throw historyError;
+    }
+
     appointmentsReady = true;
     appointments = data || [];
+    reminderHistory = historyData || [];
 
     if (appointmentsSetupNotice) {
       appointmentsSetupNotice.hidden = true;
@@ -920,6 +1362,7 @@ async function loadAppointments(user) {
     renderCalendar();
   } catch (error) {
     appointments = [];
+    reminderHistory = [];
     appointmentsReady = true;
     clearCounts();
     if (calendarLayout) {
@@ -1016,6 +1459,15 @@ function bindCalendarControls() {
 
   if (calendarMonthGrid) {
     calendarMonthGrid.addEventListener("click", event => {
+      const appointmentElement = event.target.closest("[data-appointment-id]");
+
+      if (appointmentElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        openAppointmentDetailModal(appointmentElement.dataset.appointmentId || "");
+        return;
+      }
+
       const dayElement = event.target.closest(".calendar-day[data-date-key]");
 
       if (!dayElement) {
@@ -1042,6 +1494,24 @@ function bindCalendarControls() {
 
   if (calendarWeekGrid) {
     calendarWeekGrid.addEventListener("click", event => {
+      const helpButton = event.target.closest("[data-status-help]");
+
+      if (helpButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        openStatusHelpModal(helpButton.dataset.statusHelp || "This status is estimated.");
+        return;
+      }
+
+      const appointmentElement = event.target.closest("[data-appointment-id]");
+
+      if (appointmentElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        openAppointmentDetailModal(appointmentElement.dataset.appointmentId || "");
+        return;
+      }
+
       const dayElement = event.target.closest("[data-date-key]");
 
       if (!dayElement) {
@@ -1064,6 +1534,77 @@ function bindCalendarControls() {
       viewMonth = startOfMonth(nextDate);
       renderCalendar();
     });
+  }
+
+  if (upcomingList) {
+    upcomingList.addEventListener("click", event => {
+      const appointmentElement = event.target.closest("[data-appointment-id]");
+
+      if (appointmentElement) {
+        openAppointmentDetailModal(appointmentElement.dataset.appointmentId || "");
+      }
+    });
+  }
+
+  if (previousList) {
+    previousList.addEventListener("click", event => {
+      const appointmentElement = event.target.closest("[data-appointment-id]");
+
+      if (appointmentElement) {
+        openAppointmentDetailModal(appointmentElement.dataset.appointmentId || "");
+      }
+    });
+  }
+
+  if (allAppointmentsList) {
+    allAppointmentsList.addEventListener("click", event => {
+      const appointmentElement = event.target.closest("[data-appointment-id]");
+
+      if (appointmentElement) {
+        openAppointmentDetailModal(appointmentElement.dataset.appointmentId || "");
+      }
+    });
+  }
+
+  if (appointmentDetailModal) {
+    appointmentDetailModal.addEventListener("click", event => {
+      const helpButton = event.target.closest("[data-status-help]");
+
+      if (helpButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        openStatusHelpModal(helpButton.dataset.statusHelp || "This status is estimated.");
+        return;
+      }
+
+      if (event.target === appointmentDetailModal) {
+        closeAppointmentDetailModal();
+      }
+    });
+  }
+
+  if (statusHelpModal) {
+    statusHelpModal.addEventListener("click", event => {
+      if (event.target === statusHelpModal) {
+        closeStatusHelpModal();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && appointmentDetailModal && !appointmentDetailModal.hidden) {
+      closeAppointmentDetailModal();
+    } else if (event.key === "Escape" && statusHelpModal && !statusHelpModal.hidden) {
+      closeStatusHelpModal();
+    }
+  });
+
+  if (closeAppointmentDetailButton) {
+    closeAppointmentDetailButton.addEventListener("click", closeAppointmentDetailModal);
+  }
+
+  if (closeStatusHelpButton) {
+    closeStatusHelpButton.addEventListener("click", closeStatusHelpModal);
   }
 }
 

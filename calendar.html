@@ -149,7 +149,28 @@
     </section>
   </div>
 
+  <div id="appointment-detail-modal" class="contact-modal-backdrop" hidden>
+    <div class="contact-modal client-detail-modal" role="dialog" aria-modal="true" aria-labelledby="appointment-detail-title">
+      <h3 id="appointment-detail-title">Appointment details</h3>
+      <p id="appointment-detail-copy">Saved appointment details and reminder activity.</p>
+      <div id="appointment-detail-body"></div>
+      <div class="client-detail-modal-actions">
+        <button id="close-appointment-detail-button" class="secondary-button" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-help-modal" class="contact-modal-backdrop" hidden>
+    <div class="contact-modal" role="dialog" aria-modal="true" aria-labelledby="status-help-title">
+      <h3 id="status-help-title">About This Status</h3>
+      <p id="status-help-copy">We highly believe the client has opened this message from the return information we received, but we cannot 100% guarantee they opened this email.</p>
+      <div class="client-detail-modal-actions">
+        <button id="close-status-help-button" class="secondary-button" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="calendar.js?v=20260331m"></script>
+  <script type="module" src="calendar.js?v=20260331n"></script>
 </body>
 </html>
