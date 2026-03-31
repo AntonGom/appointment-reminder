@@ -1,6 +1,6 @@
 (() => {
   const currentPath = window.location.pathname || "/";
-  const isAccountPage = /\/account\.html$/i.test(currentPath);
+  const isAccountPage = /\/(account|signin|client-details)\.html$/i.test(currentPath);
 
   if (isAccountPage) {
     return;
@@ -16,7 +16,7 @@
     return;
   }
 
-  window.location.replace(`${window.location.origin}/account.html${search}${hash}`);
+  window.location.replace(`${window.location.origin}/client-details.html${search}${hash}`);
 })();
 
 const FIELD_LIMITS = {

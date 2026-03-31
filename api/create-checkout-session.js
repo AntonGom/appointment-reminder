@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const baseUrl = getBaseUrl(req);
     const safeReturnPath = typeof returnPath === "string" && /^\/[a-z0-9-]+\.html$/i.test(returnPath)
       ? returnPath
-      : "/account.html";
+      : "/client-details.html";
     const form = new URLSearchParams();
     form.set("mode", "subscription");
     form.set("success_url", `${baseUrl}${safeReturnPath}?checkout=success`);

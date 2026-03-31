@@ -3,24 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Account</title>
-  <link rel="stylesheet" href="nav.css?v=20260326j">
+  <title>Create Account</title>
+  <link rel="stylesheet" href="nav.css?v=20260331c">
   <style>
     :root {
-      --bg-top: #10141c;
-      --bg-bottom: #1a2230;
-      --card: rgba(246, 248, 252, 0.96);
-      --card-border: rgba(95, 118, 148, 0.22);
-      --text-main: #111827;
-      --text-soft: #5b6472;
-      --field-bg: #ffffff;
-      --field-border: #cbd5e1;
-      --field-focus: #2563eb;
+      --bg-top: #0f172a;
+      --bg-bottom: #18243f;
+      --card: rgba(248, 250, 252, 0.96);
+      --card-border: rgba(148, 163, 184, 0.22);
+      --text-main: #10213d;
+      --text-soft: #5a6b86;
       --accent: #2563eb;
-      --accent-2: #3b82f6;
-      --accent-3: #1d4ed8;
-      --panel-soft: #f8fafc;
-      --success: #15803d;
+      --accent-deep: #1d4ed8;
+      --field-border: #cbd5e1;
+      --success: #166534;
       --success-bg: #dcfce7;
       --error: #b91c1c;
       --error-bg: #fee2e2;
@@ -35,15 +31,15 @@
       min-height: 100vh;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
-        radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 30%),
+        radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 24%),
         linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
-      color: var(--text-main);
+      color: #e2e8f0;
       padding: 90px 16px 34px;
     }
 
     .page {
-      max-width: 1240px;
+      max-width: 1120px;
       margin: 0 auto;
       display: grid;
       gap: 18px;
@@ -55,9 +51,9 @@
       overflow: hidden;
       background: var(--card);
       border: 1px solid var(--card-border);
-      border-radius: 28px;
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
-      backdrop-filter: none;
+      border-radius: 30px;
+      box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+      color: var(--text-main);
     }
 
     .hero::before,
@@ -65,7 +61,7 @@
       content: "";
       position: absolute;
       inset: 0 0 auto 0;
-      height: 120px;
+      height: 130px;
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
@@ -74,7 +70,14 @@
     .panel-content {
       position: relative;
       z-index: 1;
-      padding: 28px;
+      padding: 30px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(330px, 0.9fr);
+      gap: 22px;
+      align-items: stretch;
     }
 
     .eyebrow {
@@ -91,115 +94,206 @@
       text-transform: uppercase;
     }
 
-    .price-pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-left: 10px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      color: #f8fafc;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
     h1 {
-      margin: 14px 0 10px;
-      font-size: 40px;
-      line-height: 1.05;
+      margin: 16px 0 12px;
+      font-size: clamp(36px, 5vw, 58px);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
       color: var(--text-main);
+      max-width: 640px;
     }
 
     .lead {
       margin: 0;
-      max-width: 700px;
+      max-width: 680px;
       color: var(--text-soft);
       font-size: 18px;
+      line-height: 1.75;
+    }
+
+    .hero-note {
+      margin-top: 18px;
+      color: #60728f;
+      font-size: 15px;
       line-height: 1.7;
     }
 
-    .status-banner {
-      padding: 15px 18px;
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .link-button,
+    button {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 18px;
+      border: none;
       border-radius: 18px;
       font-size: 16px;
-      font-weight: 700;
-      line-height: 1.5;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
     }
 
-    .status-banner.success {
-      background: var(--success-bg);
-      color: var(--success);
+    button:hover,
+    .link-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(15, 23, 42, 0.14);
     }
 
-    .status-banner.error {
-      background: var(--error-bg);
-      color: var(--error);
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
-    .status-banner.info {
-      background: var(--info-bg);
-      color: var(--info);
+    .primary-button,
+    .link-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: #ffffff;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 18px;
-    }
-
-    .stack {
-      display: grid;
-      gap: 18px;
-    }
-
-    h2 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      line-height: 1.15;
+    .ghost-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 18px;
+      border-radius: 18px;
+      text-decoration: none;
       color: var(--text-main);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(255, 255, 255, 0.82);
+      font-size: 16px;
+      font-weight: 800;
     }
 
-    .panel-copy,
-    .feature-copy,
-    .mini-note {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 16px;
+    .hero-side {
+      display: grid;
+      gap: 14px;
+      padding: 20px;
+      border-radius: 26px;
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+      color: #f8fafc;
+      box-shadow: 0 20px 32px rgba(15, 23, 42, 0.22);
+    }
+
+    .side-label {
+      color: #93c5fd;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .side-title {
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .side-copy {
+      color: #d4deef;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .side-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .side-item {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .side-item strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #ffffff;
+      font-size: 15px;
+    }
+
+    .side-item span {
+      color: #d4deef;
+      font-size: 14px;
       line-height: 1.65;
     }
 
-    .auth-grid {
+    .status-banner,
+    .notice {
+      padding: 14px 16px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.6;
+      font-weight: 700;
+    }
+
+    .status-banner.success { background: var(--success-bg); color: var(--success); }
+    .status-banner.error { background: var(--error-bg); color: var(--error); }
+    .status-banner.info,
+    .notice { background: var(--info-bg); color: var(--info); }
+
+    .panel-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .copy-card,
+    .form-card,
+    .feature-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(248, 250, 252, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .copy-card h2,
+    .form-card h2 {
+      margin: 0 0 10px;
+      color: var(--text-main);
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .copy-card p,
+    .form-card p,
+    .feature-card p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .feature-grid {
+      display: grid;
+      gap: 14px;
       margin-top: 18px;
     }
 
-    .auth-card {
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .auth-card h3,
-    .info-card h3 {
+    .feature-card h3 {
       margin: 0 0 8px;
-      font-size: 22px;
       color: var(--text-main);
-    }
-
-    .auth-card p {
-      margin: 0 0 16px;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
+      font-size: 18px;
     }
 
     form {
       display: grid;
       gap: 14px;
+      margin-top: 14px;
     }
 
     label {
@@ -215,7 +309,7 @@
       padding: 15px 16px;
       border-radius: 16px;
       border: 1px solid var(--field-border);
-      background: var(--field-bg);
+      background: #ffffff;
       color: var(--text-main);
       font-size: 18px;
       outline: none;
@@ -223,1169 +317,38 @@
     }
 
     input:focus {
-      border-color: var(--field-focus);
+      border-color: var(--accent);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
     }
 
-    textarea {
-      width: 100%;
-      min-height: 120px;
-      padding: 15px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--field-border);
-      background: var(--field-bg);
-      color: var(--text-main);
-      font-size: 18px;
-      font-family: inherit;
-      outline: none;
-      resize: vertical;
-      transition: border-color 0.18s ease, box-shadow 0.18s ease;
-    }
-
-    textarea:focus {
-      border-color: var(--field-focus);
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-    }
-
-    button {
-      width: 100%;
-      padding: 15px 16px;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 800;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
-    }
-
-    button:disabled {
-      opacity: 0.65;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .primary-button {
-      background: linear-gradient(135deg, var(--accent), var(--accent-3));
-      color: #ffffff;
-    }
-
-    .secondary-button {
-      background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-      color: #0f172a;
-    }
-
-    .account-summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .summary-card,
-    .account-box {
-      display: grid;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .summary-card {
-      gap: 8px;
-      align-content: start;
-      min-height: 150px;
-    }
-
-    .summary-value {
-      color: var(--text-main);
-      font-size: 26px;
-      line-height: 1.2;
-      font-weight: 800;
-      word-break: break-word;
-    }
-
-    .summary-copy {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .account-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
-      flex-wrap: wrap;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(203, 213, 225, 0.8);
-    }
-
-    .account-row:last-child {
-      padding-bottom: 0;
-      border-bottom: 0;
-    }
-
-    .account-label {
+    .mini-link {
+      margin-top: 14px;
       color: var(--text-soft);
       font-size: 14px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      line-height: 1.65;
+      text-align: center;
     }
 
-    .account-value {
-      color: var(--text-main);
-      font-size: 18px;
+    .mini-link a {
+      color: var(--accent-deep);
       font-weight: 800;
-    }
-
-    .account-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-      flex-wrap: wrap;
-    }
-
-    .account-actions button {
-      width: auto;
-      min-width: 180px;
-    }
-
-    .account-page-nav {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-      margin-bottom: 18px;
-    }
-
-    .account-page-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 13px 16px;
-      border-radius: 16px;
-      background: rgba(239, 246, 255, 0.75);
-      border: 1px solid rgba(191, 219, 254, 0.9);
-      color: var(--text-main);
-      font-size: 15px;
-      font-weight: 800;
-      line-height: 1.4;
       text-decoration: none;
-      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
-    .account-page-link:hover {
-      transform: translateY(-1px);
-      border-color: rgba(37, 99, 235, 0.46);
-      background: rgba(219, 234, 254, 0.82);
-    }
-
-    .account-page-link.is-active {
-      background: linear-gradient(135deg, var(--accent), var(--accent-3));
-      border-color: transparent;
-      color: #ffffff;
-      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.2);
-    }
-
-    .clients-shell {
-      display: grid;
-      gap: 16px;
-    }
-
-    .tier-preview-shell {
-      display: grid;
-      gap: 12px;
-      margin-top: 18px;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-
-    .tier-preview-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .tier-preview-actions button {
-      width: auto;
-      min-width: 150px;
-    }
-
-    .clients-card {
-      position: relative;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(248, 250, 252, 0.92);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .clients-card.is-loading {
-      background: linear-gradient(180deg, rgba(226, 232, 240, 0.96), rgba(241, 245, 249, 0.96));
-      border-color: rgba(148, 163, 184, 0.38);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-    }
-
-    .clients-card.is-loading .section-head,
-    .clients-card.is-loading .clients-toolbar {
-      opacity: 0.62;
-      filter: saturate(0.6);
-    }
-
-    .clients-card h3 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      color: var(--text-main);
-    }
-
-    .clients-card p {
-      margin: 0 0 16px;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .section-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .section-head h3 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      color: var(--text-main);
-    }
-
-    .section-head p {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .count-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.12);
-      color: #1d4ed8;
-      font-size: 14px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .section-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-left: auto;
-      justify-content: flex-end;
-    }
-
-    .section-actions button {
-      width: auto;
-      min-width: 150px;
-    }
-
-    .qa-seed-button {
-      min-width: 190px !important;
-    }
-
-    .button-with-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .button-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      flex: 0 0 18px;
-    }
-
-    .button-icon svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .client-form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .client-form-grid .full {
-      grid-column: 1 / -1;
-    }
-
-    .clients-toolbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .toolbar-field {
-      display: grid;
-      gap: 8px;
-    }
-
-    .toolbar-label {
-      color: var(--text-main);
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .toolbar-select {
-      width: 100%;
-      padding: 15px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--field-border);
-      background: var(--field-bg);
-      color: var(--text-main);
-      font-size: 17px;
-      outline: none;
-      transition: border-color 0.18s ease, box-shadow 0.18s ease;
-    }
-
-    .toolbar-select:focus {
-      border-color: var(--field-focus);
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .form-actions button {
-      width: auto;
-      min-width: 160px;
-    }
-
-    .form-mode-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.12);
-      color: #1d4ed8;
-      font-size: 14px;
-      font-weight: 800;
-      margin-bottom: 14px;
-    }
-
-    .clients-table-shell {
-      overflow-x: auto;
-      border: 1px solid rgba(203, 213, 225, 0.9);
-      border-radius: 18px;
-      background: #ffffff;
-    }
-
-    .clients-mobile-list {
-      display: none;
-      gap: 12px;
-    }
-
-    .client-mobile-card {
-      padding: 16px;
-      border-radius: 18px;
-      background: #ffffff;
-      border: 1px solid rgba(203, 213, 225, 0.9);
-    }
-
-    .client-mobile-title {
-      margin: 0 0 12px;
-      font-size: 18px;
-      line-height: 1.3;
-      color: var(--text-main);
-    }
-
-    .client-mobile-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .client-mobile-row {
-      display: grid;
-      gap: 4px;
-    }
-
-    .client-mobile-label {
-      color: #1e3a8a;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .client-mobile-value {
-      color: var(--text-main);
-      font-size: 15px;
-      line-height: 1.55;
-      word-break: break-word;
-    }
-
-    .client-mobile-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-top: 14px;
-    }
-
-    .client-mobile-actions button {
-      min-width: 0;
-      padding: 11px 10px;
-      font-size: 14px;
-      border-radius: 12px;
-    }
-
-    .clients-table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-
-    .clients-table th,
-    .clients-table td {
-      padding: 13px 12px;
-      border-bottom: 1px solid rgba(226, 232, 240, 0.92);
-      vertical-align: middle;
-      text-align: center;
-      word-break: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .clients-table th {
-      position: sticky;
-      top: 0;
-      background: #eff6ff;
-      color: #1e3a8a;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      z-index: 1;
-    }
-
-    .clients-table tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    .clients-table td {
-      color: var(--text-main);
-      font-size: 15px;
-      line-height: 1.55;
-      white-space: normal;
-    }
-
-    .clients-table th:nth-child(1),
-    .clients-table td:nth-child(1) {
-      width: 18%;
-    }
-
-    .clients-table th:nth-child(2),
-    .clients-table td:nth-child(2) {
-      width: 22%;
-    }
-
-    .clients-table th:nth-child(3),
-    .clients-table td:nth-child(3) {
-      width: 16%;
-    }
-
-    .clients-table th:nth-child(4),
-    .clients-table td:nth-child(4) {
-      width: 22%;
-    }
-
-    .clients-table th:nth-child(5),
-    .clients-table td:nth-child(5) {
-      width: 10%;
-    }
-
-    .clients-table th:nth-child(6),
-    .clients-table td:nth-child(6) {
-      width: 12%;
-    }
-
-    .clients-table strong {
-      display: block;
-      font-size: 16px;
-      color: var(--text-main);
-      text-align: center;
-    }
-
-    .client-summary-row,
-    .client-mobile-card[data-client-row] {
-      cursor: pointer;
-      transition: background 0.16s ease;
-    }
-
-    .client-summary-row:hover td {
-      background: rgba(239, 246, 255, 0.72);
-    }
-
-    .client-mobile-card[data-client-row]:hover {
-      background: rgba(239, 246, 255, 0.78);
-    }
-
-    .table-muted {
-      color: var(--text-soft);
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .status-pill.sent {
-      background: rgba(219, 234, 254, 0.88);
-      color: #1d4ed8;
-    }
-
-    .status-pill.delivered {
-      background: rgba(220, 252, 231, 0.92);
-      color: #15803d;
-    }
-
-    .status-pill.opened {
-      background: rgba(237, 233, 254, 0.94);
-      color: #6d28d9;
-    }
-
-    .status-pill.clicked {
-      background: rgba(255, 237, 213, 0.94);
-      color: #c2410c;
-    }
-
-    .status-label-with-help {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .status-help-button {
-      width: 20px;
-      height: 20px;
-      min-width: 20px;
-      padding: 0;
-      border: 1px solid rgba(148, 163, 184, 0.9);
-      border-radius: 999px;
-      background: #ffffff;
-      color: #1d4ed8;
-      font-size: 12px;
-      font-weight: 800;
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: help;
-      box-shadow: none;
-    }
-
-    .status-help-button:hover {
-      background: #eff6ff;
-      border-color: rgba(96, 165, 250, 0.95);
-    }
-
-    .status-help-button:focus-visible {
-      outline: 2px solid rgba(37, 99, 235, 0.35);
-      outline-offset: 2px;
-    }
-
-    .table-actions {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .table-actions button {
-      width: 100%;
-      min-width: 0;
-      padding: 10px 8px;
-      font-size: 13px;
-      border-radius: 12px;
-      white-space: nowrap;
-      word-break: normal;
-    }
-
-    .history-stack {
-      display: grid;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .history-entry {
-      display: grid;
-      gap: 3px;
-      padding: 9px 10px;
-      border-radius: 12px;
-      background: rgba(239, 246, 255, 0.92);
-      border: 1px solid rgba(191, 219, 254, 0.9);
-      text-align: center;
-    }
-
-    .expanded-client-panel {
-      display: grid;
-      gap: 16px;
-      padding: 18px;
-      text-align: left;
-    }
-
-    .expanded-client-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .modal-client-panel .expanded-client-grid {
-      display: none !important;
-    }
-
-    .expanded-client-block {
-      display: grid;
-      gap: 8px;
-      padding: 14px;
-      border-radius: 16px;
-      background: #ffffff;
-      border: 1px solid rgba(203, 213, 225, 0.92);
-    }
-
-    .expanded-client-block-plain {
-      padding: 0;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
-      box-shadow: none;
-    }
-
-    .expanded-reminder-activity-shell {
-      gap: 12px;
-    }
-
-    .expanded-client-label {
-      color: #1e3a8a;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .expanded-client-value {
-      color: var(--text-main);
-      font-size: 15px;
-      line-height: 1.65;
-      word-break: break-word;
-    }
-
-    .expanded-history-list {
-      display: grid;
-      gap: 18px;
-    }
-
-    .expanded-history-group {
-      display: grid;
-      gap: 10px;
-    }
-
-    .expanded-history-latest-card {
-      padding: 14px;
-      border-radius: 18px;
-      background: rgba(248, 250, 252, 0.96);
-      border: 1px solid rgba(191, 219, 254, 0.9);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
-    }
-
-    .expanded-history-entry {
-      display: grid;
-      gap: 10px;
-      padding: 0;
-      border-bottom: 0;
-      background: transparent;
-      border-radius: 0;
-    }
-
-    .expanded-history-entry:last-child {
-      padding-bottom: 0;
-      border-bottom: 0;
-    }
-
-    .expanded-history-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .expanded-history-time {
-      color: var(--text-main);
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.45;
-    }
-
-    .expanded-history-meta,
-    .expanded-empty {
-      color: var(--text-soft);
-      font-size: 14px;
-      line-height: 1.55;
-    }
-
-    .expanded-message-preview {
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      border: 0;
-      color: var(--text-main);
-      font-size: 14px;
-      line-height: 1.65;
-      word-break: break-word;
-    }
-
-    .expanded-history-followups {
-      display: grid;
-      gap: 8px;
-      padding: 0 2px;
-    }
-
-    .expanded-history-followups-label {
-      color: var(--text-soft);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .expanded-history-timeline {
-      display: grid;
-      gap: 8px;
-      padding-left: 14px;
-      border-left: 2px solid rgba(191, 219, 254, 0.95);
-    }
-
-    .expanded-history-timeline-entry {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(248, 250, 252, 0.94);
-      border: 1px solid rgba(203, 213, 225, 0.9);
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
-    }
-
-    .expanded-history-timeline-time {
-      color: var(--text-soft);
-      font-size: 13px;
-      line-height: 1.45;
-      font-weight: 700;
-    }
-
-    .client-detail-modal {
-      max-width: 760px;
-      width: min(760px, calc(100vw - 24px));
-      max-height: min(82vh, 920px);
-      overflow: hidden;
-      display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
-    }
-
-    .client-detail-modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 18px;
-    }
-
-    #client-detail-body {
-      min-height: 0;
-      overflow: auto;
-      padding-right: 4px;
-      margin-right: -4px;
-    }
-
-    .client-detail-modal-actions button {
-      width: auto;
-      min-width: 160px;
-    }
-
-    .history-channel {
-      color: #1d4ed8;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .history-time {
-      color: var(--text-main);
-      font-size: 14px;
-      line-height: 1.5;
-      font-weight: 700;
-    }
-
-    .empty-state {
-      padding: 18px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px dashed rgba(148, 163, 184, 0.7);
-      color: var(--text-soft);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .clients-list {
-      min-height: 140px;
-    }
-
-    .loading-state {
-      display: grid;
-      justify-items: center;
-      gap: 12px;
-      text-align: center;
-      padding: 28px 18px;
-      border-radius: 18px;
-      background: rgba(226, 232, 240, 0.72);
-      border: 1px solid rgba(148, 163, 184, 0.42);
-      color: var(--text-main);
-      backdrop-filter: none;
-    }
-
-    .loading-spinner {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 3px solid rgba(37, 99, 235, 0.2);
-      border-top-color: var(--accent);
-      animation: spin 0.85s linear infinite;
-    }
-
-    .loading-title {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 800;
-    }
-
-    .loading-copy {
-      margin: 0;
-      color: var(--text-soft);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .pagination-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 14px;
-      padding: 14px 16px;
-      border-radius: 18px;
-      background: rgba(239, 246, 255, 0.82);
-      border: 1px solid rgba(191, 219, 254, 0.9);
-      flex-wrap: wrap;
-    }
-
-    .pagination-summary {
-      color: var(--text-main);
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1.5;
-    }
-
-    .pagination-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .pagination-button {
-      width: auto;
-      min-width: 44px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.34);
-      background: #ffffff;
-      color: var(--text-main);
-      font-size: 14px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
-    }
-
-    .pagination-button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      border-color: rgba(37, 99, 235, 0.42);
-    }
-
-    .pagination-button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .pagination-button.active {
-      background: linear-gradient(135deg, var(--accent), var(--accent-3));
-      color: #ffffff;
-      border-color: transparent;
-      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
-    }
-
-    .notice {
-      margin-top: 16px;
-      padding: 15px 16px;
-      border-radius: 18px;
-      background: rgba(219, 234, 254, 0.8);
-      color: #1d4ed8;
-      font-size: 15px;
-      line-height: 1.6;
-      border: 1px solid rgba(96, 165, 250, 0.24);
-    }
-
-    .inline-status {
-      margin-top: 14px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1.5;
-    }
-
-    .inline-status.success {
-      background: var(--success-bg);
-      color: var(--success);
-    }
-
-    .inline-status.error {
-      background: var(--error-bg);
-      color: var(--error);
-    }
-
-    .inline-status.info {
-      background: var(--info-bg);
-      color: var(--info);
-    }
-
-    .contact-modal-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 45;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      background: rgba(15, 23, 42, 0.58);
-      backdrop-filter: none;
-    }
-
-    .contact-modal-backdrop.visible {
-      display: flex;
-      animation: fadeIn 0.18s ease;
-    }
-
-    .contact-modal {
-      width: 100%;
-      max-width: 680px;
-      padding: 24px;
-      border-radius: 24px;
-      background: rgba(248, 250, 252, 0.98);
-      border: 1px solid rgba(148, 163, 184, 0.28);
-      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
-    }
-
-    .contact-modal h3 {
-      margin: 0 0 10px;
-      color: var(--text-main);
-      font-size: 30px;
-      line-height: 1.15;
-    }
-
-    .contact-modal p {
-      margin: 0 0 18px;
-      color: var(--text-soft);
-      font-size: 16px;
-      line-height: 1.65;
-    }
-
-    .contact-modal-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 2px;
-    }
-
-    .contact-modal-actions button {
-      width: auto;
-      min-width: 160px;
-    }
-
-    [hidden] {
-      display: none !important;
-    }
-
-    @media (max-width: 860px) {
-      .grid,
-      .auth-grid,
-      .account-summary-grid,
-      .client-form-grid,
-      .clients-toolbar,
-      .expanded-client-grid {
+    @media (max-width: 920px) {
+      .hero-grid,
+      .panel-grid {
         grid-template-columns: 1fr;
-      }
-
-      .account-actions button,
-      .form-actions button {
-        width: 100%;
-      }
-
-      .pagination-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .pagination-actions {
-        justify-content: center;
-      }
-
-      .account-page-nav {
-        justify-content: center;
       }
     }
 
     @media (max-width: 760px) {
-      .clients-table-shell {
-        display: none;
-      }
-
-      .clients-mobile-list {
-        display: grid;
-      }
-
-      .count-badge {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .section-actions {
-        width: 100%;
-      }
-
-      .section-actions button {
-        width: 100%;
-      }
-
-      .account-page-link {
-        width: 100%;
-      }
-
-      .client-mobile-title {
-        margin: 0;
-      }
-
-      .expanded-client-panel {
-        margin-top: 14px;
-        padding: 14px;
-        border-radius: 16px;
-        background: rgba(239, 246, 255, 0.78);
-        border: 1px solid rgba(191, 219, 254, 0.9);
-      }
-    }
-
-    @media (max-width: 560px) {
-      body {
-        padding-top: 84px;
-      }
-
-      .hero-content,
-      .panel-content {
-        padding: 22px;
-      }
-
-      h1 {
-        font-size: 34px;
-      }
-
-      h2 {
-        font-size: 24px;
-      }
-
-      .lead,
-      .panel-copy,
-      .feature-copy,
-      .mini-note {
-        font-size: 17px;
-      }
-
-      .auth-card h3 {
-        font-size: 20px;
-      }
-
-      .client-mobile-actions {
-        grid-template-columns: 1fr;
-      }
-
-      .contact-modal {
-        padding: 22px;
-      }
-
-      .contact-modal h3 {
-        font-size: 26px;
-      }
-
-      .contact-modal-actions button {
-        width: 100%;
-      }
-
-      .client-detail-modal-actions button {
-        width: 100%;
-      }
+      body { padding: 88px 12px 30px; }
+      .hero-content, .panel-content { padding: 22px; }
+      .hero, .panel { border-radius: 24px; }
+      .lead { font-size: 16px; }
+      .button-row { display: grid; }
+      .ghost-link, .link-button { width: 100%; }
     }
   </style>
 </head>
@@ -1393,208 +356,88 @@
   <div class="page">
     <section class="hero">
       <div class="hero-content">
-        <div class="eyebrow">
-          Client Details
-          <span id="price-pill" class="price-pill">Optional Bronze</span>
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">Create Your Account</div>
+            <h1>Make reminders easier to reuse, track, and organize.</h1>
+            <p class="lead">You can use the reminder tool without an account. Creating an account is for people who want their reminders to grow into saved client records, calendar views, and a cleaner history of what was sent.</p>
+            <div class="button-row">
+              <a class="link-button" href="index.html">Send a Reminder First</a>
+              <a class="ghost-link" href="signin.html">Already have an account? Sign in</a>
+            </div>
+            <p class="hero-note">No pressure to upgrade anything on day one. Start simple, and only add account tools if they actually help your workflow.</p>
+          </div>
+
+          <aside class="hero-side">
+            <div class="side-label">Why create one</div>
+            <div class="side-title">Keep your reminder process from starting over every time.</div>
+            <div class="side-copy">An account gives you a place to come back to. That matters when you want to reuse client info, check reminder history, or see what is coming up next.</div>
+            <div class="side-list">
+              <div class="side-item">
+                <strong>Saved contacts</strong>
+                <span>Reuse client details instead of typing everything again from scratch.</span>
+              </div>
+              <div class="side-item">
+                <strong>Calendar views</strong>
+                <span>See upcoming and previous appointments in week and month layouts.</span>
+              </div>
+              <div class="side-item">
+                <strong>Reminder history</strong>
+                <span>See what was sent and track statuses like Sent, Delivered, and Likely opened.</span>
+              </div>
+            </div>
+          </aside>
         </div>
-        <h1>Client details</h1>
-        <p class="lead">Save, search, and reuse client details in one simple place.</p>
       </div>
     </section>
 
     <div id="status-banner" class="status-banner" hidden></div>
+    <div id="auth-setup-notice" class="notice" hidden>Accounts are not configured yet. Add your Supabase public keys in Vercel first.</div>
 
-    <div class="grid">
-      <section class="panel">
-        <div class="panel-content">
-          <h2>Client details</h2>
-          <p class="panel-copy">Create an account or sign in to manage saved client details.</p>
-
-          <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
-
-          <nav class="account-page-nav" aria-label="Account pages">
-            <a class="account-page-link is-active" href="account.html">Client Details</a>
-            <a class="account-page-link" href="calendar.html">Calendar</a>
-            <a class="account-page-link" href="account-info.html">Account Info</a>
-            <a class="account-page-link" href="settings.html">Settings</a>
-            <a class="account-page-link" href="form-creator.html">Form Creator</a>
-          </nav>
-
-            <div id="signed-out-panel" class="stack">
-              <div class="account-summary-grid">
-                <div class="summary-card">
-                  <div class="account-label">Free account</div>
-                  <div class="summary-value">Same reminder tool</div>
-                  <p class="summary-copy">Signing in does not change the free reminder flow. It simply gives you an account for saved features later.</p>
-                </div>
-                <div class="summary-card">
-                  <div class="account-label">Bronze</div>
-                  <div class="summary-value">Saved contacts</div>
-                  <p class="summary-copy">Bronze can keep client details on your account and store reminder timing preferences for future automation.</p>
-                </div>
-                <div class="summary-card">
-                  <div class="account-label">Good to know</div>
-                  <div class="summary-value">One account page</div>
-                  <p class="summary-copy">You can create an account now, keep using the free tool, and only upgrade if you decide you need the extra features.</p>
-                </div>
+    <section class="panel">
+      <div class="panel-content">
+        <div class="panel-grid">
+          <div class="copy-card">
+            <h2>What stays true even with an account</h2>
+            <p>The core idea does not change. This is still meant to feel simple, readable, and useful for real people who do not want a giant software setup.</p>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <h3>You can still start free</h3>
+                <p>Creating an account does not stop you from using the same basic reminder flow you already have.</p>
               </div>
-
-              <div class="auth-grid">
-                <div class="auth-card">
-                  <h3>Create account</h3>
-                  <p>Create a login so your future saved data stays attached to your account.</p>
-                  <form id="sign-up-form">
-                    <div>
-                      <label for="sign-up-email">Email</label>
-                      <input id="sign-up-email" name="email" type="email" inputmode="email" autocomplete="email" required>
-                    </div>
-                    <div>
-                      <label for="sign-up-password">Password</label>
-                      <input id="sign-up-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
-                    </div>
-                    <button class="primary-button" type="submit">Create Account</button>
-                  </form>
-                </div>
-
-                <div class="auth-card">
-                  <h3>Sign in</h3>
-                  <p>Already have an account? Sign in here to manage your plan and contacts.</p>
-                  <form id="sign-in-form">
-                    <div>
-                      <label for="sign-in-email">Email</label>
-                      <input id="sign-in-email" name="email" type="email" inputmode="email" autocomplete="email" required>
-                    </div>
-                    <div>
-                      <label for="sign-in-password">Password</label>
-                      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" required>
-                    </div>
-                    <button class="secondary-button" type="submit">Sign In</button>
-                  </form>
-                </div>
+              <div class="feature-card">
+                <h3>You do not need to know everything now</h3>
+                <p>First-time users can create an account today and figure out the extra tools gradually.</p>
               </div>
-          </div>
-
-          <div id="signed-in-panel" hidden>
-            <div id="free-contacts-shell" class="clients-card" hidden>
-              <div class="section-head">
-                <div>
-                  <h3>Saved contacts are not turned on yet</h3>
-                  <p>Free works the same as using the reminder form signed out. Bronze turns on saved contacts.</p>
-                </div>
-              </div>
-            </div>
-
-            <div id="bronze-contacts-shell" class="clients-shell" hidden>
-              <div id="contacts-card" class="clients-card">
-                <div class="section-head">
-                  <div>
-                    <h3>Saved contacts</h3>
-                    <p>Search, sort, and reuse saved client details.</p>
-                  </div>
-                  <div class="section-actions">
-                    <div id="contacts-count-badge" class="count-badge">0 contacts</div>
-                    <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
-                    <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
-                      <span class="button-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" focusable="false">
-                          <circle cx="9" cy="7.5" r="3.5" stroke="currentColor" stroke-width="2"></circle>
-                          <path d="M3.5 18C3.5 14.9624 5.96243 12.5 9 12.5C12.0376 12.5 14.5 14.9624 14.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                          <path d="M18 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                          <path d="M14 12H22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                      </span>
-                      <span>Add Contact</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="clients-toolbar">
-                  <div class="toolbar-field">
-                    <label class="toolbar-label" for="clients-search">Search clients</label>
-                    <input id="clients-search" type="search" placeholder="Search name, email, phone, address, or details" autocomplete="off">
-                  </div>
-                  <div class="toolbar-field">
-                    <label class="toolbar-label" for="clients-sort">Sort contacts</label>
-                    <select id="clients-sort" class="toolbar-select">
-                      <option value="az">Alphabetical (A to Z)</option>
-                      <option value="newest" selected>Recently added</option>
-                      <option value="reminded">Recently reminded</option>
-                      <option value="delivered">Recently Delivered</option>
-                      <option value="opened">Recently Opened</option>
-                      <option value="oldest">Oldest added</option>
-                      <option value="updated">Recently edited</option>
-                    </select>
-                  </div>
-                </div>
-                <div id="clients-list" class="clients-list">
-                  <div class="empty-state">No contacts saved yet.</div>
-                </div>
+              <div class="feature-card">
+                <h3>It is meant to feel calmer</h3>
+                <p>The product is being designed for readability, especially for users who do not want dense dashboards and tiny controls.</p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
-  </div>
 
-  <div id="client-modal" class="contact-modal-backdrop" hidden>
-    <div class="contact-modal" role="dialog" aria-modal="true" aria-labelledby="client-modal-title">
-      <h3 id="client-modal-title">Add contact</h3>
-      <p id="client-modal-copy">Enter the client details you want saved to this account.</p>
-      <form id="client-form">
-        <div id="client-form-mode" class="form-mode-badge" hidden>Editing contact</div>
-        <div class="client-form-grid">
-          <div>
-            <label for="client-name">Client Name</label>
-            <input id="client-name" name="client_name" maxlength="30" autocomplete="off">
-          </div>
-          <div>
-            <label for="client-email">Client Email</label>
-            <input id="client-email" name="client_email" type="email" inputmode="email" autocomplete="email">
-          </div>
-          <div>
-            <label for="client-phone">Client Phone Number</label>
-            <input id="client-phone" name="client_phone" inputmode="tel" autocomplete="tel">
-          </div>
-          <div>
-            <label for="client-address">Service Location</label>
-            <input id="client-address" name="service_address" maxlength="160" autocomplete="street-address">
-          </div>
-          <div class="full">
-            <label for="client-notes">Additional Details</label>
-            <textarea id="client-notes" name="notes" maxlength="1200"></textarea>
+          <div class="form-card">
+            <h2>Create account</h2>
+            <p>Create your login so your future saved data stays attached to your account.</p>
+            <form id="sign-up-form">
+              <div>
+                <label for="sign-up-email">Email</label>
+                <input id="sign-up-email" name="email" type="email" inputmode="email" autocomplete="email" required>
+              </div>
+              <div>
+                <label for="sign-up-password">Password</label>
+                <input id="sign-up-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+              </div>
+              <button class="primary-button" type="submit">Create Account</button>
+            </form>
+            <div class="mini-link">Already have an account? <a href="signin.html">Log in here</a></div>
           </div>
         </div>
-        <div class="contact-modal-actions">
-          <button id="save-client-button" class="primary-button" type="submit">Save Contact</button>
-          <button id="cancel-edit-client-button" class="secondary-button" type="button">Cancel</button>
-        </div>
-        <div id="client-form-status" class="inline-status" hidden></div>
-      </form>
-    </div>
-  </div>
-
-  <div id="client-detail-modal" class="contact-modal-backdrop" hidden>
-    <div class="contact-modal client-detail-modal" role="dialog" aria-modal="true" aria-labelledby="client-detail-title">
-      <h3 id="client-detail-title">Client details</h3>
-      <p id="client-detail-copy">Saved client details and reminder activity.</p>
-      <div id="client-detail-body"></div>
-      <div class="client-detail-modal-actions">
-        <button id="close-client-detail-button" class="secondary-button" type="button">Close</button>
       </div>
-    </div>
+    </section>
   </div>
 
-  <div id="status-help-modal" class="contact-modal-backdrop" hidden>
-    <div class="contact-modal" role="dialog" aria-modal="true" aria-labelledby="status-help-title">
-      <h3 id="status-help-title">About This Status</h3>
-      <p id="status-help-copy">We highly believe the client has opened this message based on the return information we received, but we cannot 100% guarantee they opened the email.</p>
-      <div class="client-detail-modal-actions">
-        <button id="close-status-help-button" class="secondary-button" type="button">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="account.js?v=20260331aa"></script>
+  <script src="nav.js?v=20260331c"></script>
+  <script type="module" src="auth.js?v=20260331a"></script>
 </body>
 </html>

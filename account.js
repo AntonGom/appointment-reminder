@@ -1409,7 +1409,7 @@ async function handleSignUp(event) {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/account.html`
+        emailRedirectTo: `${window.location.origin}/client-details.html`
       }
     });
 
@@ -1869,7 +1869,7 @@ async function handleUpgrade() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ email: user.email })
+      body: JSON.stringify({ email: user.email, returnPath: "/client-details.html" })
     });
 
     const data = await response.json();

@@ -301,7 +301,7 @@ async function handleSignOut() {
     return;
   }
 
-  window.location.href = "account.html";
+  window.location.href = "signin.html";
 }
 
 function handleQueryStatus() {

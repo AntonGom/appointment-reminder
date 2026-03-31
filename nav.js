@@ -31,8 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const accountDropdownLink = document.createElement("a");
   accountDropdownLink.className = "account-dropdown-link";
-  accountDropdownLink.href = "account.html";
-  accountDropdownLink.textContent = "Account";
+  accountDropdownLink.href = "client-details.html";
+  accountDropdownLink.textContent = "Client Details";
 
   const accountDropdownSignOut = document.createElement("button");
   accountDropdownSignOut.className = "account-dropdown-action";
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <h2 class="site-nav-title">Appointment Reminder</h2>
     <p class="site-nav-copy">Simple reminders for small businesses that want fewer no-shows without a complicated scheduling system.</p>
     <nav class="site-nav-links">
-      <a href="index.html"${currentPage === "home" ? ' class="active"' : ""}>Home</a>
+      <a href="index.html"${currentPage === "home" ? ' class="active"' : ""}>Send Reminder</a>
       <a href="account.html"${currentPage === "account" ? ' class="active"' : ""}>Account</a>
       <a href="about.html"${currentPage === "about" ? ' class="active"' : ""}>About</a>
       <a href="terms.html"${currentPage === "terms" ? ' class="active"' : ""}>Terms</a>
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   accountChip.addEventListener("click", event => {
     if (!isSignedIn) {
-      window.location.href = "account.html";
+      window.location.href = "signin.html";
       return;
     }
 
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   accountDropdownSignOut.addEventListener("click", async () => {
     if (!supabaseClient) {
-      window.location.href = "account.html";
+      window.location.href = "signin.html";
       return;
     }
 
@@ -216,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     accountChip.classList.remove("signed-in");
     accountChip.classList.add("signed-out");
     accountChip.removeAttribute("aria-haspopup");
-    accountChipLabel.textContent = "Sign Up";
+    accountChipLabel.textContent = "Sign In";
     accountChipLabel.hidden = false;
     accountChipEmail.hidden = true;
     accountChipTier.hidden = true;
