@@ -10,6 +10,7 @@ create table if not exists public.client_reminder_history (
   status text not null default 'sent',
   occurred_at timestamptz,
   event_key text,
+  message_preview text,
   raw_event jsonb,
   sent_at timestamptz not null default now(),
   created_at timestamptz not null default now()
@@ -23,6 +24,7 @@ alter table public.client_reminder_history
   add column if not exists status text not null default 'sent',
   add column if not exists occurred_at timestamptz,
   add column if not exists event_key text,
+  add column if not exists message_preview text,
   add column if not exists raw_event jsonb;
 
 update public.client_reminder_history

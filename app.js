@@ -734,7 +734,7 @@ async function autoSaveBronzeContact() {
   }
 }
 
-async function logBronzeReminderHistory({ clientId, channel, source, messageId, status, eventType, occurredAt, recipientEmail, rawEvent }) {
+async function logBronzeReminderHistory({ clientId, channel, source, messageId, status, eventType, occurredAt, recipientEmail, messagePreview, rawEvent }) {
   if (!appSupabase || !currentSignedInUser || !isBronzeUser() || !clientId || !channel) {
     return;
   }
@@ -760,6 +760,7 @@ async function logBronzeReminderHistory({ clientId, channel, source, messageId, 
       occurred_at: normalizedOccurredAt,
       sent_at: normalizedOccurredAt,
       event_key: eventKey,
+      message_preview: String(messagePreview || "").trim() || null,
       raw_event: rawEvent || null
     });
 
@@ -1545,7 +1546,8 @@ async function sendLocalText() {
   await logBronzeReminderHistory({
     clientId,
     channel: "sms",
-    source: "device_sms"
+    source: "device_sms",
+    messagePreview: message
   });
   safeToLeaveAfterSend = true;
 

@@ -253,7 +253,7 @@ async function findExistingHistoryByMessageId(messageId) {
   }
 
   const rows = await supabaseAdminFetch(
-    `client_reminder_history?select=owner_id,client_id,source,recipient_email&message_id=eq.${encodeURIComponent(messageId)}&order=sent_at.desc&limit=1`
+    `client_reminder_history?select=owner_id,client_id,source,recipient_email,message_preview&message_id=eq.${encodeURIComponent(messageId)}&order=sent_at.desc&limit=1`
   );
 
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -327,6 +327,7 @@ async function processBrevoEvent(eventPayload) {
     occurred_at: occurredAt,
     sent_at: occurredAt,
     event_key: eventKey,
+    message_preview: String(existingHistory?.message_preview || "").trim() || null,
     raw_event: eventPayload
   });
 

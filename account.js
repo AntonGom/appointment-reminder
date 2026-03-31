@@ -498,6 +498,17 @@ function getReminderEventTimeLabel(entry) {
   return "Not available";
 }
 
+function getReminderMessagePreview(entry) {
+  const directPreview = String(entry?.message_preview || "").trim();
+
+  if (directPreview) {
+    return directPreview;
+  }
+
+  const rawPreview = String(entry?.raw_event?.message_preview || entry?.raw_event?.message || "").trim();
+  return rawPreview;
+}
+
 function getDedupedReminderHistoryEntries(client) {
   const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
   const sortedEntries = [...historyEntries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left));
@@ -626,6 +637,7 @@ function renderExpandedReminderHistory(client) {
         const statusLabel = getReminderStatusLabel(entry);
         const channelLabel = getReminderHistoryChannelLabel(entry);
         const sourceLabel = getReminderSourceLabel(entry);
+        const messagePreview = getReminderMessagePreview(entry);
         const metaParts = [channelLabel, sourceLabel].filter(Boolean);
 
         return `
@@ -635,6 +647,7 @@ function renderExpandedReminderHistory(client) {
               <span class="expanded-history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
             </div>
             <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
+            ${messagePreview ? `<div class="expanded-message-preview">${escapeHtml(messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
           </div>
         `;
       }).join("")}

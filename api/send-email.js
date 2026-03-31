@@ -102,6 +102,7 @@ export default async function handler(req, res) {
       eventType: "request",
       status: "sent",
       occurredAt: new Date().toISOString(),
+      messagePreview: message,
       rawEvent: {
         provider: "brevo",
         transport: "transactional_email",
@@ -459,6 +460,7 @@ async function insertReminderHistoryEvent({
   eventType,
   status,
   occurredAt,
+  messagePreview,
   rawEvent
 }) {
   const normalizedOwnerId = normalizeUuid(ownerId);
@@ -496,6 +498,7 @@ async function insertReminderHistoryEvent({
       occurred_at: normalizedOccurredAt,
       sent_at: normalizedOccurredAt,
       event_key: eventKey,
+      message_preview: String(messagePreview || "").trim() || null,
       raw_event: rawEvent || null
     }
   });
