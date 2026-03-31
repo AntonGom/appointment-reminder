@@ -545,6 +545,11 @@ function renderViewMode() {
   if (calendarMonthJump) {
     calendarMonthJump.hidden = isWeek;
   }
+
+  if (calendarLayout) {
+    calendarLayout.classList.toggle("is-week-view", isWeek);
+    calendarLayout.classList.toggle("is-month-view", !isWeek);
+  }
 }
 
 function renderCounts() {

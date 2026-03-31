@@ -248,8 +248,15 @@ h1 {
 
 .calendar-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
   gap: 18px;
+}
+
+.calendar-layout.is-week-view {
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+}
+
+.calendar-layout.is-month-view {
+  grid-template-columns: 1fr;
 }
 
 .calendar-toolbar {
@@ -365,7 +372,7 @@ h1 {
 
 .calendar-month-strip {
   display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -387,6 +394,10 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.calendar-month-strip .calendar-day {
+  min-height: 126px;
 }
 
 .calendar-day.is-other-month {
@@ -618,6 +629,10 @@ h1 {
   gap: 14px;
 }
 
+.calendar-layout.is-month-view .appointment-lists {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .appointments-card-head {
   display: flex;
   justify-content: space-between;
@@ -832,6 +847,10 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .calendar-layout.is-month-view .appointment-lists {
+    grid-template-columns: 1fr;
+  }
+
   .button-row button,
   .button-row .primary-link {
     width: 100%;
@@ -887,26 +906,99 @@ button:disabled {
   }
 
   .calendar-week-grid {
-    grid-template-columns: 70px repeat(7, minmax(120px, 1fr));
-    overflow-x: auto;
+    grid-template-columns: 46px repeat(7, minmax(0, 1fr));
   }
 
   .calendar-month-strip {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
-    overflow-x: auto;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .calendar-day {
-    min-height: 116px;
-    padding: 10px;
+    min-height: 76px;
+    padding: 6px;
+    gap: 6px;
+    border-radius: 14px;
   }
 
   .calendar-day-number {
-    font-size: 16px;
+    font-size: 13px;
+  }
+
+  .calendar-day-count {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  .calendar-day-month-label {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .calendar-month-strip .calendar-day-items {
+    display: none;
   }
 
   .calendar-chip {
     font-size: 12px;
+  }
+
+  .calendar-week-corner,
+  .calendar-week-header,
+  .calendar-week-time,
+  .calendar-week-slot {
+    min-width: 0;
+  }
+
+  .calendar-week-corner {
+    padding: 10px 2px;
+    font-size: 10px;
+  }
+
+  .calendar-week-header {
+    padding: 10px 2px 8px;
+  }
+
+  .calendar-week-day {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .calendar-week-date {
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  .calendar-week-time {
+    padding: 8px 2px;
+    font-size: 10px;
+  }
+
+  .calendar-week-slot,
+  .calendar-week-slot.is-anytime {
+    min-height: 58px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .calendar-week-appointment {
+    padding: 5px 4px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+
+  .calendar-week-appointment-title {
+    font-size: 9px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calendar-week-appointment-meta {
+    display: none;
   }
 
   .appointment-row-head {
