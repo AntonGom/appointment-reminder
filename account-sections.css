@@ -32,6 +32,14 @@ body {
   padding: 90px 16px 34px;
 }
 
+body[data-page="calendar"] .hero,
+body[data-page="calendar"] .panel,
+body[data-page="calendar"] .section-card,
+body[data-page="calendar"] .summary-card {
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.16);
+  backdrop-filter: none;
+}
+
 .page {
   max-width: 1240px;
   margin: 0 auto;
@@ -279,6 +287,23 @@ h1 {
   flex-wrap: wrap;
 }
 
+.calendar-select {
+  min-width: 126px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+
+.calendar-select:focus {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
 .calendar-toolbar-actions button {
   width: auto;
   min-width: 110px;
@@ -473,6 +498,19 @@ h1 {
   line-height: 1.6;
 }
 
+.appointments-year-group {
+  display: grid;
+  gap: 12px;
+}
+
+.appointments-year-heading {
+  margin: 0;
+  color: var(--accent-3);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .loading-card {
   display: grid;
   justify-items: center;
@@ -621,6 +659,15 @@ button:disabled {
   }
 
   .account-page-link {
+    width: 100%;
+  }
+
+  .calendar-toolbar-actions {
+    width: 100%;
+  }
+
+  .calendar-select,
+  .calendar-toolbar-actions button {
     width: 100%;
   }
 

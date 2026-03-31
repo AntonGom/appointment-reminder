@@ -16,13 +16,15 @@ const previousList = document.getElementById("previous-list");
 const upcomingCount = document.getElementById("upcoming-count");
 const previousCount = document.getElementById("previous-count");
 const monthCount = document.getElementById("month-count");
+const monthSelect = document.getElementById("calendar-month-select");
+const yearSelect = document.getElementById("calendar-year-select");
 const prevButton = document.getElementById("calendar-prev");
 const todayButton = document.getElementById("calendar-today");
 const nextButton = document.getElementById("calendar-next");
+const allAppointmentsList = document.getElementById("all-appointments-list");
 
 let supabase = null;
 let appConfig = null;
-let runtimeConfig = null;
 let appointments = [];
 let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
@@ -56,20 +58,6 @@ function getTierKey(user) {
   return String(candidates.find(value => typeof value === "string" && value.trim()) || "free")
     .trim()
     .toLowerCase();
-}
-
-function getTierLabel(user) {
-  const normalized = getTierKey(user);
-
-  if (normalized === "free") {
-    return "FREE";
-  }
-
-  if (normalized === "bronze") {
-    return "Bronze";
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function isBronzeUser(user) {
@@ -140,6 +128,9 @@ function updateSignedInView(user) {
     if (previousList) {
       previousList.innerHTML = "";
     }
+    if (allAppointmentsList) {
+      allAppointmentsList.innerHTML = "";
+    }
   }
 }
 
@@ -148,16 +139,6 @@ async function getPublicConfig() {
 
   if (!response.ok) {
     throw new Error("Unable to load account configuration.");
-  }
-
-  return response.json();
-}
-
-async function getRuntimeConfig() {
-  const response = await fetch("/api/runtime-env", { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error("Unable to load runtime environment.");
   }
 
   return response.json();
@@ -336,6 +317,10 @@ function getMonthAppointments(targetMonth) {
   });
 }
 
+function getAppointmentsSortedNewestFirst() {
+  return [...appointments].sort((left, right) => parseAppointmentDateTime(right) - parseAppointmentDateTime(left));
+}
+
 function getUpcomingAppointments() {
   const now = Date.now();
 
@@ -369,6 +354,67 @@ function renderAppointmentList(target, list, emptyMessage) {
   }
 
   target.innerHTML = list.map(renderAppointmentRow).join("");
+}
+
+function renderAllAppointments() {
+  if (!allAppointmentsList) {
+    return;
+  }
+
+  const sortedAppointments = getAppointmentsSortedNewestFirst();
+
+  if (!sortedAppointments.length) {
+    allAppointmentsList.innerHTML = `<div class="empty-state">No appointments have been saved yet.</div>`;
+    return;
+  }
+
+  const groups = new Map();
+
+  sortedAppointments.forEach(appointment => {
+    const date = parseAppointmentDateTime(appointment);
+    const year = date ? String(date.getFullYear()) : "Unknown";
+
+    if (!groups.has(year)) {
+      groups.set(year, []);
+    }
+
+    groups.get(year).push(appointment);
+  });
+
+  allAppointmentsList.innerHTML = Array.from(groups.entries()).map(([year, list]) => `
+    <div class="appointments-year-group">
+      <h4 class="appointments-year-heading">${escapeHtml(year)}</h4>
+      ${list.map(renderAppointmentRow).join("")}
+    </div>
+  `).join("");
+}
+
+function renderMonthSelectors() {
+  if (!monthSelect || !yearSelect) {
+    return;
+  }
+
+  const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "long" });
+  monthSelect.innerHTML = Array.from({ length: 12 }, (_, index) => {
+    const label = monthFormatter.format(new Date(2026, index, 1));
+    return `<option value="${index}">${escapeHtml(label)}</option>`;
+  }).join("");
+  monthSelect.value = String(viewMonth.getMonth());
+
+  const appointmentYears = appointments
+    .map(appointment => parseAppointmentDateTime(appointment)?.getFullYear())
+    .filter(year => Number.isFinite(year));
+  const currentYear = new Date().getFullYear();
+  const minYear = appointmentYears.length ? Math.min(...appointmentYears, currentYear - 1) : currentYear - 2;
+  const maxYear = appointmentYears.length ? Math.max(...appointmentYears, currentYear + 1) : currentYear + 2;
+  const yearOptions = [];
+
+  for (let year = minYear - 1; year <= maxYear + 1; year += 1) {
+    yearOptions.push(`<option value="${year}">${year}</option>`);
+  }
+
+  yearSelect.innerHTML = yearOptions.join("");
+  yearSelect.value = String(viewMonth.getFullYear());
 }
 
 function renderCounts() {
@@ -459,7 +505,9 @@ function renderMonthGrid() {
 
 function renderCalendar() {
   renderCounts();
+  renderMonthSelectors();
   renderMonthGrid();
+  renderAllAppointments();
 
   if (calendarLayout && appointmentsReady) {
     calendarLayout.hidden = false;
@@ -498,6 +546,9 @@ async function loadAppointments(user) {
         clearCounts();
         renderAppointmentList(upcomingList, [], "Appointments setup is still needed.");
         renderAppointmentList(previousList, [], "Appointments setup is still needed.");
+        if (allAppointmentsList) {
+          allAppointmentsList.innerHTML = `<div class="empty-state">Appointments setup is still needed.</div>`;
+        }
         return;
       }
 
@@ -519,6 +570,9 @@ async function loadAppointments(user) {
     if (calendarLayout) {
       calendarLayout.hidden = true;
     }
+    if (allAppointmentsList) {
+      allAppointmentsList.innerHTML = `<div class="empty-state">Unable to load appointments right now.</div>`;
+    }
     setStatus(error.message || "Unable to load appointments.", "error");
   } finally {
     setLoadingState(false);
@@ -526,6 +580,32 @@ async function loadAppointments(user) {
 }
 
 function bindCalendarControls() {
+  if (monthSelect) {
+    monthSelect.addEventListener("change", event => {
+      const nextMonth = Number(event.target.value);
+
+      if (!Number.isFinite(nextMonth)) {
+        return;
+      }
+
+      viewMonth = new Date(viewMonth.getFullYear(), nextMonth, 1);
+      renderCalendar();
+    });
+  }
+
+  if (yearSelect) {
+    yearSelect.addEventListener("change", event => {
+      const nextYear = Number(event.target.value);
+
+      if (!Number.isFinite(nextYear)) {
+        return;
+      }
+
+      viewMonth = new Date(nextYear, viewMonth.getMonth(), 1);
+      renderCalendar();
+    });
+  }
+
   if (prevButton) {
     prevButton.addEventListener("click", () => {
       viewMonth = addMonths(viewMonth, -1);
@@ -553,8 +633,6 @@ async function initPage() {
 
   try {
     appConfig = await getPublicConfig();
-    runtimeConfig = await getRuntimeConfig().catch(() => null);
-    void runtimeConfig;
   } catch (error) {
     setStatus(error.message || "Unable to load this page.", "error");
     return;

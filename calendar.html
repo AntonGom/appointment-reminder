@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260331a">
+  <link rel="stylesheet" href="account-sections.css?v=20260331b">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -86,6 +86,8 @@
                     <p class="calendar-subcopy">Appointments are added automatically after a Bronze reminder is sent with a date.</p>
                   </div>
                   <div class="calendar-toolbar-actions">
+                    <select id="calendar-month-select" class="calendar-select" aria-label="Select month"></select>
+                    <select id="calendar-year-select" class="calendar-select" aria-label="Select year"></select>
                     <button id="calendar-prev" class="secondary-button" type="button">Prev</button>
                     <button id="calendar-today" class="secondary-button" type="button">Today</button>
                     <button id="calendar-next" class="secondary-button" type="button">Next</button>
@@ -125,6 +127,16 @@
                 </div>
               </div>
             </div>
+
+            <div class="section-card appointments-card">
+              <div class="appointments-card-head">
+                <div>
+                  <h3>All saved appointments</h3>
+                  <p>Browse appointments across every month and year saved on this account.</p>
+                </div>
+              </div>
+              <div id="all-appointments-list" class="appointment-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -132,6 +144,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="calendar.js?v=20260331a"></script>
+  <script type="module" src="calendar.js?v=20260331b"></script>
 </body>
 </html>
