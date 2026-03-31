@@ -1022,6 +1022,10 @@ button.calendar-week-mobile-day {
     padding-top: 88px;
   }
 
+  body[data-page="calendar"] {
+    padding-top: 112px;
+  }
+
   .hero-content,
   .panel-content,
   .section-card,
