@@ -1488,6 +1488,11 @@ function bindCalendarControls() {
 
       selectedDateKey = nextDateKey;
       viewMonth = startOfMonth(nextDate);
+
+      if (isCompactMobileCalendar() && currentCalendarView === "month") {
+        currentCalendarView = "week";
+      }
+
       renderCalendar();
     });
   }
