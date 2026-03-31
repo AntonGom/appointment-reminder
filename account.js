@@ -38,6 +38,7 @@ const contactsCard = document.getElementById("contacts-card");
 let supabase = null;
 let appConfig = null;
 let runtimeConfig = null;
+let runtimeConfigPromise = null;
 let savedClients = [];
 let editingClientId = "";
 let clientsSearchQuery = "";
@@ -693,25 +694,34 @@ async function loadSavedClients() {
 
   try {
     const {
-      data: { user }
-    } = await supabase.auth.getUser();
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    const user = session?.user || null;
 
     if (!user?.id) {
       savedClients = [];
       return;
     }
 
-    const { data, error } = await supabase
-      .from("clients")
-      .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
-      .order("created_at", { ascending: false });
+    const [clientsResult, historyRows] = await Promise.all([
+      supabase
+        .from("clients")
+        .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
+        .order("created_at", { ascending: false }),
+      loadReminderHistory(user.id)
+    ]);
 
-    if (error) {
-      throw error;
+    if (clientsResult.error) {
+      throw clientsResult.error;
     }
 
-    const clientsData = data || [];
-    const historyRows = await loadReminderHistory(user.id);
+    const clientsData = clientsResult.data || [];
+
+    if (clientsData.length > CLIENTS_PER_PAGE * 2) {
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+    }
+
     savedClients = attachReminderHistory(clientsData, historyRows);
   } catch (error) {
     savedClients = [];
@@ -720,6 +730,46 @@ async function loadSavedClients() {
     setClientsLoadingState(false);
     renderSavedClients();
   }
+}
+
+async function hydrateRuntimeConfigForUser(user) {
+  if (!user) {
+    runtimeConfig = null;
+    runtimeConfigPromise = null;
+    updateSignedInView(user);
+    return;
+  }
+
+  const config = await ensureRuntimeConfig();
+
+  if (config) {
+    runtimeConfig = config;
+    updateSignedInView(user);
+  }
+}
+
+async function syncSignedInState(user) {
+  updateSignedInView(user);
+
+  if (!user) {
+    savedClients = [];
+    renderSavedClients();
+    return;
+  }
+
+  await ensureProfile(user);
+
+  if (isBronzeUser(user)) {
+    await Promise.all([
+      loadSavedClients(),
+      hydrateRuntimeConfigForUser(user)
+    ]);
+    return;
+  }
+
+  savedClients = [];
+  renderSavedClients();
+  await hydrateRuntimeConfigForUser(user);
 }
 
 function updateSignedInView(user) {
@@ -825,9 +875,25 @@ async function getRuntimeConfig() {
   return response.json();
 }
 
+async function ensureRuntimeConfig() {
+  if (runtimeConfig) {
+    return runtimeConfig;
+  }
+
+  if (!runtimeConfigPromise) {
+    runtimeConfigPromise = getRuntimeConfig()
+      .then(config => {
+        runtimeConfig = config;
+        return config;
+      })
+      .catch(() => null);
+  }
+
+  return runtimeConfigPromise;
+}
+
 async function initSupabase() {
   appConfig = await getPublicConfig();
-  runtimeConfig = await getRuntimeConfig().catch(() => null);
 
   if (pricePill) {
     pricePill.textContent = "Optional Bronze";
@@ -856,36 +922,10 @@ async function initSupabase() {
     data: { session }
   } = await supabase.auth.getSession();
 
-  updateSignedInView(session?.user || null);
-
-  if (session?.user) {
-    await ensureProfile(session.user);
-    if (isBronzeUser(session.user)) {
-      await loadSavedClients();
-    } else {
-      savedClients = [];
-      renderSavedClients();
-    }
-  } else {
-    savedClients = [];
-    renderSavedClients();
-  }
+  await syncSignedInState(session?.user || null);
 
   supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-    updateSignedInView(nextSession?.user || null);
-
-    if (nextSession?.user) {
-      await ensureProfile(nextSession.user);
-      if (isBronzeUser(nextSession.user)) {
-        await loadSavedClients();
-      } else {
-        savedClients = [];
-        renderSavedClients();
-      }
-    } else {
-      savedClients = [];
-      renderSavedClients();
-    }
+    await syncSignedInState(nextSession?.user || null);
   });
 }
 

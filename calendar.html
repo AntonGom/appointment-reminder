@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260331b">
+  <link rel="stylesheet" href="account-sections.css?v=20260331c">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -93,6 +93,15 @@
                     <button id="calendar-next" class="secondary-button" type="button">Next</button>
                   </div>
                 </div>
+                <div id="selected-day-card" class="selected-day-card">
+                  <div class="selected-day-head">
+                    <div>
+                      <h3 id="selected-day-title" class="selected-day-title">Selected day</h3>
+                      <p id="selected-day-copy" class="selected-day-copy">Choose a day to see all appointments for that date.</p>
+                    </div>
+                  </div>
+                  <div id="selected-day-list" class="selected-day-list"></div>
+                </div>
                 <div class="calendar-weekdays" aria-hidden="true">
                   <div class="calendar-weekday">Sun</div>
                   <div class="calendar-weekday">Mon</div>
@@ -144,6 +153,6 @@
   </div>
 
   <script src="nav.js?v=20260326j"></script>
-  <script type="module" src="calendar.js?v=20260331b"></script>
+  <script type="module" src="calendar.js?v=20260331c"></script>
 </body>
 </html>

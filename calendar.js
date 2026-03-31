@@ -11,6 +11,9 @@ const calendarLoading = document.getElementById("calendar-loading");
 const calendarLayout = document.getElementById("calendar-layout");
 const calendarMonthLabel = document.getElementById("calendar-month-label");
 const calendarMonthGrid = document.getElementById("calendar-month-grid");
+const selectedDayTitle = document.getElementById("selected-day-title");
+const selectedDayCopy = document.getElementById("selected-day-copy");
+const selectedDayList = document.getElementById("selected-day-list");
 const upcomingList = document.getElementById("upcoming-list");
 const previousList = document.getElementById("previous-list");
 const upcomingCount = document.getElementById("upcoming-count");
@@ -28,6 +31,7 @@ let appConfig = null;
 let appointments = [];
 let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
+let selectedDateKey = "";
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -317,6 +321,31 @@ function getMonthAppointments(targetMonth) {
   });
 }
 
+function getAppointmentsByDateKey(dateKey) {
+  return appointments.filter(appointment => String(appointment?.service_date || "").trim() === String(dateKey || "").trim());
+}
+
+function getSelectedDateForMonth(monthAppointments) {
+  const selectedDate = selectedDateKey ? new Date(`${selectedDateKey}T00:00:00`) : null;
+
+  if (selectedDate && !Number.isNaN(selectedDate.getTime())) {
+    if (selectedDate.getFullYear() === viewMonth.getFullYear() && selectedDate.getMonth() === viewMonth.getMonth()) {
+      return selectedDateKey;
+    }
+  }
+
+  const today = new Date();
+  if (today.getFullYear() === viewMonth.getFullYear() && today.getMonth() === viewMonth.getMonth()) {
+    return formatDateKey(today);
+  }
+
+  if (monthAppointments.length) {
+    return String(monthAppointments[0].service_date || "").trim();
+  }
+
+  return formatDateKey(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1));
+}
+
 function getAppointmentsSortedNewestFirst() {
   return [...appointments].sort((left, right) => parseAppointmentDateTime(right) - parseAppointmentDateTime(left));
 }
@@ -438,6 +467,42 @@ function renderCounts() {
   renderAppointmentList(previousList, previous.slice(0, 8), "No previous appointments yet.");
 }
 
+function renderSelectedDay(monthAppointments) {
+  if (!selectedDayTitle || !selectedDayCopy || !selectedDayList) {
+    return;
+  }
+
+  selectedDateKey = getSelectedDateForMonth(monthAppointments);
+  const selectedDate = new Date(`${selectedDateKey}T00:00:00`);
+  const dateAppointments = getAppointmentsByDateKey(selectedDateKey)
+    .sort((left, right) => parseAppointmentDateTime(left) - parseAppointmentDateTime(right));
+
+  if (Number.isNaN(selectedDate.getTime())) {
+    selectedDayTitle.textContent = "Selected day";
+    selectedDayCopy.textContent = "Choose a day to see all appointments for that date.";
+    selectedDayList.innerHTML = `<div class="empty-state">No day is selected yet.</div>`;
+    return;
+  }
+
+  selectedDayTitle.textContent = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  }).format(selectedDate);
+
+  if (!dateAppointments.length) {
+    selectedDayCopy.textContent = "No appointments are saved for this day yet.";
+    selectedDayList.innerHTML = `<div class="empty-state">This date is open right now.</div>`;
+    return;
+  }
+
+  selectedDayCopy.textContent = dateAppointments.length === 1
+    ? "1 appointment is saved for this day."
+    : `${dateAppointments.length} appointments are saved for this day.`;
+  selectedDayList.innerHTML = dateAppointments.map(renderAppointmentRow).join("");
+}
+
 function renderMonthGrid() {
   if (!calendarMonthGrid) {
     return;
@@ -448,6 +513,7 @@ function renderMonthGrid() {
   }
 
   const monthAppointments = getMonthAppointments(viewMonth);
+  selectedDateKey = getSelectedDateForMonth(monthAppointments);
   const appointmentsByDay = new Map();
 
   monthAppointments.forEach(appointment => {
@@ -480,9 +546,10 @@ function renderMonthGrid() {
     const visibleAppointments = dayAppointments.slice(0, 2);
     const isOtherMonth = cellDate.getMonth() !== viewMonth.getMonth();
     const isToday = dateKey === todayKey;
+    const isSelected = dateKey === selectedDateKey;
 
     cells.push(`
-      <div class="calendar-day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""} ${dayAppointments.length ? "has-appointments" : ""}">
+      <div class="calendar-day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""} ${dayAppointments.length ? "has-appointments" : ""} ${isSelected ? "is-selected" : ""}" data-date-key="${dateKey}">
         <div class="calendar-day-head">
           <div class="calendar-day-number">${cellDate.getDate()}</div>
           ${dayAppointments.length ? `<div class="calendar-day-count">${dayAppointments.length}</div>` : ""}
@@ -504,8 +571,10 @@ function renderMonthGrid() {
 }
 
 function renderCalendar() {
+  const monthAppointments = getMonthAppointments(viewMonth);
   renderCounts();
   renderMonthSelectors();
+  renderSelectedDay(monthAppointments);
   renderMonthGrid();
   renderAllAppointments();
 
@@ -623,6 +692,32 @@ function bindCalendarControls() {
   if (nextButton) {
     nextButton.addEventListener("click", () => {
       viewMonth = addMonths(viewMonth, 1);
+      renderCalendar();
+    });
+  }
+
+  if (calendarMonthGrid) {
+    calendarMonthGrid.addEventListener("click", event => {
+      const dayElement = event.target.closest(".calendar-day[data-date-key]");
+
+      if (!dayElement) {
+        return;
+      }
+
+      const nextDateKey = String(dayElement.dataset.dateKey || "").trim();
+
+      if (!nextDateKey) {
+        return;
+      }
+
+      const nextDate = new Date(`${nextDateKey}T00:00:00`);
+
+      if (Number.isNaN(nextDate.getTime())) {
+        return;
+      }
+
+      selectedDateKey = nextDateKey;
+      viewMonth = startOfMonth(nextDate);
       renderCalendar();
     });
   }

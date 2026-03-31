@@ -309,6 +309,44 @@ h1 {
   min-width: 110px;
 }
 
+.selected-day-card {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.96));
+  border: 1px solid rgba(191, 219, 254, 0.92);
+}
+
+.selected-day-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.selected-day-title {
+  margin: 0 0 6px;
+  color: var(--text-main);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.selected-day-copy {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.selected-day-list {
+  display: grid;
+  gap: 12px;
+}
+
 .calendar-weekdays,
 .calendar-month-grid {
   display: grid;
@@ -348,6 +386,11 @@ h1 {
 
 .calendar-day.has-appointments {
   background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 0.95));
+}
+
+.calendar-day.is-selected {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .calendar-day-head {
@@ -669,6 +712,10 @@ button:disabled {
   .calendar-select,
   .calendar-toolbar-actions button {
     width: 100%;
+  }
+
+  .selected-day-card {
+    padding: 16px;
   }
 
   .calendar-weekdays,
