@@ -734,10 +734,18 @@ async function autoSaveBronzeContact() {
   }
 }
 
-async function logBronzeReminderHistory({ clientId, channel, source }) {
+async function logBronzeReminderHistory({ clientId, channel, source, messageId, status, eventType, occurredAt, recipientEmail, rawEvent }) {
   if (!appSupabase || !currentSignedInUser || !isBronzeUser() || !clientId || !channel) {
     return;
   }
+
+  const normalizedOccurredAt = occurredAt || new Date().toISOString();
+  const normalizedStatus = String(status || "").trim() || "sent";
+  const normalizedEventType = String(eventType || "").trim() || normalizedStatus;
+  const normalizedMessageId = String(messageId || "").trim();
+  const eventKey = normalizedMessageId
+    ? `${normalizedMessageId}:${normalizedEventType}:${normalizedOccurredAt}`
+    : `${currentSignedInUser.id}:${clientId}:${channel}:${normalizedEventType}:${normalizedOccurredAt}`;
 
   try {
     const { error } = await appSupabase.from("client_reminder_history").insert({
@@ -745,7 +753,14 @@ async function logBronzeReminderHistory({ clientId, channel, source }) {
       client_id: clientId,
       channel,
       source: source || "",
-      sent_at: new Date().toISOString()
+      status: normalizedStatus,
+      event_type: normalizedEventType,
+      message_id: normalizedMessageId || null,
+      recipient_email: recipientEmail || null,
+      occurred_at: normalizedOccurredAt,
+      sent_at: normalizedOccurredAt,
+      event_key: eventKey,
+      raw_event: rawEvent || null
     });
 
     if (error) {
@@ -1457,24 +1472,24 @@ async function confirmSendBrevoEmail() {
   closeEmailModal();
   setSendEmailButtonState("loading");
   try {
+    const clientId = isBronzeUser() ? await autoSaveBronzeContact() : null;
     const res = await fetch("/api/send-email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        ...payload,
+        trackingOwnerId: currentSignedInUser?.id || "",
+        trackingClientId: clientId || "",
+        trackingSource: "automated_email"
+      })
     });
 
     const data = await res.json();
 
     if (res.ok && data.success) {
-      const clientId = await autoSaveBronzeContact();
       await upsertBronzeAppointment({
-        clientId,
-        channel: "email",
-        source: "automated_email"
-      });
-      await logBronzeReminderHistory({
         clientId,
         channel: "email",
         source: "automated_email"

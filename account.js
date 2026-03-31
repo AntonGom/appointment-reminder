@@ -160,10 +160,6 @@ function openClientDetailModal(clientId) {
           <div class="expanded-client-value">${client.client_phone ? escapeHtml(formatPhone(client.client_phone)) : `<span class="table-muted">Not added</span>`}</div>
         </div>
         <div class="expanded-client-block">
-          <div class="expanded-client-label">Reminder Status</div>
-          <div class="expanded-client-value">${renderReminderStatus(client)}</div>
-        </div>
-        <div class="expanded-client-block">
           <div class="expanded-client-label">Last Edited</div>
           <div class="expanded-client-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
         </div>
@@ -370,6 +366,10 @@ function getReminderStatusLabel(entry) {
     return "Delivered";
   }
 
+  if (rawStatus.includes("request")) {
+    return "Sent";
+  }
+
   if (rawStatus.includes("open") && rawStatus.includes("likely")) {
     return "Likely opened";
   }
@@ -480,6 +480,14 @@ function getReminderSourceLabel(entry) {
     return "Automatic send";
   }
 
+  if (source === "automated_email") {
+    return "Automated email";
+  }
+
+  if (source === "device_sms") {
+    return "Text from device";
+  }
+
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
 
@@ -530,34 +538,6 @@ async function loadReminderHistory(ownerId) {
 
   reminderHistoryReady = true;
   return data || [];
-}
-
-function getLatestReminderEntry(client) {
-  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
-
-  if (!historyEntries.length) {
-    return null;
-  }
-
-  return [...historyEntries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left))[0] || null;
-}
-
-function renderReminderStatus(client) {
-  const latestEntry = getLatestReminderEntry(client);
-
-  if (!latestEntry) {
-    return `<span class="table-muted">${reminderHistoryReady ? "No status yet" : "History setup needed"}</span>`;
-  }
-
-  const label = getReminderStatusLabel(latestEntry);
-  const statusClass = getReminderStatusClass(label);
-
-  return `
-    <div class="status-stack">
-      <span class="status-pill ${statusClass}">${escapeHtml(label)}</span>
-      <span class="status-time">${escapeHtml(getReminderEventTimeLabel(latestEntry))}</span>
-    </div>
-  `;
 }
 
 function renderReminderHistory(client) {
@@ -794,7 +774,6 @@ function renderSavedClients() {
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Reminder Status</th>
             <th>Reminder History</th>
             <th>Last Edited</th>
             <th>Actions</th>
@@ -813,7 +792,6 @@ function renderSavedClients() {
                 </td>
                 <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
-                <td>${renderReminderStatus(client)}</td>
                 <td>${renderReminderHistory(client)}</td>
                 <td>${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</td>
                 <td>
@@ -846,10 +824,6 @@ function renderSavedClients() {
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Phone</div>
                 <div class="client-mobile-value">${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</div>
-              </div>
-              <div class="client-mobile-row">
-                <div class="client-mobile-label">Reminder Status</div>
-                <div class="client-mobile-value">${renderReminderStatus(client)}</div>
               </div>
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Reminder History</div>

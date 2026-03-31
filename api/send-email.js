@@ -14,13 +14,22 @@ export default async function handler(req, res) {
       serviceDate,
       serviceTime,
       sendCopy,
-      copyEmail
+      copyEmail,
+      trackingOwnerId,
+      trackingClientId,
+      trackingSource
     } = req.body;
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "Appointment Reminder";
     const wantsCopy = sendCopy === true || sendCopy === "true";
     const normalizedCopyEmail = String(copyEmail || "").trim();
+    const trackingMetadata = buildTrackingMetadata({
+      ownerId: trackingOwnerId,
+      clientId: trackingClientId,
+      source: trackingSource,
+      recipientEmail: clientEmail
+    });
 
     if (!apiKey) {
       return res.status(500).json({ error: "Missing BREVO_API_KEY in Vercel environment variables." });
@@ -72,13 +81,32 @@ export default async function handler(req, res) {
     });
     const htmlMessage = buildEmailHtml(message, calendarLinks);
 
-    await sendBrevoEmail({
+    const primaryResult = await sendBrevoEmail({
       apiKey,
       senderEmail,
       senderName,
       toEmail: clientEmail,
       subject: "Appointment Reminder",
-      htmlContent: htmlMessage
+      htmlContent: htmlMessage,
+      trackingMetadata
+    });
+    const primaryMessageId = getBrevoMessageId(primaryResult);
+
+    await insertReminderHistoryEvent({
+      ownerId: trackingMetadata.ownerId,
+      clientId: trackingMetadata.clientId,
+      channel: "email",
+      source: trackingMetadata.source,
+      recipientEmail: clientEmail,
+      messageId: primaryMessageId,
+      eventType: "request",
+      status: "sent",
+      occurredAt: new Date().toISOString(),
+      rawEvent: {
+        provider: "brevo",
+        transport: "transactional_email",
+        stage: "send_api"
+      }
     });
 
     if (wantsCopy && normalizedCopyEmail && normalizedCopyEmail !== clientEmail) {
@@ -92,14 +120,21 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      messageId: primaryMessageId || null
+    });
 
   } catch (err) {
     return res.status(500).json({ error: err.message || "Failed to send email." });
   }
 }
 
-async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subject, htmlContent }) {
+async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subject, htmlContent, trackingMetadata }) {
+  const headers = trackingMetadata?.customHeader
+    ? { "X-Mailin-custom": trackingMetadata.customHeader }
+    : undefined;
+  const tags = trackingMetadata?.tags?.length ? trackingMetadata.tags : undefined;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
@@ -113,7 +148,9 @@ async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subjec
       },
       to: [{ email: toEmail }],
       subject,
-      htmlContent
+      htmlContent,
+      headers,
+      tags
     })
   });
 
@@ -263,6 +300,178 @@ function getBaseUrl(req) {
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function normalizeUuid(value) {
+  const normalized = String(value || "").trim();
+  return UUID_PATTERN.test(normalized) ? normalized : "";
+}
+
+function normalizeSource(value) {
+  return String(value || "").trim().slice(0, 80) || "automated_email";
+}
+
+function buildTrackingMetadata({ ownerId, clientId, source, recipientEmail }) {
+  const normalizedOwnerId = normalizeUuid(ownerId);
+  const normalizedClientId = normalizeUuid(clientId);
+  const normalizedSource = normalizeSource(source);
+  const normalizedRecipientEmail = EMAIL_PATTERN.test(String(recipientEmail || "").trim())
+    ? String(recipientEmail || "").trim()
+    : "";
+  const customHeaderParts = [
+    normalizedOwnerId ? `owner_id:${normalizedOwnerId}` : "",
+    normalizedClientId ? `client_id:${normalizedClientId}` : "",
+    normalizedSource ? `source:${normalizedSource}` : "",
+    normalizedRecipientEmail ? `recipient_email:${normalizedRecipientEmail}` : ""
+  ].filter(Boolean);
+  const tags = [
+    "appointment-reminder",
+    normalizedSource ? `source:${normalizedSource}` : ""
+  ].filter(Boolean);
+
+  return {
+    ownerId: normalizedOwnerId,
+    clientId: normalizedClientId,
+    source: normalizedSource,
+    recipientEmail: normalizedRecipientEmail,
+    customHeader: customHeaderParts.join("|"),
+    tags
+  };
+}
+
+function getSupabaseAdminConfig() {
+  const url = String(process.env.SUPABASE_URL || "").trim();
+  const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+
+  return {
+    url,
+    serviceRoleKey,
+    ready: Boolean(url && serviceRoleKey)
+  };
+}
+
+async function supabaseAdminFetch(path, options = {}) {
+  const config = getSupabaseAdminConfig();
+
+  if (!config.ready) {
+    return { data: null, error: null };
+  }
+
+  const method = options.method || "GET";
+  const headers = {
+    apikey: config.serviceRoleKey,
+    Authorization: `Bearer ${config.serviceRoleKey}`,
+    ...options.headers
+  };
+
+  if (method !== "GET" && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(`${config.url}/rest/v1/${path}`, {
+    method,
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const text = await response.text();
+  const payload = text ? safeJsonParse(text) : null;
+
+  if (!response.ok) {
+    return {
+      data: null,
+      error: new Error(`Supabase error (${response.status}): ${text || response.statusText}`)
+    };
+  }
+
+  return { data: payload, error: null };
+}
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function getBrevoMessageId(payload) {
+  const directMessageId = String(payload?.messageId || "").trim();
+
+  if (directMessageId) {
+    return directMessageId;
+  }
+
+  if (Array.isArray(payload?.messageIds) && payload.messageIds.length) {
+    return String(payload.messageIds[0] || "").trim();
+  }
+
+  return "";
+}
+
+function buildReminderHistoryEventKey({ messageId, eventType, occurredAt, recipientEmail }) {
+  return [
+    String(messageId || "").trim() || "no-message-id",
+    String(eventType || "").trim() || "sent",
+    String(occurredAt || "").trim() || new Date().toISOString(),
+    String(recipientEmail || "").trim().toLowerCase()
+  ].join(":");
+}
+
+async function insertReminderHistoryEvent({
+  ownerId,
+  clientId,
+  channel,
+  source,
+  recipientEmail,
+  messageId,
+  eventType,
+  status,
+  occurredAt,
+  rawEvent
+}) {
+  const normalizedOwnerId = normalizeUuid(ownerId);
+  const normalizedClientId = normalizeUuid(clientId);
+
+  if (!normalizedOwnerId || !channel) {
+    return;
+  }
+
+  const normalizedOccurredAt = String(occurredAt || "").trim() || new Date().toISOString();
+  const normalizedRecipientEmail = EMAIL_PATTERN.test(String(recipientEmail || "").trim())
+    ? String(recipientEmail || "").trim()
+    : null;
+  const eventKey = buildReminderHistoryEventKey({
+    messageId,
+    eventType,
+    occurredAt: normalizedOccurredAt,
+    recipientEmail: normalizedRecipientEmail
+  });
+
+  const { error } = await supabaseAdminFetch("client_reminder_history?on_conflict=event_key", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body: {
+      owner_id: normalizedOwnerId,
+      client_id: normalizedClientId || null,
+      channel,
+      source: normalizeSource(source),
+      recipient_email: normalizedRecipientEmail,
+      message_id: String(messageId || "").trim() || null,
+      event_type: String(eventType || "").trim() || "request",
+      status: String(status || "").trim() || "sent",
+      occurred_at: normalizedOccurredAt,
+      sent_at: normalizedOccurredAt,
+      event_key: eventKey,
+      raw_event: rawEvent || null
+    }
+  });
+
+  if (error) {
+    console.warn("Unable to store reminder history event.", error);
+  }
+}
 
 function validateReminderPayload({ clientName, clientPhone, serviceAddress, businessContact, message }) {
   const messageLengthLimit = 1200;
