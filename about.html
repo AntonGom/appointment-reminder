@@ -418,15 +418,14 @@
       line-height: 1.75;
     }
 
-    .truth-grid {
+    .simple-grid,
+    .cta-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 18px;
-      align-items: start;
     }
 
-    .truth-card,
-    .mission-card,
+    .simple-card,
     .cta-card {
       padding: 24px;
       border-radius: 26px;
@@ -436,8 +435,7 @@
       color: var(--text-main);
     }
 
-    .truth-card h3,
-    .mission-card h3,
+    .simple-card h3,
     .cta-card h3 {
       margin: 0 0 12px;
       font-size: 24px;
@@ -445,8 +443,7 @@
       color: #10213d;
     }
 
-    .truth-card p,
-    .mission-card p,
+    .simple-card p,
     .cta-card p {
       margin: 0;
       color: var(--text-soft);
@@ -454,15 +451,13 @@
       line-height: 1.75;
     }
 
-    .truth-list,
-    .mission-list {
+    .simple-list {
       display: grid;
       gap: 12px;
       margin-top: 18px;
     }
 
-    .truth-item,
-    .mission-item {
+    .simple-item {
       display: grid;
       grid-template-columns: 34px minmax(0, 1fr);
       gap: 12px;
@@ -473,8 +468,7 @@
       border: 1px solid rgba(191, 219, 254, 0.88);
     }
 
-    .truth-item-number,
-    .mission-item-mark {
+    .simple-item-mark {
       width: 34px;
       height: 34px;
       border-radius: 12px;
@@ -488,29 +482,17 @@
       border: 1px solid rgba(191, 219, 254, 0.9);
     }
 
-    .truth-item strong,
-    .mission-item strong {
+    .simple-item strong {
       display: block;
       margin-bottom: 3px;
       color: #10213d;
       font-size: 15px;
     }
 
-    .truth-item span,
-    .mission-item span {
+    .simple-item span {
       color: var(--text-soft);
       font-size: 14px;
       line-height: 1.7;
-    }
-
-    .split-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
-
-    .mission-card {
-      min-height: 100%;
     }
 
     .cta-card {
@@ -537,11 +519,10 @@
 
     @media (max-width: 1080px) {
       .hero-grid,
-      .truth-grid,
-      .split-grid,
+      .simple-grid,
+      .cta-grid,
       .stats-grid,
       .principles-grid,
-      .feature-grid,
       .audience-grid {
         grid-template-columns: 1fr 1fr;
       }
@@ -564,8 +545,7 @@
 
       .hero-copy p,
       .section-head p,
-      .truth-card p,
-      .mission-card p,
+      .simple-card p,
       .cta-card p {
         font-size: 16px;
       }
@@ -582,10 +562,9 @@
 
       .stats-grid,
       .principles-grid,
-      .feature-grid,
       .audience-grid,
-      .truth-grid,
-      .split-grid {
+      .simple-grid,
+      .cta-grid {
         grid-template-columns: 1fr;
       }
 
@@ -609,15 +588,15 @@
           <p>Appointment Reminder was built for people who already know how they run appointments, but want the reminder part to feel faster, clearer, and more professional. The goal is not to replace everything you already do. The goal is to make follow-up easier.</p>
           <div class="hero-actions">
             <a class="button" href="index.html">Send a Reminder</a>
-            <a class="button-secondary" href="account.html">View Client Details</a>
+            <a class="button-secondary" href="#why-choose">Why people use it</a>
           </div>
-          <p class="hero-note">Today, the product supports a free reminder flow, email sending, text-from-device sending, and Bronze tools like saved contacts, calendar views, reminder history, and email status tracking.</p>
+          <p class="hero-note">Anyone can start with the reminder flow right away. For people who want more organization later, the product can also grow into saved contacts, calendar views, and reminder history.</p>
         </div>
 
         <aside class="hero-panel" aria-label="Product overview">
           <div class="hero-panel-top">
             <span>What it feels like</span>
-            <span class="hero-tier">Free + Bronze</span>
+            <span class="hero-tier">Easy to start</span>
           </div>
 
           <div class="flow-card">
@@ -644,8 +623,8 @@
             <div class="flow-step">
               <div class="flow-step-number">3</div>
               <div>
-                <strong>Track what happened</strong>
-                <span>Bronze adds contacts, appointment history, calendar views, and email statuses like Sent, Delivered, and Likely opened.</span>
+                <strong>Stay organized later</strong>
+                <span>If you want more structure over time, the product can also keep client records, calendar views, and reminder history.</span>
               </div>
             </div>
           </div>
@@ -686,13 +665,13 @@
         </div>
         <div class="stat-card">
           <span class="stat-value">Bronze</span>
-          <span class="stat-title">When you need more</span>
-          <div class="stat-copy">Saved contacts, reminder history, client details, and calendar views live behind the account layer.</div>
+          <span class="stat-title">If you want more later</span>
+          <div class="stat-copy">Saved contacts, reminder history, and calendar views are there for businesses that want more organization over time.</div>
         </div>
       </div>
     </section>
 
-    <section class="section-panel">
+    <section class="section-panel" id="why-choose">
       <div class="section-head">
         <div class="section-tag">Why Choose Us</div>
         <h2>Built around practicality, not feature clutter.</h2>
@@ -713,7 +692,7 @@
         <article class="principle-card">
           <div class="icon-badge">03</div>
           <h3>Records that stay useful</h3>
-          <p>Bronze does more than store contacts. It adds reminder history, calendar context, and message records that make client follow-up easier to understand.</p>
+          <p>For people who want more than a one-time send, the product can also keep reminder history and message records that are easier to revisit later.</p>
         </article>
         <article class="principle-card">
           <div class="icon-badge">04</div>
@@ -735,32 +714,32 @@
 
     <section class="section-panel">
       <div class="section-head">
-        <div class="section-tag">What It Does Today</div>
-        <h2>What the product already gives you right now.</h2>
-        <p>No vague promises here. These are the kinds of things the current product is already designed to help with.</p>
+        <div class="section-tag">How People Use It</div>
+        <h2>Start simple, then add more structure only if you need it.</h2>
+        <p>This product is designed to feel useful on day one, without forcing first-time users into an account-heavy setup right away.</p>
       </div>
 
-      <div class="truth-grid">
-        <article class="truth-card">
-          <h3>The free workflow</h3>
+      <div class="simple-grid">
+        <article class="simple-card">
+          <h3>Start with the reminder flow</h3>
           <p>If someone simply needs to send a cleaner reminder without signing into a huge system, the core flow already handles that well.</p>
-          <div class="truth-list">
-            <div class="truth-item">
-              <div class="truth-item-number">1</div>
+          <div class="simple-list">
+            <div class="simple-item">
+              <div class="simple-item-mark">1</div>
               <div>
                 <strong>Guided reminder form</strong>
                 <span>One question at a time, with review before sending.</span>
               </div>
             </div>
-            <div class="truth-item">
-              <div class="truth-item-number">2</div>
+            <div class="simple-item">
+              <div class="simple-item-mark">2</div>
               <div>
                 <strong>Email or text path</strong>
                 <span>Choose automated email or send a text from the current device.</span>
               </div>
             </div>
-            <div class="truth-item">
-              <div class="truth-item-number">3</div>
+            <div class="simple-item">
+              <div class="simple-item-mark">3</div>
               <div>
                 <strong>Cleaner communication</strong>
                 <span>The message stays polished without forcing the user through a complicated setup.</span>
@@ -769,26 +748,26 @@
           </div>
         </article>
 
-        <article class="truth-card">
-          <h3>The Bronze layer</h3>
-          <p>Bronze is for businesses that want reminders to turn into a more organized client follow-up workflow.</p>
-          <div class="truth-list">
-            <div class="truth-item">
-              <div class="truth-item-number">1</div>
+        <article class="simple-card">
+          <h3>Add organization later</h3>
+          <p>Some businesses eventually want the reminder process to connect to a better record of who was contacted and what happened after the send.</p>
+          <div class="simple-list">
+            <div class="simple-item">
+              <div class="simple-item-mark">A</div>
               <div>
                 <strong>Saved contacts</strong>
                 <span>Keep client details in one place and reuse them later.</span>
               </div>
             </div>
-            <div class="truth-item">
-              <div class="truth-item-number">2</div>
+            <div class="simple-item">
+              <div class="simple-item-mark">B</div>
               <div>
                 <strong>Calendar view</strong>
                 <span>See upcoming and previous appointments in month and week layouts.</span>
               </div>
             </div>
-            <div class="truth-item">
-              <div class="truth-item-number">3</div>
+            <div class="simple-item">
+              <div class="simple-item-mark">C</div>
               <div>
                 <strong>Reminder history</strong>
                 <span>Track message content, delivery flow, and likely email opens inside the client record.</span>
@@ -826,61 +805,13 @@
     </section>
 
     <section class="section-panel">
-      <div class="split-grid">
-        <article class="mission-card">
-          <div class="section-tag">Our Mission</div>
-          <h3>Make reminders feel professional without making the work feel heavier.</h3>
-          <p>The mission is to help businesses reduce confusion, send clearer messages, and stay more organized around appointments, all without forcing them into a bloated system.</p>
-          <div class="mission-list">
-            <div class="mission-item">
-              <div class="mission-item-mark">A</div>
-              <div>
-                <strong>Accessibility first</strong>
-                <span>Readable layouts, larger controls, and a guided flow matter because not every user wants a dense dashboard.</span>
-              </div>
-            </div>
-            <div class="mission-item">
-              <div class="mission-item-mark">B</div>
-              <div>
-                <strong>Clarity over noise</strong>
-                <span>The design aims to make the next action obvious instead of filling the screen with features people do not need right away.</span>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="mission-card">
-          <div class="section-tag">Our Vision</div>
-          <h3>Grow from reminder tool into a cleaner client follow-up system.</h3>
-          <p>The long-term direction is not to become another confusing software stack. It is to keep building a system that helps businesses remember clients, track communication, and feel more in control of their schedule.</p>
-          <div class="mission-list">
-            <div class="mission-item">
-              <div class="mission-item-mark">C</div>
-              <div>
-                <strong>Useful history</strong>
-                <span>Businesses should be able to see what was sent, when it was sent, and what happened after it.</span>
-              </div>
-            </div>
-            <div class="mission-item">
-              <div class="mission-item-mark">D</div>
-              <div>
-                <strong>Sane expansion</strong>
-                <span>New features should make the workflow stronger, not harder to understand.</span>
-              </div>
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="section-panel">
       <article class="cta-card">
         <div class="section-tag">Ready to Use It</div>
-        <h3>Start with the reminder flow, then grow into contacts, history, and calendar tools if you need them.</h3>
-        <p>The product is already useful as a cleaner reminder sender. If your business needs more structure, the account side adds saved clients, reminder history, and calendar views without losing that simple feel.</p>
+        <h3>Start with the reminder flow first. Decide on the rest later.</h3>
+        <p>The product is meant to feel approachable for first-time users. You can start by sending a cleaner reminder today, then decide later whether you want the more organized client and history tools.</p>
         <div class="cta-actions">
           <a class="button" href="index.html">Go to the Reminder Tool</a>
-          <a class="button-secondary" href="account.html">Open Client Details</a>
+          <a class="button-secondary" href="#why-choose">Read the highlights again</a>
         </div>
         <div class="disclaimer">This page is written to reflect what the product does today. It is meant to market the product honestly, not exaggerate it.</div>
       </article>
