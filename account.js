@@ -379,7 +379,7 @@ function getReminderStatusLabel(entry) {
   }
 
   if (rawStatus.includes("open")) {
-    return "Opened";
+    return "Likely opened";
   }
 
   if (rawStatus.includes("calendar")) {
@@ -399,7 +399,7 @@ function getReminderStatusLabel(entry) {
   }
 
   if (entry?.opened_at || entry?.open_at) {
-    return "Opened";
+    return "Likely opened";
   }
 
   return "Sent";
@@ -595,7 +595,7 @@ async function loadReminderHistory(ownerId) {
 }
 
 function renderReminderHistory(client) {
-  const historyEntries = getDedupedReminderHistoryEntries(client).slice(0, 4);
+  const historyEntries = getDedupedReminderHistoryEntries(client).slice(0, 1);
 
   if (!historyEntries.length) {
     return `<span class="table-muted">${reminderHistoryReady ? "No reminders yet" : "History setup needed"}</span>`;
