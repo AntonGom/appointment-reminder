@@ -999,12 +999,19 @@ button.calendar-week-mobile-day {
     grid-template-columns: 1fr;
   }
 
-  .calendar-layout {
+  .calendar-layout,
+  .calendar-layout.is-week-view,
+  .calendar-layout.is-month-view {
     grid-template-columns: 1fr;
   }
 
   .calendar-layout.is-month-view .appointment-lists {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-layout > .section-card,
+  .calendar-layout > .appointment-lists {
+    min-width: 0;
   }
 
   .button-row button,
