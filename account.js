@@ -616,7 +616,7 @@ function renderReminderHistory(client) {
     <div class="history-stack">
       ${historyEntries.map(entry => `
         <div class="history-entry">
-          <div class="history-channel">${renderStatusLabelWithHelp(getReminderStatusLabel(entry))}</div>
+          <div class="history-channel">${renderStatusLabelWithHelp(getReminderStatusLabel(entry), getReminderStatusClass(getReminderStatusLabel(entry)))}</div>
           <div class="history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</div>
         </div>
       `).join("")}
