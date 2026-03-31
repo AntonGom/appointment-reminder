@@ -34,7 +34,7 @@ let appConfig = null;
 let appointments = [];
 let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
-let selectedDateKey = "";
+let selectedDateKey = getTodayKey();
 let currentAuthUserId = "";
 let currentCalendarView = "week";
 const WEEK_HOURS = Array.from({ length: 13 }, (_value, index) => index + 7);
