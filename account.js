@@ -552,6 +552,65 @@ function getDedupedReminderHistoryEntries(client) {
   });
 }
 
+function getReminderGroupKey(entry) {
+  const messageId = String(entry?.message_id || "").trim();
+
+  if (messageId) {
+    return `message:${messageId}`;
+  }
+
+  return [
+    String(entry?.channel || "").trim().toLowerCase(),
+    String(entry?.source || "").trim().toLowerCase(),
+    String(getReminderMessagePreview(entry) || "").trim(),
+    String(entry?.sent_at || entry?.occurred_at || entry?.created_at || "").trim()
+  ].join("|");
+}
+
+function getGroupedReminderHistory(client) {
+  const dedupedEntries = getDedupedReminderHistoryEntries(client);
+  const groups = [];
+  const groupsByKey = new Map();
+
+  dedupedEntries.forEach(entry => {
+    const key = getReminderGroupKey(entry);
+
+    if (!groupsByKey.has(key)) {
+      const group = {
+        key,
+        entries: [],
+        latestEntry: entry,
+        earliestEntry: entry,
+        messagePreview: getReminderMessagePreview(entry)
+      };
+      groupsByKey.set(key, group);
+      groups.push(group);
+    }
+
+    const group = groupsByKey.get(key);
+    group.entries.push(entry);
+
+    if (getReminderEventTimestamp(entry) > getReminderEventTimestamp(group.latestEntry)) {
+      group.latestEntry = entry;
+    }
+
+    if (getReminderEventTimestamp(entry) < getReminderEventTimestamp(group.earliestEntry)) {
+      group.earliestEntry = entry;
+    }
+
+    if (!group.messagePreview) {
+      group.messagePreview = getReminderMessagePreview(entry);
+    }
+  });
+
+  return groups
+    .map(group => ({
+      ...group,
+      entries: [...group.entries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left))
+    }))
+    .sort((left, right) => getReminderEventTimestamp(right.latestEntry) - getReminderEventTimestamp(left.latestEntry));
+}
+
 function getReminderSourceLabel(entry) {
   const source = String(entry?.source || "").trim().toLowerCase();
 
@@ -647,29 +706,46 @@ function renderReminderHistory(client) {
 }
 
 function renderExpandedReminderHistory(client) {
-  const historyEntries = getDedupedReminderHistoryEntries(client);
+  const reminderGroups = getGroupedReminderHistory(client);
 
-  if (!historyEntries.length) {
+  if (!reminderGroups.length) {
     return `<div class="expanded-empty">${reminderHistoryReady ? "No reminder activity for this client yet." : "Reminder history setup is still needed."}</div>`;
   }
 
   return `
     <div class="expanded-history-list">
-      ${historyEntries.map(entry => {
-        const statusLabel = getReminderStatusLabel(entry);
-        const channelLabel = getReminderHistoryChannelLabel(entry);
-        const sourceLabel = getReminderSourceLabel(entry);
-        const messagePreview = getReminderMessagePreview(entry);
+      ${reminderGroups.map(group => {
+        const statusLabel = getReminderStatusLabel(group.latestEntry);
+        const channelLabel = getReminderHistoryChannelLabel(group.latestEntry);
+        const sourceLabel = getReminderSourceLabel(group.latestEntry);
+        const messagePreview = group.messagePreview;
         const metaParts = [channelLabel, sourceLabel].filter(Boolean);
+        const sentOnLabel = getReminderEventTimeLabel(group.earliestEntry);
+        const latestUpdateLabel = getReminderEventTimeLabel(group.latestEntry);
+        const timelineMarkup = group.entries.map(entry => {
+          const entryStatusLabel = getReminderStatusLabel(entry);
+
+          return `
+            <div class="expanded-history-timeline-entry">
+              ${renderStatusLabelWithHelp(entryStatusLabel, getReminderStatusClass(entryStatusLabel))}
+              <span class="expanded-history-timeline-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
+            </div>
+          `;
+        }).join("");
 
         return `
           <div class="expanded-history-entry">
             <div class="expanded-history-top">
               ${renderStatusLabelWithHelp(statusLabel, getReminderStatusClass(statusLabel))}
-              <span class="expanded-history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
+              <span class="expanded-history-time">${escapeHtml(latestUpdateLabel)}</span>
             </div>
             <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
+            <div class="expanded-history-dates">
+              <div><strong>Sent on:</strong> ${escapeHtml(sentOnLabel)}</div>
+              <div><strong>Latest update:</strong> ${escapeHtml(latestUpdateLabel)}</div>
+            </div>
             ${messagePreview ? `<div class="expanded-message-preview">${escapeHtml(messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
+            <div class="expanded-history-timeline">${timelineMarkup}</div>
           </div>
         `;
       }).join("")}

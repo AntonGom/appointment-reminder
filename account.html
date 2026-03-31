@@ -936,6 +936,18 @@
       line-height: 1.55;
     }
 
+    .expanded-history-dates {
+      display: grid;
+      gap: 4px;
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .expanded-history-dates strong {
+      color: #1e3a8a;
+    }
+
     .expanded-message-preview {
       padding: 12px 14px;
       border-radius: 14px;
@@ -947,14 +959,50 @@
       word-break: break-word;
     }
 
+    .expanded-history-timeline {
+      display: grid;
+      gap: 8px;
+    }
+
+    .expanded-history-timeline-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(203, 213, 225, 0.88);
+    }
+
+    .expanded-history-timeline-time {
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
     .client-detail-modal {
       max-width: 760px;
+      width: min(760px, calc(100vw - 24px));
+      max-height: min(82vh, 920px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
     }
 
     .client-detail-modal-actions {
       display: flex;
       justify-content: flex-end;
       margin-top: 18px;
+    }
+
+    #client-detail-body {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 4px;
+      margin-right: -4px;
     }
 
     .client-detail-modal-actions button {
@@ -1506,6 +1554,6 @@
   </div>
 
   <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="account.js?v=20260331m"></script>
+  <script type="module" src="account.js?v=20260331n"></script>
 </body>
 </html>
