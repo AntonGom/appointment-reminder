@@ -34,6 +34,9 @@ const clientDetailTitle = document.getElementById("client-detail-title");
 const clientDetailCopy = document.getElementById("client-detail-copy");
 const clientDetailBody = document.getElementById("client-detail-body");
 const closeClientDetailButton = document.getElementById("close-client-detail-button");
+const statusHelpModal = document.getElementById("status-help-modal");
+const statusHelpCopy = document.getElementById("status-help-copy");
+const closeStatusHelpButton = document.getElementById("close-status-help-button");
 const clientsSearchInput = document.getElementById("clients-search");
 const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
@@ -427,7 +430,7 @@ function getStatusHelpText(label) {
   const normalized = String(label || "").trim().toLowerCase();
 
   if (normalized === "likely opened") {
-    return "Likely opened means the email provider saw signs the reminder was opened, but some apps can make this an estimate instead of a guarantee.";
+    return "We highly believe the client has opened this message from the return information we received, but we cannot 100% guarantee they opened this email.";
   }
 
   return "";
@@ -454,6 +457,25 @@ function renderStatusLabelWithHelp(label, statusClass = "") {
       ${iconMarkup}
     </span>
   `;
+}
+
+function openStatusHelpModal(message) {
+  if (!statusHelpModal || !statusHelpCopy) {
+    return;
+  }
+
+  statusHelpCopy.textContent = message || "This status is estimated.";
+  statusHelpModal.hidden = false;
+  statusHelpModal.classList.add("visible");
+}
+
+function closeStatusHelpModal() {
+  if (!statusHelpModal) {
+    return;
+  }
+
+  statusHelpModal.classList.remove("visible");
+  statusHelpModal.hidden = true;
 }
 
 function getReminderEventTimestamp(entry) {
@@ -1641,7 +1663,7 @@ function handleClientsListClick(event) {
   if (helpButton) {
     event.preventDefault();
     event.stopPropagation();
-    alert(helpButton.dataset.statusHelp || "This status is estimated.");
+    openStatusHelpModal(helpButton.dataset.statusHelp || "This status is estimated.");
     return;
   }
 
@@ -1811,7 +1833,7 @@ async function initAccountPage() {
       if (helpButton) {
         event.preventDefault();
         event.stopPropagation();
-        alert(helpButton.dataset.statusHelp || "This status is estimated.");
+        openStatusHelpModal(helpButton.dataset.statusHelp || "This status is estimated.");
         return;
       }
 
@@ -1821,11 +1843,21 @@ async function initAccountPage() {
     });
   }
 
+  if (statusHelpModal) {
+    statusHelpModal.addEventListener("click", event => {
+      if (event.target === statusHelpModal) {
+        closeStatusHelpModal();
+      }
+    });
+  }
+
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && clientModal && !clientModal.hidden) {
       resetClientForm();
     } else if (event.key === "Escape" && clientDetailModal && !clientDetailModal.hidden) {
       closeClientDetailModal();
+    } else if (event.key === "Escape" && statusHelpModal && !statusHelpModal.hidden) {
+      closeStatusHelpModal();
     }
   });
 
@@ -1864,6 +1896,10 @@ async function initAccountPage() {
 
   if (closeClientDetailButton) {
     closeClientDetailButton.addEventListener("click", closeClientDetailModal);
+  }
+
+  if (closeStatusHelpButton) {
+    closeStatusHelpButton.addEventListener("click", closeStatusHelpModal);
   }
 }
 
