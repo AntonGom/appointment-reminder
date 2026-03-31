@@ -20,6 +20,7 @@ const contactsCountTargets = [...document.querySelectorAll("[data-contacts-count
 let supabase = null;
 let appConfig = null;
 let runtimeConfig = null;
+let currentAuthUserId = "";
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -345,10 +346,22 @@ async function initPage() {
     data: { session }
   } = await supabase.auth.getSession();
 
+  currentAuthUserId = session?.user?.id || "";
   updateSignedInView(session?.user || null);
   await loadContactCount(session?.user || null);
 
-  supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+  supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    if (event === "TOKEN_REFRESHED") {
+      return;
+    }
+
+    const nextUserId = nextSession?.user?.id || "";
+
+    if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+      return;
+    }
+
+    currentAuthUserId = nextUserId;
     updateSignedInView(nextSession?.user || null);
     await loadContactCount(nextSession?.user || null);
   });

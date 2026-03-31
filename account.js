@@ -46,6 +46,7 @@ let clientsSortMode = "newest";
 let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
+let currentAuthUserId = "";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 
@@ -922,6 +923,7 @@ async function initSupabase() {
     data: { session }
   } = await supabase.auth.getSession();
 
+  currentAuthUserId = session?.user?.id || "";
   await syncSignedInState(session?.user || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
@@ -929,6 +931,13 @@ async function initSupabase() {
       return;
     }
 
+    const nextUserId = nextSession?.user?.id || "";
+
+    if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+      return;
+    }
+
+    currentAuthUserId = nextUserId;
     await syncSignedInState(nextSession?.user || null);
   });
 }

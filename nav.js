@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let supabaseClient = null;
   let isSignedIn = false;
+  let currentAuthUserId = "";
 
   function closeNav() {
     nav.classList.remove("open");
@@ -274,10 +275,24 @@ document.addEventListener("DOMContentLoaded", () => {
       } = await supabaseClient.auth.getSession();
 
       if (session?.user) {
+        currentAuthUserId = session.user.id || "";
         renderSignedInChip(session.user);
+      } else {
+        currentAuthUserId = "";
       }
 
-      supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
+      supabaseClient.auth.onAuthStateChange((event, nextSession) => {
+        if (event === "TOKEN_REFRESHED") {
+          return;
+        }
+
+        const nextUserId = nextSession?.user?.id || "";
+
+        if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+          return;
+        }
+
+        currentAuthUserId = nextUserId;
         if (nextSession?.user) {
           renderSignedInChip(nextSession.user);
         } else {

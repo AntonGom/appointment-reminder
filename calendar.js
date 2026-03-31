@@ -32,6 +32,7 @@ let appointments = [];
 let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = "";
+let currentAuthUserId = "";
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -784,6 +785,7 @@ async function initPage() {
     data: { session }
   } = await supabase.auth.getSession();
 
+  currentAuthUserId = session?.user?.id || "";
   updateSignedInView(session?.user || null);
   await loadAppointments(session?.user || null);
 
@@ -792,6 +794,13 @@ async function initPage() {
       return;
     }
 
+    const nextUserId = nextSession?.user?.id || "";
+
+    if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+      return;
+    }
+
+    currentAuthUserId = nextUserId;
     updateSignedInView(nextSession?.user || null);
     await loadAppointments(nextSession?.user || null);
   });

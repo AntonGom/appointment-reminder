@@ -47,6 +47,7 @@ let appSupabase = null;
 let appPublicConfig = null;
 let currentSignedInUser = null;
 let currentUserTier = "free";
+let currentAuthUserId = "";
 
 function getTierKey(user) {
   const candidates = [
@@ -132,9 +133,21 @@ async function initAccountTierState() {
     } = await appSupabase.auth.getSession();
 
     currentSignedInUser = session?.user || null;
+    currentAuthUserId = session?.user?.id || "";
     renderBronzeFeatures();
 
-    appSupabase.auth.onAuthStateChange((_event, nextSession) => {
+    appSupabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "TOKEN_REFRESHED") {
+        return;
+      }
+
+      const nextUserId = nextSession?.user?.id || "";
+
+      if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+        return;
+      }
+
+      currentAuthUserId = nextUserId;
       currentSignedInUser = nextSession?.user || null;
       renderBronzeFeatures();
     });
