@@ -371,9 +371,9 @@ h1 {
 }
 
 .calendar-month-strip {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  display: flex;
   gap: 10px;
+  align-items: stretch;
 }
 
 .calendar-weekday {
@@ -397,6 +397,8 @@ h1 {
 }
 
 .calendar-month-strip .calendar-day {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 126px;
 }
 
@@ -910,7 +912,6 @@ button:disabled {
   }
 
   .calendar-month-strip {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 6px;
   }
 
