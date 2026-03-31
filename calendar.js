@@ -11,6 +11,7 @@ const calendarLoading = document.getElementById("calendar-loading");
 const calendarLayout = document.getElementById("calendar-layout");
 const calendarMonthLabel = document.getElementById("calendar-month-label");
 const calendarMonthGrid = document.getElementById("calendar-month-grid");
+const calendarMonthWeekdays = document.getElementById("calendar-month-weekdays");
 const calendarMonthShell = document.getElementById("calendar-month-shell");
 const calendarWeekShell = document.getElementById("calendar-week-shell");
 const calendarWeekGrid = document.getElementById("calendar-week-grid");
@@ -36,7 +37,8 @@ let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = getTodayKey();
 let currentAuthUserId = "";
-let currentCalendarView = "week";
+const MOBILE_CALENDAR_QUERY = window.matchMedia("(max-width: 760px)");
+let currentCalendarView = MOBILE_CALENDAR_QUERY.matches ? "month" : "week";
 const WEEK_HOURS = Array.from({ length: 13 }, (_value, index) => index + 7);
 
 function setStatus(message, type = "info") {
@@ -403,6 +405,10 @@ function getAppointmentsSortedNewestFirst() {
   return [...appointments].sort((left, right) => parseAppointmentDateTime(right) - parseAppointmentDateTime(left));
 }
 
+function isCompactMobileCalendar() {
+  return MOBILE_CALENDAR_QUERY.matches;
+}
+
 function getWeekDates(anchorDate) {
   const weekStart = startOfWeek(anchorDate);
   return Array.from({ length: 7 }, (_value, index) => addDays(weekStart, index));
@@ -582,6 +588,7 @@ function renderMonthGrid() {
   const activeDate = getActiveDate();
   const stripDates = getMonthStripDates(activeDate);
   selectedDateKey = formatDateKey(activeDate);
+  const isMobile = isCompactMobileCalendar();
   const appointmentsByDay = new Map();
 
   stripDates.forEach(date => {
@@ -599,6 +606,13 @@ function renderMonthGrid() {
   });
 
   const todayKey = getTodayKey();
+
+  if (calendarMonthWeekdays) {
+    calendarMonthWeekdays.innerHTML = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      .map(day => `<div class="calendar-weekday">${day}</div>`)
+      .join("");
+  }
+
   const cells = stripDates.map(cellDate => {
     const dateKey = formatDateKey(cellDate);
     const dayAppointments = appointmentsByDay.get(dateKey) || [];
@@ -607,13 +621,14 @@ function renderMonthGrid() {
     const isToday = dateKey === todayKey;
     const isSelected = dateKey === selectedDateKey;
     const showMonthLabel = cellDate.getDate() === 1 || dateKey === selectedDateKey || cellDate.getMonth() !== activeDate.getMonth();
+    const mobileDots = Math.min(dayAppointments.length, 3);
 
     return `
       <div class="calendar-day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""} ${dayAppointments.length ? "has-appointments" : ""} ${isSelected ? "is-selected" : ""}" data-date-key="${dateKey}">
         ${showMonthLabel ? `<div class="calendar-day-month-label">${escapeHtml(new Intl.DateTimeFormat("en-US", { month: "short" }).format(cellDate))}</div>` : ""}
         <div class="calendar-day-head">
           <div class="calendar-day-number">${cellDate.getDate()}</div>
-          ${dayAppointments.length ? `<div class="calendar-day-count">${dayAppointments.length}</div>` : ""}
+          ${dayAppointments.length && !isMobile ? `<div class="calendar-day-count">${dayAppointments.length}</div>` : ""}
         </div>
         <div class="calendar-day-items">
           ${visibleAppointments.map(appointment => `
@@ -624,6 +639,7 @@ function renderMonthGrid() {
           `).join("")}
           ${dayAppointments.length > visibleAppointments.length ? `<div class="calendar-chip-more">+${dayAppointments.length - visibleAppointments.length} more</div>` : ""}
         </div>
+        ${isMobile && dayAppointments.length ? `<div class="calendar-day-dots" aria-hidden="true">${Array.from({ length: mobileDots }, () => `<span class="calendar-day-dot"></span>`).join("")}</div>` : ""}
       </div>
     `;
   });
@@ -1008,6 +1024,11 @@ async function initPage() {
     currentAuthUserId = nextUserId;
     updateSignedInView(nextSession?.user || null);
     await loadAppointments(nextSession?.user || null);
+  });
+
+  MOBILE_CALENDAR_QUERY.addEventListener("change", event => {
+    currentCalendarView = event.matches ? "month" : "week";
+    renderCalendar();
   });
 }
 
