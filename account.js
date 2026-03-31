@@ -784,6 +784,22 @@ function getLatestReminderSentAt(client) {
   return latestTimestamp;
 }
 
+function getLatestReminderStatusAt(client, targetStatus) {
+  const normalizedTarget = String(targetStatus || "").trim().toLowerCase();
+  const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
+
+  return historyEntries.reduce((latest, entry) => {
+    const statusLabel = getReminderStatusLabel(entry).trim().toLowerCase();
+
+    if (statusLabel !== normalizedTarget) {
+      return latest;
+    }
+
+    const timestamp = getReminderEventTimestamp(entry);
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, 0);
+}
+
 function renderExpandedClientDetails(client) {
   return `
     <div class="expanded-client-panel">
@@ -815,6 +831,32 @@ function sortContacts(contacts, mode = clientsSortMode) {
     return list.sort((left, right) => {
       const rightLatest = getLatestReminderSentAt(right);
       const leftLatest = getLatestReminderSentAt(left);
+
+      if (rightLatest !== leftLatest) {
+        return rightLatest - leftLatest;
+      }
+
+      return new Date(right.created_at || 0) - new Date(left.created_at || 0);
+    });
+  }
+
+  if (normalizedMode === "delivered") {
+    return list.sort((left, right) => {
+      const rightLatest = getLatestReminderStatusAt(right, "delivered");
+      const leftLatest = getLatestReminderStatusAt(left, "delivered");
+
+      if (rightLatest !== leftLatest) {
+        return rightLatest - leftLatest;
+      }
+
+      return new Date(right.created_at || 0) - new Date(left.created_at || 0);
+    });
+  }
+
+  if (normalizedMode === "opened") {
+    return list.sort((left, right) => {
+      const rightLatest = getLatestReminderStatusAt(right, "likely opened");
+      const leftLatest = getLatestReminderStatusAt(left, "likely opened");
 
       if (rightLatest !== leftLatest) {
         return rightLatest - leftLatest;
