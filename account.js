@@ -801,25 +801,8 @@ function getLatestReminderSentAt(client) {
 }
 
 function renderExpandedClientDetails(client) {
-  const serviceLocation = client.service_address
-    ? escapeHtml(client.service_address)
-    : `<span class="table-muted">Not added</span>`;
-  const additionalDetails = client.notes
-    ? escapeHtml(client.notes)
-    : `<span class="table-muted">No additional details saved.</span>`;
-
   return `
     <div class="expanded-client-panel">
-      <div class="expanded-client-grid">
-        <div class="expanded-client-block">
-          <div class="expanded-client-label">Service Location</div>
-          <div class="expanded-client-value">${serviceLocation}</div>
-        </div>
-        <div class="expanded-client-block">
-          <div class="expanded-client-label">Additional Details</div>
-          <div class="expanded-client-value">${additionalDetails}</div>
-        </div>
-      </div>
       <div class="expanded-client-block">
         <div class="expanded-client-label">Full Reminder Activity</div>
         ${renderExpandedReminderHistory(client)}
