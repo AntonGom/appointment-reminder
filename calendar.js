@@ -17,9 +17,6 @@ const calendarWeekGrid = document.getElementById("calendar-week-grid");
 const monthViewButton = document.getElementById("calendar-month-view");
 const weekViewButton = document.getElementById("calendar-week-view");
 const calendarMonthJump = document.getElementById("calendar-month-jump");
-const selectedDayTitle = document.getElementById("selected-day-title");
-const selectedDayCopy = document.getElementById("selected-day-copy");
-const selectedDayList = document.getElementById("selected-day-list");
 const upcomingList = document.getElementById("upcoming-list");
 const previousList = document.getElementById("previous-list");
 const upcomingCount = document.getElementById("upcoming-count");
@@ -39,7 +36,7 @@ let appointmentsReady = true;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = "";
 let currentAuthUserId = "";
-let currentCalendarView = "month";
+let currentCalendarView = "week";
 const WEEK_HOURS = Array.from({ length: 13 }, (_value, index) => index + 7);
 
 function setStatus(message, type = "info") {
@@ -265,14 +262,6 @@ function formatAppointmentChipMeta(appointment) {
     hour: "numeric",
     minute: "2-digit"
   }).format(date);
-}
-
-function formatSelectedDateCountLabel(count) {
-  if (count <= 0) {
-    return "";
-  }
-
-  return count === 1 ? "1" : String(count);
 }
 
 function normalizePhone(value) {
@@ -567,65 +556,6 @@ function renderCounts() {
   renderAppointmentList(previousList, previous.slice(0, 8), "No previous appointments yet.");
 }
 
-function renderSelectedDay(monthAppointments) {
-  if (!selectedDayTitle || !selectedDayCopy || !selectedDayList) {
-    return;
-  }
-
-  selectedDateKey = getSelectedDateKeyForCurrentView(monthAppointments);
-  const selectedDate = new Date(`${selectedDateKey}T00:00:00`);
-  const dateAppointments = getAppointmentsByDateKey(selectedDateKey)
-    .sort((left, right) => parseAppointmentDateTime(left) - parseAppointmentDateTime(right));
-
-  if (Number.isNaN(selectedDate.getTime())) {
-    selectedDayTitle.textContent = "Selected day";
-    selectedDayCopy.textContent = "Choose a day to see all appointments for that date.";
-    selectedDayList.innerHTML = `<div class="empty-state">No day is selected yet.</div>`;
-    return;
-  }
-
-  selectedDayTitle.textContent = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  }).format(selectedDate);
-
-  if (!dateAppointments.length) {
-    selectedDayCopy.textContent = "No appointments are saved for this day yet.";
-    selectedDayList.innerHTML = `
-      <div class="calendar-day is-selected selected-day-tile">
-        <div class="calendar-day-head">
-          <div class="calendar-day-number">${selectedDate.getDate()}</div>
-        </div>
-        <div class="selected-day-empty">This date is open right now.</div>
-      </div>
-    `;
-    return;
-  }
-
-  selectedDayCopy.textContent = dateAppointments.length === 1
-    ? "1 appointment is saved for this day."
-    : `${dateAppointments.length} appointments are saved for this day.`;
-  selectedDayList.innerHTML = `
-    <div class="calendar-day has-appointments is-selected selected-day-tile">
-      <div class="calendar-day-head">
-        <div class="calendar-day-number">${selectedDate.getDate()}</div>
-        <div class="calendar-day-count">${formatSelectedDateCountLabel(dateAppointments.length)}</div>
-      </div>
-      <div class="calendar-day-items">
-        ${dateAppointments.map(appointment => `
-          <div class="calendar-chip">
-            <strong>${escapeHtml(getAppointmentTitle(appointment))}</strong>
-            <span>${escapeHtml(formatAppointmentChipMeta(appointment))}</span>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-    ${dateAppointments.map(renderAppointmentRow).join("")}
-  `;
-}
-
 function renderMonthGrid() {
   if (!calendarMonthGrid) {
     return;
@@ -757,7 +687,7 @@ function renderWeekGrid() {
               <div class="calendar-week-appointment-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
               <div class="calendar-week-appointment-meta">${escapeHtml(appointment.service_location || "Appointment saved")}</div>
             </div>
-          `).join("") : `<div class="selected-day-empty">No anytime appointments</div>`}
+          `).join("") : ``}
         </div>
       `;
     })
@@ -805,10 +735,10 @@ function renderWeekGrid() {
 
 function renderCalendar() {
   const monthAppointments = getMonthAppointments(viewMonth);
+  selectedDateKey = getSelectedDateKeyForCurrentView(monthAppointments);
   renderCounts();
   renderMonthSelectors();
   renderViewMode();
-  renderSelectedDay(monthAppointments);
   if (currentCalendarView === "week") {
     renderWeekGrid();
   } else {

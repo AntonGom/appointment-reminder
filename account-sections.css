@@ -350,63 +350,6 @@ h1 {
   gap: 10px;
 }
 
-.selected-day-card {
-  display: grid;
-  gap: 14px;
-  margin-bottom: 18px;
-  padding: 18px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.96));
-  border: 1px solid rgba(191, 219, 254, 0.92);
-}
-
-.selected-day-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.selected-day-title {
-  margin: 0 0 6px;
-  color: var(--text-main);
-  font-size: 24px;
-  line-height: 1.2;
-  font-weight: 800;
-}
-
-.selected-day-copy {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.selected-day-list {
-  display: grid;
-  gap: 12px;
-}
-
-.selected-day-tile {
-  min-height: 0;
-  padding: 16px;
-}
-
-.selected-day-tile .calendar-day-items {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-}
-
-.selected-day-empty {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px dashed rgba(148, 163, 184, 0.62);
-  color: var(--text-soft);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .calendar-weekdays,
 .calendar-month-grid {
   display: grid;
@@ -912,10 +855,6 @@ button:disabled {
   .calendar-view-button,
   .calendar-toolbar-actions button {
     width: 100%;
-  }
-
-  .selected-day-card {
-    padding: 16px;
   }
 
   .calendar-weekdays,

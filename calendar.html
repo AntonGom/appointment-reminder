@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260331e">
+  <link rel="stylesheet" href="account-sections.css?v=20260331f">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -87,8 +87,8 @@
                   </div>
                   <div class="calendar-toolbar-actions">
                     <div class="calendar-view-toggle" role="tablist" aria-label="Calendar view">
-                      <button id="calendar-month-view" class="calendar-view-button is-active" type="button" aria-pressed="true">Month</button>
-                      <button id="calendar-week-view" class="calendar-view-button" type="button" aria-pressed="false">Week</button>
+                      <button id="calendar-month-view" class="calendar-view-button" type="button" aria-pressed="false">Month</button>
+                      <button id="calendar-week-view" class="calendar-view-button is-active" type="button" aria-pressed="true">Week</button>
                     </div>
                     <div id="calendar-month-jump" class="calendar-month-jump">
                       <select id="calendar-month-select" class="calendar-select" aria-label="Select month"></select>
@@ -98,15 +98,6 @@
                     <button id="calendar-today" class="secondary-button" type="button">Today</button>
                     <button id="calendar-next" class="secondary-button" type="button">Next</button>
                   </div>
-                </div>
-                <div id="selected-day-card" class="selected-day-card">
-                  <div class="selected-day-head">
-                    <div>
-                      <h3 id="selected-day-title" class="selected-day-title">Selected day</h3>
-                      <p id="selected-day-copy" class="selected-day-copy">Choose a day to see all appointments for that date.</p>
-                    </div>
-                  </div>
-                  <div id="selected-day-list" class="selected-day-list"></div>
                 </div>
                 <div id="calendar-month-shell" class="calendar-view-shell">
                   <div class="calendar-weekdays" aria-hidden="true">
@@ -164,6 +155,6 @@
   </div>
 
   <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="calendar.js?v=20260331f"></script>
+  <script type="module" src="calendar.js?v=20260331g"></script>
 </body>
 </html>
