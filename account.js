@@ -746,7 +746,8 @@ function renderExpandedReminderHistory(client) {
         const metaParts = [channelLabel, sourceLabel].filter(Boolean);
         const sentOnLabel = getReminderEventTimeLabel(group.earliestEntry);
         const latestUpdateLabel = getReminderEventTimeLabel(group.latestEntry);
-        const timelineMarkup = group.entries.map(entry => {
+        const priorTimelineEntries = group.entries.slice(1);
+        const timelineMarkup = priorTimelineEntries.map(entry => {
           const entryStatusLabel = getReminderStatusLabel(entry);
 
           return `
@@ -769,7 +770,7 @@ function renderExpandedReminderHistory(client) {
               <div><strong>Latest update:</strong> ${escapeHtml(latestUpdateLabel)}</div>
             </div>
             ${messagePreview ? `<div class="expanded-message-preview">${escapeHtml(messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
-            <div class="expanded-history-timeline">${timelineMarkup}</div>
+            ${timelineMarkup ? `<div class="expanded-history-timeline">${timelineMarkup}</div>` : ""}
           </div>
         `;
       }).join("")}
