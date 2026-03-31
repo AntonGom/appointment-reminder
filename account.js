@@ -1035,7 +1035,7 @@ async function handleSaveClient(event) {
     client_name: String(formData.get("client_name") || "").trim().slice(0, 30),
     client_email: String(formData.get("client_email") || "").trim(),
     client_phone: normalizePhone(formData.get("client_phone") || ""),
-    service_address: String(formData.get("service_address") || "").trim().slice(0, 40),
+    service_address: String(formData.get("service_address") || "").trim().slice(0, 160),
     notes: String(formData.get("notes") || "").trim().slice(0, 1200),
     updated_at: new Date().toISOString()
   };

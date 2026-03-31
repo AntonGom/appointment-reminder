@@ -743,6 +743,122 @@ async function logBronzeReminderHistory({ clientId, channel, source }) {
   }
 }
 
+function buildBronzeAppointmentPayload({ clientId, channel, source }) {
+  if (!currentSignedInUser?.id) {
+    return null;
+  }
+
+  const serviceDate = getFieldValue("date");
+
+  if (!serviceDate) {
+    return null;
+  }
+
+  const serviceTime = getFieldValue("time");
+
+  return {
+    owner_id: currentSignedInUser.id,
+    client_id: clientId || null,
+    client_name: getFieldValue("name").slice(0, 30),
+    client_email: getFieldValue("email"),
+    client_phone: getPhoneDigits(),
+    service_date: serviceDate,
+    service_time: serviceTime || null,
+    service_location: getFieldValue("address").slice(0, FIELD_LIMITS.address.maxLength),
+    notes: getFieldValue("notes").slice(0, 1200),
+    last_channel: channel || null,
+    last_source: source || "",
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function findExistingBronzeAppointmentId(payload) {
+  if (!appSupabase || !payload?.owner_id || !payload?.service_date) {
+    return null;
+  }
+
+  const lookupRules = [];
+
+  if (payload.client_id) {
+    lookupRules.push({ column: "client_id", value: payload.client_id });
+  }
+
+  if (payload.client_email) {
+    lookupRules.push({ column: "client_email", value: payload.client_email });
+  }
+
+  if (payload.client_phone) {
+    lookupRules.push({ column: "client_phone", value: payload.client_phone });
+  }
+
+  for (const rule of lookupRules) {
+    let query = appSupabase
+      .from("appointments")
+      .select("id")
+      .eq("owner_id", payload.owner_id)
+      .eq(rule.column, rule.value)
+      .eq("service_date", payload.service_date)
+      .limit(1);
+
+    query = payload.service_time
+      ? query.eq("service_time", payload.service_time)
+      : query.is("service_time", null);
+
+    const { data, error } = await query.maybeSingle();
+
+    if (!error && data?.id) {
+      return data.id;
+    }
+  }
+
+  return null;
+}
+
+async function upsertBronzeAppointment({ clientId, channel, source }) {
+  if (!appSupabase || !currentSignedInUser || !isBronzeUser()) {
+    return null;
+  }
+
+  const payload = buildBronzeAppointmentPayload({ clientId, channel, source });
+
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const existingId = await findExistingBronzeAppointmentId(payload);
+
+    if (existingId) {
+      const { error } = await appSupabase
+        .from("appointments")
+        .update(payload)
+        .eq("id", existingId)
+        .eq("owner_id", payload.owner_id);
+
+      if (error) {
+        throw error;
+      }
+
+      return existingId;
+    }
+
+    const { data, error } = await appSupabase
+      .from("appointments")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.id || null;
+  } catch (error) {
+    console.warn("Unable to save Bronze appointment.", error);
+    return null;
+  }
+}
+
 function hasUnsavedFormData() {
   if (safeToLeaveAfterSend) {
     return false;
@@ -1340,6 +1456,11 @@ async function confirmSendBrevoEmail() {
 
     if (res.ok && data.success) {
       const clientId = await autoSaveBronzeContact();
+      await upsertBronzeAppointment({
+        clientId,
+        channel: "email",
+        source: "automated_email"
+      });
       await logBronzeReminderHistory({
         clientId,
         channel: "email",
@@ -1388,6 +1509,11 @@ async function sendLocalText() {
   }
 
   const clientId = await autoSaveBronzeContact();
+  await upsertBronzeAppointment({
+    clientId,
+    channel: "sms",
+    source: "device_sms"
+  });
   await logBronzeReminderHistory({
     clientId,
     channel: "sms",

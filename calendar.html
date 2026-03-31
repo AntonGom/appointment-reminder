@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar</title>
+  <link rel="stylesheet" href="nav.css?v=20260326j">
+  <link rel="stylesheet" href="account-sections.css?v=20260331a">
+</head>
+<body data-page="calendar">
+  <div class="page">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">
+          Calendar
+          <span id="price-pill" class="price-pill">Optional Bronze</span>
+        </div>
+        <h1>Appointments calendar</h1>
+        <p class="lead">See upcoming and previous appointments in one place.</p>
+      </div>
+    </section>
+
+    <div id="status-banner" class="status-banner" hidden></div>
+
+    <section class="panel">
+      <div class="panel-content">
+        <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
+
+        <nav class="account-page-nav" aria-label="Account pages">
+          <a class="account-page-link" href="account.html">Client Details</a>
+          <a class="account-page-link is-active" href="calendar.html">Calendar</a>
+          <a class="account-page-link" href="account-info.html">Account Info</a>
+          <a class="account-page-link" href="settings.html">Settings</a>
+          <a class="account-page-link" href="form-creator.html">Form Creator</a>
+        </nav>
+
+        <div class="content-stack">
+          <div id="signed-out-shell" class="section-card">
+            <h2 class="section-title">Sign in to view your calendar</h2>
+            <p class="signed-out-copy">Go to the Client Details page to sign in first. Then come back here to see your saved appointments.</p>
+            <div class="button-row" style="margin-top:16px;">
+              <a class="primary-link" href="account.html">Go to Sign In</a>
+            </div>
+          </div>
+
+          <div id="free-shell" class="section-card" hidden>
+            <h2 class="section-title">Calendar is part of Bronze</h2>
+            <p class="card-copy">Free accounts can still use the reminder form, but the calendar only fills in when Bronze saves appointments to your account.</p>
+            <div class="button-row" style="margin-top:16px;">
+              <a class="primary-link" href="settings.html">Go to Settings</a>
+            </div>
+          </div>
+
+          <div id="bronze-shell" class="calendar-shell" hidden>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-label">Upcoming</div>
+                <div id="upcoming-count" class="summary-value">0</div>
+                <p class="summary-copy">Appointments that are still ahead.</p>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Previous</div>
+                <div id="previous-count" class="summary-value">0</div>
+                <p class="summary-copy">Appointments that already passed.</p>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">This Month</div>
+                <div id="month-count" class="summary-value">0</div>
+                <p class="summary-copy">Appointments in the month you are viewing.</p>
+              </div>
+            </div>
+
+            <div id="appointments-setup-notice" class="notice" hidden>Appointments setup is still needed. Run the new SQL file in Supabase to turn this calendar on.</div>
+
+            <div id="calendar-loading" class="loading-card" hidden>
+              <div class="loading-spinner" aria-hidden="true"></div>
+              <p class="loading-title">Loading appointments...</p>
+              <p class="loading-copy">Pulling your saved appointments and building the calendar.</p>
+            </div>
+
+            <div id="calendar-layout" class="calendar-layout" hidden>
+              <div class="section-card">
+                <div class="calendar-toolbar">
+                  <div class="calendar-toolbar-copy">
+                    <h2 id="calendar-month-label" class="calendar-month-label">Month</h2>
+                    <p class="calendar-subcopy">Appointments are added automatically after a Bronze reminder is sent with a date.</p>
+                  </div>
+                  <div class="calendar-toolbar-actions">
+                    <button id="calendar-prev" class="secondary-button" type="button">Prev</button>
+                    <button id="calendar-today" class="secondary-button" type="button">Today</button>
+                    <button id="calendar-next" class="secondary-button" type="button">Next</button>
+                  </div>
+                </div>
+                <div class="calendar-weekdays" aria-hidden="true">
+                  <div class="calendar-weekday">Sun</div>
+                  <div class="calendar-weekday">Mon</div>
+                  <div class="calendar-weekday">Tue</div>
+                  <div class="calendar-weekday">Wed</div>
+                  <div class="calendar-weekday">Thu</div>
+                  <div class="calendar-weekday">Fri</div>
+                  <div class="calendar-weekday">Sat</div>
+                </div>
+                <div id="calendar-month-grid" class="calendar-month-grid"></div>
+              </div>
+
+              <div class="appointment-lists">
+                <div class="section-card appointments-card">
+                  <div class="appointments-card-head">
+                    <div>
+                      <h3>Upcoming appointments</h3>
+                      <p>The next appointments saved to this account.</p>
+                    </div>
+                  </div>
+                  <div id="upcoming-list" class="appointment-list"></div>
+                </div>
+
+                <div class="section-card appointments-card">
+                  <div class="appointments-card-head">
+                    <div>
+                      <h3>Previous appointments</h3>
+                      <p>The most recent appointments that already passed.</p>
+                    </div>
+                  </div>
+                  <div id="previous-list" class="appointment-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="nav.js?v=20260326j"></script>
+  <script type="module" src="calendar.js?v=20260331a"></script>
+</body>
+</html>
