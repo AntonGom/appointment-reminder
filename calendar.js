@@ -647,10 +647,101 @@ function renderMonthGrid() {
   calendarMonthGrid.innerHTML = cells.join("");
 }
 
+function renderMobileWeekGrid() {
+  if (!calendarWeekGrid) {
+    return;
+  }
+
+  const activeDate = getActiveDate();
+  const weekDates = getWeekDates(activeDate);
+  const todayKey = getTodayKey();
+  const appointmentsByDateKey = new Map();
+
+  weekDates.forEach(date => {
+    appointmentsByDateKey.set(formatDateKey(date), []);
+  });
+
+  getWeekAppointments(weekDates).forEach(appointment => {
+    const dateKey = String(appointment?.service_date || "").trim();
+
+    if (!appointmentsByDateKey.has(dateKey)) {
+      appointmentsByDateKey.set(dateKey, []);
+    }
+
+    appointmentsByDateKey.get(dateKey).push(appointment);
+  });
+
+  const weekStart = weekDates[0];
+  const weekEnd = weekDates[6];
+
+  if (calendarMonthLabel) {
+    calendarMonthLabel.textContent = formatWeekLabel(weekStart, weekEnd);
+  }
+
+  const selectedAppointments = [...(appointmentsByDateKey.get(selectedDateKey) || [])].sort((left, right) => {
+    const leftTime = parseAppointmentDateTime(left)?.getTime() || 0;
+    const rightTime = parseAppointmentDateTime(right)?.getTime() || 0;
+    return leftTime - rightTime;
+  });
+
+  const dayButtons = weekDates.map(date => {
+    const dateKey = formatDateKey(date);
+    const isSelected = dateKey === selectedDateKey;
+    const isToday = dateKey === todayKey;
+    const count = (appointmentsByDateKey.get(dateKey) || []).length;
+
+    return `
+      <button class="calendar-week-mobile-day ${isSelected ? "is-selected" : ""} ${isToday ? "is-today" : ""}" type="button" data-date-key="${dateKey}">
+        <span class="calendar-week-mobile-day-name">${new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date)}</span>
+        <span class="calendar-week-mobile-day-number">${date.getDate()}</span>
+        ${count ? `<span class="calendar-week-mobile-day-count">${count}</span>` : ""}
+      </button>
+    `;
+  }).join("");
+
+  const selectedDateLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  }).format(new Date(`${selectedDateKey}T00:00:00`));
+
+  const appointmentMarkup = selectedAppointments.length
+    ? selectedAppointments.map(appointment => {
+      const hasTime = Boolean(String(appointment?.service_time || "").trim());
+      return `
+        <div class="calendar-week-mobile-row">
+          <div class="calendar-week-mobile-time">${escapeHtml(hasTime ? formatAppointmentChipMeta(appointment) : "Any time")}</div>
+          <div class="calendar-week-mobile-entry">
+            <div class="calendar-week-mobile-title">${escapeHtml(getAppointmentTitle(appointment))}</div>
+            <div class="calendar-week-mobile-meta">${escapeHtml(appointment.service_location || appointment.client_email || appointment.client_phone || "Appointment saved")}</div>
+            ${appointment.notes ? `<div class="calendar-week-mobile-note">${escapeHtml(appointment.notes)}</div>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("")
+    : `<div class="empty-state">No appointments are saved for ${escapeHtml(selectedDateLabel)}.</div>`;
+
+  calendarWeekGrid.classList.add("is-mobile-week");
+  calendarWeekGrid.innerHTML = `
+    <div class="calendar-week-mobile-days">${dayButtons}</div>
+    <div class="calendar-week-mobile-agenda">
+      <div class="calendar-week-mobile-heading">${escapeHtml(selectedDateLabel)}</div>
+      <div class="calendar-week-mobile-list">${appointmentMarkup}</div>
+    </div>
+  `;
+}
+
 function renderWeekGrid() {
   if (!calendarWeekGrid) {
     return;
   }
+
+  if (isCompactMobileCalendar()) {
+    renderMobileWeekGrid();
+    return;
+  }
+
+  calendarWeekGrid.classList.remove("is-mobile-week");
 
   const activeDate = getActiveDate();
   const weekDates = getWeekDates(activeDate);
