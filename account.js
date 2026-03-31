@@ -552,54 +552,67 @@ function getDedupedReminderHistoryEntries(client) {
   });
 }
 
-function getReminderGroupKey(entry) {
-  const messageId = String(entry?.message_id || "").trim();
-
-  if (messageId) {
-    return `message:${messageId}`;
-  }
-
-  return [
-    String(entry?.channel || "").trim().toLowerCase(),
-    String(entry?.source || "").trim().toLowerCase(),
-    String(getReminderMessagePreview(entry) || "").trim(),
-    String(entry?.sent_at || entry?.occurred_at || entry?.created_at || "").trim()
-  ].join("|");
-}
-
 function getGroupedReminderHistory(client) {
   const dedupedEntries = getDedupedReminderHistoryEntries(client);
   const groups = [];
-  const groupsByKey = new Map();
+  const reminderWindowMs = 5 * 60 * 1000;
 
   dedupedEntries.forEach(entry => {
-    const key = getReminderGroupKey(entry);
+    const messageId = String(entry?.message_id || "").trim();
+    const messagePreview = String(getReminderMessagePreview(entry) || "").trim();
+    const entryChannel = String(entry?.channel || "").trim().toLowerCase();
+    const entrySource = String(entry?.source || "").trim().toLowerCase();
+    const entryTimestamp = getReminderEventTimestamp(entry);
 
-    if (!groupsByKey.has(key)) {
-      const group = {
-        key,
-        entries: [],
+    const matchingGroup = groups.find(group => {
+      const groupMessageId = String(group.messageId || "").trim();
+      const sameMessageId = messageId && groupMessageId && messageId === groupMessageId;
+
+      if (sameMessageId) {
+        return true;
+      }
+
+      const sameChannel = entryChannel === group.channel;
+      const sameSource = entrySource === group.source;
+      const samePreview = messagePreview && messagePreview === group.messagePreview;
+      const closeInTime = Math.abs(entryTimestamp - group.anchorTimestamp) <= reminderWindowMs;
+
+      return sameChannel && sameSource && samePreview && closeInTime;
+    });
+
+    if (!matchingGroup) {
+      groups.push({
+        key: messageId || `${entryChannel}|${entrySource}|${messagePreview}|${entryTimestamp}`,
+        entries: [entry],
         latestEntry: entry,
         earliestEntry: entry,
-        messagePreview: getReminderMessagePreview(entry)
-      };
-      groupsByKey.set(key, group);
-      groups.push(group);
+        messagePreview,
+        messageId,
+        channel: entryChannel,
+        source: entrySource,
+        anchorTimestamp: entryTimestamp
+      });
+      return;
     }
 
-    const group = groupsByKey.get(key);
-    group.entries.push(entry);
+    matchingGroup.entries.push(entry);
 
-    if (getReminderEventTimestamp(entry) > getReminderEventTimestamp(group.latestEntry)) {
-      group.latestEntry = entry;
+    if (messageId && !matchingGroup.messageId) {
+      matchingGroup.messageId = messageId;
+      matchingGroup.key = messageId;
     }
 
-    if (getReminderEventTimestamp(entry) < getReminderEventTimestamp(group.earliestEntry)) {
-      group.earliestEntry = entry;
+    if (!matchingGroup.messagePreview && messagePreview) {
+      matchingGroup.messagePreview = messagePreview;
     }
 
-    if (!group.messagePreview) {
-      group.messagePreview = getReminderMessagePreview(entry);
+    if (entryTimestamp > getReminderEventTimestamp(matchingGroup.latestEntry)) {
+      matchingGroup.latestEntry = entry;
+    }
+
+    if (entryTimestamp < getReminderEventTimestamp(matchingGroup.earliestEntry)) {
+      matchingGroup.earliestEntry = entry;
+      matchingGroup.anchorTimestamp = entryTimestamp;
     }
   });
 
