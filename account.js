@@ -149,24 +149,8 @@ function openClientDetailModal(clientId) {
     clientDetailCopy.textContent = summaryParts.join(" | ") || "Saved client details and reminder activity.";
   }
 
-  const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
-
   clientDetailBody.innerHTML = `
     <div class="expanded-client-panel modal-client-panel">
-      <div class="expanded-client-grid">
-        <div class="expanded-client-block">
-          <div class="expanded-client-label">Email</div>
-          <div class="expanded-client-value">${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</div>
-        </div>
-        <div class="expanded-client-block">
-          <div class="expanded-client-label">Phone</div>
-          <div class="expanded-client-value">${client.client_phone ? escapeHtml(formatPhone(client.client_phone)) : `<span class="table-muted">Not added</span>`}</div>
-        </div>
-        <div class="expanded-client-block">
-          <div class="expanded-client-label">Last Edited</div>
-          <div class="expanded-client-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
-        </div>
-      </div>
       ${renderExpandedClientDetails(client)}
     </div>
   `;
