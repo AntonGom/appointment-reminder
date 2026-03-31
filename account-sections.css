@@ -1000,18 +1000,6 @@ h1 {
   line-height: 1.55;
 }
 
-.expanded-history-dates {
-  display: grid;
-  gap: 4px;
-  color: var(--text-main);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.expanded-history-dates strong {
-  color: #1e3a8a;
-}
-
 .expanded-message-preview {
   padding: 0;
   border-radius: 0;
