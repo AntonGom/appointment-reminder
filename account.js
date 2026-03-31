@@ -802,7 +802,7 @@ function getLatestReminderStatusAt(client, targetStatus) {
 function renderExpandedClientDetails(client) {
   return `
     <div class="expanded-client-panel">
-      <div class="expanded-client-block">
+      <div class="expanded-client-block expanded-client-block-plain expanded-reminder-activity-shell">
         <div class="expanded-client-label">Full Reminder Activity</div>
         ${renderExpandedReminderHistory(client)}
       </div>

@@ -709,11 +709,11 @@ function openAppointmentDetailModal(appointmentId) {
           ${appointment.notes ? `<div><strong>Notes:</strong> ${escapeHtml(appointment.notes)}</div>` : ""}
         </div>
       </div>
-      <div class="expanded-client-block">
-        <div class="expanded-client-label">Full Reminder Activity</div>
-        ${renderExpandedReminderHistory(reminderEntries)}
+        <div class="expanded-client-block expanded-client-block-plain expanded-reminder-activity-shell">
+          <div class="expanded-client-label">Full Reminder Activity</div>
+          ${renderExpandedReminderHistory(reminderEntries)}
+        </div>
       </div>
-    </div>
   `;
 
   appointmentDetailModal.hidden = false;

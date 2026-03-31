@@ -952,6 +952,18 @@ h1 {
   border: 1px solid rgba(203, 213, 225, 0.92);
 }
 
+.expanded-client-block-plain {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.expanded-reminder-activity-shell {
+  gap: 12px;
+}
+
 .expanded-client-label {
   color: #1e3a8a;
   font-size: 12px;
@@ -1039,17 +1051,16 @@ h1 {
 }
 
 .expanded-history-timeline {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
-  padding-left: 0;
-  border-left: 0;
+  padding-left: 14px;
+  border-left: 2px solid rgba(191, 219, 254, 0.95);
 }
 
 .expanded-history-timeline-entry {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 12px;
