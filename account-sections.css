@@ -506,6 +506,9 @@ h1 {
   display: grid;
   grid-template-columns: 92px repeat(7, minmax(0, 1fr));
   gap: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.92);
@@ -592,6 +595,8 @@ h1 {
   align-content: start;
   gap: 8px;
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-week-slot.is-selected {
@@ -621,6 +626,8 @@ h1 {
   color: #ffffff;
   display: grid;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16);
 }
 
@@ -922,7 +929,9 @@ button:disabled {
   }
 
   .calendar-week-grid {
-    grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+    grid-template-columns: 38px repeat(7, minmax(0, 1fr));
+    width: 100%;
+    max-width: 100%;
   }
 
   .calendar-month-strip {
@@ -1004,34 +1013,34 @@ button:disabled {
   }
 
   .calendar-week-header {
-    padding: 10px 2px 8px;
+    padding: 8px 1px 6px;
   }
 
   .calendar-week-day {
-    font-size: 9px;
-    letter-spacing: 0.02em;
+    font-size: 8px;
+    letter-spacing: 0;
   }
 
   .calendar-week-date {
-    font-size: 13px;
+    font-size: 12px;
     margin-top: 2px;
   }
 
   .calendar-week-time {
-    padding: 8px 2px;
-    font-size: 10px;
+    padding: 8px 1px;
+    font-size: 9px;
   }
 
   .calendar-week-slot,
   .calendar-week-slot.is-anytime {
-    min-height: 46px;
-    padding: 4px;
-    gap: 4px;
+    min-height: 42px;
+    padding: 3px;
+    gap: 3px;
   }
 
   .calendar-week-appointment {
-    padding: 5px 4px;
-    border-radius: 10px;
+    padding: 4px 3px;
+    border-radius: 8px;
     gap: 2px;
   }
 
