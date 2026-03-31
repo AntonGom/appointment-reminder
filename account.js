@@ -924,7 +924,11 @@ async function initSupabase() {
 
   await syncSignedInState(session?.user || null);
 
-  supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+  supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    if (event === "TOKEN_REFRESHED") {
+      return;
+    }
+
     await syncSignedInState(nextSession?.user || null);
   });
 }

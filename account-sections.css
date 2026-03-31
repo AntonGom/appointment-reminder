@@ -347,6 +347,25 @@ h1 {
   gap: 12px;
 }
 
+.selected-day-tile {
+  min-height: 0;
+  padding: 16px;
+}
+
+.selected-day-tile .calendar-day-items {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.selected-day-empty {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px dashed rgba(148, 163, 184, 0.62);
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .calendar-weekdays,
 .calendar-month-grid {
   display: grid;

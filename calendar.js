@@ -231,6 +231,14 @@ function formatAppointmentChipMeta(appointment) {
   }).format(date);
 }
 
+function formatSelectedDateCountLabel(count) {
+  if (count <= 0) {
+    return "";
+  }
+
+  return count === 1 ? "1" : String(count);
+}
+
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
@@ -493,14 +501,37 @@ function renderSelectedDay(monthAppointments) {
 
   if (!dateAppointments.length) {
     selectedDayCopy.textContent = "No appointments are saved for this day yet.";
-    selectedDayList.innerHTML = `<div class="empty-state">This date is open right now.</div>`;
+    selectedDayList.innerHTML = `
+      <div class="calendar-day is-selected selected-day-tile">
+        <div class="calendar-day-head">
+          <div class="calendar-day-number">${selectedDate.getDate()}</div>
+        </div>
+        <div class="selected-day-empty">This date is open right now.</div>
+      </div>
+    `;
     return;
   }
 
   selectedDayCopy.textContent = dateAppointments.length === 1
     ? "1 appointment is saved for this day."
     : `${dateAppointments.length} appointments are saved for this day.`;
-  selectedDayList.innerHTML = dateAppointments.map(renderAppointmentRow).join("");
+  selectedDayList.innerHTML = `
+    <div class="calendar-day has-appointments is-selected selected-day-tile">
+      <div class="calendar-day-head">
+        <div class="calendar-day-number">${selectedDate.getDate()}</div>
+        <div class="calendar-day-count">${formatSelectedDateCountLabel(dateAppointments.length)}</div>
+      </div>
+      <div class="calendar-day-items">
+        ${dateAppointments.map(appointment => `
+          <div class="calendar-chip">
+            <strong>${escapeHtml(getAppointmentTitle(appointment))}</strong>
+            <span>${escapeHtml(formatAppointmentChipMeta(appointment))}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+    ${dateAppointments.map(renderAppointmentRow).join("")}
+  `;
 }
 
 function renderMonthGrid() {
@@ -756,7 +787,11 @@ async function initPage() {
   updateSignedInView(session?.user || null);
   await loadAppointments(session?.user || null);
 
-  supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+  supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    if (event === "TOKEN_REFRESHED") {
+      return;
+    }
+
     updateSignedInView(nextSession?.user || null);
     await loadAppointments(nextSession?.user || null);
   });
