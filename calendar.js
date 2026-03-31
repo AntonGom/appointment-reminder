@@ -639,13 +639,15 @@ function renderExpandedReminderHistory(entries) {
         }).join("");
 
         return `
-          <div class="expanded-history-entry">
-            <div class="expanded-history-top">
-              ${renderStatusLabelWithHelp(statusLabel)}
-              <span class="expanded-history-time">${escapeHtml(latestUpdateLabel)}</span>
+          <div class="expanded-history-group">
+            <div class="expanded-history-entry">
+              <div class="expanded-history-top">
+                ${renderStatusLabelWithHelp(statusLabel)}
+                <span class="expanded-history-time">${escapeHtml(latestUpdateLabel)}</span>
+              </div>
+              <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
+              ${group.messagePreview ? `<div class="expanded-message-preview">${escapeHtml(group.messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
             </div>
-            <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
-            ${group.messagePreview ? `<div class="expanded-message-preview">${escapeHtml(group.messagePreview).replace(/\n/g, "<br>")}</div>` : ""}
             ${timelineMarkup ? `<div class="expanded-history-timeline">${timelineMarkup}</div>` : ""}
           </div>
         `;

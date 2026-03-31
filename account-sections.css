@@ -965,6 +965,11 @@ h1 {
   gap: 18px;
 }
 
+.expanded-history-group {
+  display: grid;
+  gap: 8px;
+}
+
 .expanded-history-entry {
   display: grid;
   gap: 10px;
