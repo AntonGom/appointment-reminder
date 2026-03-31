@@ -954,6 +954,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.calendar-week-mobile-day {
+  min-width: 0;
+  width: 100%;
+}
+
 .primary-button,
 .primary-link {
   background: linear-gradient(135deg, var(--accent), var(--accent-3));
