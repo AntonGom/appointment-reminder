@@ -29,6 +29,11 @@ const clientFormMode = document.getElementById("client-form-mode");
 const clientModal = document.getElementById("client-modal");
 const clientModalTitle = document.getElementById("client-modal-title");
 const clientModalCopy = document.getElementById("client-modal-copy");
+const clientDetailModal = document.getElementById("client-detail-modal");
+const clientDetailTitle = document.getElementById("client-detail-title");
+const clientDetailCopy = document.getElementById("client-detail-copy");
+const clientDetailBody = document.getElementById("client-detail-body");
+const closeClientDetailButton = document.getElementById("close-client-detail-button");
 const clientsSearchInput = document.getElementById("clients-search");
 const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
@@ -47,7 +52,6 @@ let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
 let currentAuthUserId = "";
-let expandedClientId = "";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 
@@ -121,6 +125,64 @@ function closeClientModal() {
 
   clientModal.classList.remove("visible");
   clientModal.hidden = true;
+}
+
+function openClientDetailModal(clientId) {
+  const client = savedClients.find(entry => entry.id === clientId);
+
+  if (!client || !clientDetailModal || !clientDetailBody) {
+    return;
+  }
+
+  if (clientDetailTitle) {
+    clientDetailTitle.textContent = client.client_name || "Saved client";
+  }
+
+  if (clientDetailCopy) {
+    const summaryParts = [
+      client.client_email || "",
+      client.client_phone ? formatPhone(client.client_phone) : ""
+    ].filter(Boolean);
+    clientDetailCopy.textContent = summaryParts.join(" | ") || "Saved client details and reminder activity.";
+  }
+
+  const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
+
+  clientDetailBody.innerHTML = `
+    <div class="expanded-client-panel modal-client-panel">
+      <div class="expanded-client-grid">
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Email</div>
+          <div class="expanded-client-value">${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</div>
+        </div>
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Phone</div>
+          <div class="expanded-client-value">${client.client_phone ? escapeHtml(formatPhone(client.client_phone)) : `<span class="table-muted">Not added</span>`}</div>
+        </div>
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Reminder Status</div>
+          <div class="expanded-client-value">${renderReminderStatus(client)}</div>
+        </div>
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Last Edited</div>
+          <div class="expanded-client-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
+        </div>
+      </div>
+      ${renderExpandedClientDetails(client)}
+    </div>
+  `;
+
+  clientDetailModal.hidden = false;
+  clientDetailModal.classList.add("visible");
+}
+
+function closeClientDetailModal() {
+  if (!clientDetailModal) {
+    return;
+  }
+
+  clientDetailModal.classList.remove("visible");
+  clientDetailModal.hidden = true;
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -743,15 +805,11 @@ function renderSavedClients() {
             const displayName = client.client_name || "Saved client";
             const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
             const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
-            const isExpanded = expandedClientId === client.id;
 
             return `
-              <tr>
+              <tr class="client-summary-row" data-client-row data-client-id="${client.id}">
                 <td>
-                  <button class="client-name-button" type="button" data-action="toggle-details" data-client-id="${client.id}" aria-expanded="${isExpanded ? "true" : "false"}">
-                    <strong>${escapeHtml(displayName)}</strong>
-                    <span class="client-name-hint">${isExpanded ? "Hide details" : "View details"}</span>
-                  </button>
+                  <strong>${escapeHtml(displayName)}</strong>
                 </td>
                 <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
@@ -766,13 +824,6 @@ function renderSavedClients() {
                   </div>
                 </td>
               </tr>
-              ${isExpanded ? `
-                <tr class="client-expanded-row">
-                  <td colspan="7">
-                    ${renderExpandedClientDetails(client)}
-                  </td>
-                </tr>
-              ` : ""}
             `;
           }).join("")}
         </tbody>
@@ -785,11 +836,8 @@ function renderSavedClients() {
         const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
 
         return `
-          <div class="client-mobile-card">
-            <button class="client-mobile-title-button" type="button" data-action="toggle-details" data-client-id="${client.id}" aria-expanded="${expandedClientId === client.id ? "true" : "false"}">
-              <span class="client-mobile-title">${escapeHtml(displayName)}</span>
-              <span class="client-name-hint">${expandedClientId === client.id ? "Hide details" : "View details"}</span>
-            </button>
+          <div class="client-mobile-card" data-client-row data-client-id="${client.id}">
+            <h4 class="client-mobile-title">${escapeHtml(displayName)}</h4>
             <div class="client-mobile-grid">
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Email</div>
@@ -812,7 +860,6 @@ function renderSavedClients() {
                 <div class="client-mobile-value">${updatedLabel ? escapeHtml(updatedLabel) : `<span class="table-muted">Not available</span>`}</div>
               </div>
             </div>
-            ${expandedClientId === client.id ? renderExpandedClientDetails(client) : ""}
             <div class="client-mobile-actions">
               <button class="secondary-button" type="button" data-action="edit" data-client-id="${client.id}">Edit</button>
               <button class="primary-button" type="button" data-action="use" data-client-id="${client.id}">Use</button>
@@ -1575,26 +1622,33 @@ function handleClientsListClick(event) {
 
   const button = event.target.closest("button[data-action]");
 
-  if (!button) {
+  if (button) {
+    const clientId = button.dataset.clientId || "";
+    const action = button.dataset.action || "";
+
+    if (!clientId) {
+      return;
+    }
+
+    if (action === "use") {
+      useClientInReminder(clientId);
+    } else if (action === "edit") {
+      populateClientForm(clientId);
+    } else if (action === "delete") {
+      deleteClient(clientId);
+    }
+
     return;
   }
 
-  const clientId = button.dataset.clientId || "";
-  const action = button.dataset.action || "";
+  const clientRow = event.target.closest("[data-client-row]");
 
-  if (!clientId) {
-    return;
-  }
+  if (clientRow) {
+    const rowClientId = String(clientRow.dataset.clientId || "").trim();
 
-  if (action === "use") {
-    useClientInReminder(clientId);
-  } else if (action === "toggle-details") {
-    expandedClientId = expandedClientId === clientId ? "" : clientId;
-    renderSavedClients();
-  } else if (action === "edit") {
-    populateClientForm(clientId);
-  } else if (action === "delete") {
-    deleteClient(clientId);
+    if (rowClientId) {
+      openClientDetailModal(rowClientId);
+    }
   }
 }
 
@@ -1702,9 +1756,19 @@ async function initAccountPage() {
     });
   }
 
+  if (clientDetailModal) {
+    clientDetailModal.addEventListener("click", event => {
+      if (event.target === clientDetailModal) {
+        closeClientDetailModal();
+      }
+    });
+  }
+
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && clientModal && !clientModal.hidden) {
       resetClientForm();
+    } else if (event.key === "Escape" && clientDetailModal && !clientDetailModal.hidden) {
+      closeClientDetailModal();
     }
   });
 
@@ -1739,6 +1803,10 @@ async function initAccountPage() {
 
   if (seedClientsButton) {
     seedClientsButton.addEventListener("click", handleSeedClients);
+  }
+
+  if (closeClientDetailButton) {
+    closeClientDetailButton.addEventListener("click", closeClientDetailModal);
   }
 }
 

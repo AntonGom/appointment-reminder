@@ -746,32 +746,18 @@
       text-align: center;
     }
 
-    .client-name-button,
-    .client-mobile-title-button {
-      width: 100%;
-      min-width: 0;
-      padding: 0;
-      border: 0;
-      background: transparent;
-      color: inherit;
-      box-shadow: none;
-      display: grid;
-      gap: 4px;
-      justify-items: center;
+    .client-summary-row,
+    .client-mobile-card[data-client-row] {
+      cursor: pointer;
+      transition: background 0.16s ease;
     }
 
-    .client-name-button:hover,
-    .client-mobile-title-button:hover {
-      transform: none;
-      box-shadow: none;
+    .client-summary-row:hover td {
+      background: rgba(239, 246, 255, 0.72);
     }
 
-    .client-name-hint {
-      color: #2563eb;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+    .client-mobile-card[data-client-row]:hover {
+      background: rgba(239, 246, 255, 0.78);
     }
 
     .table-muted {
@@ -856,11 +842,6 @@
       text-align: center;
     }
 
-    .client-expanded-row td {
-      padding: 0;
-      background: rgba(248, 250, 252, 0.96);
-    }
-
     .expanded-client-panel {
       display: grid;
       gap: 16px;
@@ -932,6 +913,21 @@
       color: var(--text-soft);
       font-size: 14px;
       line-height: 1.55;
+    }
+
+    .client-detail-modal {
+      max-width: 760px;
+    }
+
+    .client-detail-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .client-detail-modal-actions button {
+      width: auto;
+      min-width: 160px;
     }
 
     .history-channel {
@@ -1210,11 +1206,6 @@
         width: 100%;
       }
 
-      .client-mobile-title-button {
-        justify-items: start;
-        text-align: left;
-      }
-
       .client-mobile-title {
         margin: 0;
       }
@@ -1274,6 +1265,10 @@
       }
 
       .contact-modal-actions button {
+        width: 100%;
+      }
+
+      .client-detail-modal-actions button {
         width: 100%;
       }
     }
@@ -1461,7 +1456,18 @@
     </div>
   </div>
 
+  <div id="client-detail-modal" class="contact-modal-backdrop" hidden>
+    <div class="contact-modal client-detail-modal" role="dialog" aria-modal="true" aria-labelledby="client-detail-title">
+      <h3 id="client-detail-title">Client details</h3>
+      <p id="client-detail-copy">Saved client details and reminder activity.</p>
+      <div id="client-detail-body"></div>
+      <div class="client-detail-modal-actions">
+        <button id="close-client-detail-button" class="secondary-button" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="account.js?v=20260331e"></script>
+  <script type="module" src="account.js?v=20260331f"></script>
 </body>
 </html>
