@@ -531,6 +531,13 @@ function getReminderMessagePreview(entry) {
   return rawPreview;
 }
 
+function normalizeReminderPreview(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
 function getDedupedReminderHistoryEntries(client) {
   const historyEntries = Array.isArray(client?.reminder_history) ? client.reminder_history : [];
   const sortedEntries = [...historyEntries].sort((left, right) => getReminderEventTimestamp(right) - getReminderEventTimestamp(left));
@@ -555,11 +562,12 @@ function getDedupedReminderHistoryEntries(client) {
 function getGroupedReminderHistory(client) {
   const dedupedEntries = getDedupedReminderHistoryEntries(client);
   const groups = [];
-  const reminderWindowMs = 5 * 60 * 1000;
+  const reminderWindowMs = 15 * 60 * 1000;
 
   dedupedEntries.forEach(entry => {
     const messageId = String(entry?.message_id || "").trim();
     const messagePreview = String(getReminderMessagePreview(entry) || "").trim();
+    const normalizedPreview = normalizeReminderPreview(messagePreview);
     const entryChannel = String(entry?.channel || "").trim().toLowerCase();
     const entrySource = String(entry?.source || "").trim().toLowerCase();
     const entryTimestamp = getReminderEventTimestamp(entry);
@@ -573,11 +581,12 @@ function getGroupedReminderHistory(client) {
       }
 
       const sameChannel = entryChannel === group.channel;
-      const sameSource = entrySource === group.source;
-      const samePreview = messagePreview && messagePreview === group.messagePreview;
-      const closeInTime = Math.abs(entryTimestamp - group.anchorTimestamp) <= reminderWindowMs;
+      const samePreview = normalizedPreview && normalizedPreview === group.normalizedPreview;
+      const closeToEarliest = Math.abs(entryTimestamp - group.earliestTimestamp) <= reminderWindowMs;
+      const closeToLatest = Math.abs(entryTimestamp - group.latestTimestamp) <= reminderWindowMs;
+      const closeInTime = closeToEarliest || closeToLatest;
 
-      return sameChannel && sameSource && samePreview && closeInTime;
+      return sameChannel && samePreview && closeInTime;
     });
 
     if (!matchingGroup) {
@@ -589,8 +598,9 @@ function getGroupedReminderHistory(client) {
         messagePreview,
         messageId,
         channel: entryChannel,
-        source: entrySource,
-        anchorTimestamp: entryTimestamp
+        normalizedPreview,
+        earliestTimestamp: entryTimestamp,
+        latestTimestamp: entryTimestamp
       });
       return;
     }
@@ -608,11 +618,12 @@ function getGroupedReminderHistory(client) {
 
     if (entryTimestamp > getReminderEventTimestamp(matchingGroup.latestEntry)) {
       matchingGroup.latestEntry = entry;
+      matchingGroup.latestTimestamp = entryTimestamp;
     }
 
     if (entryTimestamp < getReminderEventTimestamp(matchingGroup.earliestEntry)) {
       matchingGroup.earliestEntry = entry;
-      matchingGroup.anchorTimestamp = entryTimestamp;
+      matchingGroup.earliestTimestamp = entryTimestamp;
     }
   });
 
