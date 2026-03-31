@@ -884,9 +884,15 @@ function sortContacts(contacts, mode = clientsSortMode) {
 
 function getFilteredClients() {
   const query = clientsSearchQuery.trim().toLowerCase();
-  const filteredClients = query
+  let filteredClients = query
     ? savedClients.filter(client => getClientSearchText(client).includes(query))
     : [...savedClients];
+
+  if (clientsSortMode === "delivered") {
+    filteredClients = filteredClients.filter(client => getLatestReminderStatusAt(client, "delivered") > 0);
+  } else if (clientsSortMode === "opened") {
+    filteredClients = filteredClients.filter(client => getLatestReminderStatusAt(client, "likely opened") > 0);
+  }
 
   return sortContacts(filteredClients, clientsSortMode);
 }
