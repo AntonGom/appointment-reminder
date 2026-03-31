@@ -967,14 +967,22 @@ h1 {
 
 .expanded-history-group {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+}
+
+.expanded-history-latest-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.96);
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 .expanded-history-entry {
   display: grid;
   gap: 10px;
-  padding: 0 0 18px;
-  border-bottom: 1px solid rgba(203, 213, 225, 0.9);
+  padding: 0;
+  border-bottom: 0;
   background: transparent;
   border-radius: 0;
 }
@@ -1016,23 +1024,39 @@ h1 {
   word-break: break-word;
 }
 
-.expanded-history-timeline {
+.expanded-history-followups {
   display: grid;
-  gap: 6px;
-  padding-left: 14px;
-  border-left: 2px solid rgba(191, 219, 254, 0.95);
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.expanded-history-followups-label {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.expanded-history-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 0;
+  border-left: 0;
 }
 
 .expanded-history-timeline-entry {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(248, 250, 252, 0.94);
   border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
 }
 
 .expanded-history-timeline-time {
