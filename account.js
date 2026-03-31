@@ -423,6 +423,39 @@ function getReminderStatusClass(label) {
   return "sent";
 }
 
+function getStatusHelpText(label) {
+  const normalized = String(label || "").trim().toLowerCase();
+
+  if (normalized === "likely opened") {
+    return "Likely opened means the email provider saw signs the reminder was opened, but some apps can make this an estimate instead of a guarantee.";
+  }
+
+  return "";
+}
+
+function renderStatusLabelWithHelp(label, statusClass = "") {
+  const helpText = getStatusHelpText(label);
+  const iconMarkup = helpText
+    ? `<button class="status-help-button" type="button" data-status-help="${escapeHtml(helpText)}" aria-label="What does ${escapeHtml(label)} mean?" title="${escapeHtml(helpText)}">?</button>`
+    : "";
+
+  if (statusClass) {
+    return `
+      <span class="status-pill ${statusClass}">
+        <span>${escapeHtml(label)}</span>
+        ${iconMarkup}
+      </span>
+    `;
+  }
+
+  return `
+    <span class="status-label-with-help">
+      <span>${escapeHtml(label)}</span>
+      ${iconMarkup}
+    </span>
+  `;
+}
+
 function getReminderEventTimestamp(entry) {
   const candidates = [
     entry?.occurred_at,
@@ -553,7 +586,7 @@ function renderReminderHistory(client) {
     <div class="history-stack">
       ${historyEntries.map(entry => `
         <div class="history-entry">
-          <div class="history-channel">${escapeHtml(getReminderStatusLabel(entry))}</div>
+          <div class="history-channel">${renderStatusLabelWithHelp(getReminderStatusLabel(entry))}</div>
           <div class="history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</div>
         </div>
       `).join("")}
@@ -579,7 +612,7 @@ function renderExpandedReminderHistory(client) {
         return `
           <div class="expanded-history-entry">
             <div class="expanded-history-top">
-              <span class="status-pill ${getReminderStatusClass(statusLabel)}">${escapeHtml(statusLabel)}</span>
+              ${renderStatusLabelWithHelp(statusLabel, getReminderStatusClass(statusLabel))}
               <span class="expanded-history-time">${escapeHtml(getReminderEventTimeLabel(entry))}</span>
             </div>
             <div class="expanded-history-meta">${escapeHtml(metaParts.join(" | ") || "Reminder activity")}</div>
@@ -1571,6 +1604,15 @@ async function deleteClient(clientId) {
 }
 
 function handleClientsListClick(event) {
+  const helpButton = event.target.closest("[data-status-help]");
+
+  if (helpButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    alert(helpButton.dataset.statusHelp || "This status is estimated.");
+    return;
+  }
+
   const paginationButton = event.target.closest("button[data-pagination]");
 
   if (paginationButton) {
@@ -1732,6 +1774,15 @@ async function initAccountPage() {
 
   if (clientDetailModal) {
     clientDetailModal.addEventListener("click", event => {
+      const helpButton = event.target.closest("[data-status-help]");
+
+      if (helpButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        alert(helpButton.dataset.statusHelp || "This status is estimated.");
+        return;
+      }
+
       if (event.target === clientDetailModal) {
         closeClientDetailModal();
       }

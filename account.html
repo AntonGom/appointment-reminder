@@ -763,6 +763,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       padding: 7px 10px;
       border-radius: 999px;
       font-size: 12px;
@@ -790,6 +791,43 @@
     .status-pill.clicked {
       background: rgba(255, 237, 213, 0.94);
       color: #c2410c;
+    }
+
+    .status-label-with-help {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .status-help-button {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      padding: 0;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      border-radius: 999px;
+      background: #ffffff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+      box-shadow: none;
+    }
+
+    .status-help-button:hover {
+      background: #eff6ff;
+      border-color: rgba(96, 165, 250, 0.95);
+    }
+
+    .status-help-button:focus-visible {
+      outline: 2px solid rgba(37, 99, 235, 0.35);
+      outline-offset: 2px;
     }
 
     .table-actions {
@@ -1447,6 +1485,6 @@
   </div>
 
   <script src="nav.js?v=20260331a"></script>
-  <script type="module" src="account.js?v=20260331g"></script>
+  <script type="module" src="account.js?v=20260331h"></script>
 </body>
 </html>
