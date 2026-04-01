@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401d";
+} from "./branding-templates.js?v=20260401e";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -35,6 +35,7 @@ const fieldIds = {
   secondaryHex: "branding-secondary-hex",
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
+  artShape: "branding-art-shape",
   shapeIntensity: "branding-shape-intensity",
   shineStyle: "branding-shine-style",
   motionStyle: "branding-motion-style",
@@ -47,6 +48,7 @@ const fieldIds = {
 const helperTextIds = {
   secondaryColor: "branding-secondary-color-hint",
   buttonStyle: "branding-button-style-hint",
+  artShape: "branding-art-shape-hint",
   shapeIntensity: "branding-shape-intensity-hint",
   shineStyle: "branding-shine-style-hint",
   motionStyle: "branding-motion-style-hint"
@@ -85,6 +87,11 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["buttons"],
     selectors: ["#branding-preview-subject", ".signature-card-cta"],
     note: "Highlighting the buttons and chips whose corners change shape."
+  },
+  [fieldIds.artShape]: {
+    iframeAreas: ["art"],
+    selectors: [".signature-card-art"],
+    note: "Highlighting the geometric art style on the right side."
   },
   [fieldIds.shapeIntensity]: {
     iframeAreas: ["art"],
@@ -264,6 +271,7 @@ function getDraftBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
@@ -294,6 +302,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
+  getFieldElement(fieldIds.artShape).value = normalized.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
   getFieldElement(fieldIds.motionStyle).value = normalized.motionStyle;
@@ -372,6 +381,7 @@ function applyLiveBrandingState(branding) {
 function updateHelperHints() {
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
+  updateHelperHint(helperTextIds.artShape, getArtShapeHint());
   updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
   updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
   updateHelperHint(helperTextIds.motionStyle, getMotionStyleHint());
@@ -401,6 +411,36 @@ function getButtonStyleHint() {
   }
 
   return "Makes the action buttons fully rounded and softer.";
+}
+
+function getArtShapeHint() {
+  const value = getFieldElement(fieldIds.artShape)?.value || "classic";
+
+  if (value === "orbit") {
+    return "Uses rings and orbit-like shapes around the main mark.";
+  }
+
+  if (value === "stacked") {
+    return "Uses layered panels behind the main mark.";
+  }
+
+  if (value === "ribbon") {
+    return "Uses flowing bar shapes with a sleeker ribbon feel.";
+  }
+
+  if (value === "prism") {
+    return "Uses angular prism and diamond geometry.";
+  }
+
+  if (value === "frame") {
+    return "Uses a stronger outlined frame around the main mark.";
+  }
+
+  if (value === "random") {
+    return "Picks one of the art styles for you automatically.";
+  }
+
+  return "Uses the original geometric shape layout.";
 }
 
 function getShapeIntensityHint() {
@@ -554,6 +594,7 @@ async function saveBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
@@ -635,11 +676,6 @@ function renderTemplateCards() {
         </span>
         <span class="signature-card-art" aria-hidden="true">
           <span class="signature-card-aura"></span>
-          <span class="signature-card-ring"></span>
-          <span class="signature-card-mini one"></span>
-          <span class="signature-card-mini two"></span>
-          <span class="signature-card-diamond"></span>
-          <span class="signature-card-beam"></span>
           <span class="signature-card-shard one"></span>
           <span class="signature-card-shard two"></span>
           <span class="signature-card-shard three"></span>
@@ -675,6 +711,7 @@ function wireFormInputs() {
   const accentHexInput = getFieldElement(fieldIds.accentHex);
   const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
   const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
+  const artShapeInput = getFieldElement(fieldIds.artShape);
 
   brandingForm.addEventListener("input", event => {
     if (event.target === accentColorInput && accentHexInput) {
@@ -702,6 +739,13 @@ function wireFormInputs() {
   });
 
   brandingForm.addEventListener("change", event => {
+    if (event.target === artShapeInput && artShapeInput?.value === "random") {
+      const artShapes = ["classic", "orbit", "stacked", "ribbon", "prism", "frame"];
+      const randomShape = artShapes[Math.floor(Math.random() * artShapes.length)];
+      artShapeInput.value = randomShape;
+      setStatus(`Random art shape selected: ${randomShape.charAt(0).toUpperCase()}${randomShape.slice(1)}.`, "info");
+    }
+
     if (event.target?.id) {
       applyPreviewHighlight(event.target.id);
     }

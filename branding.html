@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401i">
+  <link rel="stylesheet" href="branding.css?v=20260401j">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -112,6 +112,20 @@
                     </div>
 
                     <div>
+                      <label class="branding-label" for="branding-art-shape">Art shape</label>
+                      <select id="branding-art-shape" class="branding-select">
+                        <option value="classic" selected>Classic</option>
+                        <option value="orbit">Orbit</option>
+                        <option value="stacked">Stacked</option>
+                        <option value="ribbon">Ribbon</option>
+                        <option value="prism">Prism</option>
+                        <option value="frame">Frame</option>
+                        <option value="random">Random pick</option>
+                      </select>
+                      <p id="branding-art-shape-hint" class="field-hint branding-helper">Choose the geometric art style shown on the right.</p>
+                    </div>
+
+                    <div>
                       <label class="branding-label" for="branding-shape-intensity">Shape intensity</label>
                       <select id="branding-shape-intensity" class="branding-select">
                         <option value="soft">Soft</option>
@@ -203,6 +217,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401i"></script>
+  <script type="module" src="branding.js?v=20260401j"></script>
 </body>
 </html>
