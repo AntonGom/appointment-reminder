@@ -49,6 +49,32 @@ let currentSignedInUser = null;
 let currentUserTier = "free";
 let currentAuthUserId = "";
 
+function getSavedBrandingProfile() {
+  const profile = currentSignedInUser?.user_metadata?.branding_profile;
+
+  if (!profile || typeof profile !== "object") {
+    return null;
+  }
+
+  const businessName = String(profile.businessName || "").trim();
+
+  if (!businessName) {
+    return null;
+  }
+
+  return {
+    templateStyle: String(profile.templateStyle || "").trim(),
+    businessName,
+    tagline: String(profile.tagline || "").trim(),
+    accentColor: String(profile.accentColor || "").trim(),
+    logoUrl: String(profile.logoUrl || "").trim(),
+    contactEmail: String(profile.contactEmail || "").trim(),
+    contactPhone: String(profile.contactPhone || "").trim(),
+    websiteUrl: String(profile.websiteUrl || "").trim(),
+    rescheduleUrl: String(profile.rescheduleUrl || "").trim()
+  };
+}
+
 function getTierKey(user) {
   const candidates = [
     user?.user_metadata?.tier,
@@ -600,7 +626,8 @@ function getReminderPayload() {
     serviceDate: getFieldValue("date"),
     serviceTime: getFieldValue("time"),
     sendCopy: shouldSendCopy(),
-    copyEmail: getCopyEmail()
+    copyEmail: getCopyEmail(),
+    brandingProfile: getSavedBrandingProfile()
   };
 }
 

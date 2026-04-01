@@ -114,6 +114,10 @@ function updateSignedInView(user) {
   const isSignedIn = Boolean(user);
   const isBronze = isSignedIn && isBronzeUser(user);
 
+  document.querySelectorAll("[data-auth-only]").forEach(link => {
+    link.hidden = !isSignedIn;
+  });
+
   if (signedOutShell) {
     signedOutShell.hidden = isSignedIn;
   }

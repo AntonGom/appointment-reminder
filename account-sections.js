@@ -136,6 +136,10 @@ function updateSignedInView(user) {
   const isBronze = isSignedIn && isBronzeUser(user);
   const tierLabel = isSignedIn ? getTierLabel(user) : "FREE";
 
+  document.querySelectorAll("[data-auth-only]").forEach(link => {
+    link.hidden = !isSignedIn;
+  });
+
   if (signedOutShell) {
     signedOutShell.hidden = isSignedIn;
   }

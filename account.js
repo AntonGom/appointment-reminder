@@ -1223,6 +1223,10 @@ function updateSignedInView(user) {
   const tierKey = isSignedIn ? getTierKey(user) : "free";
   const isBronze = isSignedIn && tierKey === "bronze";
 
+  document.querySelectorAll("[data-auth-only]").forEach(link => {
+    link.hidden = !isSignedIn;
+  });
+
   if (signedOutPanel) {
     signedOutPanel.hidden = isSignedIn;
   }

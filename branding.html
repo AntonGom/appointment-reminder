@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Branding</title>
+  <link rel="stylesheet" href="nav.css?v=20260331c">
+  <link rel="stylesheet" href="account-sections.css?v=20260331b">
+  <link rel="stylesheet" href="branding.css?v=20260401b">
+</head>
+<body data-page="branding">
+  <div class="page">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">
+          Branding
+          <span id="price-pill" class="price-pill">Sign in required</span>
+        </div>
+        <h1>Build the look of your reminder emails.</h1>
+        <p class="lead">Choose a template, set your business details, and preview how your automated email reminders will look before you send them.</p>
+      </div>
+    </section>
+
+    <div id="status-banner" class="status-banner" hidden></div>
+
+    <section class="panel">
+      <div class="panel-content">
+        <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
+
+        <nav class="account-page-nav" aria-label="Account pages">
+          <a class="account-page-link" href="client-details.html">Client Details</a>
+          <a class="account-page-link" href="calendar.html">Calendar</a>
+          <a class="account-page-link" href="account-info.html">Account Info</a>
+          <a class="account-page-link is-active" href="branding.html" data-auth-only hidden>Branding</a>
+          <a class="account-page-link" href="settings.html">Settings</a>
+          <a class="account-page-link" href="form-creator.html">Form Creator</a>
+        </nav>
+
+        <div class="content-stack">
+          <div id="signed-out-shell" class="section-card">
+            <h2 class="section-title">Sign in to style your reminder emails</h2>
+            <p class="signed-out-copy">Branding is saved to your account. Sign in first, then come back here to preview how your reminder emails will look.</p>
+            <div class="button-row" style="margin-top:16px;">
+              <a class="primary-link" href="signin.html">Go to Sign In</a>
+            </div>
+          </div>
+
+          <div id="signed-in-shell" hidden>
+            <div class="branding-layout">
+              <section class="section-card branding-card">
+                <h2>Business Branding Profile</h2>
+                <p class="branding-copy">This preview uses the same branding layout your automated reminder emails will use when branding is saved.</p>
+
+                <div class="template-picker">
+                  <div class="template-picker-head">
+                    <div>
+                      <h3>Email style</h3>
+                      <p>Pick the look that feels closest to your business.</p>
+                    </div>
+                  </div>
+                  <div id="template-grid" class="template-grid"></div>
+                </div>
+
+                <form id="branding-form">
+                  <input id="branding-template-style" type="hidden" value="signature">
+                  <div class="branding-field-grid">
+                    <div class="field-span-2">
+                      <label class="branding-label" for="branding-business-name">Business name</label>
+                      <input id="branding-business-name" class="branding-input" type="text" maxlength="80" placeholder="North Shore Wellness" required>
+                    </div>
+
+                    <div class="field-span-2">
+                      <label class="branding-label" for="branding-tagline">Short tagline</label>
+                      <input id="branding-tagline" class="branding-input" type="text" maxlength="120" placeholder="Friendly reminders that feel polished and professional.">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-accent-color">Brand color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-accent-color" class="branding-color-input" type="color" value="#2563eb">
+                        <input id="branding-accent-hex" class="branding-input" type="text" maxlength="7" value="#2563eb" placeholder="#2563eb">
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-logo-url">Logo image URL</label>
+                      <input id="branding-logo-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourdomain.com/logo.png">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-contact-email">Business email</label>
+                      <input id="branding-contact-email" class="branding-input" type="email" inputmode="email" placeholder="hello@yourbusiness.com">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-contact-phone">Business phone</label>
+                      <input id="branding-contact-phone" class="branding-input" type="text" placeholder="(305) 555-0188">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-website-url">Website link</label>
+                      <input id="branding-website-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourbusiness.com">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-reschedule-url">Reschedule link</label>
+                      <input id="branding-reschedule-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourbusiness.com/reschedule">
+                    </div>
+                  </div>
+
+                  <div class="branding-actions">
+                    <button id="save-branding-button" class="primary-button" type="submit">Save Branding</button>
+                    <button id="reset-branding-button" class="secondary-button" type="button">Reset to Saved</button>
+                    <button id="branding-sign-out" class="secondary-button" type="button">Sign Out</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="section-card branding-card">
+                <div class="branding-preview-head">
+                  <div>
+                    <h3>Live email preview</h3>
+                    <p>This sample preview updates as you type and uses the same email renderer as your automated reminder emails.</p>
+                  </div>
+                  <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
+                </div>
+
+                <div class="branding-preview-shell">
+                  <div class="branding-preview-chrome">
+                    <div class="branding-preview-dots" aria-hidden="true">
+                      <span class="branding-preview-dot"></span>
+                      <span class="branding-preview-dot"></span>
+                      <span class="branding-preview-dot"></span>
+                    </div>
+                    <div class="branding-preview-from">
+                      <strong id="branding-preview-from">Your business name</strong>
+                      <span id="branding-preview-email">you@example.com</span>
+                    </div>
+                  </div>
+                  <iframe id="branding-preview-frame" class="branding-preview-frame" title="Branded email preview"></iframe>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="nav.js?v=20260331c"></script>
+  <script type="module" src="branding.js?v=20260401a"></script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import { buildReminderEmailHtml, buildReminderEmailSubject, hasSavedBrandingProfile } from "../branding-templates.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -15,13 +17,15 @@ export default async function handler(req, res) {
       serviceTime,
       sendCopy,
       copyEmail,
+      brandingProfile,
       trackingOwnerId,
       trackingClientId,
       trackingSource
     } = req.body;
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
-    const senderName = process.env.BREVO_SENDER_NAME || "Appointment Reminder";
+    const savedBranding = hasSavedBrandingProfile(brandingProfile) ? brandingProfile : null;
+    const senderName = savedBranding?.businessName || process.env.BREVO_SENDER_NAME || "Appointment Reminder";
     const wantsCopy = sendCopy === true || sendCopy === "true";
     const normalizedCopyEmail = String(copyEmail || "").trim();
     const trackingMetadata = buildTrackingMetadata({
@@ -79,14 +83,19 @@ export default async function handler(req, res) {
       serviceDate,
       serviceTime
     });
-    const htmlMessage = buildEmailHtml(message, calendarLinks);
+    const htmlMessage = buildReminderEmailHtml({
+      message,
+      calendarLinks,
+      brandingProfile: savedBranding
+    });
+    const subject = buildReminderEmailSubject(savedBranding);
 
     const primaryResult = await sendBrevoEmail({
       apiKey,
       senderEmail,
       senderName,
       toEmail: clientEmail,
-      subject: "Appointment Reminder",
+      subject,
       htmlContent: htmlMessage,
       trackingMetadata
     });
@@ -116,7 +125,7 @@ export default async function handler(req, res) {
         senderEmail,
         senderName,
         toEmail: normalizedCopyEmail,
-        subject: "Copy of Appointment Reminder",
+        subject: `Copy of ${subject}`,
         htmlContent: htmlMessage
       });
     }
@@ -161,48 +170,6 @@ async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subjec
   }
 
   return response.json();
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function buildEmailHtml(message, calendarLinks) {
-  const safeMessage = escapeHtml(message);
-  const formattedMessage = safeMessage
-    .split("\n\n")
-    .map(section => `<p style="margin:0 0 16px; line-height:1.65; color:#334155; font-size:15px;">${section.replace(/\n/g, "<br>")}</p>`)
-    .join("");
-  const calendarSection = calendarLinks ? `
-        <div style="padding:0 24px 28px;">
-          <div style="margin:0 0 12px; color:#0f172a; font-size:16px; font-weight:700;">Add to Calendar</div>
-          <div style="font-size:14px; color:#475569; margin-bottom:14px;">Save this appointment to your preferred calendar.</div>
-          <div>
-            <a href="${calendarLinks.apple}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#1f2937; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Apple Calendar</a>
-            <a href="${calendarLinks.outlook}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Outlook Calendar</a>
-            <a href="${calendarLinks.google}" style="display:inline-block; margin:0 10px 10px 0; padding:12px 16px; background:#0f766e; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:700;">Google Calendar</a>
-          </div>
-        </div>
-  ` : "";
-
-  return `
-    <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
-      <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #dbe7ff; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(37,99,235,0.08);">
-        <div style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
-          <div style="color:#ffffff; font-size:22px; font-weight:700;">Appointment Reminder</div>
-        </div>
-        <div style="padding:28px 24px;">
-          ${formattedMessage}
-        </div>
-        ${calendarSection}
-      </div>
-    </div>
-  `;
 }
 
 function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, businessContact, serviceDate, serviceTime }) {
