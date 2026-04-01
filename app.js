@@ -33,6 +33,7 @@ const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
+const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -1499,6 +1500,18 @@ function sendBrevoEmail() {
   openEmailModal();
 }
 
+function storeQaLastSentEmail(record) {
+  if (!record) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(QA_LAST_EMAIL_STORAGE_KEY, JSON.stringify(record));
+  } catch (error) {
+    console.warn("Unable to store QA last sent email.", error);
+  }
+}
+
 async function confirmSendBrevoEmail() {
   const payload = getBrevoPayloadOrAlert();
 
@@ -1526,6 +1539,10 @@ async function confirmSendBrevoEmail() {
     const data = await res.json();
 
     if (res.ok && data.success) {
+      if (data.qaEmailDebug) {
+        storeQaLastSentEmail(data.qaEmailDebug);
+      }
+
       await upsertBronzeAppointment({
         clientId,
         channel: "email",

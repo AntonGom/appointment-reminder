@@ -169,6 +169,7 @@ let lastPreviewKey = "";
 let currentPreviewFocusField = "";
 let previewRandomNonce = 0;
 let lastSentEmailRecord = null;
+const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 
 const TEMPLATE_SHOWCASES = {
   signature: {
@@ -559,49 +560,42 @@ function renderLastSentEmailRecord(record) {
 }
 
 async function loadLastSentEmailHtml({ announce = true } = {}) {
-  if (!supabase || !currentUser || !isQaRuntime()) {
+  if (!currentUser || !isQaRuntime()) {
     return;
   }
 
   setButtonBusy(qaLoadLastEmailButton, true, "Loading...");
 
   if (announce) {
-    setQaEmailStatus("Loading the exact HTML from reminder history...", "info");
+    setQaEmailStatus("Loading the exact HTML from this browser session...", "info");
   }
 
   try {
-    const { data, error } = await supabase
-      .from("client_reminder_history")
-      .select("id, recipient_email, message_id, sent_at, message_preview, raw_event")
-      .eq("owner_id", currentUser.id)
-      .eq("channel", "email")
-      .eq("status", "sent")
-      .order("sent_at", { ascending: false })
-      .limit(25);
+    const storedValue = window.sessionStorage.getItem(QA_LAST_EMAIL_STORAGE_KEY);
 
-    if (error) {
-      throw error;
+    if (!storedValue) {
+      clearLastSentEmailRecord();
+      setQaEmailStatus("No QA email HTML is stored in this browser session yet. Send a fresh automated email from this same tab, then load it here.", "info");
+      return;
     }
 
-    const match = (data || []).find(entry => {
-      const html = String(entry?.raw_event?.rendered_email_html || "").trim();
-      return Boolean(html);
-    });
+    const match = JSON.parse(storedValue);
+    const html = String(match?.html || "").trim();
 
-    if (!match) {
+    if (!html) {
       clearLastSentEmailRecord();
-      setQaEmailStatus("No stored sent email HTML found yet. Send a fresh automated email from QA first, then load it here.", "info");
+      setQaEmailStatus("The saved QA email HTML in this browser session is empty. Send a fresh automated email and try again.", "info");
       return;
     }
 
     renderLastSentEmailRecord({
-      html: String(match?.raw_event?.rendered_email_html || "").trim(),
-      subject: String(match?.raw_event?.rendered_email_subject || "").trim(),
-      sentAt: match?.sent_at || null,
-      recipient: String(match?.recipient_email || "").trim(),
-      messageId: String(match?.message_id || "").trim()
+      html,
+      subject: String(match?.subject || "").trim(),
+      sentAt: match?.sentAt || null,
+      recipient: String(match?.recipient || "").trim(),
+      messageId: String(match?.messageId || "").trim()
     });
-    setQaEmailStatus("Loaded the exact HTML that was saved when your most recent reminder email was sent.", "success");
+    setQaEmailStatus("Loaded the exact HTML from the most recent QA email saved in this browser session.", "success");
 
     if (announce) {
       qaLastEmailViewer?.scrollIntoView({ behavior: "smooth", block: "start" });

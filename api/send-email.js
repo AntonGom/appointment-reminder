@@ -91,6 +91,8 @@ export default async function handler(req, res) {
       brandingProfile: savedBranding
     });
     const subject = buildReminderEmailSubject(savedBranding, { message });
+    const occurredAt = new Date().toISOString();
+    const qaDebugEnabled = isQaRuntime();
 
     const primaryResult = await sendBrevoEmail({
       apiKey,
@@ -112,16 +114,12 @@ export default async function handler(req, res) {
       messageId: primaryMessageId,
       eventType: "request",
       status: "sent",
-      occurredAt: new Date().toISOString(),
+      occurredAt,
       messagePreview: message,
       rawEvent: {
         provider: "brevo",
         transport: "transactional_email",
-        stage: "send_api",
-        rendered_email_subject: subject,
-        rendered_email_html: htmlMessage,
-        sender_name: senderName,
-        sender_email: senderEmail
+        stage: "send_api"
       }
     });
 
@@ -138,12 +136,25 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      messageId: primaryMessageId || null
+      messageId: primaryMessageId || null,
+      qaEmailDebug: qaDebugEnabled ? {
+        subject,
+        html: htmlMessage,
+        recipient: clientEmail,
+        messageId: primaryMessageId || null,
+        sentAt: occurredAt
+      } : null
     });
 
   } catch (err) {
     return res.status(500).json({ error: err.message || "Failed to send email." });
   }
+}
+
+function isQaRuntime() {
+  const env = process.env.VERCEL_ENV || "development";
+  const branch = process.env.VERCEL_GIT_COMMIT_REF || "";
+  return env === "preview" || /qa/i.test(branch);
 }
 
 async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subject, htmlContent, trackingMetadata }) {
