@@ -1,18 +1,18 @@
 export const BRANDING_TEMPLATE_OPTIONS = [
   {
     id: "signature",
-    label: "Signature",
-    description: "Polished header with strong brand presence and clean action buttons."
+    label: "Liquid Glass",
+    description: "Glossy, premium, and polished with a modern glass look."
   },
   {
     id: "spotlight",
-    label: "Spotlight",
-    description: "Soft card layout with a brighter content focus and modern spacing."
+    label: "Soft Studio",
+    description: "Minimal and modern with lighter layers and a calm upscale feel."
   },
   {
     id: "executive",
-    label: "Executive",
-    description: "Sharper dark header with a more formal business look."
+    label: "Midnight Executive",
+    description: "Dark, sharp, and more formal for a higher-end business look."
   }
 ];
 
@@ -20,8 +20,8 @@ const DEFAULT_TEMPLATE = "signature";
 const DEFAULT_ACCENT = "#2563eb";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
-export function hasSavedBrandingProfile(profile = {}) {
-  return Boolean(cleanText(profile.businessName, 80));
+export function hasSavedBrandingProfile(profile = null) {
+  return Boolean(cleanText(profile?.businessName, 80));
 }
 
 export function buildReminderEmailSubject(brandingProfile) {
@@ -139,14 +139,19 @@ function buildEmailContent({ message, branding, calendarLinks }) {
 
 function buildSignatureTemplate(content) {
   return `
-    <div style="margin:0;padding:32px 16px;background:#eef4ff;font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #dbe7ff;border-radius:28px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.14);">
-        <div style="padding:26px 28px;background:linear-gradient(135deg, ${content.brand.accentColor}, #0f172a);">
+    <div style="margin:0;padding:34px 16px;background:
+      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.2)}, transparent 34%),
+      radial-gradient(circle at 85% 8%, rgba(255,255,255,0.82), transparent 24%),
+      linear-gradient(180deg, #edf4ff, #f8fbff);font-family:Arial, sans-serif;">
+      <div style="max-width:680px;margin:0 auto;background:rgba(255,255,255,0.92);border:1px solid rgba(255,255,255,0.82);border-radius:30px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
+        <div style="padding:28px;background:
+          radial-gradient(circle at top right, rgba(255,255,255,0.32), transparent 28%),
+          linear-gradient(135deg, ${content.brand.accentColor}, #0f172a);">
           <div style="display:flex;align-items:center;gap:16px;">
             ${content.logoMarkup}
             <div>
-              <div style="font-size:13px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#bfdbfe;">Appointment reminder</div>
-              <div style="font-size:28px;line-height:1.08;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
+              <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">Appointment reminder</div>
+              <div style="font-size:30px;line-height:1.05;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
               ${content.tagline}
             </div>
           </div>
@@ -162,7 +167,7 @@ function buildSignatureTemplate(content) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div style="padding:18px 28px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13px;line-height:1.7;">
+        <div style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.9);color:#64748b;font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
@@ -173,14 +178,18 @@ function buildSignatureTemplate(content) {
 
 function buildSpotlightTemplate(content) {
   return `
-    <div style="margin:0;padding:30px 14px;background:linear-gradient(180deg, #f8fbff, #edf4ff);font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:30px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.1);">
-        <div style="padding:18px 22px;background:${hexToRgba(content.brand.accentColor, 0.08)};border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};">
+    <div style="margin:0;padding:30px 14px;background:
+      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.14)}, transparent 32%),
+      linear-gradient(180deg, #f8fbff, #eff6ff);font-family:Arial, sans-serif;">
+      <div style="max-width:680px;margin:0 auto;background:rgba(255,255,255,0.95);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:32px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
+        <div style="padding:20px 22px;background:
+          radial-gradient(circle at top right, rgba(255,255,255,0.82), transparent 24%),
+          linear-gradient(180deg, ${hexToRgba(content.brand.accentColor, 0.14)}, rgba(255,255,255,0.72));border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
           <div style="display:flex;align-items:center;gap:14px;">
             ${content.logoMarkup}
             <div>
               <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">Branded reminder</div>
-              <div style="font-size:26px;line-height:1.08;font-weight:800;color:#0f172a;margin-top:4px;">${content.brandTitle}</div>
+              <div style="font-size:28px;line-height:1.08;font-weight:800;color:#0f172a;margin-top:4px;">${content.brandTitle}</div>
             </div>
           </div>
         </div>
@@ -188,7 +197,7 @@ function buildSpotlightTemplate(content) {
           ${content.greeting}
           ${content.intro}
           ${content.summaryHtml}
-          <div style="padding:20px 22px;border-radius:24px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.05);">
+          <div style="padding:20px 22px;border-radius:24px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.95);box-shadow:0 16px 28px rgba(15,23,42,0.06);">
             ${content.detailsHtml}
             ${content.bodyHtml}
             ${content.contactPrompt}
@@ -208,15 +217,19 @@ function buildSpotlightTemplate(content) {
 
 function buildExecutiveTemplate(content) {
   return `
-    <div style="margin:0;padding:30px 14px;background:#f1f5f9;font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:24px;overflow:hidden;box-shadow:0 20px 42px rgba(15,23,42,0.12);">
-        <div style="padding:22px 26px;background:#0f172a;border-bottom:4px solid ${content.brand.accentColor};">
+    <div style="margin:0;padding:30px 14px;background:
+      radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
+      linear-gradient(180deg, #eef2f7, #e8eef7);font-family:Arial, sans-serif;">
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:28px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
+        <div style="padding:24px 28px;background:
+          radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 24%),
+          linear-gradient(135deg, #0f172a, #1f2937);border-bottom:4px solid ${content.brand.accentColor};">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;">
             <div style="display:flex;align-items:center;gap:14px;">
               ${content.logoMarkup}
               <div>
                 <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">Appointment notice</div>
-                <div style="font-size:26px;line-height:1.08;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
+                <div style="font-size:29px;line-height:1.06;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
               </div>
             </div>
             <div style="font-size:13px;color:#cbd5e1;text-align:right;">${escapeHtml(content.brand.tagline || "Professional reminders")}</div>

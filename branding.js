@@ -40,6 +40,8 @@ let appConfig = null;
 let currentUser = null;
 let currentSavedBranding = {};
 let currentAuthUserId = "";
+let previewRenderTimer = null;
+let lastPreviewKey = "";
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -183,6 +185,13 @@ function syncTemplateCards() {
 
 function renderPreview() {
   const draftBranding = getDraftBranding();
+  const previewKey = JSON.stringify(draftBranding);
+
+  if (previewKey === lastPreviewKey) {
+    return;
+  }
+
+  lastPreviewKey = previewKey;
   const previewHtml = buildReminderEmailHtml({
     message: buildSampleMessage(draftBranding),
     calendarLinks: {
@@ -209,6 +218,13 @@ function renderPreview() {
   if (previewEmail) {
     previewEmail.textContent = draftBranding.contactEmail || currentUser?.email || "you@example.com";
   }
+}
+
+function queuePreviewRender() {
+  window.clearTimeout(previewRenderTimer);
+  previewRenderTimer = window.setTimeout(() => {
+    renderPreview();
+  }, 120);
 }
 
 function updateSignedInView(user) {
@@ -328,7 +344,7 @@ function renderTemplateCards() {
     const nextTemplate = button.dataset.template || "signature";
     getFieldElement(fieldIds.templateStyle).value = nextTemplate;
     syncTemplateCards();
-    renderPreview();
+    queuePreviewRender();
   });
 }
 
@@ -349,7 +365,7 @@ function wireFormInputs() {
       accentColorInput.value = accentHexInput.value.trim();
     }
 
-    renderPreview();
+    queuePreviewRender();
   });
 
   brandingForm.addEventListener("submit", event => {

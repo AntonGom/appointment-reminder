@@ -5,6 +5,20 @@
   --branding-ink: #0f172a;
 }
 
+body[data-page="branding"] {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 28%),
+    radial-gradient(circle at 86% 8%, rgba(255, 255, 255, 0.22), transparent 18%),
+    linear-gradient(160deg, #10141c 0%, #1a2230 100%);
+}
+
+body[data-page="branding"] .hero,
+body[data-page="branding"] .panel,
+body[data-page="branding"] .section-card {
+  backdrop-filter: none;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+}
+
 .branding-layout {
   display: grid;
   grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.05fr);
@@ -14,6 +28,18 @@
 
 .branding-card {
   padding: 22px;
+}
+
+.branding-card:first-child {
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 22%),
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,248,252,0.96));
+}
+
+.branding-card:last-child {
+  background:
+    radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,248,252,0.96));
 }
 
 .branding-card h2 {
@@ -122,27 +148,33 @@
 }
 
 .template-card {
+  position: relative;
   width: 100%;
-  padding: 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(191, 219, 254, 0.9);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.96));
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.92), transparent 22%),
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(239,246,255,0.72));
   text-align: left;
   color: var(--branding-ink);
   display: grid;
   gap: 10px;
   align-items: start;
   justify-items: start;
-  box-shadow: none;
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
 }
 
 .template-card:hover {
-  box-shadow: 0 18px 32px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 20px 34px rgba(37, 99, 235, 0.14);
 }
 
 .template-card.is-active {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: linear-gradient(180deg, rgba(219, 234, 254, 0.96), rgba(239, 246, 255, 0.98));
+  border-color: rgba(37, 99, 235, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.96), transparent 22%),
+    linear-gradient(180deg, rgba(219, 234, 254, 0.92), rgba(255,255,255,0.9));
+  box-shadow: 0 24px 38px rgba(37, 99, 235, 0.16);
 }
 
 .template-card-badge {
@@ -171,10 +203,13 @@
 .template-card-preview {
   display: grid;
   gap: 6px;
-  padding: 12px;
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(203, 213, 225, 0.9);
+  width: 100%;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.92), transparent 18%),
+    linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.94));
+  border: 1px solid rgba(203, 213, 225, 0.72);
 }
 
 .template-card-preview-bar {
@@ -199,6 +234,18 @@
 
 .template-card-preview-line.short {
   width: 68%;
+}
+
+.template-card::after {
+  content: "";
+  width: 88px;
+  height: 88px;
+  border-radius: 999px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: radial-gradient(circle, rgba(37,99,235,0.14), rgba(255,255,255,0));
+  pointer-events: none;
 }
 
 .branding-actions {
@@ -239,8 +286,10 @@
   border-radius: 28px;
   overflow: hidden;
   border: 1px solid var(--branding-shell-border);
-  background: var(--branding-shell-bg);
-  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 24%),
+    var(--branding-shell-bg);
+  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.1);
 }
 
 .branding-preview-chrome {
@@ -286,7 +335,7 @@
 .branding-preview-frame {
   display: block;
   width: 100%;
-  min-height: 760px;
+  min-height: 700px;
   border: 0;
   background: #eef4ff;
 }
