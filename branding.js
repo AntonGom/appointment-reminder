@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401i";
+} from "./branding-templates.js?v=20260401j";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -562,8 +562,6 @@ function getMotionStyleHint() {
 
 function applyPreviewHighlight(fieldId) {
   currentPreviewFocusField = fieldId || "";
-  clearPagePreviewHighlights();
-
   const config = PREVIEW_HIGHLIGHT_CONFIG[currentPreviewFocusField];
 
   if (previewFocusNote) {
@@ -574,12 +572,6 @@ function applyPreviewHighlight(fieldId) {
     clearIframePreviewHighlights();
     return;
   }
-
-  (config.selectors || []).forEach(selector => {
-    document.querySelectorAll(selector).forEach(element => {
-      element.classList.add("preview-highlighted");
-    });
-  });
 
   applyIframePreviewHighlights(config.iframeAreas || []);
 }
@@ -861,9 +853,7 @@ function wireFormInputs() {
         event.target.blur();
         applyPreviewHighlight("");
       }, 0);
-    }
-
-    if (event.target?.id) {
+    } else if (event.target?.id) {
       applyPreviewHighlight(event.target.id);
     }
 

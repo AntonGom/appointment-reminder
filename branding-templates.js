@@ -100,24 +100,21 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
   }
 
   if (branding.brandingEnabled === false) {
-    return buildDefaultReminderEmail(message, calendarLinks);
-  }
-
-  if (!previewMode) {
-    return buildProductionBrandedEmail({ message, calendarLinks, branding });
+    return buildDefaultReminderEmail(message, calendarLinks, { includePreviewStyles: previewMode });
   }
 
   const content = buildEmailContent({ message, branding, calendarLinks });
+  const includePreviewStyles = previewMode;
 
   if (branding.templateStyle === "spotlight") {
-    return buildSpotlightTemplate(content);
+    return buildSpotlightTemplate(content, { includePreviewStyles });
   }
 
   if (branding.templateStyle === "executive") {
-    return buildExecutiveTemplate(content);
+    return buildExecutiveTemplate(content, { includePreviewStyles });
   }
 
-  return buildSignatureTemplate(content);
+  return buildSignatureTemplate(content, { includePreviewStyles });
 }
 
 function buildPreviewFocusStyles() {
@@ -415,9 +412,10 @@ function buildHeroMark({ artShape, shapeProfile, markBackground, markBorder, mar
   `;
 }
 
-function buildSignatureTemplate(content) {
+function buildSignatureTemplate(content, options = {}) {
+  const includePreviewStyles = Boolean(options.includePreviewStyles);
   return `
-    ${buildPreviewFocusStyles()}
+    ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:34px 16px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.18)}, transparent 34%),
       linear-gradient(180deg, #f6f9ff, #f8fbff);font-family:Arial, sans-serif;">
@@ -472,9 +470,10 @@ function buildSignatureTemplate(content) {
   `;
 }
 
-function buildSpotlightTemplate(content) {
+function buildSpotlightTemplate(content, options = {}) {
+  const includePreviewStyles = Boolean(options.includePreviewStyles);
   return `
-    ${buildPreviewFocusStyles()}
+    ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.12)}, transparent 32%),
       linear-gradient(180deg, #f8fbff, #f6f9ff);font-family:Arial, sans-serif;">
@@ -532,9 +531,10 @@ function buildSpotlightTemplate(content) {
   `;
 }
 
-function buildExecutiveTemplate(content) {
+function buildExecutiveTemplate(content, options = {}) {
+  const includePreviewStyles = Boolean(options.includePreviewStyles);
   return `
-    ${buildPreviewFocusStyles()}
+    ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
       linear-gradient(180deg, #eef2f7, #f3f6fb);font-family:Arial, sans-serif;">
@@ -590,7 +590,8 @@ function buildExecutiveTemplate(content) {
   `;
 }
 
-function buildDefaultReminderEmail(message, calendarLinks) {
+function buildDefaultReminderEmail(message, calendarLinks, options = {}) {
+  const includePreviewStyles = Boolean(options.includePreviewStyles);
   const safeMessage = escapeHtml(message || "");
   const formattedMessage = safeMessage
     .split("\n\n")
@@ -599,7 +600,7 @@ function buildDefaultReminderEmail(message, calendarLinks) {
     .join("");
 
   return `
-    ${buildPreviewFocusStyles()}
+    ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
       <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #dbe7ff; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(37,99,235,0.08);">
         <div data-preview-area="hero" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
