@@ -161,6 +161,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
 
 let supabase = null;
 let appConfig = null;
+let runtimeConfig = null;
 let currentUser = null;
 let currentSavedBranding = {};
 let currentAuthUserId = "";
