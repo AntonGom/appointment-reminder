@@ -97,6 +97,10 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
     return buildDefaultReminderEmail(message, calendarLinks);
   }
 
+  if (!previewMode) {
+    return buildProductionBrandedEmail({ message, calendarLinks, branding });
+  }
+
   const content = buildEmailContent({ message, branding, calendarLinks });
 
   if (branding.templateStyle === "spotlight") {
@@ -602,6 +606,347 @@ function buildDefaultReminderEmail(message, calendarLinks) {
       </div>
     </div>
   `;
+}
+
+function buildProductionBrandedEmail({ message, calendarLinks, branding }) {
+  const parsed = parseReminderMessage(message);
+  const theme = getProductionTheme(branding);
+  const summaryHtml = buildProductionSummary(parsed.summary, branding);
+  const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding) : "";
+  const bodyHtml = parsed.body.length
+    ? parsed.body.map(paragraph => `
+        <tr>
+          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;color:#334155;">
+            ${escapeHtml(paragraph)}
+          </td>
+        </tr>
+      `).join("")
+    : "";
+  const contactPromptHtml = parsed.contactPrompt
+    ? `
+      <tr>
+        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;color:#334155;">
+          ${escapeHtml(parsed.contactPrompt)}
+        </td>
+      </tr>
+    `
+    : "";
+  const closingHtml = parsed.closing
+    ? `
+      <tr>
+        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;color:#0f172a;">
+          ${escapeHtml(parsed.closing)}
+        </td>
+      </tr>
+    `
+    : "";
+  const logoMarkup = branding.logoUrl
+    ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${escapeAttribute(branding.businessName)} logo" width="54" height="54" style="display:block;width:54px;height:54px;border-radius:16px;object-fit:cover;border:1px solid ${hexToRgba("#ffffff", 0.24)};">`
+    : `<div style="width:54px;height:54px;border-radius:16px;background:${theme.markBackground};border:1px solid ${theme.markBorder};display:flex;align-items:center;justify-content:center;color:${theme.markText};font-size:20px;font-weight:800;line-height:1;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
+  const topLabel = escapeHtml(branding.headerLabel || "Appointment Reminder");
+  const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
+  const tagline = branding.tagline
+    ? `<div style="font-size:14px;line-height:1.6;color:${theme.taglineColor};margin-top:8px;">${escapeHtml(branding.tagline)}</div>`
+    : "";
+  const contactLineParts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
+  const contactLine = contactLineParts.length
+    ? `<div style="font-size:13px;line-height:1.6;color:${theme.metaColor};margin-top:12px;">${escapeHtml(contactLineParts.join(" | "))}</div>`
+    : "";
+  const productionButtons = buildProductionButtons(branding);
+  const productionCalendar = buildProductionCalendar(calendarLinks, branding);
+
+  return `
+    <div style="margin:0;padding:28px 12px;background:${theme.pageBackground};font-family:Arial,Helvetica,sans-serif;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;">
+        <tr>
+          <td style="padding:0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${theme.heroBackground};">
+              <tr>
+                <td style="padding:26px 28px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td valign="top" style="width:72px;padding-right:16px;">
+                        ${logoMarkup}
+                      </td>
+                      <td valign="top">
+                        <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${theme.labelColor};">
+                          ${topLabel}
+                        </div>
+                        <div style="font-size:34px;line-height:1.02;font-weight:800;color:${theme.titleColor};margin-top:6px;">
+                          ${businessName}
+                        </div>
+                        ${tagline}
+                        ${contactLine}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 28px 14px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;color:#0f172a;">
+                  ${escapeHtml(parsed.greeting || "Hello,")}
+                </td>
+              </tr>
+              ${parsed.intro ? `
+                <tr>
+                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;color:#334155;">
+                    ${escapeHtml(parsed.intro)}
+                  </td>
+                </tr>
+              ` : ""}
+              ${summaryHtml}
+              ${detailsHtml}
+              ${bodyHtml}
+              ${contactPromptHtml}
+              ${productionButtons}
+              ${productionCalendar}
+              ${closingHtml}
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
+            <div style="font-size:13px;line-height:1.7;color:${theme.footerColor};">
+              <strong style="color:${theme.footerTitleColor};">${businessName}</strong><br>
+              ${escapeHtml(buildFooterContactLine(branding))}
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+function getProductionTheme(branding) {
+  if (branding.templateStyle === "executive") {
+    return {
+      pageBackground: "#eef2f7",
+      heroBackground: "#182235",
+      shellBorder: "#d5dde8",
+      labelColor: "#94a3b8",
+      titleColor: "#ffffff",
+      taglineColor: "#dbe4ef",
+      metaColor: "#c3d0df",
+      markBackground: "rgba(255,255,255,0.12)",
+      markBorder: "rgba(255,255,255,0.18)",
+      markText: "#ffffff",
+      footerBackground: "#0f172a",
+      footerColor: "#cbd5e1",
+      footerTitleColor: "#ffffff"
+    };
+  }
+
+  if (branding.templateStyle === "spotlight") {
+    return {
+      pageBackground: "#f8fbff",
+      heroBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.52)})`,
+      shellBorder: hexToRgba(branding.accentColor, 0.18),
+      labelColor: branding.accentColor,
+      titleColor: "#0f172a",
+      taglineColor: "#475569",
+      metaColor: "#475569",
+      markBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.78)})`,
+      markBorder: hexToRgba(branding.accentColor, 0.18),
+      markText: "#0f172a",
+      footerBackground: "#eff6ff",
+      footerColor: "#475569",
+      footerTitleColor: "#0f172a"
+    };
+  }
+
+  return {
+    pageBackground: "#f4f7fb",
+    heroBackground: `linear-gradient(135deg, ${branding.accentColor} 0%, ${hexToRgba(branding.accentColor, 0.82)} 58%, #1f2937 100%)`,
+    shellBorder: "#dbe7ff",
+    labelColor: "#dbeafe",
+    titleColor: "#ffffff",
+    taglineColor: "#dbeafe",
+    metaColor: "#eff6ff",
+    markBackground: `linear-gradient(180deg, rgba(255,255,255,0.92), ${hexToRgba(branding.secondaryColor, 0.72)})`,
+    markBorder: "rgba(255,255,255,0.3)",
+    markText: "#0f172a",
+    footerBackground: "#f8fafc",
+    footerColor: "#64748b",
+    footerTitleColor: "#0f172a"
+  };
+}
+
+function buildProductionSummary(summaryItems, branding) {
+  if (!summaryItems.length) {
+    return "";
+  }
+
+  const radius = getSafePanelRadius(branding.panelShape);
+  const cells = summaryItems.slice(0, 3).map(item => `
+    <td valign="top" style="padding:0 8px 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid ${hexToRgba(branding.accentColor, 0.18)};${radius}background:linear-gradient(180deg, #ffffff, #f8fafc);">
+        <tr>
+          <td style="padding:14px 14px 12px;">
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:16px;font-weight:700;line-height:1.45;color:#0f172a;">${escapeHtml(item.value)}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  `).join("");
+
+  return `
+    <tr>
+      <td style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>${cells}</tr>
+        </table>
+      </td>
+    </tr>
+  `;
+}
+
+function buildProductionDetails(details, branding) {
+  const radius = getSafePanelRadius(branding.panelShape);
+
+  return `
+    <tr>
+      <td style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid ${hexToRgba(branding.accentColor, 0.14)};${radius}background:linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.34)});">
+          <tr>
+            <td style="padding:16px 18px;">
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
+              <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+}
+
+function buildProductionButtons(branding) {
+  const buttons = [];
+  const radius = getSafeButtonRadius(branding.buttonStyle);
+
+  if (branding.contactPhone) {
+    const digits = branding.contactPhone.replace(/\D/g, "");
+    if (digits) {
+      buttons.push({
+        href: `tel:${digits}`,
+        label: "Call us",
+        background: branding.accentColor,
+        color: "#ffffff",
+        border: branding.accentColor
+      });
+    }
+  }
+
+  if (branding.websiteUrl) {
+    buttons.push({
+      href: branding.websiteUrl,
+      label: "Visit website",
+      background: "#ffffff",
+      color: "#0f172a",
+      border: hexToRgba(branding.accentColor, 0.24)
+    });
+  }
+
+  if (branding.rescheduleUrl) {
+    buttons.push({
+      href: branding.rescheduleUrl,
+      label: "Reschedule",
+      background: "#0f172a",
+      color: "#ffffff",
+      border: "#0f172a"
+    });
+  }
+
+  if (!buttons.length) {
+    return "";
+  }
+
+  return `
+    <tr>
+      <td style="padding:0 0 18px;">
+        ${buttons.map(button => `
+          <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};color:${button.color};border:1px solid ${button.border};text-decoration:none;font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
+        `).join("")}
+      </td>
+    </tr>
+  `;
+}
+
+function buildProductionCalendar(calendarLinks, branding) {
+  if (!calendarLinks) {
+    return "";
+  }
+
+  const radius = getSafePanelRadius(branding.panelShape);
+  const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
+
+  return `
+    <tr>
+      <td style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="${radius}background:${hexToRgba(branding.accentColor, 0.05)};border:1px solid ${hexToRgba(branding.accentColor, 0.16)};">
+          <tr>
+            <td style="padding:18px;">
+              <div style="font-size:15px;font-weight:800;color:#0f172a;margin:0 0 8px;">Add to Calendar</div>
+              <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;color:#ffffff;border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};color:#ffffff;border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#0f766e;color:#ffffff;border:1px solid #0f766e;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+}
+
+function getSafeButtonRadius(style) {
+  if (style === "crisp") {
+    return "border-radius:10px;";
+  }
+
+  if (style === "rounded") {
+    return "border-radius:16px;";
+  }
+
+  if (style === "bubbly") {
+    return "border-radius:24px;";
+  }
+
+  if (style === "cloudy") {
+    return "border-radius:28px;";
+  }
+
+  if (style === "parallelogram") {
+    return "border-radius:12px;";
+  }
+
+  return "border-radius:999px;";
+}
+
+function getSafePanelRadius(style) {
+  if (style === "crisp") {
+    return "border-radius:12px;";
+  }
+
+  if (style === "bubbly") {
+    return "border-radius:24px;";
+  }
+
+  if (style === "cloudy") {
+    return "border-radius:28px;";
+  }
+
+  if (style === "parallelogram") {
+    return "border-radius:14px;";
+  }
+
+  return "border-radius:18px;";
 }
 
 function buildButtonStyle(style) {

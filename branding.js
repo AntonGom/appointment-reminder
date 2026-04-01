@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401g";
+} from "./branding-templates.js?v=20260401h";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -565,6 +565,17 @@ function applyPreviewHighlight(fieldId) {
   applyIframePreviewHighlights(config.iframeAreas || []);
 }
 
+function clearPreviewHighlightIfIdle() {
+  window.setTimeout(() => {
+    const activeElement = document.activeElement;
+    const insideForm = brandingForm?.contains(activeElement);
+
+    if (!insideForm) {
+      applyPreviewHighlight("");
+    }
+  }, 0);
+}
+
 function clearPagePreviewHighlights() {
   document.querySelectorAll(".preview-highlighted").forEach(element => {
     element.classList.remove("preview-highlighted");
@@ -831,6 +842,19 @@ function wireFormInputs() {
   brandingForm.addEventListener("focusin", event => {
     if (event.target?.id) {
       applyPreviewHighlight(event.target.id);
+    }
+  });
+
+  brandingForm.addEventListener("focusout", () => {
+    clearPreviewHighlightIfIdle();
+  });
+
+  document.addEventListener("pointerdown", event => {
+    const target = event.target;
+    const insideForm = brandingForm.contains(target);
+
+    if (!insideForm) {
+      applyPreviewHighlight("");
     }
   });
 
