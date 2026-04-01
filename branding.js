@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401m";
+} from "./branding-templates.js?v=20260401n";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
