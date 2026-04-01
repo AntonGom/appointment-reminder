@@ -7,7 +7,6 @@
 
 body[data-page="branding"] {
   --branding-live-accent: #2563eb;
-  --branding-live-secondary: #e8f1ff;
   --branding-live-button-radius: 999px;
 }
 
@@ -50,13 +49,13 @@ body[data-page="branding"] .section-card {
 .branding-card:first-child {
   background:
     radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 22%),
-    linear-gradient(180deg, rgba(255,255,255,0.95), color-mix(in srgb, var(--branding-live-secondary) 28%, white 72%));
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,248,252,0.96));
 }
 
 .branding-card:last-child {
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--branding-live-accent) 14%, transparent), transparent 26%),
-    linear-gradient(180deg, rgba(255,255,255,0.95), color-mix(in srgb, var(--branding-live-secondary) 34%, white 66%));
+    linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,248,252,0.96));
 }
 
 .branding-card h2 {
@@ -524,7 +523,7 @@ body[data-page="branding"] .section-card {
   justify-content: center;
   padding: 10px 14px;
   border-radius: var(--branding-live-button-radius);
-  background: color-mix(in srgb, var(--branding-live-secondary) 72%, white 28%);
+  background: rgba(219, 234, 254, 0.92);
   border: 1px solid color-mix(in srgb, var(--branding-live-accent) 20%, white 80%);
   color: var(--branding-live-accent);
   font-size: 13px;

@@ -282,7 +282,6 @@ function renderPreview() {
 
 function applyLiveBrandingState(branding) {
   document.body.style.setProperty("--branding-live-accent", branding.accentColor || "#2563eb");
-  document.body.style.setProperty("--branding-live-secondary", branding.secondaryColor || "#e8f1ff");
   document.body.style.setProperty("--branding-live-button-radius", getLiveButtonRadius(branding.buttonStyle));
   document.body.dataset.brandingShine = branding.shineStyle || "on";
   document.body.dataset.brandingMotion = branding.motionStyle || "showcase";
