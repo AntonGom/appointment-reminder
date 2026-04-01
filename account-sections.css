@@ -294,10 +294,13 @@ h1 {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  width: 100%;
 }
 
 .calendar-toolbar-controls {
   display: grid;
+  width: 100%;
+  flex: 1 1 100%;
   justify-items: center;
   gap: 10px;
 }
@@ -365,6 +368,7 @@ h1 {
   align-items: center;
   flex-wrap: nowrap;
   justify-content: center;
+  width: 100%;
 }
 
 .calendar-nav-buttons button {
