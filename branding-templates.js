@@ -1,18 +1,18 @@
 export const BRANDING_TEMPLATE_OPTIONS = [
   {
     id: "signature",
-    label: "Liquid Glass",
-    description: "Glossy, premium, and polished with a modern glass look."
+    label: "Glass Ribbon",
+    description: "Bright, sculpted, and polished with a premium glass finish."
   },
   {
     id: "spotlight",
-    label: "Soft Studio",
-    description: "Minimal and modern with lighter layers and a calm upscale feel."
+    label: "Studio Arc",
+    description: "Editorial, airy, and modern with a softer luxury feel."
   },
   {
     id: "executive",
-    label: "Midnight Executive",
-    description: "Dark, sharp, and more formal for a higher-end business look."
+    label: "Executive Slate",
+    description: "Darker, sharper, and more formal for executive-facing brands."
   }
 ];
 
@@ -137,23 +137,90 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   };
 }
 
+function buildHeroContactChips(branding, palette = {}) {
+  const items = [branding.contactPhone, branding.contactEmail, formatUrlLabel(branding.websiteUrl)].filter(Boolean).slice(0, 3);
+
+  if (!items.length) {
+    return "";
+  }
+
+  const background = palette.background || "rgba(255,255,255,0.14)";
+  const border = palette.border || "rgba(255,255,255,0.22)";
+  const color = palette.color || "#ffffff";
+
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;">
+      ${items.map(item => `
+        <span style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:${background};border:1px solid ${border};color:${color};font-size:13px;font-weight:700;line-height:1.4;">
+          ${escapeHtml(item)}
+        </span>
+      `).join("")}
+    </div>
+  `;
+}
+
+function buildHeroArtBlock(branding, options = {}) {
+  const accentColor = options.accentColor || branding.accentColor || DEFAULT_ACCENT;
+  const auraColor = options.auraColor || hexToRgba(accentColor, 0.32);
+  const shardColor = options.shardColor || "rgba(255,255,255,0.72)";
+  const shardSecondary = options.shardSecondary || hexToRgba(accentColor, 0.18);
+  const markBackground = options.markBackground || "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(219,234,254,0.72))";
+  const markBorder = options.markBorder || "rgba(255,255,255,0.46)";
+  const markTextColor = options.markTextColor || "#0f172a";
+  const lineColor = options.lineColor || "rgba(255,255,255,0.86)";
+
+  return `
+    <div style="position:relative;height:160px;">
+      <div style="position:absolute;right:18px;top:16px;width:118px;height:118px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);"></div>
+      <div style="position:absolute;right:94px;top:8px;width:44px;height:136px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
+      <div style="position:absolute;right:40px;top:36px;width:44px;height:96px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
+      <div style="position:absolute;right:132px;top:62px;width:44px;height:80px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.26)}, rgba(255,255,255,0.04));"></div>
+      <div style="position:absolute;right:8px;top:16px;width:100px;height:124px;border-radius:28px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;top:-10px;left:30px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
+        <div style="position:absolute;top:-10px;left:58px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
+        <div style="position:absolute;inset:16px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">
+          ${escapeHtml(getInitials(branding.businessName || "AR"))}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function buildSignatureTemplate(content) {
   return `
     <div style="margin:0;padding:34px 16px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.2)}, transparent 34%),
       radial-gradient(circle at 85% 8%, rgba(255,255,255,0.82), transparent 24%),
       linear-gradient(180deg, #edf4ff, #f8fbff);font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:rgba(255,255,255,0.92);border:1px solid rgba(255,255,255,0.82);border-radius:30px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
+      <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.82);border-radius:34px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
         <div style="padding:28px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.32), transparent 28%),
-          linear-gradient(135deg, ${content.brand.accentColor}, #0f172a);">
-          <div style="display:flex;align-items:center;gap:16px;">
-            ${content.logoMarkup}
+          radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 28%),
+          linear-gradient(135deg, ${content.brand.accentColor}, #111827);">
+          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
-              <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">Appointment reminder</div>
-              <div style="font-size:30px;line-height:1.05;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                ${content.logoMarkup}
+                <div>
+                  <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">Branded reminder</div>
+                  <div style="font-size:31px;line-height:1.02;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
+                </div>
+              </div>
               ${content.tagline}
+              ${buildHeroContactChips(content.brand, {
+                background: "rgba(255,255,255,0.14)",
+                border: "rgba(255,255,255,0.2)",
+                color: "#ffffff"
+              })}
             </div>
+            ${buildHeroArtBlock(content.brand, {
+              accentColor: content.brand.accentColor,
+              auraColor: hexToRgba(content.brand.accentColor, 0.36),
+              shardColor: "rgba(255,255,255,0.74)",
+              shardSecondary: "rgba(255,255,255,0.08)",
+              markBackground: "linear-gradient(180deg, rgba(255,255,255,0.82), rgba(219,234,254,0.42))",
+              markBorder: "rgba(255,255,255,0.34)",
+              markTextColor: "#0f172a"
+            })}
           </div>
         </div>
         <div style="padding:28px;">
@@ -167,7 +234,7 @@ function buildSignatureTemplate(content) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.9);color:#64748b;font-size:13px;line-height:1.7;">
+        <div style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.92);color:#64748b;font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
@@ -181,23 +248,43 @@ function buildSpotlightTemplate(content) {
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.14)}, transparent 32%),
       linear-gradient(180deg, #f8fbff, #eff6ff);font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:rgba(255,255,255,0.95);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:32px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
-        <div style="padding:20px 22px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.82), transparent 24%),
-          linear-gradient(180deg, ${hexToRgba(content.brand.accentColor, 0.14)}, rgba(255,255,255,0.72));border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
-          <div style="display:flex;align-items:center;gap:14px;">
-            ${content.logoMarkup}
+      <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.96);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:34px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
+        <div style="padding:24px 26px;background:
+          radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 24%),
+          linear-gradient(180deg, ${hexToRgba(content.brand.accentColor, 0.12)}, rgba(255,255,255,0.72));border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
+          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
-              <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">Branded reminder</div>
-              <div style="font-size:28px;line-height:1.08;font-weight:800;color:#0f172a;margin-top:4px;">${content.brandTitle}</div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                ${content.logoMarkup}
+                <div>
+                  <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">Studio reminder</div>
+                  <div style="font-size:30px;line-height:1.03;font-weight:800;color:#0f172a;margin-top:5px;">${content.brandTitle}</div>
+                </div>
+              </div>
+              ${content.brand.tagline ? `<div style="font-size:14px;line-height:1.7;color:#475569;margin-top:10px;">${escapeHtml(content.brand.tagline)}</div>` : ""}
+              ${buildHeroContactChips(content.brand, {
+                background: "rgba(255,255,255,0.78)",
+                border: hexToRgba(content.brand.accentColor, 0.16),
+                color: "#0f172a"
+              })}
             </div>
+            ${buildHeroArtBlock(content.brand, {
+              accentColor: content.brand.accentColor,
+              auraColor: hexToRgba(content.brand.accentColor, 0.18),
+              shardColor: "rgba(203,213,225,0.92)",
+              shardSecondary: "rgba(220,252,231,0.28)",
+              markBackground: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(220,252,231,0.62))",
+              markBorder: "rgba(203,213,225,0.72)",
+              markTextColor: "#0f172a",
+              lineColor: "rgba(255,255,255,0.92)"
+            })}
           </div>
         </div>
         <div style="padding:28px;">
           ${content.greeting}
           ${content.intro}
           ${content.summaryHtml}
-          <div style="padding:20px 22px;border-radius:24px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.95);box-shadow:0 16px 28px rgba(15,23,42,0.06);">
+          <div style="padding:20px 22px;border-radius:26px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.95);box-shadow:0 16px 28px rgba(15,23,42,0.06);">
             ${content.detailsHtml}
             ${content.bodyHtml}
             ${content.contactPrompt}
@@ -220,19 +307,36 @@ function buildExecutiveTemplate(content) {
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
       linear-gradient(180deg, #eef2f7, #e8eef7);font-family:Arial, sans-serif;">
-      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:28px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
+      <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:30px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
         <div style="padding:24px 28px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 24%),
-          linear-gradient(135deg, #0f172a, #1f2937);border-bottom:4px solid ${content.brand.accentColor};">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;">
-            <div style="display:flex;align-items:center;gap:14px;">
-              ${content.logoMarkup}
-              <div>
-                <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">Appointment notice</div>
-                <div style="font-size:29px;line-height:1.06;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
+          radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 24%),
+          linear-gradient(135deg, #0f172a, #182235);border-bottom:4px solid ${content.brand.accentColor};">
+          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
+            <div>
+              <div style="display:flex;align-items:center;gap:14px;">
+                ${content.logoMarkup}
+                <div>
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">Executive notice</div>
+                  <div style="font-size:30px;line-height:1.04;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
+                </div>
               </div>
+              <div style="font-size:14px;line-height:1.7;color:#cbd5e1;margin-top:10px;">${escapeHtml(content.brand.tagline || "Professional reminders for a polished client experience.")}</div>
+              ${buildHeroContactChips(content.brand, {
+                background: "rgba(255,255,255,0.08)",
+                border: "rgba(148,163,184,0.24)",
+                color: "#e2e8f0"
+              })}
             </div>
-            <div style="font-size:13px;color:#cbd5e1;text-align:right;">${escapeHtml(content.brand.tagline || "Professional reminders")}</div>
+            ${buildHeroArtBlock(content.brand, {
+              accentColor: content.brand.accentColor,
+              auraColor: hexToRgba(content.brand.accentColor, 0.2),
+              shardColor: "rgba(148,163,184,0.42)",
+              shardSecondary: "rgba(15,23,42,0.08)",
+              markBackground: "linear-gradient(180deg, rgba(37,99,235,0.24), rgba(15,23,42,0.62))",
+              markBorder: "rgba(255,255,255,0.18)",
+              markTextColor: "#f8fafc",
+              lineColor: "rgba(255,255,255,0.54)"
+            })}
           </div>
         </div>
         <div style="padding:28px;">

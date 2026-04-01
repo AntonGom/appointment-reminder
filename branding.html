@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401c">
+  <link rel="stylesheet" href="branding.css?v=20260401d">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -16,8 +16,8 @@
           Branding
           <span id="price-pill" class="price-pill">Sign in required</span>
         </div>
-        <h1>Build the look of your reminder emails.</h1>
-        <p class="lead">Choose a template, set your business details, and preview how your automated email reminders will look before you send them.</p>
+        <h1>Design a reminder identity that feels polished.</h1>
+        <p class="lead">Choose a sharper signature-style layout, set your business details, and preview the exact branded reminder look your clients will see.</p>
       </div>
     </section>
 
@@ -46,20 +46,20 @@
           </div>
 
           <div id="signed-in-shell" hidden>
+            <section class="section-card branding-gallery-card">
+              <div class="branding-gallery-head">
+                <div>
+                  <h2>Template gallery</h2>
+                  <p class="branding-copy">Pick the overall feel first, then fine-tune your brand details below. Each layout is designed to make reminders feel more premium and more trustworthy.</p>
+                </div>
+              </div>
+              <div id="template-grid" class="signature-gallery"></div>
+            </section>
+
             <div class="branding-layout">
               <section class="section-card branding-card">
                 <h2>Business Branding Profile</h2>
-                <p class="branding-copy">This preview uses the same branding layout your automated reminder emails will use when branding is saved.</p>
-
-                <div class="template-picker">
-                  <div class="template-picker-head">
-                    <div>
-                      <h3>Email style</h3>
-                      <p>Pick the look that feels closest to your business.</p>
-                    </div>
-                  </div>
-                  <div id="template-grid" class="template-grid"></div>
-                </div>
+                <p class="branding-copy">Save the brand details that should appear in your reminder emails. Your actual automated reminder email will use this profile when branding is turned on.</p>
 
                 <form id="branding-form">
                   <input id="branding-template-style" type="hidden" value="signature">
@@ -120,7 +120,7 @@
                 <div class="branding-preview-head">
                   <div>
                     <h3>Live email preview</h3>
-                    <p>This sample preview updates as you type and uses the same email renderer as your automated reminder emails.</p>
+                    <p>This preview updates as you type and uses the same renderer as your actual automated reminder emails.</p>
                   </div>
                   <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
                 </div>
@@ -148,6 +148,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401b"></script>
+  <script type="module" src="branding.js?v=20260401c"></script>
 </body>
 </html>

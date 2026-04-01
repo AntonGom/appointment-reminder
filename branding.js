@@ -43,6 +43,39 @@ let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
 
+const TEMPLATE_SHOWCASES = {
+  signature: {
+    company: "North Shore Wellness",
+    line: "Boutique wellness studio",
+    promise: "Clear reminders that still feel polished, modern, and premium.",
+    service: "Appointments + rescheduling",
+    email: "hello@northshorewellness.com",
+    website: "northshorewellness.com",
+    mark: "NS",
+    themeClass: "is-glass"
+  },
+  spotlight: {
+    company: "Harbor Legal Group",
+    line: "Private client coordination",
+    promise: "A lighter editorial layout for businesses that want a calm upscale feel.",
+    service: "Consults + follow-up",
+    email: "desk@harborlegal.com",
+    website: "harborlegal.com",
+    mark: "HL",
+    themeClass: "is-studio"
+  },
+  executive: {
+    company: "Aureline Concierge",
+    line: "Executive service desk",
+    promise: "Dark, sharper, and built for a more formal premium brand.",
+    service: "Bookings + confirmations",
+    email: "team@aureline.co",
+    website: "aureline.co",
+    mark: "AU",
+    themeClass: "is-executive"
+  }
+};
+
 function setStatus(message, type = "info") {
   if (!statusBanner) {
     return;
@@ -176,10 +209,15 @@ function applyBrandingToForm(branding) {
 function syncTemplateCards() {
   const activeTemplate = getFieldElement(fieldIds.templateStyle)?.value || "signature";
 
-  document.querySelectorAll(".template-card").forEach(card => {
+  document.querySelectorAll(".signature-card").forEach(card => {
     const isActive = card.dataset.template === activeTemplate;
     card.classList.toggle("is-active", isActive);
     card.setAttribute("aria-pressed", String(isActive));
+    const cta = card.querySelector(".signature-card-cta");
+
+    if (cta) {
+      cta.textContent = isActive ? "Selected" : "Preview";
+    }
   });
 }
 
@@ -224,7 +262,7 @@ function queuePreviewRender() {
   window.clearTimeout(previewRenderTimer);
   previewRenderTimer = window.setTimeout(() => {
     renderPreview();
-  }, 120);
+  }, 160);
 }
 
 function updateSignedInView(user) {
@@ -314,21 +352,36 @@ function renderTemplateCards() {
   }
 
   templateGrid.innerHTML = BRANDING_TEMPLATE_OPTIONS.map(option => {
-    const previewClass = option.id === "executive"
-      ? "dark"
-      : option.id === "spotlight"
-        ? "soft"
-        : "";
+    const showcase = TEMPLATE_SHOWCASES[option.id] || TEMPLATE_SHOWCASES.signature;
 
     return `
-      <button class="template-card" type="button" data-template="${option.id}" aria-pressed="false">
-        <span class="template-card-badge">${option.label}</span>
-        <span class="template-card-title">${option.label}</span>
-        <span class="template-card-copy">${option.description}</span>
-        <span class="template-card-preview" aria-hidden="true">
-          <span class="template-card-preview-bar ${previewClass}"></span>
-          <span class="template-card-preview-line short"></span>
-          <span class="template-card-preview-line"></span>
+      <button class="signature-card ${showcase.themeClass}" type="button" data-template="${option.id}" aria-pressed="false">
+        <span class="signature-card-rail" aria-hidden="true">
+          <span class="signature-card-icon">www</span>
+          <span class="signature-card-icon">@</span>
+          <span class="signature-card-icon">in</span>
+          <span class="signature-card-icon">☎</span>
+        </span>
+        <span class="signature-card-copy-wrap">
+          <span class="signature-card-badge">${option.label}</span>
+          <span class="signature-card-brand">${showcase.line}</span>
+          <span class="signature-card-title">${showcase.company}</span>
+          <span class="signature-card-copy">${showcase.promise}</span>
+          <span class="signature-card-meta">
+            <strong>${showcase.service}</strong>
+            ${showcase.email}<br>
+            ${showcase.website}
+          </span>
+        </span>
+        <span class="signature-card-art" aria-hidden="true">
+          <span class="signature-card-aura"></span>
+          <span class="signature-card-shard one"></span>
+          <span class="signature-card-shard two"></span>
+          <span class="signature-card-shard three"></span>
+          <span class="signature-card-mark">
+            <span class="signature-card-mark-fill">${showcase.mark}</span>
+          </span>
+          <span class="signature-card-cta">Preview</span>
         </span>
       </button>
     `;
