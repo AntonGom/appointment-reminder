@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260331s">
+  <link rel="stylesheet" href="account-sections.css?v=20260401a">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -85,18 +85,22 @@
                     <h2 id="calendar-month-label" class="calendar-month-label">Month</h2>
                     <p class="calendar-subcopy">Appointments are added automatically after a Bronze reminder is sent with a date.</p>
                   </div>
-                  <div class="calendar-toolbar-actions">
+                  <div class="calendar-toolbar-controls">
                     <div class="calendar-view-toggle" role="tablist" aria-label="Calendar view">
                       <button id="calendar-month-view" class="calendar-view-button" type="button" aria-pressed="false">Month</button>
                       <button id="calendar-week-view" class="calendar-view-button is-active" type="button" aria-pressed="true">Week</button>
                     </div>
-                    <div id="calendar-month-jump" class="calendar-month-jump">
-                      <select id="calendar-month-select" class="calendar-select" aria-label="Select month"></select>
-                      <select id="calendar-year-select" class="calendar-select" aria-label="Select year"></select>
+                    <div class="calendar-toolbar-actions">
+                      <div id="calendar-month-jump" class="calendar-month-jump">
+                        <select id="calendar-month-select" class="calendar-select" aria-label="Select month"></select>
+                        <select id="calendar-year-select" class="calendar-select" aria-label="Select year"></select>
+                      </div>
+                      <div class="calendar-nav-buttons">
+                        <button id="calendar-prev" class="secondary-button" type="button">Prev</button>
+                        <button id="calendar-today" class="secondary-button" type="button">Today</button>
+                        <button id="calendar-next" class="secondary-button" type="button">Next</button>
+                      </div>
                     </div>
-                    <button id="calendar-prev" class="secondary-button" type="button">Prev</button>
-                    <button id="calendar-today" class="secondary-button" type="button">Today</button>
-                    <button id="calendar-next" class="secondary-button" type="button">Next</button>
                   </div>
                 </div>
                 <div id="calendar-month-shell" class="calendar-view-shell">

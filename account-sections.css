@@ -295,6 +295,12 @@ h1 {
   align-items: center;
 }
 
+.calendar-toolbar-controls {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
 .calendar-view-toggle {
   display: inline-flex;
   align-items: center;
@@ -348,6 +354,18 @@ h1 {
 }
 
 .calendar-toolbar-actions button {
+  width: auto;
+  min-width: 110px;
+}
+
+.calendar-nav-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.calendar-nav-buttons button {
   width: auto;
   min-width: 110px;
 }
@@ -1328,6 +1346,11 @@ button.calendar-week-mobile-day {
     width: 100%;
   }
 
+  .calendar-toolbar-controls {
+    width: 100%;
+    justify-items: stretch;
+  }
+
   .calendar-view-toggle,
   .calendar-month-jump {
     width: 100%;
@@ -1338,9 +1361,20 @@ button.calendar-week-mobile-day {
   }
 
   .calendar-select,
-  .calendar-view-button,
-  .calendar-toolbar-actions button {
+  .calendar-view-button {
     width: 100%;
+  }
+
+  .calendar-nav-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .calendar-nav-buttons button {
+    width: 100%;
+    min-width: 0;
   }
 
   .calendar-weekdays,
