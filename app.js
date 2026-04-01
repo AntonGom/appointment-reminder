@@ -70,6 +70,7 @@ function getSavedBrandingProfile() {
     tagline: String(profile.tagline || "").trim(),
     headerLabel: String(profile.headerLabel || "").trim(),
     accentColor: String(profile.accentColor || "").trim(),
+    headerColor: String(profile.headerColor || "").trim(),
     secondaryColor: String(profile.secondaryColor || "").trim(),
     artShapeColor: String(profile.artShapeColor || "").trim(),
     panelColor: String(profile.panelColor || "").trim(),

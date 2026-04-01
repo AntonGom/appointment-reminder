@@ -34,6 +34,7 @@ const HERO_GRADIENT_STYLES = new Set(["signature", "spotlight", "split", "solid"
 export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   signature: Object.freeze({
     accentColor: "#2563eb",
+    headerColor: "#2563eb",
     secondaryColor: "#e8f1ff",
     artShapeColor: "#c7dcff",
     panelColor: "#eef4ff",
@@ -48,6 +49,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   }),
   spotlight: Object.freeze({
     accentColor: "#0f766e",
+    headerColor: "#0f766e",
     secondaryColor: "#e6fbf4",
     artShapeColor: "#66dbc6",
     panelColor: "#ecfbf6",
@@ -62,6 +64,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   }),
   executive: Object.freeze({
     accentColor: "#0f172a",
+    headerColor: "#0f172a",
     secondaryColor: "#dbe2ea",
     artShapeColor: "#94a3b8",
     panelColor: "#edf2f7",
@@ -108,6 +111,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const tagline = cleanText(profile?.tagline, 120);
   const headerLabel = cleanText(profile?.headerLabel, 50);
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
+  const headerColor = normalizeHexColor(profile?.headerColor) || templatePreset.headerColor || accentColor;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
@@ -132,6 +136,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     tagline: tagline || (forPreview ? "Friendly appointment reminders that feel polished and trustworthy." : ""),
     headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
     accentColor,
+    headerColor,
     secondaryColor,
     artShapeColor,
     panelColor,
@@ -887,7 +892,7 @@ function buildEmailPreheader({ parsed, branding }) {
 }
 
 function buildHeroBackground(branding, templateStyle) {
-  const accent = branding.accentColor || DEFAULT_ACCENT;
+  const accent = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
   const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
   const style = branding.heroGradientStyle || "signature";
   const executiveTail = "#111827";
@@ -1049,18 +1054,23 @@ function buildProductionHeroArt(branding, theme) {
 function getProductionTheme(branding) {
   const artColor = branding.artShapeColor || branding.accentColor || DEFAULT_ACCENT;
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
+  const headerColor = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
+  const darkHeroText = getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" }) === "#0f172a";
+  const labelColor = darkHeroText ? hexToRgba(branding.accentColor || headerColor, 0.92) : "rgba(255,255,255,0.82)";
+  const titleColor = darkHeroText ? "#0f172a" : "#ffffff";
+  const supportingHeroColor = darkHeroText ? "#334155" : "rgba(255,255,255,0.84)";
 
   if (branding.templateStyle === "executive") {
     return {
       templateStyle: "executive",
       pageBackground: "#eef2f7",
       heroBackground: buildHeroBackground(branding, "executive"),
-      heroBgColor: "#182235",
+      heroBgColor: headerColor,
       shellBorder: "#d5dde8",
-      labelColor: "#94a3b8",
-      titleColor: "#ffffff",
-      taglineColor: "#dbe4ef",
-      metaColor: "#c3d0df",
+      labelColor,
+      titleColor,
+      taglineColor: supportingHeroColor,
+      metaColor: supportingHeroColor,
       markBackground: "rgba(255,255,255,0.12)",
       markBorder: "rgba(255,255,255,0.18)",
       markText: "#ffffff",
@@ -1078,12 +1088,12 @@ function getProductionTheme(branding) {
       templateStyle: "spotlight",
       pageBackground: "#f8fbff",
       heroBackground: buildHeroBackground(branding, "spotlight"),
-      heroBgColor: "#ffffff",
+      heroBgColor: headerColor,
       shellBorder: hexToRgba(branding.accentColor, 0.18),
-      labelColor: branding.accentColor,
-      titleColor: "#0f172a",
-      taglineColor: "#475569",
-      metaColor: "#475569",
+      labelColor,
+      titleColor,
+      taglineColor: supportingHeroColor,
+      metaColor: supportingHeroColor,
       markBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.78)})`,
       markBorder: hexToRgba(branding.accentColor, 0.18),
       markText: "#0f172a",
@@ -1100,12 +1110,12 @@ function getProductionTheme(branding) {
     templateStyle: "signature",
     pageBackground: "#f4f7fb",
     heroBackground: buildHeroBackground(branding, "signature"),
-    heroBgColor: branding.accentColor,
+    heroBgColor: headerColor,
     shellBorder: "#dbe7ff",
-    labelColor: "#dbeafe",
-    titleColor: "#ffffff",
-    taglineColor: "#dbeafe",
-    metaColor: "#eff6ff",
+    labelColor,
+    titleColor,
+    taglineColor: supportingHeroColor,
+    metaColor: supportingHeroColor,
     markBackground: `linear-gradient(180deg, rgba(255,255,255,0.92), ${hexToRgba(branding.secondaryColor, 0.72)})`,
     markBorder: "rgba(255,255,255,0.3)",
     markText: "#0f172a",

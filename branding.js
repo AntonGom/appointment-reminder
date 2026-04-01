@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401o";
+} from "./branding-templates.js?v=20260401p";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -46,6 +46,8 @@ const fieldIds = {
   headerLabel: "branding-header-label",
   accentColor: "branding-accent-color",
   accentHex: "branding-accent-hex",
+  headerColor: "branding-header-color",
+  headerHex: "branding-header-hex",
   secondaryColor: "branding-secondary-color",
   secondaryHex: "branding-secondary-hex",
   artShapeColor: "branding-art-shape-color",
@@ -69,6 +71,7 @@ const fieldIds = {
 };
 
 const helperTextIds = {
+  headerColor: "branding-header-color-hint",
   secondaryColor: "branding-secondary-color-hint",
   artShapeColor: "branding-art-shape-color-hint",
   panelColor: "branding-panel-color-hint",
@@ -104,9 +107,13 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting the small top label above the business name."
   },
   [fieldIds.accentColor]: {
-    iframeAreas: ["hero", "buttons"],
+    iframeAreas: ["buttons"],
     selectors: ["#branding-preview-subject"],
-    note: "Highlighting the primary brand color areas."
+    note: "Highlighting the primary brand color areas like labels and main action accents."
+  },
+  [fieldIds.headerColor]: {
+    iframeAreas: ["hero"],
+    note: "Highlighting the large top company section so you can color that area directly."
   },
   [fieldIds.secondaryColor]: {
     iframeAreas: ["art", "secondary"],
@@ -351,6 +358,7 @@ function getDraftBranding() {
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
+    headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
@@ -387,6 +395,8 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
   getFieldElement(fieldIds.accentColor).value = normalized.accentColor;
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
+  getFieldElement(fieldIds.headerColor).value = normalized.headerColor;
+  getFieldElement(fieldIds.headerHex).value = normalized.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = normalized.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
   getFieldElement(fieldIds.artShapeColor).value = normalized.artShapeColor;
@@ -436,6 +446,8 @@ function applyTemplatePreset(templateId) {
 
   getFieldElement(fieldIds.accentColor).value = preset.accentColor;
   getFieldElement(fieldIds.accentHex).value = preset.accentColor;
+  getFieldElement(fieldIds.headerColor).value = preset.headerColor;
+  getFieldElement(fieldIds.headerHex).value = preset.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = preset.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
   getFieldElement(fieldIds.artShapeColor).value = preset.artShapeColor;
@@ -703,6 +715,7 @@ function applyLiveBrandingState(branding) {
 }
 
 function updateHelperHints() {
+  updateHelperHint(helperTextIds.headerColor, getHeaderColorHint());
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
   updateHelperHint(helperTextIds.artShapeColor, getArtShapeColorHint());
   updateHelperHint(helperTextIds.panelColor, getPanelColorHint());
@@ -722,6 +735,10 @@ function updateHelperHint(elementId, text) {
   if (element) {
     element.textContent = text;
   }
+}
+
+function getHeaderColorHint() {
+  return "Changes the large top company section behind the business name and tagline.";
 }
 
 function getSecondaryColorHint() {
@@ -1028,6 +1045,7 @@ async function saveBranding() {
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
+    headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
@@ -1159,6 +1177,8 @@ function wireFormInputs() {
 
   const accentColorInput = getFieldElement(fieldIds.accentColor);
   const accentHexInput = getFieldElement(fieldIds.accentHex);
+  const headerColorInput = getFieldElement(fieldIds.headerColor);
+  const headerHexInput = getFieldElement(fieldIds.headerHex);
   const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
   const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
   const artShapeColorInput = getFieldElement(fieldIds.artShapeColor);
@@ -1172,6 +1192,10 @@ function wireFormInputs() {
   brandingForm.addEventListener("input", event => {
     if (event.target === accentColorInput && accentHexInput) {
       accentHexInput.value = accentColorInput.value;
+    }
+
+    if (event.target === headerColorInput && headerHexInput) {
+      headerHexInput.value = headerColorInput.value;
     }
 
     if (event.target === secondaryColorInput && secondaryHexInput) {
@@ -1192,6 +1216,10 @@ function wireFormInputs() {
 
     if (event.target === accentHexInput && accentColorInput && /^#[0-9a-f]{3,6}$/i.test(accentHexInput.value.trim())) {
       accentColorInput.value = accentHexInput.value.trim();
+    }
+
+    if (event.target === headerHexInput && headerColorInput && /^#[0-9a-f]{3,6}$/i.test(headerHexInput.value.trim())) {
+      headerColorInput.value = headerHexInput.value.trim();
     }
 
     if (event.target === secondaryHexInput && secondaryColorInput && /^#[0-9a-f]{3,6}$/i.test(secondaryHexInput.value.trim())) {
