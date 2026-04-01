@@ -27,6 +27,7 @@ const REAL_ART_SHAPES = ["classic", "orbit", "stacked", "ribbon", "prism", "fram
 const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 const SHINE_STYLES = new Set(["on", "off"]);
 const MOTION_STYLES = new Set(["showcase", "float", "pulse", "still"]);
+const HERO_GRADIENT_STYLES = new Set(["signature", "spotlight", "split", "solid"]);
 
 export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   signature: Object.freeze({
@@ -37,7 +38,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     artShape: "classic",
     shapeIntensity: "balanced",
     shineStyle: "on",
-    motionStyle: "showcase"
+    motionStyle: "showcase",
+    heroGradientStyle: "signature"
   }),
   spotlight: Object.freeze({
     accentColor: "#0f766e",
@@ -47,7 +49,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     artShape: "ribbon",
     shapeIntensity: "soft",
     shineStyle: "on",
-    motionStyle: "float"
+    motionStyle: "float",
+    heroGradientStyle: "spotlight"
   }),
   executive: Object.freeze({
     accentColor: "#0f172a",
@@ -57,7 +60,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     artShape: "frame",
     shapeIntensity: "bold",
     shineStyle: "off",
-    motionStyle: "still"
+    motionStyle: "still",
+    heroGradientStyle: "split"
   })
 });
 
@@ -102,6 +106,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : templatePreset.shapeIntensity || "balanced";
   const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : templatePreset.shineStyle || "on";
   const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : templatePreset.motionStyle || "showcase";
+  const heroGradientStyle = HERO_GRADIENT_STYLES.has(profile?.heroGradientStyle) ? profile.heroGradientStyle : templatePreset.heroGradientStyle || "signature";
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -122,6 +127,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     shapeIntensity,
     shineStyle,
     motionStyle,
+    heroGradientStyle,
     contactEmail,
     contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
     websiteUrl,
@@ -677,7 +683,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const bodyHtml = parsed.body.length
     ? parsed.body.map(paragraph => `
         <tr>
-          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;color:#334155;">
+          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
             ${escapeHtml(paragraph)}
           </td>
         </tr>
@@ -686,7 +692,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const contactPromptHtml = parsed.contactPrompt
     ? `
       <tr>
-        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;color:#334155;">
+        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
           ${escapeHtml(parsed.contactPrompt)}
         </td>
       </tr>
@@ -695,7 +701,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const closingHtml = parsed.closing
     ? `
       <tr>
-        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;color:#0f172a;">
+        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;${paintTextColor("#0f172a")}">
           ${escapeHtml(parsed.closing)}
         </td>
       </tr>
@@ -707,11 +713,11 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const topLabel = escapeHtml(branding.headerLabel || "Appointment Reminder");
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
   const tagline = branding.tagline
-    ? `<div style="font-size:14px;line-height:1.6;color:${theme.taglineColor};margin-top:8px;">${escapeHtml(branding.tagline)}</div>`
+    ? `<div style="font-size:14px;line-height:1.6;${paintTextColor(theme.taglineColor)}margin-top:8px;">${escapeHtml(branding.tagline)}</div>`
     : "";
   const contactLineParts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
   const contactLine = contactLineParts.length
-    ? `<div style="font-size:13px;line-height:1.6;color:${theme.metaColor};margin-top:12px;">${escapeHtml(contactLineParts.join(" | "))}</div>`
+    ? `<div style="font-size:13px;line-height:1.6;${paintTextColor(theme.metaColor)}margin-top:12px;">${escapeHtml(contactLineParts.join(" | "))}</div>`
     : "";
   const productionButtons = buildProductionButtons(branding);
   const productionCalendar = buildProductionCalendar(calendarLinks, branding);
@@ -726,10 +732,10 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
 
   const contentHtml = `
     <div style="margin:0;padding:28px 12px;background:${theme.pageBackground};">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);">
         <tr>
-          <td data-preview-area="hero" style="padding:0;background:${theme.heroBackground};">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <td data-preview-area="hero" bgcolor="${theme.heroBgColor}" style="padding:0;background:${theme.heroBackground};">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${theme.heroBgColor}">
               <tr>
                 <td style="padding:26px 28px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -738,10 +744,10 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
                         <div data-preview-area="logo">${logoMarkup}</div>
                       </td>
                       <td valign="top">
-                        <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${theme.labelColor};">
+                        <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;${paintTextColor(theme.labelColor)}">
                           ${topLabel}
                         </div>
-                        <div style="font-size:34px;line-height:1.02;font-weight:800;color:${theme.titleColor};margin-top:6px;">
+                        <div style="font-size:34px;line-height:1.02;font-weight:800;${paintTextColor(theme.titleColor)}margin-top:6px;">
                           ${businessName}
                         </div>
                         ${tagline}
@@ -759,13 +765,13 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           <td style="padding:28px 28px 14px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;color:#0f172a;">
+                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor("#0f172a")}">
                   ${escapeHtml(parsed.greeting || "Hello,")}
                 </td>
               </tr>
               ${parsed.intro ? `
                 <tr>
-                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;color:#334155;">
+                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
                     ${escapeHtml(parsed.intro)}
                   </td>
                 </tr>
@@ -781,9 +787,9 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           </td>
         </tr>
         <tr>
-          <td data-preview-area="footer" style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
-            <div style="font-size:13px;line-height:1.7;color:${theme.footerColor};">
-              <strong style="color:${theme.footerTitleColor};">${businessName}</strong><br>
+          <td data-preview-area="footer" bgcolor="${theme.footerBgColor}" style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
+            <div style="font-size:13px;line-height:1.7;${paintTextColor(theme.footerColor)}">
+              <strong style="${paintTextColor(theme.footerTitleColor)}">${businessName}</strong><br>
               ${escapeHtml(buildFooterContactLine(branding))}
             </div>
           </td>
@@ -808,6 +814,7 @@ function wrapEmailDocument(contentHtml, options = {}) {
       <meta charset="UTF-8">
       <meta http-equiv="x-ua-compatible" content="ie=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="x-apple-disable-message-reformatting">
       <meta name="color-scheme" content="light only">
       <meta name="supported-color-schemes" content="light">
       <style>
@@ -860,6 +867,62 @@ function buildEmailPreheader({ parsed, branding }) {
   }
 
   return parts.join(" ");
+}
+
+function buildHeroBackground(branding, templateStyle) {
+  const accent = branding.accentColor || DEFAULT_ACCENT;
+  const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
+  const style = branding.heroGradientStyle || "signature";
+
+  if (templateStyle === "executive") {
+    if (style === "solid") {
+      return "#182235";
+    }
+
+    if (style === "spotlight") {
+      return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.3)}, transparent 28%), linear-gradient(135deg, #111827 0%, #182235 56%, #1f2937 100%)`;
+    }
+
+    if (style === "split") {
+      return `linear-gradient(120deg, #111827 0%, #182235 52%, ${hexToRgba(secondary, 0.42)} 100%)`;
+    }
+
+    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.26)}, transparent 24%), linear-gradient(135deg, #0f172a 0%, #182235 54%, ${hexToRgba(accent, 0.72)} 100%)`;
+  }
+
+  if (templateStyle === "spotlight") {
+    if (style === "solid") {
+      return "#ffffff";
+    }
+
+    if (style === "split") {
+      return `linear-gradient(120deg, #ffffff 0%, ${hexToRgba(secondary, 0.86)} 58%, ${hexToRgba(accent, 0.14)} 100%)`;
+    }
+
+    if (style === "signature") {
+      return `linear-gradient(135deg, #ffffff 0%, ${hexToRgba(secondary, 0.72)} 48%, ${hexToRgba(accent, 0.12)} 100%)`;
+    }
+
+    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.82)}, transparent 22%), linear-gradient(180deg, #ffffff, ${hexToRgba(secondary, 0.48)})`;
+  }
+
+  if (style === "solid") {
+    return accent;
+  }
+
+  if (style === "spotlight") {
+    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.92)}, transparent 26%), linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.84)} 54%, #1f2937 100%)`;
+  }
+
+  if (style === "split") {
+    return `linear-gradient(120deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 52%, ${secondary} 100%)`;
+  }
+
+  return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.82)} 58%, ${secondary} 100%)`;
+}
+
+function paintTextColor(color) {
+  return `color:${color};-webkit-text-fill-color:${color};`;
 }
 
 function buildProductionHeroArt(branding, theme) {
@@ -954,7 +1017,8 @@ function getProductionTheme(branding) {
     return {
       templateStyle: "executive",
       pageBackground: "#eef2f7",
-      heroBackground: "#182235",
+      heroBackground: buildHeroBackground(branding, "executive"),
+      heroBgColor: "#182235",
       shellBorder: "#d5dde8",
       labelColor: "#94a3b8",
       titleColor: "#ffffff",
@@ -966,6 +1030,7 @@ function getProductionTheme(branding) {
       heroLineColor: "rgba(255,255,255,0.24)",
       heroMarkCore: "linear-gradient(140deg, rgba(15,23,42,0.92), rgba(37,99,235,0.34))",
       footerBackground: "#0f172a",
+      footerBgColor: "#0f172a",
       footerColor: "#cbd5e1",
       footerTitleColor: "#ffffff"
     };
@@ -975,7 +1040,8 @@ function getProductionTheme(branding) {
     return {
       templateStyle: "spotlight",
       pageBackground: "#f8fbff",
-      heroBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.52)})`,
+      heroBackground: buildHeroBackground(branding, "spotlight"),
+      heroBgColor: "#ffffff",
       shellBorder: hexToRgba(branding.accentColor, 0.18),
       labelColor: branding.accentColor,
       titleColor: "#0f172a",
@@ -987,6 +1053,7 @@ function getProductionTheme(branding) {
       heroLineColor: "rgba(255,255,255,0.86)",
       heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.72)})`,
       footerBackground: "#eff6ff",
+      footerBgColor: "#eff6ff",
       footerColor: "#475569",
       footerTitleColor: "#0f172a"
     };
@@ -995,7 +1062,8 @@ function getProductionTheme(branding) {
   return {
     templateStyle: "signature",
     pageBackground: "#f4f7fb",
-    heroBackground: `linear-gradient(135deg, ${branding.accentColor} 0%, ${hexToRgba(branding.accentColor, 0.82)} 58%, #1f2937 100%)`,
+    heroBackground: buildHeroBackground(branding, "signature"),
+    heroBgColor: branding.accentColor,
     shellBorder: "#dbe7ff",
     labelColor: "#dbeafe",
     titleColor: "#ffffff",
@@ -1007,6 +1075,7 @@ function getProductionTheme(branding) {
     heroLineColor: "rgba(255,255,255,0.76)",
     heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.8)})`,
     footerBackground: "#f8fafc",
+    footerBgColor: "#f8fafc",
     footerColor: "#64748b",
     footerTitleColor: "#0f172a"
   };
@@ -1020,11 +1089,11 @@ function buildProductionSummary(summaryItems, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const cells = summaryItems.slice(0, 3).map(item => `
     <td valign="top" style="padding:0 8px 0 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid ${hexToRgba(branding.accentColor, 0.18)};${radius}background:linear-gradient(180deg, #ffffff, #f8fafc);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(branding.accentColor, 0.18)};${radius}background:linear-gradient(180deg, #ffffff, #f8fafc);">
         <tr>
           <td style="padding:14px 14px 12px;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:16px;font-weight:700;line-height:1.45;color:#0f172a;">${escapeHtml(item.value)}</div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor("#0f172a")}">${escapeHtml(item.value)}</div>
           </td>
         </tr>
       </table>
@@ -1048,11 +1117,11 @@ function buildProductionDetails(details, branding) {
   return `
     <tr>
       <td data-preview-area="secondary" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid ${hexToRgba(branding.accentColor, 0.14)};${radius}background:linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.34)});">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(branding.accentColor, 0.14)};${radius}background:linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.34)});">
           <tr>
             <td style="padding:16px 18px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
-              <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor("#64748b")}margin:0 0 8px;">Additional details</div>
+              <div style="font-size:15px;line-height:1.7;${paintTextColor("#0f172a")}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
         </table>
@@ -1106,7 +1175,7 @@ function buildProductionButtons(branding) {
     <tr>
       <td data-preview-area="buttons" style="padding:0 0 18px;">
         ${buttons.map(button => `
-          <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};color:${button.color};border:1px solid ${button.border};text-decoration:none;font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
+          <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};${paintTextColor(button.color)}border:1px solid ${button.border};text-decoration:none;font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
         `).join("")}
       </td>
     </tr>
@@ -1124,14 +1193,14 @@ function buildProductionCalendar(calendarLinks, branding) {
   return `
     <tr>
       <td data-preview-area="buttons" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="${radius}background:${hexToRgba(branding.accentColor, 0.05)};border:1px solid ${hexToRgba(branding.accentColor, 0.16)};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${hexToRgba(branding.accentColor, 0.05)};border:1px solid ${hexToRgba(branding.accentColor, 0.16)};">
           <tr>
             <td style="padding:18px;">
-              <div style="font-size:15px;font-weight:800;color:#0f172a;margin:0 0 8px;">Add to Calendar</div>
-              <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
-              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;color:#ffffff;border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};color:#ffffff;border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#0f766e;color:#ffffff;border:1px solid #0f766e;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+              <div style="font-size:15px;font-weight:800;${paintTextColor("#0f172a")}margin:0 0 8px;">Add to Calendar</div>
+              <div style="font-size:13px;line-height:1.65;${paintTextColor("#475569")}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor("#ffffff")}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor("#ffffff")}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#0f766e;${paintTextColor("#ffffff")}border:1px solid #0f766e;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
             </td>
           </tr>
         </table>

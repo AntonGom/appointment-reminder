@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401l";
+} from "./branding-templates.js?v=20260401m";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -39,6 +39,7 @@ const fieldIds = {
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
   panelShape: "branding-panel-shape",
+  heroGradientStyle: "branding-hero-gradient",
   artShape: "branding-art-shape",
   shapeIntensity: "branding-shape-intensity",
   shineStyle: "branding-shine-style",
@@ -53,6 +54,7 @@ const helperTextIds = {
   secondaryColor: "branding-secondary-color-hint",
   buttonStyle: "branding-button-style-hint",
   panelShape: "branding-panel-shape-hint",
+  heroGradientStyle: "branding-hero-gradient-hint",
   artShape: "branding-art-shape-hint",
   shapeIntensity: "branding-shape-intensity-hint",
   shineStyle: "branding-shine-style-hint",
@@ -101,6 +103,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.panelShape]: {
     iframeAreas: ["secondary", "buttons"],
     note: "Highlighting the info boxes and panels whose shape will change."
+  },
+  [fieldIds.heroGradientStyle]: {
+    iframeAreas: ["hero"],
+    note: "Highlighting the top company section where the main and secondary colors blend together."
   },
   [fieldIds.artShape]: {
     iframeAreas: ["art"],
@@ -288,6 +294,7 @@ function getDraftBranding() {
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
+    heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -321,6 +328,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
+  getFieldElement(fieldIds.heroGradientStyle).value = normalized.heroGradientStyle;
   getFieldElement(fieldIds.artShape).value = normalized.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
@@ -362,6 +370,7 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
   getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = preset.panelShape;
+  getFieldElement(fieldIds.heroGradientStyle).value = preset.heroGradientStyle;
   getFieldElement(fieldIds.artShape).value = preset.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = preset.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = preset.shineStyle;
@@ -434,6 +443,7 @@ function updateHelperHints() {
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
   updateHelperHint(helperTextIds.panelShape, getPanelShapeHint());
+  updateHelperHint(helperTextIds.heroGradientStyle, getHeroGradientHint());
   updateHelperHint(helperTextIds.artShape, getArtShapeHint());
   updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
   updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
@@ -498,6 +508,24 @@ function getPanelShapeHint() {
   }
 
   return "Keeps the email info boxes smooth and rounded.";
+}
+
+function getHeroGradientHint() {
+  const value = getFieldElement(fieldIds.heroGradientStyle)?.value || "signature";
+
+  if (value === "spotlight") {
+    return "Uses a softer fade so the top section feels lighter and calmer.";
+  }
+
+  if (value === "split") {
+    return "Pushes the secondary color harder into the top section for a bolder two-tone look.";
+  }
+
+  if (value === "solid") {
+    return "Keeps the top section mostly on the main brand color with minimal blending.";
+  }
+
+  return "Blends the main and secondary colors in a premium signature-style gradient.";
 }
 
 function getArtShapeHint() {
