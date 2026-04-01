@@ -117,7 +117,11 @@ export default async function handler(req, res) {
       rawEvent: {
         provider: "brevo",
         transport: "transactional_email",
-        stage: "send_api"
+        stage: "send_api",
+        rendered_email_subject: subject,
+        rendered_email_html: htmlMessage,
+        sender_name: senderName,
+        sender_email: senderEmail
       }
     });
 

@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401p">
+  <link rel="stylesheet" href="branding.css?v=20260401q">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -254,6 +254,53 @@
                 </div>
               </section>
             </div>
+
+            <section id="branding-qa-tools" class="section-card branding-card branding-qa-card" hidden>
+              <div class="branding-qa-head">
+                <div>
+                  <h3>Email QA tools</h3>
+                  <p class="branding-copy">Load the exact HTML saved from your most recent sent reminder email so we can validate what actually left the app, not just the design preview.</p>
+                </div>
+                <div class="branding-qa-actions">
+                  <button id="qa-load-last-email-button" class="secondary-button" type="button">View Last Sent Email HTML</button>
+                  <button id="qa-open-raw-email-button" class="secondary-button" type="button" disabled>Open Raw Email</button>
+                </div>
+              </div>
+
+              <p id="qa-last-email-status" class="field-hint qa-email-status">Send yourself a QA reminder email, then load it here.</p>
+
+              <div id="qa-last-email-meta" class="qa-email-meta" hidden>
+                <div class="qa-email-meta-item">
+                  <span class="qa-email-meta-label">Subject</span>
+                  <strong id="qa-last-email-subject">Not loaded</strong>
+                </div>
+                <div class="qa-email-meta-item">
+                  <span class="qa-email-meta-label">Sent</span>
+                  <strong id="qa-last-email-sent-at">Not loaded</strong>
+                </div>
+                <div class="qa-email-meta-item">
+                  <span class="qa-email-meta-label">Recipient</span>
+                  <strong id="qa-last-email-recipient">Not loaded</strong>
+                </div>
+                <div class="qa-email-meta-item">
+                  <span class="qa-email-meta-label">Message ID</span>
+                  <strong id="qa-last-email-message-id">Not loaded</strong>
+                </div>
+              </div>
+
+              <div id="qa-last-email-viewer" class="qa-email-viewer" hidden>
+                <div class="qa-email-pane">
+                  <div class="qa-email-pane-label">Rendered exact email</div>
+                  <div class="qa-email-render-shell">
+                    <iframe id="qa-last-email-frame" class="qa-email-frame" title="Last sent email HTML"></iframe>
+                  </div>
+                </div>
+                <div class="qa-email-pane">
+                  <div class="qa-email-pane-label">Stored raw HTML</div>
+                  <textarea id="qa-last-email-html" class="qa-email-source" readonly spellcheck="false"></textarea>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -261,6 +308,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401s"></script>
+  <script type="module" src="branding.js?v=20260401t"></script>
 </body>
 </html>

@@ -468,13 +468,13 @@ function getReminderEventTimeLabel(entry) {
 }
 
 function getReminderMessagePreview(entry) {
-  const directPreview = String(entry?.message_preview || "").trim();
+  const directPreview = String(entry?.message_preview || entry?.raw_message_preview || entry?.raw_message_fallback || "").trim();
 
   if (directPreview) {
     return directPreview;
   }
 
-  return String(entry?.raw_event?.message_preview || entry?.raw_event?.message || "").trim();
+  return "";
 }
 
 function normalizeReminderPreview(value) {
@@ -1354,7 +1354,7 @@ async function loadAppointments(user) {
         .order("service_time", { ascending: true }),
       supabase
         .from("client_reminder_history")
-        .select("*")
+        .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
         .eq("owner_id", user.id)
         .order("sent_at", { ascending: false })
         .limit(500)

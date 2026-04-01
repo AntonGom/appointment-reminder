@@ -25,6 +25,18 @@ const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
 const brandingEnabledNote = document.getElementById("branding-enabled-note");
 const signOutButton = document.getElementById("branding-sign-out");
+const qaToolsShell = document.getElementById("branding-qa-tools");
+const qaLoadLastEmailButton = document.getElementById("qa-load-last-email-button");
+const qaOpenRawEmailButton = document.getElementById("qa-open-raw-email-button");
+const qaLastEmailStatus = document.getElementById("qa-last-email-status");
+const qaLastEmailMeta = document.getElementById("qa-last-email-meta");
+const qaLastEmailSubject = document.getElementById("qa-last-email-subject");
+const qaLastEmailSentAt = document.getElementById("qa-last-email-sent-at");
+const qaLastEmailRecipient = document.getElementById("qa-last-email-recipient");
+const qaLastEmailMessageId = document.getElementById("qa-last-email-message-id");
+const qaLastEmailViewer = document.getElementById("qa-last-email-viewer");
+const qaLastEmailFrame = document.getElementById("qa-last-email-frame");
+const qaLastEmailHtml = document.getElementById("qa-last-email-html");
 
 const fieldIds = {
   templateStyle: "branding-template-style",
@@ -156,6 +168,7 @@ let previewRenderTimer = null;
 let lastPreviewKey = "";
 let currentPreviewFocusField = "";
 let previewRandomNonce = 0;
+let lastSentEmailRecord = null;
 
 const TEMPLATE_SHOWCASES = {
   signature: {
@@ -220,6 +233,15 @@ function setButtonBusy(button, isBusy, busyText) {
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function getTierKey(user) {
   const candidates = [
     user?.user_metadata?.tier,
@@ -256,6 +278,22 @@ function getPublicConfig() {
 
     return response.json();
   });
+}
+
+function getRuntimeConfig() {
+  return fetch("/api/runtime-env", { cache: "no-store" }).then(response => {
+    if (!response.ok) {
+      throw new Error("Unable to load runtime environment.");
+    }
+
+    return response.json();
+  });
+}
+
+function isQaRuntime() {
+  return runtimeConfig?.env === "preview"
+    || runtimeConfig?.label === "DEV"
+    || /qa/i.test(String(runtimeConfig?.branch || ""));
 }
 
 function getFieldElement(fieldId) {
@@ -429,6 +467,192 @@ function renderPreview() {
   }
 
   applyPreviewHighlight(currentPreviewFocusField);
+}
+
+function setQaEmailStatus(message, type = "info") {
+  if (!qaLastEmailStatus) {
+    return;
+  }
+
+  qaLastEmailStatus.textContent = message || "";
+  qaLastEmailStatus.className = `field-hint qa-email-status ${type}`;
+}
+
+function clearLastSentEmailRecord() {
+  lastSentEmailRecord = null;
+
+  if (qaOpenRawEmailButton) {
+    qaOpenRawEmailButton.disabled = true;
+  }
+
+  if (qaLastEmailMeta) {
+    qaLastEmailMeta.hidden = true;
+  }
+
+  if (qaLastEmailViewer) {
+    qaLastEmailViewer.hidden = true;
+  }
+
+  if (qaLastEmailFrame) {
+    qaLastEmailFrame.srcdoc = "";
+  }
+
+  if (qaLastEmailHtml) {
+    qaLastEmailHtml.value = "";
+  }
+}
+
+function formatQaDateTime(value) {
+  const date = new Date(value || "");
+
+  if (!Number.isFinite(date.getTime())) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function renderLastSentEmailRecord(record) {
+  lastSentEmailRecord = record;
+
+  if (qaOpenRawEmailButton) {
+    qaOpenRawEmailButton.disabled = false;
+  }
+
+  if (qaLastEmailSubject) {
+    qaLastEmailSubject.textContent = record.subject || "No subject found";
+  }
+
+  if (qaLastEmailSentAt) {
+    qaLastEmailSentAt.textContent = formatQaDateTime(record.sentAt);
+  }
+
+  if (qaLastEmailRecipient) {
+    qaLastEmailRecipient.textContent = record.recipient || "No recipient found";
+  }
+
+  if (qaLastEmailMessageId) {
+    qaLastEmailMessageId.textContent = record.messageId || "Not available";
+  }
+
+  if (qaLastEmailMeta) {
+    qaLastEmailMeta.hidden = false;
+  }
+
+  if (qaLastEmailFrame) {
+    qaLastEmailFrame.srcdoc = record.html || "";
+  }
+
+  if (qaLastEmailHtml) {
+    qaLastEmailHtml.value = record.html || "";
+  }
+
+  if (qaLastEmailViewer) {
+    qaLastEmailViewer.hidden = false;
+  }
+}
+
+async function loadLastSentEmailHtml({ announce = true } = {}) {
+  if (!supabase || !currentUser || !isQaRuntime()) {
+    return;
+  }
+
+  setButtonBusy(qaLoadLastEmailButton, true, "Loading...");
+
+  if (announce) {
+    setQaEmailStatus("Loading the exact HTML from reminder history...", "info");
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("client_reminder_history")
+      .select("id, recipient_email, message_id, sent_at, message_preview, raw_event")
+      .eq("owner_id", currentUser.id)
+      .eq("channel", "email")
+      .eq("status", "sent")
+      .order("sent_at", { ascending: false })
+      .limit(25);
+
+    if (error) {
+      throw error;
+    }
+
+    const match = (data || []).find(entry => {
+      const html = String(entry?.raw_event?.rendered_email_html || "").trim();
+      return Boolean(html);
+    });
+
+    if (!match) {
+      clearLastSentEmailRecord();
+      setQaEmailStatus("No stored sent email HTML found yet. Send a fresh automated email from QA first, then load it here.", "info");
+      return;
+    }
+
+    renderLastSentEmailRecord({
+      html: String(match?.raw_event?.rendered_email_html || "").trim(),
+      subject: String(match?.raw_event?.rendered_email_subject || "").trim(),
+      sentAt: match?.sent_at || null,
+      recipient: String(match?.recipient_email || "").trim(),
+      messageId: String(match?.message_id || "").trim()
+    });
+    setQaEmailStatus("Loaded the exact HTML that was saved when your most recent reminder email was sent.", "success");
+
+    if (announce) {
+      qaLastEmailViewer?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  } catch (error) {
+    clearLastSentEmailRecord();
+    setQaEmailStatus(error.message || "Unable to load the last sent email HTML right now.", "error");
+  } finally {
+    setButtonBusy(qaLoadLastEmailButton, false);
+  }
+}
+
+function openLastSentEmailRaw() {
+  if (!lastSentEmailRecord?.html) {
+    setQaEmailStatus("Load a sent email first so there is raw HTML to open.", "error");
+    return;
+  }
+
+  const popup = window.open("", "_blank", "noopener,noreferrer");
+
+  if (!popup) {
+    setQaEmailStatus("Your browser blocked the raw-email window. Allow pop-ups for QA testing and try again.", "error");
+    return;
+  }
+
+  popup.document.open();
+  popup.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raw Email HTML</title>
+  <style>
+    body { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #0f172a; color: #e2e8f0; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 14px; font: 800 28px/1.1 system-ui, sans-serif; color: #f8fafc; }
+    p { margin: 0 0 8px; color: #cbd5e1; font: 14px/1.6 system-ui, sans-serif; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #111827; border: 1px solid #334155; border-radius: 18px; padding: 18px; overflow: auto; color: #e2e8f0; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Raw Email HTML</h1>
+    <p><strong>Subject:</strong> ${escapeHtml(lastSentEmailRecord.subject || "No subject found")}</p>
+    <p><strong>Sent:</strong> ${escapeHtml(formatQaDateTime(lastSentEmailRecord.sentAt))}</p>
+    <p><strong>Recipient:</strong> ${escapeHtml(lastSentEmailRecord.recipient || "No recipient found")}</p>
+    <pre>${escapeHtml(lastSentEmailRecord.html)}</pre>
+  </main>
+</body>
+</html>`);
+  popup.document.close();
 }
 
 function applyLiveBrandingState(branding) {
@@ -727,6 +951,14 @@ function updateSignedInView(user) {
   if (pricePill) {
     pricePill.textContent = isSignedIn ? getTierLabel(user) : "Sign in required";
   }
+
+  if (qaToolsShell) {
+    qaToolsShell.hidden = !(isSignedIn && isQaRuntime());
+  }
+
+  if (!isSignedIn) {
+    clearLastSentEmailRecord();
+  }
 }
 
 async function saveBranding() {
@@ -746,6 +978,7 @@ async function saveBranding() {
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
+    heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -967,6 +1200,16 @@ function wireFormInputs() {
       window.location.href = "signin.html";
     });
   }
+
+  if (qaLoadLastEmailButton) {
+    qaLoadLastEmailButton.addEventListener("click", () => {
+      loadLastSentEmailHtml({ announce: true });
+    });
+  }
+
+  if (qaOpenRawEmailButton) {
+    qaOpenRawEmailButton.addEventListener("click", openLastSentEmailRaw);
+  }
 }
 
 async function initBrandingPage() {
@@ -974,7 +1217,10 @@ async function initBrandingPage() {
   wireFormInputs();
 
   try {
-    appConfig = await getPublicConfig();
+    [appConfig, runtimeConfig] = await Promise.all([
+      getPublicConfig(),
+      getRuntimeConfig().catch(() => null)
+    ]);
   } catch (error) {
     setStatus(error.message || "Unable to load this page.", "error");
     return;
@@ -1006,6 +1252,9 @@ async function initBrandingPage() {
 
   currentSavedBranding = currentUser?.user_metadata?.branding_profile || {};
   applyBrandingToForm(currentSavedBranding);
+  if (currentUser && isQaRuntime()) {
+    loadLastSentEmailHtml({ announce: false });
+  }
 
   supabase.auth.onAuthStateChange((event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
@@ -1023,6 +1272,9 @@ async function initBrandingPage() {
     currentSavedBranding = currentUser?.user_metadata?.branding_profile || {};
     updateSignedInView(currentUser);
     applyBrandingToForm(currentSavedBranding);
+    if (currentUser && isQaRuntime()) {
+      loadLastSentEmailHtml({ announce: false });
+    }
   });
 
   if (currentUser && hasSavedBrandingProfile(currentSavedBranding)) {

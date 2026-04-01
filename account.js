@@ -505,14 +505,13 @@ function getReminderEventTimeLabel(entry) {
 }
 
 function getReminderMessagePreview(entry) {
-  const directPreview = String(entry?.message_preview || "").trim();
+  const directPreview = String(entry?.message_preview || entry?.raw_message_preview || entry?.raw_message_fallback || "").trim();
 
   if (directPreview) {
     return directPreview;
   }
 
-  const rawPreview = String(entry?.raw_event?.message_preview || entry?.raw_event?.message || "").trim();
-  return rawPreview;
+  return "";
 }
 
 function normalizeReminderPreview(value) {
@@ -675,7 +674,7 @@ async function loadReminderHistory(ownerId) {
 
   const { data, error } = await supabase
     .from("client_reminder_history")
-    .select("*")
+    .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
     .eq("owner_id", ownerId)
     .order("sent_at", { ascending: false })
     .limit(500);
