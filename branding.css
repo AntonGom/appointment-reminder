@@ -544,6 +544,22 @@ body[data-page="branding"] .section-card {
   text-align: center;
 }
 
+body[data-branding-button-style="bubbly"] .preview-subject,
+body[data-branding-button-style="bubbly"] .signature-card-cta {
+  border-radius: 28px 22px 30px 20px / 24px 30px 22px 28px;
+}
+
+body[data-branding-button-style="cloudy"] .preview-subject,
+body[data-branding-button-style="cloudy"] .signature-card-cta {
+  border-radius: 26px 34px 24px 36px / 30px 24px 34px 26px;
+}
+
+body[data-branding-button-style="parallelogram"] .preview-subject,
+body[data-branding-button-style="parallelogram"] .signature-card-cta {
+  border-radius: 12px;
+  clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
+}
+
 .preview-highlighted {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24), 0 0 0 1px rgba(239, 68, 68, 0.9);
 }

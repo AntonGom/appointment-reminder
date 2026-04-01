@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401e";
+} from "./branding-templates.js?v=20260401g";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -35,6 +35,7 @@ const fieldIds = {
   secondaryHex: "branding-secondary-hex",
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
+  panelShape: "branding-panel-shape",
   artShape: "branding-art-shape",
   shapeIntensity: "branding-shape-intensity",
   shineStyle: "branding-shine-style",
@@ -48,6 +49,7 @@ const fieldIds = {
 const helperTextIds = {
   secondaryColor: "branding-secondary-color-hint",
   buttonStyle: "branding-button-style-hint",
+  panelShape: "branding-panel-shape-hint",
   artShape: "branding-art-shape-hint",
   shapeIntensity: "branding-shape-intensity-hint",
   shineStyle: "branding-shine-style-hint",
@@ -87,6 +89,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["buttons"],
     selectors: ["#branding-preview-subject", ".signature-card-cta"],
     note: "Highlighting the buttons and chips whose corners change shape."
+  },
+  [fieldIds.panelShape]: {
+    iframeAreas: ["secondary", "buttons"],
+    note: "Highlighting the info boxes and panels whose shape will change."
   },
   [fieldIds.artShape]: {
     iframeAreas: ["art"],
@@ -135,6 +141,7 @@ let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
 let currentPreviewFocusField = "";
+let previewRandomNonce = 0;
 
 const TEMPLATE_SHOWCASES = {
   signature: {
@@ -271,6 +278,7 @@ function getDraftBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -302,6 +310,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
+  getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
   getFieldElement(fieldIds.artShape).value = normalized.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
@@ -332,7 +341,8 @@ function syncTemplateCards() {
 
 function renderPreview() {
   const draftBranding = getDraftBranding();
-  const previewKey = JSON.stringify(draftBranding);
+  const randomSeed = draftBranding.artShape === "random" ? previewRandomNonce : 0;
+  const previewKey = JSON.stringify({ ...draftBranding, __randomSeed: randomSeed });
 
   if (previewKey === lastPreviewKey) {
     return;
@@ -347,7 +357,8 @@ function renderPreview() {
       google: "#google-calendar"
     },
     brandingProfile: draftBranding,
-    previewMode: true
+    previewMode: true,
+    randomSeed
   });
 
   if (previewFrame) {
@@ -376,11 +387,13 @@ function applyLiveBrandingState(branding) {
   document.body.style.setProperty("--branding-live-button-radius", getLiveButtonRadius(branding.buttonStyle));
   document.body.dataset.brandingShine = branding.shineStyle || "on";
   document.body.dataset.brandingMotion = branding.motionStyle || "showcase";
+  document.body.dataset.brandingButtonStyle = branding.buttonStyle || "pill";
 }
 
 function updateHelperHints() {
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
+  updateHelperHint(helperTextIds.panelShape, getPanelShapeHint());
   updateHelperHint(helperTextIds.artShape, getArtShapeHint());
   updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
   updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
@@ -406,11 +419,45 @@ function getButtonStyleHint() {
     return "Makes the action buttons more squared and sharp.";
   }
 
+  if (value === "bubbly") {
+    return "Makes the action buttons puffier and more playful.";
+  }
+
+  if (value === "cloudy") {
+    return "Gives the action buttons a softer cloud-like curve.";
+  }
+
+  if (value === "parallelogram") {
+    return "Turns the action buttons into angled, executive-style shapes.";
+  }
+
   if (value === "rounded") {
     return "Keeps the action buttons soft, but not fully pill-shaped.";
   }
 
   return "Makes the action buttons fully rounded and softer.";
+}
+
+function getPanelShapeHint() {
+  const value = getFieldElement(fieldIds.panelShape)?.value || "rounded";
+
+  if (value === "crisp") {
+    return "Makes the email info boxes sharper and more structured.";
+  }
+
+  if (value === "bubbly") {
+    return "Makes the email info boxes puffier and friendlier.";
+  }
+
+  if (value === "cloudy") {
+    return "Gives the email info boxes softer organic curves.";
+  }
+
+  if (value === "parallelogram") {
+    return "Turns the email info boxes into angled geometric panels.";
+  }
+
+  return "Keeps the email info boxes smooth and rounded.";
 }
 
 function getArtShapeHint() {
@@ -436,8 +483,20 @@ function getArtShapeHint() {
     return "Uses a stronger outlined frame around the main mark.";
   }
 
+  if (value === "halo") {
+    return "Uses circular rings and halo-style geometry around the main mark.";
+  }
+
+  if (value === "cascade") {
+    return "Uses stepped descending panels for a stronger sculpted look.";
+  }
+
+  if (value === "split") {
+    return "Uses split bars and a centered divider for a sharper art direction.";
+  }
+
   if (value === "random") {
-    return "Picks one of the art styles for you automatically.";
+    return "Generates a fresh random art layout live in the preview.";
   }
 
   return "Uses the original geometric shape layout.";
@@ -549,10 +608,26 @@ function getLiveButtonRadius(style) {
     return "18px";
   }
 
+  if (style === "bubbly") {
+    return "28px";
+  }
+
+  if (style === "cloudy") {
+    return "32px";
+  }
+
+  if (style === "parallelogram") {
+    return "12px";
+  }
+
   return "999px";
 }
 
 function queuePreviewRender() {
+  if (getFieldElement(fieldIds.artShape)?.value === "random") {
+    previewRandomNonce += 1;
+  }
+
   window.clearTimeout(previewRenderTimer);
   previewRenderTimer = window.setTimeout(() => {
     renderPreview();
@@ -594,6 +669,7 @@ async function saveBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -740,10 +816,8 @@ function wireFormInputs() {
 
   brandingForm.addEventListener("change", event => {
     if (event.target === artShapeInput && artShapeInput?.value === "random") {
-      const artShapes = ["classic", "orbit", "stacked", "ribbon", "prism", "frame"];
-      const randomShape = artShapes[Math.floor(Math.random() * artShapes.length)];
-      artShapeInput.value = randomShape;
-      setStatus(`Random art shape selected: ${randomShape.charAt(0).toUpperCase()}${randomShape.slice(1)}.`, "info");
+      previewRandomNonce += 1;
+      setStatus("Random art mode is on. The preview will generate fresh geometric art live.", "info");
     }
 
     if (event.target?.id) {

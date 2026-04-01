@@ -20,8 +20,10 @@ const DEFAULT_TEMPLATE = "signature";
 const DEFAULT_ACCENT = "#2563eb";
 const DEFAULT_SECONDARY = "#e8f1ff";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
-const BUTTON_STYLES = new Set(["pill", "rounded", "crisp"]);
-const ART_SHAPES = new Set(["classic", "orbit", "stacked", "ribbon", "prism", "frame"]);
+const BUTTON_STYLES = new Set(["pill", "rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
+const PANEL_STYLES = new Set(["rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
+const ART_SHAPES = new Set(["classic", "orbit", "stacked", "ribbon", "prism", "frame", "halo", "cascade", "split", "random"]);
+const REAL_ART_SHAPES = ["classic", "orbit", "stacked", "ribbon", "prism", "frame", "halo", "cascade", "split"];
 const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 const SHINE_STYLES = new Set(["on", "off"]);
 const MOTION_STYLES = new Set(["showcase", "float", "pulse", "still"]);
@@ -53,6 +55,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || DEFAULT_SECONDARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : "pill";
+  const panelShape = PANEL_STYLES.has(profile?.panelShape) ? profile.panelShape : "rounded";
   const artShape = ART_SHAPES.has(profile?.artShape) ? profile.artShape : "classic";
   const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : "balanced";
   const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : "on";
@@ -71,6 +74,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     secondaryColor,
     logoUrl,
     buttonStyle,
+    panelShape,
     artShape,
     shapeIntensity,
     shineStyle,
@@ -82,8 +86,12 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   };
 }
 
-export function buildReminderEmailHtml({ message, calendarLinks = null, brandingProfile = null, previewMode = false } = {}) {
-  const branding = normalizeBrandingProfile(brandingProfile, { forPreview: previewMode });
+export function buildReminderEmailHtml({ message, calendarLinks = null, brandingProfile = null, previewMode = false, randomSeed = 0 } = {}) {
+  const normalizedBranding = normalizeBrandingProfile(brandingProfile, { forPreview: previewMode });
+  const branding = {
+    ...normalizedBranding,
+    resolvedArtShape: resolveArtShape(normalizedBranding.artShape, randomSeed)
+  };
 
   if (!previewMode && !hasSavedBrandingProfile(brandingProfile)) {
     return buildDefaultReminderEmail(message, calendarLinks);
@@ -119,21 +127,31 @@ function buildPreviewFocusStyles() {
   `;
 }
 
+function resolveArtShape(artShape, randomSeed = 0) {
+  if (artShape && artShape !== "random") {
+    return artShape;
+  }
+
+  const seed = Number.isFinite(randomSeed) && randomSeed > 0 ? randomSeed : Date.now();
+  return REAL_ART_SHAPES[Math.abs(seed) % REAL_ART_SHAPES.length];
+}
+
 function buildEmailContent({ message, branding, calendarLinks }) {
   const parsed = parseReminderMessage(message);
+  const surfaceStyle = buildSurfaceStyle(branding.panelShape);
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
     ? `<div data-preview-area="secondary" style="display:grid;grid-template-columns:repeat(${Math.min(parsed.summary.length, 3)}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="padding:14px 16px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);">
+          <div style="${surfaceStyle}padding:14px 16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
-    ? `<div data-preview-area="secondary" style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.12)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
+    ? `<div data-preview-area="secondary" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.12)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
         <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
         <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
@@ -208,19 +226,14 @@ function buildHeroArtBlock(branding, options = {}) {
   const markBorder = options.markBorder || "rgba(255,255,255,0.46)";
   const markTextColor = options.markTextColor || "#0f172a";
   const lineColor = options.lineColor || "rgba(255,255,255,0.86)";
-  const artShape = branding.artShape || "classic";
+  const artShape = branding.resolvedArtShape || branding.artShape || "classic";
+  const initials = escapeHtml(getInitials(branding.businessName || "AR"));
 
   return `
     <div data-preview-area="art" style="position:relative;height:${shapeProfile.heroHeight}px;">
       <div style="position:absolute;right:${shapeProfile.auraRight}px;top:${shapeProfile.auraTop}px;width:${shapeProfile.auraSize}px;height:${shapeProfile.auraSize}px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);opacity:${shapeProfile.auraOpacity};"></div>
       ${buildHeroArtShape({ artShape, branding, shapeProfile, accentColor, shardColor, shardSecondary, lineColor })}
-      <div style="position:absolute;right:${shapeProfile.markRight}px;top:${shapeProfile.markTop}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:28px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
-        <div style="position:absolute;top:-10px;left:30px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
-        <div style="position:absolute;top:-10px;left:58px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
-        <div style="position:absolute;inset:16px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">
-          ${escapeHtml(getInitials(branding.businessName || "AR"))}
-        </div>
-      </div>
+      ${buildHeroMark({ artShape, shapeProfile, markBackground, markBorder, markTextColor, lineColor, initials })}
     </div>
   `;
 }
@@ -272,10 +285,123 @@ function buildHeroArtShape({ artShape, branding, shapeProfile, accentColor, shar
     `;
   }
 
+  if (artShape === "halo") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 8}px;top:${shapeProfile.shardOneTop - 2}px;width:${shapeProfile.markWidth + 40}px;height:${shapeProfile.markWidth + 40}px;border-radius:999px;border:2px solid ${hexToRgba(accentColor, 0.28)};"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 28}px;top:${shapeProfile.shardOneTop + 18}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markWidth}px;border-radius:999px;border:2px dashed ${hexToRgba(branding.secondaryColor || accentColor, 0.62)};"></div>
+      <div style="position:absolute;right:${shapeProfile.shardThreeRight + 16}px;top:${shapeProfile.shardThreeTop + 8}px;width:16px;height:16px;border-radius:999px;background:${hexToRgba(accentColor, 0.84)};"></div>
+      <div style="position:absolute;right:${shapeProfile.shardThreeRight + 58}px;top:${shapeProfile.shardThreeTop + 34}px;width:12px;height:12px;border-radius:999px;background:${hexToRgba(branding.secondaryColor || accentColor, 0.88)};"></div>
+      <div style="position:absolute;right:${shapeProfile.shardOneRight + 8}px;top:${shapeProfile.shardTwoTop + 18}px;width:22px;height:${shapeProfile.shardOneHeight + 12}px;border-radius:999px;background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.32)}, rgba(255,255,255,0.04));"></div>
+    `;
+  }
+
+  if (artShape === "cascade") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.shardOneRight + 44}px;top:${shapeProfile.shardOneTop + 2}px;width:${shapeProfile.shardWidth + 24}px;height:${shapeProfile.shardOneHeight + 4}px;border-radius:18px;transform:skew(-16deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 18}px;top:${shapeProfile.shardTwoTop + 22}px;width:${shapeProfile.shardWidth + 12}px;height:${shapeProfile.shardTwoHeight + 10}px;border-radius:18px;transform:skew(-16deg);background:linear-gradient(180deg, ${hexToRgba(branding.secondaryColor || accentColor, 0.74)}, rgba(255,255,255,0.06));"></div>
+      <div style="position:absolute;right:${shapeProfile.shardThreeRight - 2}px;top:${shapeProfile.shardThreeTop + 50}px;width:${shapeProfile.shardWidth + 2}px;height:${shapeProfile.shardThreeHeight + 18}px;border-radius:18px;transform:skew(-16deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.56)}, rgba(255,255,255,0.04));"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 72}px;top:${shapeProfile.shardOneTop + 56}px;width:${shapeProfile.shardWidth - 16}px;height:${shapeProfile.shardThreeHeight - 6}px;border-radius:18px;transform:skew(-16deg);background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.04));"></div>
+    `;
+  }
+
+  if (artShape === "split") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.shardOneRight + 52}px;top:${shapeProfile.shardOneTop + 4}px;width:34px;height:${shapeProfile.markHeight + 8}px;border-radius:18px;transform:skew(-20deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 2}px;top:${shapeProfile.shardTwoTop + 12}px;width:34px;height:${shapeProfile.markHeight - 12}px;border-radius:18px;transform:skew(-20deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.58)}, rgba(255,255,255,0.06));"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight + 42}px;top:${shapeProfile.shardTwoTop + 18}px;width:${shapeProfile.markWidth - 24}px;height:6px;border-radius:999px;background:${hexToRgba(branding.secondaryColor || accentColor, 0.72)};transform:rotate(-24deg);"></div>
+      <div style="position:absolute;right:${shapeProfile.shardThreeRight + 34}px;top:${shapeProfile.shardThreeTop + 62}px;width:${shapeProfile.markWidth - 30}px;height:6px;border-radius:999px;background:${hexToRgba(accentColor, 0.42)};transform:rotate(-24deg);"></div>
+    `;
+  }
+
   return `
     <div style="position:absolute;right:${shapeProfile.shardOneRight}px;top:${shapeProfile.shardOneTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardOneHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
     <div style="position:absolute;right:${shapeProfile.shardTwoRight}px;top:${shapeProfile.shardTwoTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardTwoHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
     <div style="position:absolute;right:${shapeProfile.shardThreeRight}px;top:${shapeProfile.shardThreeTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardThreeHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.26)}, rgba(255,255,255,0.04));"></div>
+  `;
+}
+
+function buildHeroMark({ artShape, shapeProfile, markBackground, markBorder, markTextColor, lineColor, initials }) {
+  if (artShape === "orbit") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 4}px;top:${shapeProfile.markTop + 6}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markWidth}px;border-radius:999px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:12px;border-radius:999px;border:2px solid ${lineColor};opacity:0.84;"></div>
+        <div style="position:absolute;inset:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:24px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "stacked") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 16}px;top:${shapeProfile.markTop + 8}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:22px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.18);"></div>
+      <div style="position:absolute;right:${shapeProfile.markRight + 8}px;top:${shapeProfile.markTop + 4}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:24px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.16);"></div>
+      <div style="position:absolute;right:${shapeProfile.markRight}px;top:${shapeProfile.markTop}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:26px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:16px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "ribbon") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight - 6}px;top:${shapeProfile.markTop + 10}px;width:${shapeProfile.markWidth + 12}px;height:${shapeProfile.markHeight - 10}px;border-radius:999px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;transform:skew(-16deg);">
+        <div style="position:absolute;top:-8px;left:36px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-12deg);"></div>
+        <div style="position:absolute;top:-8px;left:64px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-12deg);"></div>
+        <div style="position:absolute;inset:16px 20px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);color:${markTextColor};font-size:24px;font-weight:900;letter-spacing:-0.04em;transform:skew(16deg);">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "prism") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 6}px;top:${shapeProfile.markTop + 8}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markWidth}px;transform:rotate(45deg);border-radius:24px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:18px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);color:${markTextColor};font-size:24px;font-weight:900;letter-spacing:-0.04em;transform:rotate(-45deg);">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "frame") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight}px;top:${shapeProfile.markTop}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:28px;background:rgba(255,255,255,0.08);border:2px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:10px;border-radius:22px;border:2px solid ${lineColor};opacity:0.88;"></div>
+        <div style="position:absolute;inset:24px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:${markBackground};color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "halo") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 6}px;top:${shapeProfile.markTop + 4}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markWidth}px;border-radius:999px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:10px;border-radius:999px;border:2px solid ${lineColor};opacity:0.84;"></div>
+        <div style="position:absolute;inset:20px;border-radius:999px;border:2px solid ${hexToRgba(markTextColor, 0.16)};"></div>
+        <div style="position:absolute;inset:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);color:${markTextColor};font-size:24px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "cascade") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 12}px;top:${shapeProfile.markTop + 4}px;width:${shapeProfile.markWidth + 8}px;height:${shapeProfile.markHeight}px;border-radius:26px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;inset:14px 18px 42px 18px;border-radius:18px;background:rgba(255,255,255,0.18);"></div>
+        <div style="position:absolute;left:18px;right:18px;bottom:18px;height:18px;border-radius:999px;background:${lineColor};opacity:0.72;"></div>
+        <div style="position:absolute;inset:18px;border-radius:20px;display:flex;align-items:center;justify-content:center;color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  if (artShape === "split") {
+    return `
+      <div style="position:absolute;right:${shapeProfile.markRight + 6}px;top:${shapeProfile.markTop + 6}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:24px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+        <div style="position:absolute;left:50%;top:-10px;width:5px;height:160px;border-radius:999px;background:${lineColor};transform:translateX(-50%) skew(-20deg);"></div>
+        <div style="position:absolute;inset:16px 18px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06));color:${markTextColor};font-size:25px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="position:absolute;right:${shapeProfile.markRight}px;top:${shapeProfile.markTop}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:28px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+      <div style="position:absolute;top:-10px;left:30px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
+      <div style="position:absolute;top:-10px;left:58px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
+      <div style="position:absolute;inset:16px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">${initials}</div>
+    </div>
   `;
 }
 
@@ -478,9 +604,53 @@ function buildDefaultReminderEmail(message, calendarLinks) {
   `;
 }
 
+function buildButtonStyle(style) {
+  if (style === "crisp") {
+    return "border-radius:10px;";
+  }
+
+  if (style === "rounded") {
+    return "border-radius:16px;";
+  }
+
+  if (style === "bubbly") {
+    return "border-radius:28px 22px 30px 20px / 24px 30px 22px 28px;";
+  }
+
+  if (style === "cloudy") {
+    return "border-radius:26px 34px 24px 36px / 30px 24px 34px 26px;";
+  }
+
+  if (style === "parallelogram") {
+    return "border-radius:12px;clip-path:polygon(12% 0, 100% 0, 88% 100%, 0 100%);padding-left:22px;padding-right:22px;";
+  }
+
+  return "border-radius:999px;";
+}
+
+function buildSurfaceStyle(style) {
+  if (style === "crisp") {
+    return "border-radius:12px;";
+  }
+
+  if (style === "bubbly") {
+    return "border-radius:28px 20px 30px 22px / 24px 32px 22px 30px;";
+  }
+
+  if (style === "cloudy") {
+    return "border-radius:26px 34px 24px 38px / 30px 24px 36px 26px;";
+  }
+
+  if (style === "parallelogram") {
+    return "border-radius:14px;clip-path:polygon(6% 0, 100% 0, 94% 100%, 0 100%);";
+  }
+
+  return "border-radius:18px;";
+}
+
 function buildActionButtons(branding) {
   const buttons = [];
-  const radius = getButtonRadius(branding.buttonStyle);
+  const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
 
   if (branding.contactPhone) {
     const digits = branding.contactPhone.replace(/\D/g, "");
@@ -490,7 +660,7 @@ function buildActionButtons(branding) {
         label: "Call us",
         background: branding.accentColor,
         color: "#ffffff",
-        radius
+        style: buttonShapeStyle
       });
     }
   }
@@ -502,19 +672,19 @@ function buildActionButtons(branding) {
         background: `linear-gradient(135deg, ${hexToRgba(branding.secondaryColor, 0.92)}, rgba(255,255,255,0.98))`,
         color: "#0f172a",
         border: hexToRgba(branding.accentColor, 0.2),
-        radius
+        style: buttonShapeStyle
     });
   }
 
   if (branding.rescheduleUrl) {
     buttons.push({
       href: branding.rescheduleUrl,
-      label: "Reschedule",
-      background: "#0f172a",
-      color: "#ffffff",
-      radius
-    });
-  }
+        label: "Reschedule",
+        background: "#0f172a",
+        color: "#ffffff",
+        style: buttonShapeStyle
+      });
+    }
 
   if (!buttons.length) {
     return "";
@@ -523,7 +693,7 @@ function buildActionButtons(branding) {
   return `
     <div data-preview-area="buttons" style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;">
       ${buttons.map(button => `
-        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;border-radius:${button.radius};text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
+        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;${button.style}text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
       `).join("")}
     </div>
   `;
@@ -538,31 +708,20 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
     ? { accentColor: brandingOrAccent, buttonStyle: "pill" }
     : brandingOrAccent || { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" };
   const accentColor = branding.accentColor || DEFAULT_ACCENT;
-  const radius = getButtonRadius(branding.buttonStyle);
+  const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
+  const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
 
   return `
-    <div data-preview-area="buttons" style="margin:4px 0 18px;padding:18px;border-radius:18px;background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
+    <div data-preview-area="buttons" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
       <div style="margin:0 0 10px;color:#0f172a;font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;background:#1f2937;color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;background:${accentColor};color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#0f766e;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;
-}
-
-function getButtonRadius(style) {
-  if (style === "crisp") {
-    return "10px";
-  }
-
-  if (style === "rounded") {
-    return "16px";
-  }
-
-  return "999px";
 }
 
 function getShapeProfile(intensity) {
