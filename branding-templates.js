@@ -28,17 +28,57 @@ const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 const SHINE_STYLES = new Set(["on", "off"]);
 const MOTION_STYLES = new Set(["showcase", "float", "pulse", "still"]);
 
+export const TEMPLATE_STYLE_PRESETS = Object.freeze({
+  signature: Object.freeze({
+    accentColor: "#2563eb",
+    secondaryColor: "#e8f1ff",
+    buttonStyle: "pill",
+    panelShape: "rounded",
+    artShape: "classic",
+    shapeIntensity: "balanced",
+    shineStyle: "on",
+    motionStyle: "showcase"
+  }),
+  spotlight: Object.freeze({
+    accentColor: "#0f766e",
+    secondaryColor: "#e6fbf4",
+    buttonStyle: "rounded",
+    panelShape: "rounded",
+    artShape: "ribbon",
+    shapeIntensity: "soft",
+    shineStyle: "on",
+    motionStyle: "float"
+  }),
+  executive: Object.freeze({
+    accentColor: "#0f172a",
+    secondaryColor: "#dbe2ea",
+    buttonStyle: "crisp",
+    panelShape: "crisp",
+    artShape: "frame",
+    shapeIntensity: "bold",
+    shineStyle: "off",
+    motionStyle: "still"
+  })
+});
+
 export function hasSavedBrandingProfile(profile = null) {
   return Boolean(cleanText(profile?.businessName, 80));
 }
 
-export function buildReminderEmailSubject(brandingProfile) {
+export function buildReminderEmailSubject(brandingProfile, options = {}) {
+  const parsed = parseReminderMessage(options.message || "");
+  const dateItem = parsed.summary.find(item => item.label === "Date");
+  const timeItem = parsed.summary.find(item => item.label === "Time");
+  const baseSubject = dateItem
+    ? `Appointment Reminder for ${dateItem.value}${timeItem ? ` at ${timeItem.value}` : ""}`
+    : "Appointment Reminder";
+
   if (!hasSavedBrandingProfile(brandingProfile) || brandingProfile?.brandingEnabled === false) {
-    return "Appointment Reminder";
+    return baseSubject;
   }
 
   const businessName = normalizeBrandingProfile(brandingProfile).businessName;
-  return businessName ? `Appointment Reminder from ${businessName}` : "Appointment Reminder";
+  return businessName ? `${baseSubject} from ${businessName}` : baseSubject;
 }
 
 export function normalizeBrandingProfile(profile = {}, options = {}) {
@@ -47,20 +87,21 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const templateStyle = BRANDING_TEMPLATE_OPTIONS.some(option => option.id === profile?.templateStyle)
     ? profile.templateStyle
     : DEFAULT_TEMPLATE;
+  const templatePreset = TEMPLATE_STYLE_PRESETS[templateStyle] || TEMPLATE_STYLE_PRESETS.signature;
 
   const businessName = cleanText(profile?.businessName, 80);
   const tagline = cleanText(profile?.tagline, 120);
   const headerLabel = cleanText(profile?.headerLabel, 50);
-  const accentColor = normalizeHexColor(profile?.accentColor) || DEFAULT_ACCENT;
-  const secondaryColor = normalizeHexColor(profile?.secondaryColor) || DEFAULT_SECONDARY;
+  const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
+  const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const brandingEnabled = profile?.brandingEnabled !== false;
-  const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : "pill";
-  const panelShape = PANEL_STYLES.has(profile?.panelShape) ? profile.panelShape : "rounded";
-  const artShape = ART_SHAPES.has(profile?.artShape) ? profile.artShape : "classic";
-  const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : "balanced";
-  const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : "on";
-  const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : "showcase";
+  const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : templatePreset.buttonStyle || "pill";
+  const panelShape = PANEL_STYLES.has(profile?.panelShape) ? profile.panelShape : templatePreset.panelShape || "rounded";
+  const artShape = ART_SHAPES.has(profile?.artShape) ? profile.artShape : templatePreset.artShape || "classic";
+  const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : templatePreset.shapeIntensity || "balanced";
+  const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : templatePreset.shineStyle || "on";
+  const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : templatePreset.motionStyle || "showcase";
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -103,18 +144,12 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
     return buildDefaultReminderEmail(message, calendarLinks, { includePreviewStyles: previewMode });
   }
 
-  const content = buildEmailContent({ message, branding, calendarLinks });
-  const includePreviewStyles = previewMode;
-
-  if (branding.templateStyle === "spotlight") {
-    return buildSpotlightTemplate(content, { includePreviewStyles });
-  }
-
-  if (branding.templateStyle === "executive") {
-    return buildExecutiveTemplate(content, { includePreviewStyles });
-  }
-
-  return buildSignatureTemplate(content, { includePreviewStyles });
+  return buildProductionBrandedEmail({
+    message,
+    calendarLinks,
+    branding,
+    includePreviewStyles: previewMode
+  });
 }
 
 function buildPreviewFocusStyles() {
@@ -613,10 +648,8 @@ function buildDefaultReminderEmail(message, calendarLinks, options = {}) {
     .filter(Boolean)
     .map(section => `<p style="margin:0 0 16px; line-height:1.65; color:#334155; font-size:15px;">${section.replace(/\n/g, "<br>")}</p>`)
     .join("");
-
-  return `
-    ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
-    <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
+  const contentHtml = `
+    <div style="margin:0; padding:32px 16px; background:#f3f7ff;">
       <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #dbe7ff; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(37,99,235,0.08);">
         <div data-preview-area="hero" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
           <div style="color:#ffffff; font-size:22px; font-weight:700;">Appointment Reminder</div>
@@ -628,13 +661,19 @@ function buildDefaultReminderEmail(message, calendarLinks, options = {}) {
       </div>
     </div>
   `;
+
+  return wrapEmailDocument(contentHtml, {
+    includePreviewStyles,
+    preheader: buildEmailPreheader({ parsed: parseReminderMessage(message), branding: null })
+  });
 }
 
-function buildProductionBrandedEmail({ message, calendarLinks, branding }) {
+function buildProductionBrandedEmail({ message, calendarLinks, branding, includePreviewStyles = false }) {
   const parsed = parseReminderMessage(message);
   const theme = getProductionTheme(branding);
   const summaryHtml = buildProductionSummary(parsed.summary, branding);
   const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding) : "";
+  const hasHeroArt = shouldRenderHeroArt(branding);
   const bodyHtml = parsed.body.length
     ? parsed.body.map(paragraph => `
         <tr>
@@ -676,30 +715,39 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding }) {
     : "";
   const productionButtons = buildProductionButtons(branding);
   const productionCalendar = buildProductionCalendar(calendarLinks, branding);
+  const heroArtCell = hasHeroArt
+    ? `
+      <td width="18" style="font-size:0;line-height:0;">&nbsp;</td>
+      <td data-preview-area="art" valign="middle" width="170" style="width:170px;">
+        ${buildProductionHeroArt(branding, theme)}
+      </td>
+    `
+    : "";
 
-  return `
-    <div style="margin:0;padding:28px 12px;background:${theme.pageBackground};font-family:Arial,Helvetica,sans-serif;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;">
+  const contentHtml = `
+    <div style="margin:0;padding:28px 12px;background:${theme.pageBackground};">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);">
         <tr>
-          <td style="padding:0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${theme.heroBackground};">
+          <td data-preview-area="hero" style="padding:0;background:${theme.heroBackground};">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
                 <td style="padding:26px 28px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
                       <td valign="top" style="width:72px;padding-right:16px;">
-                        ${logoMarkup}
+                        <div data-preview-area="logo">${logoMarkup}</div>
                       </td>
                       <td valign="top">
-                        <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${theme.labelColor};">
+                        <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${theme.labelColor};">
                           ${topLabel}
                         </div>
                         <div style="font-size:34px;line-height:1.02;font-weight:800;color:${theme.titleColor};margin-top:6px;">
                           ${businessName}
                         </div>
                         ${tagline}
-                        ${contactLine}
+                        ${contactLine ? `<div data-preview-area="contact">${contactLine}</div>` : ""}
                       </td>
+                      ${heroArtCell}
                     </tr>
                   </table>
                 </td>
@@ -733,7 +781,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding }) {
           </td>
         </tr>
         <tr>
-          <td style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
+          <td data-preview-area="footer" style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
             <div style="font-size:13px;line-height:1.7;color:${theme.footerColor};">
               <strong style="color:${theme.footerTitleColor};">${businessName}</strong><br>
               ${escapeHtml(buildFooterContactLine(branding))}
@@ -743,11 +791,168 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding }) {
       </table>
     </div>
   `;
+
+  return wrapEmailDocument(contentHtml, {
+    includePreviewStyles,
+    preheader: buildEmailPreheader({ parsed, branding })
+  });
+}
+
+function wrapEmailDocument(contentHtml, options = {}) {
+  const includePreviewStyles = Boolean(options.includePreviewStyles);
+  const preheader = String(options.preheader || "").trim();
+
+  return `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="color-scheme" content="light only">
+      <meta name="supported-color-schemes" content="light">
+      <style>
+        body, table, td, div, p, a, span {
+          font-family: Arial, "Segoe UI", Helvetica, sans-serif !important;
+        }
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #f4f7fb;
+          color: #0f172a;
+          -webkit-text-size-adjust: 100%;
+          -ms-text-size-adjust: 100%;
+        }
+        a {
+          color: inherit;
+        }
+        a[x-apple-data-detectors] {
+          color: inherit !important;
+          text-decoration: none !important;
+        }
+      </style>
+      ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
+    </head>
+    <body>
+      ${preheader ? `<div style="display:none!important;max-height:0;overflow:hidden;opacity:0;mso-hide:all;color:transparent;line-height:1px;font-size:1px;">${escapeHtml(preheader)}</div>` : ""}
+      ${contentHtml}
+    </body>
+  </html>`;
+}
+
+function buildEmailPreheader({ parsed, branding }) {
+  const businessName = cleanText(branding?.businessName, 80);
+  const dateItem = parsed?.summary?.find(item => item.label === "Date");
+  const timeItem = parsed?.summary?.find(item => item.label === "Time");
+  const parts = [];
+
+  if (businessName) {
+    parts.push(`Appointment reminder from ${businessName}`);
+  } else {
+    parts.push("Appointment reminder");
+  }
+
+  if (dateItem?.value) {
+    parts.push(`for ${dateItem.value}`);
+  }
+
+  if (timeItem?.value) {
+    parts.push(`at ${timeItem.value}`);
+  }
+
+  return parts.join(" ");
+}
+
+function buildProductionHeroArt(branding, theme) {
+  const artShape = branding.resolvedArtShape || branding.artShape || "classic";
+  const accent = branding.accentColor || DEFAULT_ACCENT;
+  const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
+  const markText = theme.templateStyle === "executive" ? "#f8fafc" : "#0f172a";
+  const markFill = theme.templateStyle === "executive"
+    ? `linear-gradient(180deg, ${hexToRgba(secondary, 0.22)}, rgba(255,255,255,0.06))`
+    : `linear-gradient(180deg, rgba(255,255,255,0.94), ${hexToRgba(secondary, 0.82)})`;
+  const markBorder = theme.templateStyle === "executive"
+    ? "rgba(255,255,255,0.2)"
+    : hexToRgba(accent, 0.18);
+  const mainMark = `
+    <div style="position:absolute;right:8px;top:16px;width:92px;height:112px;border-radius:28px;background:${markFill};border:1px solid ${markBorder};box-shadow:0 10px 22px rgba(15,23,42,0.12);overflow:hidden;">
+      <div style="position:absolute;top:-8px;left:30px;width:3px;height:126px;background:${theme.heroLineColor};opacity:0.88;"></div>
+      <div style="position:absolute;top:-8px;left:56px;width:3px;height:126px;background:${theme.heroLineColor};opacity:0.88;"></div>
+      <div style="position:absolute;inset:14px;border-radius:20px;background:${theme.heroMarkCore};display:flex;align-items:center;justify-content:center;color:${markText};font-size:19px;font-weight:800;line-height:1;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>
+    </div>`;
+
+  if (artShape === "none") {
+    return "";
+  }
+
+  let artHtml = "";
+
+  if (artShape === "orbit") {
+    artHtml = `
+      <div style="position:absolute;right:30px;top:10px;width:104px;height:104px;border-radius:999px;border:2px solid ${hexToRgba(accent, 0.28)};"></div>
+      <div style="position:absolute;right:18px;top:24px;width:86px;height:86px;border-radius:999px;border:2px solid ${hexToRgba(secondary, 0.92)};"></div>
+      <div style="position:absolute;right:112px;top:64px;width:12px;height:12px;border-radius:999px;background:${accent};"></div>
+    `;
+  } else if (artShape === "stacked") {
+    artHtml = `
+      <div style="position:absolute;right:82px;top:12px;width:34px;height:116px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.84), ${hexToRgba(secondary, 0.4)});"></div>
+      <div style="position:absolute;right:52px;top:28px;width:34px;height:94px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(secondary, 0.82)}, rgba(255,255,255,0.08));"></div>
+      <div style="position:absolute;right:22px;top:46px;width:34px;height:74px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.52)}, rgba(255,255,255,0.08));"></div>
+    `;
+  } else if (artShape === "ribbon") {
+    artHtml = `
+      <div style="position:absolute;right:78px;top:28px;width:74px;height:14px;border-radius:999px;background:${hexToRgba(accent, 0.56)};"></div>
+      <div style="position:absolute;right:58px;top:54px;width:86px;height:14px;border-radius:999px;background:${hexToRgba(secondary, 0.92)};"></div>
+      <div style="position:absolute;right:88px;top:82px;width:66px;height:14px;border-radius:999px;background:rgba(255,255,255,0.7);"></div>
+    `;
+  } else if (artShape === "prism") {
+    artHtml = `
+      <div style="position:absolute;right:86px;top:20px;width:34px;height:34px;transform:rotate(45deg);border-radius:10px;background:rgba(255,255,255,0.86);"></div>
+      <div style="position:absolute;right:56px;top:50px;width:26px;height:26px;transform:rotate(45deg);border-radius:8px;background:${hexToRgba(secondary, 0.92)};"></div>
+      <div style="position:absolute;right:98px;top:82px;width:18px;height:18px;transform:rotate(45deg);border-radius:6px;background:${hexToRgba(accent, 0.64)};"></div>
+    `;
+  } else if (artShape === "frame") {
+    artHtml = `
+      <div style="position:absolute;right:18px;top:12px;width:118px;height:118px;border-radius:28px;border:2px solid ${hexToRgba(accent, 0.26)};"></div>
+      <div style="position:absolute;right:34px;top:28px;width:90px;height:90px;border-radius:24px;border:2px solid ${hexToRgba(secondary, 0.92)};"></div>
+    `;
+  } else if (artShape === "halo") {
+    artHtml = `
+      <div style="position:absolute;right:26px;top:18px;width:108px;height:108px;border-radius:999px;border:2px solid ${hexToRgba(accent, 0.24)};"></div>
+      <div style="position:absolute;right:42px;top:34px;width:76px;height:76px;border-radius:999px;border:2px dashed ${hexToRgba(secondary, 0.94)};"></div>
+      <div style="position:absolute;right:122px;top:64px;width:10px;height:10px;border-radius:999px;background:${accent};"></div>
+    `;
+  } else if (artShape === "cascade") {
+    artHtml = `
+      <div style="position:absolute;right:94px;top:18px;width:18px;height:92px;border-radius:999px;background:rgba(255,255,255,0.82);"></div>
+      <div style="position:absolute;right:68px;top:34px;width:18px;height:76px;border-radius:999px;background:${hexToRgba(secondary, 0.88)};"></div>
+      <div style="position:absolute;right:42px;top:50px;width:18px;height:60px;border-radius:999px;background:${hexToRgba(accent, 0.5)};"></div>
+    `;
+  } else if (artShape === "split") {
+    artHtml = `
+      <div style="position:absolute;right:78px;top:18px;width:48px;height:104px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.9), ${hexToRgba(secondary, 0.7)});"></div>
+      <div style="position:absolute;right:48px;top:18px;width:34px;height:104px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.6)}, rgba(255,255,255,0.1));"></div>
+    `;
+  } else {
+    artHtml = `
+      <div style="position:absolute;right:84px;top:14px;width:30px;height:116px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.84), ${hexToRgba(secondary, 0.44)});"></div>
+      <div style="position:absolute;right:54px;top:40px;width:30px;height:90px;border-radius:16px;background:linear-gradient(180deg, ${hexToRgba(secondary, 0.88)}, rgba(255,255,255,0.08));"></div>
+      <div style="position:absolute;right:118px;top:58px;width:24px;height:68px;border-radius:14px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.42)}, rgba(255,255,255,0.06));"></div>
+    `;
+  }
+
+  return `
+    <div style="position:relative;width:156px;height:138px;margin-left:auto;">
+      <div style="position:absolute;right:0;top:0;width:126px;height:126px;border-radius:999px;background:radial-gradient(circle, ${hexToRgba(secondary, 0.7)}, rgba(255,255,255,0));"></div>
+      ${artHtml}
+      ${mainMark}
+    </div>
+  `;
 }
 
 function getProductionTheme(branding) {
   if (branding.templateStyle === "executive") {
     return {
+      templateStyle: "executive",
       pageBackground: "#eef2f7",
       heroBackground: "#182235",
       shellBorder: "#d5dde8",
@@ -758,6 +963,8 @@ function getProductionTheme(branding) {
       markBackground: "rgba(255,255,255,0.12)",
       markBorder: "rgba(255,255,255,0.18)",
       markText: "#ffffff",
+      heroLineColor: "rgba(255,255,255,0.24)",
+      heroMarkCore: "linear-gradient(140deg, rgba(15,23,42,0.92), rgba(37,99,235,0.34))",
       footerBackground: "#0f172a",
       footerColor: "#cbd5e1",
       footerTitleColor: "#ffffff"
@@ -766,6 +973,7 @@ function getProductionTheme(branding) {
 
   if (branding.templateStyle === "spotlight") {
     return {
+      templateStyle: "spotlight",
       pageBackground: "#f8fbff",
       heroBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.52)})`,
       shellBorder: hexToRgba(branding.accentColor, 0.18),
@@ -776,6 +984,8 @@ function getProductionTheme(branding) {
       markBackground: `linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.78)})`,
       markBorder: hexToRgba(branding.accentColor, 0.18),
       markText: "#0f172a",
+      heroLineColor: "rgba(255,255,255,0.86)",
+      heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.72)})`,
       footerBackground: "#eff6ff",
       footerColor: "#475569",
       footerTitleColor: "#0f172a"
@@ -783,6 +993,7 @@ function getProductionTheme(branding) {
   }
 
   return {
+    templateStyle: "signature",
     pageBackground: "#f4f7fb",
     heroBackground: `linear-gradient(135deg, ${branding.accentColor} 0%, ${hexToRgba(branding.accentColor, 0.82)} 58%, #1f2937 100%)`,
     shellBorder: "#dbe7ff",
@@ -793,6 +1004,8 @@ function getProductionTheme(branding) {
     markBackground: `linear-gradient(180deg, rgba(255,255,255,0.92), ${hexToRgba(branding.secondaryColor, 0.72)})`,
     markBorder: "rgba(255,255,255,0.3)",
     markText: "#0f172a",
+    heroLineColor: "rgba(255,255,255,0.76)",
+    heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.8)})`,
     footerBackground: "#f8fafc",
     footerColor: "#64748b",
     footerTitleColor: "#0f172a"
@@ -820,7 +1033,7 @@ function buildProductionSummary(summaryItems, branding) {
 
   return `
     <tr>
-      <td style="padding:0 0 18px;">
+      <td data-preview-area="secondary" style="padding:0 0 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>${cells}</tr>
         </table>
@@ -834,7 +1047,7 @@ function buildProductionDetails(details, branding) {
 
   return `
     <tr>
-      <td style="padding:0 0 18px;">
+      <td data-preview-area="secondary" style="padding:0 0 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid ${hexToRgba(branding.accentColor, 0.14)};${radius}background:linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.34)});">
           <tr>
             <td style="padding:16px 18px;">
@@ -891,7 +1104,7 @@ function buildProductionButtons(branding) {
 
   return `
     <tr>
-      <td style="padding:0 0 18px;">
+      <td data-preview-area="buttons" style="padding:0 0 18px;">
         ${buttons.map(button => `
           <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};color:${button.color};border:1px solid ${button.border};text-decoration:none;font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
         `).join("")}
@@ -910,7 +1123,7 @@ function buildProductionCalendar(calendarLinks, branding) {
 
   return `
     <tr>
-      <td style="padding:0 0 18px;">
+      <td data-preview-area="buttons" style="padding:0 0 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="${radius}background:${hexToRgba(branding.accentColor, 0.05)};border:1px solid ${hexToRgba(branding.accentColor, 0.16)};">
           <tr>
             <td style="padding:18px;">
@@ -1169,7 +1382,11 @@ function buildFooterContactLine(branding) {
 }
 
 function parseReminderMessage(message) {
-  const lines = String(message || "").split("\n").map(line => line.trim());
+  const lines = String(message || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trim());
   const greeting = lines.find(line => line) || "Hello,";
   const intro = lines.find(line => /^This is a friendly reminder/i.test(line)) || "";
   const summary = [];
@@ -1201,8 +1418,8 @@ function parseReminderMessage(message) {
       return;
     }
 
-    if (/^Location:/i.test(line)) {
-      summary.push({ label: "Location", value: line.replace(/^Location:\s*/i, "") });
+    if (/^(Location|Service Location):/i.test(line)) {
+      summary.push({ label: "Location", value: line.replace(/^(Location|Service Location):\s*/i, "") });
       return;
     }
 

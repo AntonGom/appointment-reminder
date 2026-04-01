@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       calendarLinks,
       brandingProfile: savedBranding
     });
-    const subject = buildReminderEmailSubject(savedBranding);
+    const subject = buildReminderEmailSubject(savedBranding, { message });
 
     const primaryResult = await sendBrevoEmail({
       apiKey,

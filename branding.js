@@ -1,11 +1,12 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import {
   BRANDING_TEMPLATE_OPTIONS,
+  TEMPLATE_STYLE_PRESETS,
   buildReminderEmailHtml,
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401k";
+} from "./branding-templates.js?v=20260401l";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -348,10 +349,30 @@ function syncTemplateCards() {
   });
 }
 
+function applyTemplatePreset(templateId) {
+  const preset = TEMPLATE_STYLE_PRESETS[templateId];
+
+  if (!preset) {
+    return;
+  }
+
+  getFieldElement(fieldIds.accentColor).value = preset.accentColor;
+  getFieldElement(fieldIds.accentHex).value = preset.accentColor;
+  getFieldElement(fieldIds.secondaryColor).value = preset.secondaryColor;
+  getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
+  getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
+  getFieldElement(fieldIds.panelShape).value = preset.panelShape;
+  getFieldElement(fieldIds.artShape).value = preset.artShape;
+  getFieldElement(fieldIds.shapeIntensity).value = preset.shapeIntensity;
+  getFieldElement(fieldIds.shineStyle).value = preset.shineStyle;
+  getFieldElement(fieldIds.motionStyle).value = preset.motionStyle;
+}
+
 function renderPreview() {
   const draftBranding = getDraftBranding();
+  const sampleMessage = buildSampleMessage(draftBranding);
   const randomSeed = draftBranding.artShape === "random" ? previewRandomNonce : 0;
-  const previewKey = JSON.stringify({ ...draftBranding, __randomSeed: randomSeed });
+  const previewKey = JSON.stringify({ ...draftBranding, __randomSeed: randomSeed, __sampleMessage: sampleMessage });
 
   if (previewKey === lastPreviewKey) {
     return;
@@ -359,7 +380,7 @@ function renderPreview() {
 
   lastPreviewKey = previewKey;
   const previewHtml = buildReminderEmailHtml({
-    message: buildSampleMessage(draftBranding),
+    message: sampleMessage,
     calendarLinks: {
       apple: "#apple-calendar",
       outlook: "#outlook-calendar",
@@ -377,7 +398,7 @@ function renderPreview() {
   applyLiveBrandingState(draftBranding);
 
   if (previewSubject) {
-    previewSubject.textContent = buildReminderEmailSubject(draftBranding);
+    previewSubject.textContent = buildReminderEmailSubject(draftBranding, { message: sampleMessage });
   }
 
   if (previewFrom) {
@@ -805,7 +826,10 @@ function renderTemplateCards() {
 
     const nextTemplate = button.dataset.template || "signature";
     getFieldElement(fieldIds.templateStyle).value = nextTemplate;
+    applyTemplatePreset(nextTemplate);
+    applyPreviewHighlight("");
     syncTemplateCards();
+    updateHelperHints();
     queuePreviewRender();
   });
 }
