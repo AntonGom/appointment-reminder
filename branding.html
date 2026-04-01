@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401g">
+  <link rel="stylesheet" href="branding.css?v=20260401h">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -93,6 +93,7 @@
                         <input id="branding-secondary-color" class="branding-color-input" type="color" value="#e8f1ff">
                         <input id="branding-secondary-hex" class="branding-input" type="text" maxlength="7" value="#e8f1ff" placeholder="#e8f1ff">
                       </div>
+                      <p id="branding-secondary-color-hint" class="field-hint branding-helper">Adds a supporting tone inside the hero art and accent surfaces.</p>
                     </div>
 
                     <div>
@@ -107,6 +108,7 @@
                         <option value="rounded">Rounded</option>
                         <option value="crisp">Crisp</option>
                       </select>
+                      <p id="branding-button-style-hint" class="field-hint branding-helper">Changes the shape of the call-to-action buttons and chips.</p>
                     </div>
 
                     <div>
@@ -116,6 +118,7 @@
                         <option value="balanced" selected>Balanced</option>
                         <option value="bold">Bold</option>
                       </select>
+                      <p id="branding-shape-intensity-hint" class="field-hint branding-helper">Controls how strong the geometric art feels on the right side.</p>
                     </div>
 
                     <div>
@@ -124,6 +127,7 @@
                         <option value="on" selected>On</option>
                         <option value="off">Off</option>
                       </select>
+                      <p id="branding-shine-style-hint" class="field-hint branding-helper">Adds or removes the glossy sweep on the preview cards.</p>
                     </div>
 
                     <div>
@@ -134,6 +138,7 @@
                         <option value="pulse">Pulse</option>
                         <option value="still">Still</option>
                       </select>
+                      <p id="branding-motion-style-hint" class="field-hint branding-helper">Changes how the preview art animates while you design it.</p>
                     </div>
 
                     <div>
@@ -170,11 +175,12 @@
                   <div>
                     <h3>Live email preview</h3>
                     <p>This preview updates as you type and uses the same renderer as your actual automated reminder emails.</p>
+                    <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Click or focus a setting and the preview will highlight the part it changes.</p>
                   </div>
                   <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
                 </div>
 
-                <div class="branding-preview-shell">
+                <div id="branding-preview-shell" class="branding-preview-shell">
                   <div class="branding-preview-chrome">
                     <div class="branding-preview-dots" aria-hidden="true">
                       <span class="branding-preview-dot"></span>
@@ -197,6 +203,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401g"></script>
+  <script type="module" src="branding.js?v=20260401h"></script>
 </body>
 </html>

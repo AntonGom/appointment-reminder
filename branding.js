@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401b";
+} from "./branding-templates.js?v=20260401c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -20,6 +20,8 @@ const previewFrame = document.getElementById("branding-preview-frame");
 const previewSubject = document.getElementById("branding-preview-subject");
 const previewFrom = document.getElementById("branding-preview-from");
 const previewEmail = document.getElementById("branding-preview-email");
+const previewShell = document.getElementById("branding-preview-shell");
+const previewFocusNote = document.getElementById("branding-preview-focus-note");
 const signOutButton = document.getElementById("branding-sign-out");
 
 const fieldIds = {
@@ -42,6 +44,82 @@ const fieldIds = {
   rescheduleUrl: "branding-reschedule-url"
 };
 
+const helperTextIds = {
+  secondaryColor: "branding-secondary-color-hint",
+  buttonStyle: "branding-button-style-hint",
+  shapeIntensity: "branding-shape-intensity-hint",
+  shineStyle: "branding-shine-style-hint",
+  motionStyle: "branding-motion-style-hint"
+};
+
+const defaultPreviewFocusNote = "Click or focus a setting and the preview will highlight the part it changes.";
+
+const PREVIEW_HIGHLIGHT_CONFIG = {
+  [fieldIds.businessName]: {
+    iframeAreas: ["hero", "logo", "footer"],
+    selectors: [".branding-preview-from"],
+    note: "Highlighting where your business name appears."
+  },
+  [fieldIds.tagline]: {
+    iframeAreas: ["hero"],
+    note: "Highlighting the short supporting line below your business name."
+  },
+  [fieldIds.headerLabel]: {
+    iframeAreas: ["hero-label"],
+    note: "Highlighting the small top label above the business name."
+  },
+  [fieldIds.accentColor]: {
+    iframeAreas: ["hero", "buttons"],
+    selectors: ["#branding-preview-subject"],
+    note: "Highlighting the primary brand color areas."
+  },
+  [fieldIds.secondaryColor]: {
+    iframeAreas: ["art", "secondary"],
+    note: "Highlighting where the supporting color appears inside the email card."
+  },
+  [fieldIds.logoUrl]: {
+    iframeAreas: ["logo"],
+    note: "Highlighting the logo area."
+  },
+  [fieldIds.buttonStyle]: {
+    iframeAreas: ["buttons"],
+    selectors: ["#branding-preview-subject", ".signature-card-cta"],
+    note: "Highlighting the buttons and chips whose corners change shape."
+  },
+  [fieldIds.shapeIntensity]: {
+    iframeAreas: ["art"],
+    selectors: [".signature-card-art"],
+    note: "Highlighting the geometric art that gets softer or bolder."
+  },
+  [fieldIds.shineStyle]: {
+    iframeAreas: ["art"],
+    selectors: ["#branding-preview-shell", ".signature-card"],
+    note: "Highlighting the surfaces that get the glass shine effect."
+  },
+  [fieldIds.motionStyle]: {
+    iframeAreas: ["art"],
+    selectors: ["#branding-preview-shell", ".signature-card-art"],
+    note: "Highlighting the live preview areas that animate on this page."
+  },
+  [fieldIds.contactEmail]: {
+    iframeAreas: ["contact", "footer", "buttons"],
+    selectors: [".branding-preview-from"],
+    note: "Highlighting where your business email appears."
+  },
+  [fieldIds.contactPhone]: {
+    iframeAreas: ["contact", "buttons"],
+    note: "Highlighting where your business phone appears."
+  },
+  [fieldIds.websiteUrl]: {
+    iframeAreas: ["buttons", "footer"],
+    note: "Highlighting the website button and footer link area."
+  },
+  [fieldIds.rescheduleUrl]: {
+    iframeAreas: ["buttons"],
+    note: "Highlighting the reschedule button area."
+  }
+};
+
 let supabase = null;
 let appConfig = null;
 let currentUser = null;
@@ -49,6 +127,7 @@ let currentSavedBranding = {};
 let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
+let currentPreviewFocusField = "";
 
 const TEMPLATE_SHOWCASES = {
   signature: {
@@ -222,6 +301,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.contactPhone).value = branding.contactPhone || "";
   getFieldElement(fieldIds.websiteUrl).value = branding.websiteUrl || "";
   getFieldElement(fieldIds.rescheduleUrl).value = branding.rescheduleUrl || "";
+  updateHelperHints();
   syncTemplateCards();
   renderPreview();
 }
@@ -278,6 +358,8 @@ function renderPreview() {
   if (previewEmail) {
     previewEmail.textContent = draftBranding.contactEmail || currentUser?.email || "you@example.com";
   }
+
+  applyPreviewHighlight(currentPreviewFocusField);
 }
 
 function applyLiveBrandingState(branding) {
@@ -285,6 +367,137 @@ function applyLiveBrandingState(branding) {
   document.body.style.setProperty("--branding-live-button-radius", getLiveButtonRadius(branding.buttonStyle));
   document.body.dataset.brandingShine = branding.shineStyle || "on";
   document.body.dataset.brandingMotion = branding.motionStyle || "showcase";
+}
+
+function updateHelperHints() {
+  updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
+  updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
+  updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
+  updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
+  updateHelperHint(helperTextIds.motionStyle, getMotionStyleHint());
+}
+
+function updateHelperHint(elementId, text) {
+  const element = document.getElementById(elementId);
+
+  if (element) {
+    element.textContent = text;
+  }
+}
+
+function getSecondaryColorHint() {
+  return "Used as the supporting tone inside the hero art and lighter accent panels.";
+}
+
+function getButtonStyleHint() {
+  const value = getFieldElement(fieldIds.buttonStyle)?.value || "pill";
+
+  if (value === "crisp") {
+    return "Makes the action buttons more squared and sharp.";
+  }
+
+  if (value === "rounded") {
+    return "Keeps the action buttons soft, but not fully pill-shaped.";
+  }
+
+  return "Makes the action buttons fully rounded and softer.";
+}
+
+function getShapeIntensityHint() {
+  const value = getFieldElement(fieldIds.shapeIntensity)?.value || "balanced";
+
+  if (value === "soft") {
+    return "Uses calmer, lighter geometric art in the hero.";
+  }
+
+  if (value === "bold") {
+    return "Makes the geometric art larger and more dramatic.";
+  }
+
+  return "Keeps the geometric art noticeable without overpowering the layout.";
+}
+
+function getShineStyleHint() {
+  const value = getFieldElement(fieldIds.shineStyle)?.value || "on";
+  return value === "off"
+    ? "Turns off the glossy light sweep on the preview cards."
+    : "Adds a soft glass sweep across the preview cards.";
+}
+
+function getMotionStyleHint() {
+  const value = getFieldElement(fieldIds.motionStyle)?.value || "showcase";
+
+  if (value === "float") {
+    return "Focuses on the shards and art drifting gently.";
+  }
+
+  if (value === "pulse") {
+    return "Focuses on the aura softly breathing in and out.";
+  }
+
+  if (value === "still") {
+    return "Turns decorative motion off so the preview stays still.";
+  }
+
+  return "Mixes floating, pulsing, and shine for the most premium preview.";
+}
+
+function applyPreviewHighlight(fieldId) {
+  currentPreviewFocusField = fieldId || "";
+  clearPagePreviewHighlights();
+
+  const config = PREVIEW_HIGHLIGHT_CONFIG[currentPreviewFocusField];
+
+  if (previewFocusNote) {
+    previewFocusNote.textContent = config?.note || defaultPreviewFocusNote;
+  }
+
+  if (!config) {
+    clearIframePreviewHighlights();
+    return;
+  }
+
+  (config.selectors || []).forEach(selector => {
+    document.querySelectorAll(selector).forEach(element => {
+      element.classList.add("preview-highlighted");
+    });
+  });
+
+  applyIframePreviewHighlights(config.iframeAreas || []);
+}
+
+function clearPagePreviewHighlights() {
+  document.querySelectorAll(".preview-highlighted").forEach(element => {
+    element.classList.remove("preview-highlighted");
+  });
+}
+
+function clearIframePreviewHighlights() {
+  const frameDocument = previewFrame?.contentDocument;
+
+  if (!frameDocument) {
+    return;
+  }
+
+  frameDocument.querySelectorAll(".preview-focus").forEach(element => {
+    element.classList.remove("preview-focus");
+  });
+}
+
+function applyIframePreviewHighlights(areas) {
+  const frameDocument = previewFrame?.contentDocument;
+
+  if (!frameDocument) {
+    return;
+  }
+
+  clearIframePreviewHighlights();
+
+  areas.forEach(area => {
+    frameDocument.querySelectorAll(`[data-preview-area="${area}"]`).forEach(element => {
+      element.classList.add("preview-focus");
+    });
+  });
 }
 
 function getLiveButtonRadius(style) {
@@ -475,12 +688,34 @@ function wireFormInputs() {
       secondaryColorInput.value = secondaryHexInput.value.trim();
     }
 
+    if (event.target?.id) {
+      applyPreviewHighlight(event.target.id);
+    }
+
+    updateHelperHints();
     queuePreviewRender();
   });
 
-  brandingForm.addEventListener("change", () => {
+  brandingForm.addEventListener("change", event => {
+    if (event.target?.id) {
+      applyPreviewHighlight(event.target.id);
+    }
+
+    updateHelperHints();
     queuePreviewRender();
   });
+
+  brandingForm.addEventListener("focusin", event => {
+    if (event.target?.id) {
+      applyPreviewHighlight(event.target.id);
+    }
+  });
+
+  if (previewFrame) {
+    previewFrame.addEventListener("load", () => {
+      applyPreviewHighlight(currentPreviewFocusField);
+    });
+  }
 
   brandingForm.addEventListener("submit", event => {
     event.preventDefault();

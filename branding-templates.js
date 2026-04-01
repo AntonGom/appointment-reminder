@@ -99,21 +99,37 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
   return buildSignatureTemplate(content);
 }
 
+function buildPreviewFocusStyles() {
+  return `
+    <style>
+      * { box-sizing: border-box; }
+      [data-preview-area] {
+        transition: outline-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+      }
+      [data-preview-area].preview-focus {
+        outline: 2px solid rgba(37, 99, 235, 0.5);
+        outline-offset: 4px;
+        border-radius: 22px;
+      }
+    </style>
+  `;
+}
+
 function buildEmailContent({ message, branding, calendarLinks }) {
   const parsed = parseReminderMessage(message);
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
-    ? `<div style="display:grid;grid-template-columns:repeat(${Math.min(parsed.summary.length, 3)}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
+    ? `<div data-preview-area="secondary" style="display:grid;grid-template-columns:repeat(${Math.min(parsed.summary.length, 3)}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="padding:14px 16px;border-radius:16px;background:linear-gradient(180deg, ${hexToRgba(branding.secondaryColor, 0.42)}, rgba(255,255,255,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};">
+          <div style="padding:14px 16px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
-    ? `<div style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), ${hexToRgba(branding.secondaryColor, 0.44)});border:1px solid ${hexToRgba(branding.accentColor, 0.12)};">
+    ? `<div data-preview-area="secondary" style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.12)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
         <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
         <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
@@ -168,7 +184,7 @@ function buildHeroContactChips(branding, palette = {}) {
   const color = palette.color || "#ffffff";
 
   return `
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;">
+    <div data-preview-area="contact" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;">
       ${items.map(item => `
         <span style="display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:${background};border:1px solid ${border};color:${color};font-size:13px;font-weight:700;line-height:1.4;">
           ${escapeHtml(item)}
@@ -190,7 +206,7 @@ function buildHeroArtBlock(branding, options = {}) {
   const lineColor = options.lineColor || "rgba(255,255,255,0.86)";
 
   return `
-    <div style="position:relative;height:${shapeProfile.heroHeight}px;">
+    <div data-preview-area="art" style="position:relative;height:${shapeProfile.heroHeight}px;">
       <div style="position:absolute;right:${shapeProfile.auraRight}px;top:${shapeProfile.auraTop}px;width:${shapeProfile.auraSize}px;height:${shapeProfile.auraSize}px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);opacity:${shapeProfile.auraOpacity};"></div>
       <div style="position:absolute;right:${shapeProfile.shardOneRight}px;top:${shapeProfile.shardOneTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardOneHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
       <div style="position:absolute;right:${shapeProfile.shardTwoRight}px;top:${shapeProfile.shardTwoTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardTwoHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
@@ -208,20 +224,20 @@ function buildHeroArtBlock(branding, options = {}) {
 
 function buildSignatureTemplate(content) {
   return `
+    ${buildPreviewFocusStyles()}
     <div style="margin:0;padding:34px 16px;background:
-      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.2)}, transparent 34%),
-      radial-gradient(circle at 85% 8%, ${hexToRgba(content.brand.secondaryColor, 0.8)}, transparent 24%),
-      linear-gradient(180deg, ${hexToRgba(content.brand.secondaryColor, 0.74)}, #f8fbff);font-family:Arial, sans-serif;">
+      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.18)}, transparent 34%),
+      linear-gradient(180deg, #f6f9ff, #f8fbff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.82);border-radius:34px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
-        <div style="padding:28px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 28%),
-          linear-gradient(135deg, ${content.brand.accentColor} 0%, ${content.brand.secondaryColor} 52%, #111827 100%);">
+        <div data-preview-area="hero" style="padding:28px;background:
+          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.88)}, transparent 26%),
+          linear-gradient(135deg, ${content.brand.accentColor} 0%, ${hexToRgba(content.brand.accentColor, 0.72)} 56%, #111827 100%);">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:16px;">
-                ${content.logoMarkup}
+                <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">${content.heroLabel}</div>
+                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">${content.heroLabel}</div>
                   <div style="font-size:31px;line-height:1.02;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -254,7 +270,7 @@ function buildSignatureTemplate(content) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.92);color:#64748b;font-size:13px;line-height:1.7;">
+        <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.92);color:#64748b;font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
@@ -265,20 +281,20 @@ function buildSignatureTemplate(content) {
 
 function buildSpotlightTemplate(content) {
   return `
+    ${buildPreviewFocusStyles()}
     <div style="margin:0;padding:30px 14px;background:
-      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.14)}, transparent 32%),
-      radial-gradient(circle at 86% 12%, ${hexToRgba(content.brand.secondaryColor, 0.74)}, transparent 18%),
-      linear-gradient(180deg, #f8fbff, ${hexToRgba(content.brand.secondaryColor, 0.56)});font-family:Arial, sans-serif;">
+      radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.12)}, transparent 32%),
+      linear-gradient(180deg, #f8fbff, #f6f9ff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.96);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:34px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
-        <div style="padding:24px 26px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 24%),
-          linear-gradient(135deg, ${hexToRgba(content.brand.secondaryColor, 0.78)}, rgba(255,255,255,0.92) 58%, ${hexToRgba(content.brand.accentColor, 0.12)});border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
+        <div data-preview-area="hero" style="padding:24px 26px;background:
+          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.78)}, transparent 20%),
+          linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94) 52%, ${hexToRgba(content.brand.accentColor, 0.1)});border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
-                ${content.logoMarkup}
+                <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">${content.heroLabel}</div>
+                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">${content.heroLabel}</div>
                   <div style="font-size:30px;line-height:1.03;font-weight:800;color:#0f172a;margin-top:5px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -314,7 +330,7 @@ function buildSpotlightTemplate(content) {
           ${content.calendarSection}
           <div style="margin-top:18px;">${content.closing}</div>
         </div>
-        <div style="padding:18px 28px;background:#eff6ff;border-top:1px solid #dbeafe;color:#475569;font-size:13px;line-height:1.7;">
+        <div data-preview-area="footer" style="padding:18px 28px;background:#eff6ff;border-top:1px solid #dbeafe;color:#475569;font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
@@ -325,20 +341,20 @@ function buildSpotlightTemplate(content) {
 
 function buildExecutiveTemplate(content) {
   return `
+    ${buildPreviewFocusStyles()}
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
-      radial-gradient(circle at 84% 12%, ${hexToRgba(content.brand.secondaryColor, 0.22)}, transparent 18%),
-      linear-gradient(180deg, #eef2f7, ${hexToRgba(content.brand.secondaryColor, 0.34)});font-family:Arial, sans-serif;">
+      linear-gradient(180deg, #eef2f7, #f3f6fb);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:30px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
-        <div style="padding:24px 28px;background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 24%),
-          linear-gradient(135deg, #0f172a 0%, #182235 54%, ${hexToRgba(content.brand.secondaryColor, 0.38)} 100%);border-bottom:4px solid ${content.brand.accentColor};">
+        <div data-preview-area="hero" style="padding:24px 28px;background:
+          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.34)}, transparent 24%),
+          linear-gradient(135deg, #0f172a 0%, #182235 54%, #1f2937 100%);border-bottom:4px solid ${content.brand.accentColor};">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
-                ${content.logoMarkup}
+                <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">${content.heroLabel}</div>
+                  <div data-preview-area="hero-label" style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">${content.heroLabel}</div>
                   <div style="font-size:30px;line-height:1.04;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -372,7 +388,7 @@ function buildExecutiveTemplate(content) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div style="padding:18px 26px;background:#0f172a;color:#cbd5e1;font-size:13px;line-height:1.7;">
+        <div data-preview-area="footer" style="padding:18px 26px;background:#0f172a;color:#cbd5e1;font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:#ffffff;margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
@@ -390,9 +406,10 @@ function buildDefaultReminderEmail(message, calendarLinks) {
     .join("");
 
   return `
+    ${buildPreviewFocusStyles()}
     <div style="margin:0; padding:32px 16px; background:#f3f7ff; font-family:Arial, sans-serif;">
       <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #dbe7ff; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(37,99,235,0.08);">
-        <div style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
+        <div data-preview-area="hero" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); padding:20px 24px;">
           <div style="color:#ffffff; font-size:22px; font-weight:700;">Appointment Reminder</div>
         </div>
         <div style="padding:28px 24px;">
@@ -447,7 +464,7 @@ function buildActionButtons(branding) {
   }
 
   return `
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;">
+    <div data-preview-area="buttons" style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;">
       ${buttons.map(button => `
         <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;border-radius:${button.radius};text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
       `).join("")}
@@ -467,7 +484,7 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
   const radius = getButtonRadius(branding.buttonStyle);
 
   return `
-    <div style="margin:4px 0 18px;padding:18px;border-radius:18px;background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
+    <div data-preview-area="buttons" style="margin:4px 0 18px;padding:18px;border-radius:18px;background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
       <div style="margin:0 0 10px;color:#0f172a;font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
