@@ -107,9 +107,10 @@ function buildPreviewFocusStyles() {
         transition: outline-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
       }
       [data-preview-area].preview-focus {
-        outline: 2px solid rgba(37, 99, 235, 0.5);
-        outline-offset: 4px;
+        outline: 3px solid rgba(239, 68, 68, 0.88);
+        outline-offset: 5px;
         border-radius: 22px;
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.16);
       }
     </style>
   `;
@@ -208,6 +209,11 @@ function buildHeroArtBlock(branding, options = {}) {
   return `
     <div data-preview-area="art" style="position:relative;height:${shapeProfile.heroHeight}px;">
       <div style="position:absolute;right:${shapeProfile.auraRight}px;top:${shapeProfile.auraTop}px;width:${shapeProfile.auraSize}px;height:${shapeProfile.auraSize}px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);opacity:${shapeProfile.auraOpacity};"></div>
+      <div style="position:absolute;left:4px;top:${Math.max(10, shapeProfile.shardOneTop + 6)}px;width:34px;height:34px;border-radius:999px;border:2px solid ${hexToRgba(accentColor, 0.42)};background:rgba(255,255,255,0.08);"></div>
+      <div style="position:absolute;left:18px;top:${Math.max(42, shapeProfile.heroHeight - 40)}px;width:70px;height:14px;border-radius:999px;background:linear-gradient(90deg, ${hexToRgba(accentColor, 0.36)}, rgba(255,255,255,0.1));"></div>
+      <div style="position:absolute;left:56px;top:${Math.max(34, shapeProfile.heroHeight - 74)}px;width:26px;height:26px;border-radius:10px;transform:rotate(45deg);background:linear-gradient(180deg, ${hexToRgba(branding.secondaryColor || accentColor, 0.72)}, rgba(255,255,255,0.08));"></div>
+      <div style="position:absolute;right:${Math.max(118, shapeProfile.shardTwoRight + 58)}px;top:${Math.max(20, shapeProfile.shardTwoTop + 8)}px;width:16px;height:58px;border-radius:999px;background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.52)}, rgba(255,255,255,0.08));"></div>
+      <div style="position:absolute;right:${Math.max(124, shapeProfile.shardThreeRight + 26)}px;top:${Math.max(84, shapeProfile.heroHeight - 30)}px;width:86px;height:12px;border-radius:999px;background:linear-gradient(90deg, ${hexToRgba(branding.secondaryColor || accentColor, 0.74)}, rgba(255,255,255,0.08));"></div>
       <div style="position:absolute;right:${shapeProfile.shardOneRight}px;top:${shapeProfile.shardOneTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardOneHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
       <div style="position:absolute;right:${shapeProfile.shardTwoRight}px;top:${shapeProfile.shardTwoTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardTwoHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
       <div style="position:absolute;right:${shapeProfile.shardThreeRight}px;top:${shapeProfile.shardThreeTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardThreeHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.26)}, rgba(255,255,255,0.04));"></div>

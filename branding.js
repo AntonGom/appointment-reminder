@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401c";
+} from "./branding-templates.js?v=20260401d";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -99,7 +99,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.motionStyle]: {
     iframeAreas: ["art"],
     selectors: ["#branding-preview-shell", ".signature-card-art"],
-    note: "Highlighting the live preview areas that animate on this page."
+    note: "Highlighting the live preview art that moves on this page."
   },
   [fieldIds.contactEmail]: {
     iframeAreas: ["contact", "footer", "buttons"],
@@ -635,6 +635,11 @@ function renderTemplateCards() {
         </span>
         <span class="signature-card-art" aria-hidden="true">
           <span class="signature-card-aura"></span>
+          <span class="signature-card-ring"></span>
+          <span class="signature-card-mini one"></span>
+          <span class="signature-card-mini two"></span>
+          <span class="signature-card-diamond"></span>
+          <span class="signature-card-beam"></span>
           <span class="signature-card-shard one"></span>
           <span class="signature-card-shard two"></span>
           <span class="signature-card-shard three"></span>
