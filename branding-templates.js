@@ -106,14 +106,14 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const summaryHtml = parsed.summary.length
     ? `<div style="display:grid;grid-template-columns:repeat(${Math.min(parsed.summary.length, 3)}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="padding:14px 16px;border-radius:16px;background:${hexToRgba(branding.accentColor, 0.08)};border:1px solid ${hexToRgba(branding.accentColor, 0.18)};">
+          <div style="padding:14px 16px;border-radius:16px;background:linear-gradient(180deg, ${hexToRgba(branding.secondaryColor, 0.42)}, rgba(255,255,255,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
-    ? `<div style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:${hexToRgba(branding.secondaryColor, 0.42)};border:1px solid ${hexToRgba(branding.accentColor, 0.12)};">
+    ? `<div style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), ${hexToRgba(branding.secondaryColor, 0.44)});border:1px solid ${hexToRgba(branding.accentColor, 0.12)};">
         <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
         <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
@@ -183,8 +183,8 @@ function buildHeroArtBlock(branding, options = {}) {
   const shapeProfile = getShapeProfile(branding.shapeIntensity);
   const auraColor = options.auraColor || hexToRgba(accentColor, 0.32);
   const shardColor = options.shardColor || "rgba(255,255,255,0.72)";
-  const shardSecondary = options.shardSecondary || hexToRgba(accentColor, 0.18);
-  const markBackground = options.markBackground || "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(219,234,254,0.72))";
+  const shardSecondary = options.shardSecondary || hexToRgba(branding.secondaryColor || accentColor, 0.24);
+  const markBackground = options.markBackground || `linear-gradient(180deg, rgba(255,255,255,0.88), ${hexToRgba(branding.secondaryColor || accentColor, 0.72)})`;
   const markBorder = options.markBorder || "rgba(255,255,255,0.46)";
   const markTextColor = options.markTextColor || "#0f172a";
   const lineColor = options.lineColor || "rgba(255,255,255,0.86)";
@@ -210,12 +210,12 @@ function buildSignatureTemplate(content) {
   return `
     <div style="margin:0;padding:34px 16px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.2)}, transparent 34%),
-      radial-gradient(circle at 85% 8%, rgba(255,255,255,0.82), transparent 24%),
-      linear-gradient(180deg, ${hexToRgba(content.brand.secondaryColor, 0.64)}, #f8fbff);font-family:Arial, sans-serif;">
+      radial-gradient(circle at 85% 8%, ${hexToRgba(content.brand.secondaryColor, 0.8)}, transparent 24%),
+      linear-gradient(180deg, ${hexToRgba(content.brand.secondaryColor, 0.74)}, #f8fbff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.82);border-radius:34px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
         <div style="padding:28px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 28%),
-          linear-gradient(135deg, ${content.brand.accentColor}, #111827);">
+          linear-gradient(135deg, ${content.brand.accentColor} 0%, ${content.brand.secondaryColor} 52%, #111827 100%);">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:16px;">
@@ -236,8 +236,8 @@ function buildSignatureTemplate(content) {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.36),
               shardColor: "rgba(255,255,255,0.74)",
-              shardSecondary: "rgba(255,255,255,0.08)",
-              markBackground: "linear-gradient(180deg, rgba(255,255,255,0.82), rgba(219,234,254,0.42))",
+              shardSecondary: hexToRgba(content.brand.secondaryColor, 0.28),
+              markBackground: `linear-gradient(180deg, rgba(255,255,255,0.82), ${hexToRgba(content.brand.secondaryColor, 0.5)})`,
               markBorder: "rgba(255,255,255,0.34)",
               markTextColor: "#0f172a"
             })}
@@ -267,11 +267,12 @@ function buildSpotlightTemplate(content) {
   return `
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.14)}, transparent 32%),
-      linear-gradient(180deg, #f8fbff, ${hexToRgba(content.brand.secondaryColor, 0.52)});font-family:Arial, sans-serif;">
+      radial-gradient(circle at 86% 12%, ${hexToRgba(content.brand.secondaryColor, 0.74)}, transparent 18%),
+      linear-gradient(180deg, #f8fbff, ${hexToRgba(content.brand.secondaryColor, 0.56)});font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.96);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:34px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
         <div style="padding:24px 26px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 24%),
-          linear-gradient(180deg, ${hexToRgba(content.brand.accentColor, 0.12)}, rgba(255,255,255,0.72));border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
+          linear-gradient(135deg, ${hexToRgba(content.brand.secondaryColor, 0.78)}, rgba(255,255,255,0.92) 58%, ${hexToRgba(content.brand.accentColor, 0.12)});border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
@@ -292,8 +293,8 @@ function buildSpotlightTemplate(content) {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.18),
               shardColor: "rgba(203,213,225,0.92)",
-              shardSecondary: "rgba(220,252,231,0.28)",
-              markBackground: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(220,252,231,0.62))",
+              shardSecondary: hexToRgba(content.brand.secondaryColor, 0.42),
+              markBackground: `linear-gradient(180deg, rgba(255,255,255,0.96), ${hexToRgba(content.brand.secondaryColor, 0.72)})`,
               markBorder: "rgba(203,213,225,0.72)",
               markTextColor: "#0f172a",
               lineColor: "rgba(255,255,255,0.92)"
@@ -326,11 +327,12 @@ function buildExecutiveTemplate(content) {
   return `
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
-      linear-gradient(180deg, #eef2f7, ${hexToRgba(content.brand.secondaryColor, 0.38)});font-family:Arial, sans-serif;">
+      radial-gradient(circle at 84% 12%, ${hexToRgba(content.brand.secondaryColor, 0.22)}, transparent 18%),
+      linear-gradient(180deg, #eef2f7, ${hexToRgba(content.brand.secondaryColor, 0.34)});font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:30px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
         <div style="padding:24px 28px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 24%),
-          linear-gradient(135deg, #0f172a, #182235);border-bottom:4px solid ${content.brand.accentColor};">
+          linear-gradient(135deg, #0f172a 0%, #182235 54%, ${hexToRgba(content.brand.secondaryColor, 0.38)} 100%);border-bottom:4px solid ${content.brand.accentColor};">
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
@@ -351,8 +353,8 @@ function buildExecutiveTemplate(content) {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.2),
               shardColor: "rgba(148,163,184,0.42)",
-              shardSecondary: "rgba(15,23,42,0.08)",
-              markBackground: "linear-gradient(180deg, rgba(37,99,235,0.24), rgba(15,23,42,0.62))",
+              shardSecondary: hexToRgba(content.brand.secondaryColor, 0.18),
+              markBackground: `linear-gradient(180deg, ${hexToRgba(content.brand.accentColor, 0.24)}, ${hexToRgba(content.brand.secondaryColor, 0.34)}, rgba(15,23,42,0.62))`,
               markBorder: "rgba(255,255,255,0.18)",
               markTextColor: "#f8fafc",
               lineColor: "rgba(255,255,255,0.54)"
@@ -420,13 +422,13 @@ function buildActionButtons(branding) {
   }
 
   if (branding.websiteUrl) {
-    buttons.push({
-      href: branding.websiteUrl,
-      label: "Visit website",
-      background: hexToRgba(branding.secondaryColor, 0.86),
-      color: "#0f172a",
-      border: hexToRgba(branding.accentColor, 0.2),
-      radius
+      buttons.push({
+        href: branding.websiteUrl,
+        label: "Visit website",
+        background: `linear-gradient(135deg, ${hexToRgba(branding.secondaryColor, 0.92)}, rgba(255,255,255,0.98))`,
+        color: "#0f172a",
+        border: hexToRgba(branding.accentColor, 0.2),
+        radius
     });
   }
 
