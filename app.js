@@ -58,16 +58,25 @@ function getSavedBrandingProfile() {
 
   const businessName = String(profile.businessName || "").trim();
 
-  if (!businessName) {
+  if (!businessName || profile.brandingEnabled === false) {
     return null;
   }
 
   return {
     templateStyle: String(profile.templateStyle || "").trim(),
+    brandingEnabled: profile.brandingEnabled !== false,
     businessName,
     tagline: String(profile.tagline || "").trim(),
+    headerLabel: String(profile.headerLabel || "").trim(),
     accentColor: String(profile.accentColor || "").trim(),
+    secondaryColor: String(profile.secondaryColor || "").trim(),
     logoUrl: String(profile.logoUrl || "").trim(),
+    buttonStyle: String(profile.buttonStyle || "").trim(),
+    panelShape: String(profile.panelShape || "").trim(),
+    artShape: String(profile.artShape || "").trim(),
+    shapeIntensity: String(profile.shapeIntensity || "").trim(),
+    shineStyle: String(profile.shineStyle || "").trim(),
+    motionStyle: String(profile.motionStyle || "").trim(),
     contactEmail: String(profile.contactEmail || "").trim(),
     contactPhone: String(profile.contactPhone || "").trim(),
     websiteUrl: String(profile.websiteUrl || "").trim(),

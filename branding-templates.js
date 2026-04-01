@@ -33,7 +33,7 @@ export function hasSavedBrandingProfile(profile = null) {
 }
 
 export function buildReminderEmailSubject(brandingProfile) {
-  if (!hasSavedBrandingProfile(brandingProfile)) {
+  if (!hasSavedBrandingProfile(brandingProfile) || brandingProfile?.brandingEnabled === false) {
     return "Appointment Reminder";
   }
 
@@ -54,6 +54,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const accentColor = normalizeHexColor(profile?.accentColor) || DEFAULT_ACCENT;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || DEFAULT_SECONDARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
+  const brandingEnabled = profile?.brandingEnabled !== false;
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : "pill";
   const panelShape = PANEL_STYLES.has(profile?.panelShape) ? profile.panelShape : "rounded";
   const artShape = ART_SHAPES.has(profile?.artShape) ? profile.artShape : "classic";
@@ -73,6 +74,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     accentColor,
     secondaryColor,
     logoUrl,
+    brandingEnabled,
     buttonStyle,
     panelShape,
     artShape,
@@ -93,7 +95,11 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
     resolvedArtShape: resolveArtShape(normalizedBranding.artShape, randomSeed)
   };
 
-  if (!previewMode && !hasSavedBrandingProfile(brandingProfile)) {
+  if (!previewMode && (!hasSavedBrandingProfile(brandingProfile) || brandingProfile?.brandingEnabled === false)) {
+    return buildDefaultReminderEmail(message, calendarLinks);
+  }
+
+  if (branding.brandingEnabled === false) {
     return buildDefaultReminderEmail(message, calendarLinks);
   }
 

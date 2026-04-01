@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401h";
+} from "./branding-templates.js?v=20260401i";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -22,10 +22,12 @@ const previewFrom = document.getElementById("branding-preview-from");
 const previewEmail = document.getElementById("branding-preview-email");
 const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
+const brandingEnabledNote = document.getElementById("branding-enabled-note");
 const signOutButton = document.getElementById("branding-sign-out");
 
 const fieldIds = {
   templateStyle: "branding-template-style",
+  brandingEnabled: "branding-enabled",
   businessName: "branding-business-name",
   tagline: "branding-tagline",
   headerLabel: "branding-header-label",
@@ -59,6 +61,11 @@ const helperTextIds = {
 const defaultPreviewFocusNote = "Click or focus a setting and the preview will highlight the part it changes.";
 
 const PREVIEW_HIGHLIGHT_CONFIG = {
+  [fieldIds.brandingEnabled]: {
+    iframeAreas: ["hero", "secondary", "buttons", "footer"],
+    selectors: ["#branding-preview-shell", "#branding-preview-subject"],
+    note: "Toggle between your branded email and the simpler standard reminder layout."
+  },
   [fieldIds.businessName]: {
     iframeAreas: ["hero", "logo", "footer"],
     selectors: [".branding-preview-from"],
@@ -271,6 +278,7 @@ function buildSampleMessage(profile) {
 function getDraftBranding() {
   const rawDraft = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
+    brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
     businessName: getFieldElement(fieldIds.businessName)?.value || "",
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
@@ -301,6 +309,7 @@ function applyBrandingToForm(branding) {
   });
 
   getFieldElement(fieldIds.templateStyle).value = normalized.templateStyle;
+  getFieldElement(fieldIds.brandingEnabled).checked = normalized.brandingEnabled !== false;
   getFieldElement(fieldIds.businessName).value = branding.businessName || "";
   getFieldElement(fieldIds.tagline).value = branding.tagline || "";
   getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
@@ -372,11 +381,21 @@ function renderPreview() {
   }
 
   if (previewFrom) {
-    previewFrom.textContent = draftBranding.businessName || "Your business name";
+    previewFrom.textContent = draftBranding.brandingEnabled === false
+      ? "Standard Reminder Email"
+      : draftBranding.businessName || "Your business name";
   }
 
   if (previewEmail) {
-    previewEmail.textContent = draftBranding.contactEmail || currentUser?.email || "you@example.com";
+    previewEmail.textContent = draftBranding.brandingEnabled === false
+      ? (currentUser?.email || "you@example.com")
+      : (draftBranding.contactEmail || currentUser?.email || "you@example.com");
+  }
+
+  if (brandingEnabledNote) {
+    brandingEnabledNote.textContent = draftBranding.brandingEnabled === false
+      ? "Branding is off. Your design stays saved here, but outgoing emails use the standard reminder format."
+      : "Branding is on. Outgoing emails will use your saved branded layout.";
   }
 
   applyPreviewHighlight(currentPreviewFocusField);
@@ -673,6 +692,7 @@ async function saveBranding() {
 
   const rawBranding = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
+    brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
     businessName: (getFieldElement(fieldIds.businessName)?.value || "").trim(),
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
@@ -721,7 +741,12 @@ async function saveBranding() {
     currentUser = data.user || currentUser;
     currentSavedBranding = { ...normalizedForStorage };
     applyBrandingToForm(currentSavedBranding);
-    setStatus("Branding saved. Your automated reminder emails will use this look.", "success");
+    setStatus(
+      normalizedForStorage.brandingEnabled === false
+        ? "Branding saved. Outgoing emails will use the standard reminder layout until you turn branding back on."
+        : "Branding saved. Your automated reminder emails will use this look.",
+      "success"
+    );
   } catch (error) {
     setStatus(error.message || "Unable to save branding right now.", "error");
   } finally {
@@ -829,6 +854,13 @@ function wireFormInputs() {
     if (event.target === artShapeInput && artShapeInput?.value === "random") {
       previewRandomNonce += 1;
       setStatus("Random art mode is on. The preview will generate fresh geometric art live.", "info");
+    }
+
+    if (event.target instanceof HTMLSelectElement) {
+      window.setTimeout(() => {
+        event.target.blur();
+        applyPreviewHighlight("");
+      }, 0);
     }
 
     if (event.target?.id) {
@@ -948,7 +980,12 @@ async function initBrandingPage() {
   });
 
   if (currentUser && hasSavedBrandingProfile(currentSavedBranding)) {
-    setStatus("This preview is using your saved branding profile.", "info");
+    setStatus(
+      currentSavedBranding.brandingEnabled === false
+        ? "Branding is currently off. Your design is still saved here for later."
+        : "This preview is using your saved branding profile.",
+      "info"
+    );
   }
 }
 

@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401m">
+  <link rel="stylesheet" href="branding.css?v=20260401n">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -63,6 +63,20 @@
 
                 <form id="branding-form">
                   <input id="branding-template-style" type="hidden" value="signature">
+                  <div class="branding-toggle-card field-span-2">
+                    <label class="branding-toggle-row" for="branding-enabled">
+                      <span class="branding-toggle-copy">
+                        <span class="branding-toggle-title">Use branded reminder emails</span>
+                        <span class="branding-toggle-text">Turn this off anytime to send the simpler free-user reminder layout instead.</span>
+                      </span>
+                      <span class="branding-switch">
+                        <input id="branding-enabled" type="checkbox" checked>
+                        <span class="branding-switch-ui" aria-hidden="true"></span>
+                      </span>
+                    </label>
+                    <p id="branding-enabled-note" class="field-hint branding-helper">When off, your design stays saved here, but outgoing emails use the standard reminder format.</p>
+                  </div>
+
                   <div class="branding-field-grid">
                     <div class="field-span-2">
                       <label class="branding-label" for="branding-business-name">Business name</label>
@@ -235,6 +249,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401m"></script>
+  <script type="module" src="branding.js?v=20260401n"></script>
 </body>
 </html>

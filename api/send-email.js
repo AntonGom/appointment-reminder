@@ -24,7 +24,9 @@ export default async function handler(req, res) {
     } = req.body;
     const apiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
-    const savedBranding = hasSavedBrandingProfile(brandingProfile) ? brandingProfile : null;
+    const savedBranding = hasSavedBrandingProfile(brandingProfile) && brandingProfile?.brandingEnabled !== false
+      ? brandingProfile
+      : null;
     const senderName = savedBranding?.businessName || process.env.BREVO_SENDER_NAME || "Appointment Reminder";
     const wantsCopy = sendCopy === true || sendCopy === "true";
     const normalizedCopyEmail = String(copyEmail || "").trim();
