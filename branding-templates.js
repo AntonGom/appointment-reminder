@@ -19,6 +19,8 @@ export const BRANDING_TEMPLATE_OPTIONS = [
 const DEFAULT_TEMPLATE = "signature";
 const DEFAULT_ACCENT = "#2563eb";
 const DEFAULT_SECONDARY = "#e8f1ff";
+const DEFAULT_PANEL = "#f3f7ff";
+const DEFAULT_TERTIARY = "#1f2937";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const BUTTON_STYLES = new Set(["pill", "rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
 const PANEL_STYLES = new Set(["rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
@@ -33,6 +35,9 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   signature: Object.freeze({
     accentColor: "#2563eb",
     secondaryColor: "#e8f1ff",
+    artShapeColor: "#c7dcff",
+    panelColor: "#eef4ff",
+    tertiaryColor: "#1f2937",
     buttonStyle: "pill",
     panelShape: "rounded",
     artShape: "classic",
@@ -44,6 +49,9 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   spotlight: Object.freeze({
     accentColor: "#0f766e",
     secondaryColor: "#e6fbf4",
+    artShapeColor: "#66dbc6",
+    panelColor: "#ecfbf6",
+    tertiaryColor: "#134e4a",
     buttonStyle: "rounded",
     panelShape: "rounded",
     artShape: "ribbon",
@@ -55,6 +63,9 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   executive: Object.freeze({
     accentColor: "#0f172a",
     secondaryColor: "#dbe2ea",
+    artShapeColor: "#94a3b8",
+    panelColor: "#edf2f7",
+    tertiaryColor: "#334155",
     buttonStyle: "crisp",
     panelShape: "crisp",
     artShape: "frame",
@@ -98,6 +109,9 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const headerLabel = cleanText(profile?.headerLabel, 50);
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
+  const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
+  const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
+  const tertiaryColor = normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const brandingEnabled = profile?.brandingEnabled !== false;
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : templatePreset.buttonStyle || "pill";
@@ -119,6 +133,9 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
     accentColor,
     secondaryColor,
+    artShapeColor,
+    panelColor,
+    tertiaryColor,
     logoUrl,
     brandingEnabled,
     buttonStyle,
@@ -927,9 +944,24 @@ function paintTextColor(color) {
   return `color:${color};-webkit-text-fill-color:${color};`;
 }
 
+function getReadableTextColor(color, options = {}) {
+  const light = options.light || "#ffffff";
+  const dark = options.dark || "#0f172a";
+  const normalized = normalizeHexColor(color) || DEFAULT_ACCENT;
+  const red = parseInt(normalized.slice(1, 3), 16);
+  const green = parseInt(normalized.slice(3, 5), 16);
+  const blue = parseInt(normalized.slice(5, 7), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+  return brightness >= 165 ? dark : light;
+}
+
+function buildPanelBackground(panelColor, alpha = 0.34) {
+  return `linear-gradient(180deg, #ffffff, ${hexToRgba(panelColor, alpha)})`;
+}
+
 function buildProductionHeroArt(branding, theme) {
   const artShape = branding.resolvedArtShape || branding.artShape || "classic";
-  const accent = branding.accentColor || DEFAULT_ACCENT;
+  const artColor = branding.artShapeColor || branding.accentColor || DEFAULT_ACCENT;
   const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
   const markText = theme.templateStyle === "executive" ? "#f8fafc" : "#0f172a";
   const markFill = theme.templateStyle === "executive"
@@ -937,7 +969,7 @@ function buildProductionHeroArt(branding, theme) {
     : `linear-gradient(180deg, rgba(255,255,255,0.94), ${hexToRgba(secondary, 0.82)})`;
   const markBorder = theme.templateStyle === "executive"
     ? "rgba(255,255,255,0.2)"
-    : hexToRgba(accent, 0.18);
+    : hexToRgba(artColor, 0.18);
   const mainMark = `
     <div style="position:absolute;right:8px;top:16px;width:92px;height:112px;border-radius:28px;background:${markFill};border:1px solid ${markBorder};box-shadow:0 10px 22px rgba(15,23,42,0.12);overflow:hidden;">
       <div style="position:absolute;top:-8px;left:30px;width:3px;height:126px;background:${theme.heroLineColor};opacity:0.88;"></div>
@@ -953,19 +985,19 @@ function buildProductionHeroArt(branding, theme) {
 
   if (artShape === "orbit") {
     artHtml = `
-      <div style="position:absolute;right:30px;top:10px;width:104px;height:104px;border-radius:999px;border:2px solid ${hexToRgba(accent, 0.28)};"></div>
+      <div style="position:absolute;right:30px;top:10px;width:104px;height:104px;border-radius:999px;border:2px solid ${hexToRgba(artColor, 0.28)};"></div>
       <div style="position:absolute;right:18px;top:24px;width:86px;height:86px;border-radius:999px;border:2px solid ${hexToRgba(secondary, 0.92)};"></div>
-      <div style="position:absolute;right:112px;top:64px;width:12px;height:12px;border-radius:999px;background:${accent};"></div>
+      <div style="position:absolute;right:112px;top:64px;width:12px;height:12px;border-radius:999px;background:${artColor};"></div>
     `;
   } else if (artShape === "stacked") {
     artHtml = `
       <div style="position:absolute;right:82px;top:12px;width:34px;height:116px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.84), ${hexToRgba(secondary, 0.4)});"></div>
       <div style="position:absolute;right:52px;top:28px;width:34px;height:94px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(secondary, 0.82)}, rgba(255,255,255,0.08));"></div>
-      <div style="position:absolute;right:22px;top:46px;width:34px;height:74px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.52)}, rgba(255,255,255,0.08));"></div>
+      <div style="position:absolute;right:22px;top:46px;width:34px;height:74px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(artColor, 0.52)}, rgba(255,255,255,0.08));"></div>
     `;
   } else if (artShape === "ribbon") {
     artHtml = `
-      <div style="position:absolute;right:78px;top:28px;width:74px;height:14px;border-radius:999px;background:${hexToRgba(accent, 0.56)};"></div>
+      <div style="position:absolute;right:78px;top:28px;width:74px;height:14px;border-radius:999px;background:${hexToRgba(artColor, 0.56)};"></div>
       <div style="position:absolute;right:58px;top:54px;width:86px;height:14px;border-radius:999px;background:${hexToRgba(secondary, 0.92)};"></div>
       <div style="position:absolute;right:88px;top:82px;width:66px;height:14px;border-radius:999px;background:rgba(255,255,255,0.7);"></div>
     `;
@@ -973,41 +1005,41 @@ function buildProductionHeroArt(branding, theme) {
     artHtml = `
       <div style="position:absolute;right:86px;top:20px;width:34px;height:34px;transform:rotate(45deg);border-radius:10px;background:rgba(255,255,255,0.86);"></div>
       <div style="position:absolute;right:56px;top:50px;width:26px;height:26px;transform:rotate(45deg);border-radius:8px;background:${hexToRgba(secondary, 0.92)};"></div>
-      <div style="position:absolute;right:98px;top:82px;width:18px;height:18px;transform:rotate(45deg);border-radius:6px;background:${hexToRgba(accent, 0.64)};"></div>
+      <div style="position:absolute;right:98px;top:82px;width:18px;height:18px;transform:rotate(45deg);border-radius:6px;background:${hexToRgba(artColor, 0.64)};"></div>
     `;
   } else if (artShape === "frame") {
     artHtml = `
-      <div style="position:absolute;right:18px;top:12px;width:118px;height:118px;border-radius:28px;border:2px solid ${hexToRgba(accent, 0.26)};"></div>
+      <div style="position:absolute;right:18px;top:12px;width:118px;height:118px;border-radius:28px;border:2px solid ${hexToRgba(artColor, 0.26)};"></div>
       <div style="position:absolute;right:34px;top:28px;width:90px;height:90px;border-radius:24px;border:2px solid ${hexToRgba(secondary, 0.92)};"></div>
     `;
   } else if (artShape === "halo") {
     artHtml = `
-      <div style="position:absolute;right:26px;top:18px;width:108px;height:108px;border-radius:999px;border:2px solid ${hexToRgba(accent, 0.24)};"></div>
+      <div style="position:absolute;right:26px;top:18px;width:108px;height:108px;border-radius:999px;border:2px solid ${hexToRgba(artColor, 0.24)};"></div>
       <div style="position:absolute;right:42px;top:34px;width:76px;height:76px;border-radius:999px;border:2px dashed ${hexToRgba(secondary, 0.94)};"></div>
-      <div style="position:absolute;right:122px;top:64px;width:10px;height:10px;border-radius:999px;background:${accent};"></div>
+      <div style="position:absolute;right:122px;top:64px;width:10px;height:10px;border-radius:999px;background:${artColor};"></div>
     `;
   } else if (artShape === "cascade") {
     artHtml = `
       <div style="position:absolute;right:94px;top:18px;width:18px;height:92px;border-radius:999px;background:rgba(255,255,255,0.82);"></div>
       <div style="position:absolute;right:68px;top:34px;width:18px;height:76px;border-radius:999px;background:${hexToRgba(secondary, 0.88)};"></div>
-      <div style="position:absolute;right:42px;top:50px;width:18px;height:60px;border-radius:999px;background:${hexToRgba(accent, 0.5)};"></div>
+      <div style="position:absolute;right:42px;top:50px;width:18px;height:60px;border-radius:999px;background:${hexToRgba(artColor, 0.5)};"></div>
     `;
   } else if (artShape === "split") {
     artHtml = `
       <div style="position:absolute;right:78px;top:18px;width:48px;height:104px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.9), ${hexToRgba(secondary, 0.7)});"></div>
-      <div style="position:absolute;right:48px;top:18px;width:34px;height:104px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.6)}, rgba(255,255,255,0.1));"></div>
+      <div style="position:absolute;right:48px;top:18px;width:34px;height:104px;border-radius:18px;background:linear-gradient(180deg, ${hexToRgba(artColor, 0.6)}, rgba(255,255,255,0.1));"></div>
     `;
   } else {
     artHtml = `
       <div style="position:absolute;right:84px;top:14px;width:30px;height:116px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.84), ${hexToRgba(secondary, 0.44)});"></div>
       <div style="position:absolute;right:54px;top:40px;width:30px;height:90px;border-radius:16px;background:linear-gradient(180deg, ${hexToRgba(secondary, 0.88)}, rgba(255,255,255,0.08));"></div>
-      <div style="position:absolute;right:118px;top:58px;width:24px;height:68px;border-radius:14px;background:linear-gradient(180deg, ${hexToRgba(accent, 0.42)}, rgba(255,255,255,0.06));"></div>
+      <div style="position:absolute;right:118px;top:58px;width:24px;height:68px;border-radius:14px;background:linear-gradient(180deg, ${hexToRgba(artColor, 0.42)}, rgba(255,255,255,0.06));"></div>
     `;
   }
 
   return `
     <div style="position:relative;width:156px;height:138px;margin-left:auto;">
-      <div style="position:absolute;right:0;top:0;width:126px;height:126px;border-radius:999px;background:radial-gradient(circle, ${hexToRgba(secondary, 0.7)}, rgba(255,255,255,0));"></div>
+      <div style="position:absolute;right:0;top:0;width:126px;height:126px;border-radius:999px;background:radial-gradient(circle, ${hexToRgba(artColor, 0.34)}, rgba(255,255,255,0));"></div>
       ${artHtml}
       ${mainMark}
     </div>
@@ -1015,6 +1047,9 @@ function buildProductionHeroArt(branding, theme) {
 }
 
 function getProductionTheme(branding) {
+  const artColor = branding.artShapeColor || branding.accentColor || DEFAULT_ACCENT;
+  const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
+
   if (branding.templateStyle === "executive") {
     return {
       templateStyle: "executive",
@@ -1030,8 +1065,8 @@ function getProductionTheme(branding) {
       markBorder: "rgba(255,255,255,0.18)",
       markText: "#ffffff",
       heroLineColor: "rgba(255,255,255,0.24)",
-      heroMarkCore: "linear-gradient(140deg, rgba(15,23,42,0.92), rgba(37,99,235,0.34))",
-      footerBackground: "#0f172a",
+      heroMarkCore: `linear-gradient(140deg, rgba(15,23,42,0.92), ${hexToRgba(artColor, 0.34)})`,
+      footerBackground: `linear-gradient(180deg, #0f172a 0%, ${hexToRgba(tertiaryColor, 0.28)} 100%)`,
       footerBgColor: "#0f172a",
       footerColor: "#cbd5e1",
       footerTitleColor: "#ffffff"
@@ -1053,8 +1088,8 @@ function getProductionTheme(branding) {
       markBorder: hexToRgba(branding.accentColor, 0.18),
       markText: "#0f172a",
       heroLineColor: "rgba(255,255,255,0.86)",
-      heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.72)})`,
-      footerBackground: "#eff6ff",
+      heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(artColor, 0.2)} 44%, ${hexToRgba(branding.secondaryColor, 0.72)} 100%)`,
+      footerBackground: `linear-gradient(180deg, #eff6ff 0%, ${hexToRgba(tertiaryColor, 0.12)} 100%)`,
       footerBgColor: "#eff6ff",
       footerColor: "#475569",
       footerTitleColor: "#0f172a"
@@ -1075,8 +1110,8 @@ function getProductionTheme(branding) {
     markBorder: "rgba(255,255,255,0.3)",
     markText: "#0f172a",
     heroLineColor: "rgba(255,255,255,0.76)",
-    heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(branding.secondaryColor, 0.8)})`,
-    footerBackground: "#f8fafc",
+    heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(artColor, 0.18)} 42%, ${hexToRgba(branding.secondaryColor, 0.8)} 100%)`,
+    footerBackground: `linear-gradient(180deg, #f8fafc 0%, ${hexToRgba(tertiaryColor, 0.12)} 100%)`,
     footerBgColor: "#f8fafc",
     footerColor: "#64748b",
     footerTitleColor: "#0f172a"
@@ -1089,9 +1124,10 @@ function buildProductionSummary(summaryItems, branding) {
   }
 
   const radius = getSafePanelRadius(branding.panelShape);
+  const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const cells = summaryItems.slice(0, 3).map(item => `
     <td valign="top" style="padding:0 8px 0 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(branding.accentColor, 0.18)};${radius}background:linear-gradient(180deg, #ffffff, #f8fafc);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildPanelBackground(panelColor, 0.44)};">
         <tr>
           <td style="padding:14px 14px 12px;">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
@@ -1115,14 +1151,15 @@ function buildProductionSummary(summaryItems, branding) {
 
 function buildProductionDetails(details, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
+  const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
 
   return `
     <tr>
       <td data-preview-area="secondary" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(branding.accentColor, 0.14)};${radius}background:linear-gradient(180deg, #ffffff, ${hexToRgba(branding.secondaryColor, 0.34)});">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.38)};${radius}background:${buildPanelBackground(panelColor, 0.5)};">
           <tr>
             <td style="padding:16px 18px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor("#64748b")}margin:0 0 8px;">Additional details</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Additional details</div>
               <div style="font-size:15px;line-height:1.7;${paintTextColor("#0f172a")}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
@@ -1135,6 +1172,8 @@ function buildProductionDetails(details, branding) {
 function buildProductionButtons(branding) {
   const buttons = [];
   const radius = getSafeButtonRadius(branding.buttonStyle);
+  const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
+  const tertiaryText = getReadableTextColor(tertiaryColor);
 
   if (branding.contactPhone) {
     const digits = branding.contactPhone.replace(/\D/g, "");
@@ -1153,9 +1192,9 @@ function buildProductionButtons(branding) {
     buttons.push({
       href: branding.websiteUrl,
       label: "Visit website",
-      background: "#ffffff",
-      color: "#0f172a",
-      border: hexToRgba(branding.accentColor, 0.24)
+      background: tertiaryColor,
+      color: tertiaryText,
+      border: tertiaryColor
     });
   }
 
@@ -1191,14 +1230,15 @@ function buildProductionCalendar(calendarLinks, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
+  const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
 
   return `
     <tr>
       <td data-preview-area="buttons" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${hexToRgba(branding.accentColor, 0.05)};border:1px solid ${hexToRgba(branding.accentColor, 0.16)};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${buildPanelBackground(panelColor, 0.42)};border:1px solid ${hexToRgba(panelColor, 0.38)};">
           <tr>
             <td style="padding:18px;">
-              <div style="font-size:15px;font-weight:800;${paintTextColor("#0f172a")}margin:0 0 8px;">Add to Calendar</div>
+              <div style="font-size:15px;font-weight:800;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Add to Calendar</div>
               <div style="font-size:13px;line-height:1.65;${paintTextColor("#475569")}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
               <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor("#ffffff")}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
               <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor("#ffffff")}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>

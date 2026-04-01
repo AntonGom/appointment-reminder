@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401n";
+} from "./branding-templates.js?v=20260401o";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -48,6 +48,12 @@ const fieldIds = {
   accentHex: "branding-accent-hex",
   secondaryColor: "branding-secondary-color",
   secondaryHex: "branding-secondary-hex",
+  artShapeColor: "branding-art-shape-color",
+  artShapeHex: "branding-art-shape-hex",
+  panelColor: "branding-panel-color",
+  panelHex: "branding-panel-hex",
+  tertiaryColor: "branding-tertiary-color",
+  tertiaryHex: "branding-tertiary-hex",
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
   panelShape: "branding-panel-shape",
@@ -64,6 +70,9 @@ const fieldIds = {
 
 const helperTextIds = {
   secondaryColor: "branding-secondary-color-hint",
+  artShapeColor: "branding-art-shape-color-hint",
+  panelColor: "branding-panel-color-hint",
+  tertiaryColor: "branding-tertiary-color-hint",
   buttonStyle: "branding-button-style-hint",
   panelShape: "branding-panel-shape-hint",
   heroGradientStyle: "branding-hero-gradient-hint",
@@ -102,6 +111,18 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.secondaryColor]: {
     iframeAreas: ["art", "secondary"],
     note: "Highlighting where the supporting color appears inside the email card."
+  },
+  [fieldIds.artShapeColor]: {
+    iframeAreas: ["art"],
+    note: "Highlighting the geometric art that uses your dedicated art color."
+  },
+  [fieldIds.panelColor]: {
+    iframeAreas: ["secondary"],
+    note: "Highlighting the info cards and detail panels that use your panel color."
+  },
+  [fieldIds.tertiaryColor]: {
+    iframeAreas: ["buttons", "footer"],
+    note: "Highlighting the supporting accent areas like the website button and footer tint."
   },
   [fieldIds.logoUrl]: {
     iframeAreas: ["logo"],
@@ -331,6 +352,9 @@ function getDraftBranding() {
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
+    panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
+    tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
@@ -365,6 +389,12 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
   getFieldElement(fieldIds.secondaryColor).value = normalized.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
+  getFieldElement(fieldIds.artShapeColor).value = normalized.artShapeColor;
+  getFieldElement(fieldIds.artShapeHex).value = normalized.artShapeColor;
+  getFieldElement(fieldIds.panelColor).value = normalized.panelColor;
+  getFieldElement(fieldIds.panelHex).value = normalized.panelColor;
+  getFieldElement(fieldIds.tertiaryColor).value = normalized.tertiaryColor;
+  getFieldElement(fieldIds.tertiaryHex).value = normalized.tertiaryColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
@@ -408,6 +438,12 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.accentHex).value = preset.accentColor;
   getFieldElement(fieldIds.secondaryColor).value = preset.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
+  getFieldElement(fieldIds.artShapeColor).value = preset.artShapeColor;
+  getFieldElement(fieldIds.artShapeHex).value = preset.artShapeColor;
+  getFieldElement(fieldIds.panelColor).value = preset.panelColor;
+  getFieldElement(fieldIds.panelHex).value = preset.panelColor;
+  getFieldElement(fieldIds.tertiaryColor).value = preset.tertiaryColor;
+  getFieldElement(fieldIds.tertiaryHex).value = preset.tertiaryColor;
   getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = preset.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = preset.heroGradientStyle;
@@ -668,6 +704,9 @@ function applyLiveBrandingState(branding) {
 
 function updateHelperHints() {
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
+  updateHelperHint(helperTextIds.artShapeColor, getArtShapeColorHint());
+  updateHelperHint(helperTextIds.panelColor, getPanelColorHint());
+  updateHelperHint(helperTextIds.tertiaryColor, getTertiaryColorHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
   updateHelperHint(helperTextIds.panelShape, getPanelShapeHint());
   updateHelperHint(helperTextIds.heroGradientStyle, getHeroGradientHint());
@@ -687,6 +726,18 @@ function updateHelperHint(elementId, text) {
 
 function getSecondaryColorHint() {
   return "Used as the supporting tone inside the hero art and lighter accent panels.";
+}
+
+function getArtShapeColorHint() {
+  return "Changes the geometric art itself without recoloring the entire header.";
+}
+
+function getPanelColorHint() {
+  return "Used behind the summary cards, detail panel, and calendar panel.";
+}
+
+function getTertiaryColorHint() {
+  return "Used for the supporting accent areas like the website button and footer tint.";
 }
 
 function getButtonStyleHint() {
@@ -978,6 +1029,9 @@ async function saveBranding() {
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
+    panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
+    tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
@@ -1107,6 +1161,12 @@ function wireFormInputs() {
   const accentHexInput = getFieldElement(fieldIds.accentHex);
   const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
   const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
+  const artShapeColorInput = getFieldElement(fieldIds.artShapeColor);
+  const artShapeHexInput = getFieldElement(fieldIds.artShapeHex);
+  const panelColorInput = getFieldElement(fieldIds.panelColor);
+  const panelHexInput = getFieldElement(fieldIds.panelHex);
+  const tertiaryColorInput = getFieldElement(fieldIds.tertiaryColor);
+  const tertiaryHexInput = getFieldElement(fieldIds.tertiaryHex);
   const artShapeInput = getFieldElement(fieldIds.artShape);
 
   brandingForm.addEventListener("input", event => {
@@ -1118,12 +1178,36 @@ function wireFormInputs() {
       secondaryHexInput.value = secondaryColorInput.value;
     }
 
+    if (event.target === artShapeColorInput && artShapeHexInput) {
+      artShapeHexInput.value = artShapeColorInput.value;
+    }
+
+    if (event.target === panelColorInput && panelHexInput) {
+      panelHexInput.value = panelColorInput.value;
+    }
+
+    if (event.target === tertiaryColorInput && tertiaryHexInput) {
+      tertiaryHexInput.value = tertiaryColorInput.value;
+    }
+
     if (event.target === accentHexInput && accentColorInput && /^#[0-9a-f]{3,6}$/i.test(accentHexInput.value.trim())) {
       accentColorInput.value = accentHexInput.value.trim();
     }
 
     if (event.target === secondaryHexInput && secondaryColorInput && /^#[0-9a-f]{3,6}$/i.test(secondaryHexInput.value.trim())) {
       secondaryColorInput.value = secondaryHexInput.value.trim();
+    }
+
+    if (event.target === artShapeHexInput && artShapeColorInput && /^#[0-9a-f]{3,6}$/i.test(artShapeHexInput.value.trim())) {
+      artShapeColorInput.value = artShapeHexInput.value.trim();
+    }
+
+    if (event.target === panelHexInput && panelColorInput && /^#[0-9a-f]{3,6}$/i.test(panelHexInput.value.trim())) {
+      panelColorInput.value = panelHexInput.value.trim();
+    }
+
+    if (event.target === tertiaryHexInput && tertiaryColorInput && /^#[0-9a-f]{3,6}$/i.test(tertiaryHexInput.value.trim())) {
+      tertiaryColorInput.value = tertiaryHexInput.value.trim();
     }
 
     if (event.target?.id) {
