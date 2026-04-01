@@ -876,34 +876,34 @@ function buildHeroBackground(branding, templateStyle) {
 
   if (templateStyle === "executive") {
     if (style === "solid") {
-      return "#182235";
+      return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.94)} 100%)`;
     }
 
     if (style === "spotlight") {
-      return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.3)}, transparent 28%), linear-gradient(135deg, #111827 0%, #182235 56%, #1f2937 100%)`;
+      return `radial-gradient(circle at 86% 18%, ${hexToRgba(secondary, 0.92)}, transparent 34%), linear-gradient(135deg, ${hexToRgba(accent, 0.96)} 0%, ${hexToRgba(accent, 0.86)} 52%, #111827 100%)`;
     }
 
     if (style === "split") {
-      return `linear-gradient(120deg, #111827 0%, #182235 52%, ${hexToRgba(secondary, 0.42)} 100%)`;
+      return `linear-gradient(118deg, ${hexToRgba(accent, 0.96)} 0%, ${hexToRgba(accent, 0.9)} 50%, ${hexToRgba(secondary, 0.96)} 50%, ${hexToRgba(secondary, 0.82)} 100%)`;
     }
 
-    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.26)}, transparent 24%), linear-gradient(135deg, #0f172a 0%, #182235 54%, ${hexToRgba(accent, 0.72)} 100%)`;
+    return `linear-gradient(135deg, ${hexToRgba(accent, 0.98)} 0%, ${hexToRgba(accent, 0.9)} 56%, ${hexToRgba(secondary, 0.94)} 100%)`;
   }
 
   if (templateStyle === "spotlight") {
     if (style === "solid") {
-      return "#ffffff";
+      return `linear-gradient(135deg, ${hexToRgba(accent, 0.16)} 0%, #ffffff 100%)`;
     }
 
     if (style === "split") {
-      return `linear-gradient(120deg, #ffffff 0%, ${hexToRgba(secondary, 0.86)} 58%, ${hexToRgba(accent, 0.14)} 100%)`;
+      return `linear-gradient(118deg, ${hexToRgba(accent, 0.18)} 0%, ${hexToRgba(accent, 0.12)} 50%, ${hexToRgba(secondary, 0.98)} 50%, ${hexToRgba(secondary, 0.84)} 100%)`;
     }
 
     if (style === "signature") {
-      return `linear-gradient(135deg, #ffffff 0%, ${hexToRgba(secondary, 0.72)} 48%, ${hexToRgba(accent, 0.12)} 100%)`;
+      return `linear-gradient(135deg, ${hexToRgba(accent, 0.12)} 0%, ${hexToRgba(secondary, 0.78)} 54%, #ffffff 100%)`;
     }
 
-    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.82)}, transparent 22%), linear-gradient(180deg, #ffffff, ${hexToRgba(secondary, 0.48)})`;
+    return `radial-gradient(circle at 86% 20%, ${hexToRgba(secondary, 0.98)}, transparent 30%), linear-gradient(180deg, ${hexToRgba(accent, 0.08)}, ${hexToRgba(secondary, 0.42)})`;
   }
 
   if (style === "solid") {
@@ -911,11 +911,11 @@ function buildHeroBackground(branding, templateStyle) {
   }
 
   if (style === "spotlight") {
-    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.92)}, transparent 26%), linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.84)} 54%, #1f2937 100%)`;
+    return `radial-gradient(circle at 86% 18%, ${hexToRgba(secondary, 0.98)}, transparent 34%), linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 58%, #1f2937 100%)`;
   }
 
   if (style === "split") {
-    return `linear-gradient(120deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 52%, ${secondary} 100%)`;
+    return `linear-gradient(118deg, ${accent} 0%, ${hexToRgba(accent, 0.94)} 50%, ${secondary} 50%, ${hexToRgba(secondary, 0.9)} 100%)`;
   }
 
   return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.82)} 58%, ${secondary} 100%)`;

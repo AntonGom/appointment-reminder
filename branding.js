@@ -615,15 +615,7 @@ function openLastSentEmailRaw() {
     return;
   }
 
-  const popup = window.open("", "_blank", "noopener,noreferrer");
-
-  if (!popup) {
-    setQaEmailStatus("Your browser blocked the raw-email window. Allow pop-ups for QA testing and try again.", "error");
-    return;
-  }
-
-  popup.document.open();
-  popup.document.write(`<!DOCTYPE html>
+  const rawPageHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -646,8 +638,24 @@ function openLastSentEmailRaw() {
     <pre>${escapeHtml(lastSentEmailRecord.html)}</pre>
   </main>
 </body>
-</html>`);
-  popup.document.close();
+</html>`;
+
+  const blob = new Blob([rawPageHtml], { type: "text/html;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(blobUrl);
+  }, 60000);
+
+  setQaEmailStatus("Opened the raw email HTML in a new tab.", "success");
 }
 
 function applyLiveBrandingState(branding) {

@@ -74,6 +74,7 @@ function getSavedBrandingProfile() {
     logoUrl: String(profile.logoUrl || "").trim(),
     buttonStyle: String(profile.buttonStyle || "").trim(),
     panelShape: String(profile.panelShape || "").trim(),
+    heroGradientStyle: String(profile.heroGradientStyle || "").trim(),
     artShape: String(profile.artShape || "").trim(),
     shapeIntensity: String(profile.shapeIntensity || "").trim(),
     shineStyle: String(profile.shineStyle || "").trim(),
