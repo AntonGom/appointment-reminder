@@ -48,7 +48,8 @@ let selectedDateKey = getTodayKey();
 let currentAuthUserId = "";
 const MOBILE_CALENDAR_QUERY = window.matchMedia("(max-width: 760px)");
 let currentCalendarView = MOBILE_CALENDAR_QUERY.matches ? "month" : "week";
-const WEEK_HOURS = Array.from({ length: 13 }, (_value, index) => index + 7);
+const DEFAULT_WEEK_START_HOUR = 7;
+const DEFAULT_WEEK_END_HOUR = 19;
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -847,6 +848,31 @@ function getWeekAppointments(weekDates) {
   return appointments.filter(appointment => validKeys.has(String(appointment?.service_date || "").trim()));
 }
 
+function getWeekHours(weekAppointments) {
+  let startHour = DEFAULT_WEEK_START_HOUR;
+  let endHour = DEFAULT_WEEK_END_HOUR;
+
+  weekAppointments.forEach(appointment => {
+    const timeText = String(appointment?.service_time || "").trim();
+
+    if (!timeText) {
+      return;
+    }
+
+    const [hourText] = timeText.split(":");
+    const hour = Number(hourText);
+
+    if (!Number.isFinite(hour)) {
+      return;
+    }
+
+    startHour = Math.min(startHour, Math.max(0, hour));
+    endHour = Math.max(endHour, Math.min(23, hour));
+  });
+
+  return Array.from({ length: endHour - startHour + 1 }, (_value, index) => startHour + index);
+}
+
 function setActiveDateMonthYear(nextYear, nextMonth) {
   const activeDate = getActiveDate();
   const nextDate = new Date(nextYear, nextMonth, activeDate.getDate());
@@ -979,6 +1005,14 @@ function renderViewMode() {
   if (calendarLayout) {
     calendarLayout.classList.toggle("is-week-view", isWeek);
     calendarLayout.classList.toggle("is-month-view", !isWeek);
+  }
+
+  if (prevButton) {
+    prevButton.textContent = isWeek ? "Prev Week" : "Prev Month";
+  }
+
+  if (nextButton) {
+    nextButton.textContent = isWeek ? "Next Week" : "Next Month";
   }
 }
 
@@ -1231,7 +1265,9 @@ function renderWeekGrid() {
     })
   ];
 
-  const slotRows = WEEK_HOURS.flatMap(hour => {
+  const weekHours = getWeekHours(weekAppointments);
+
+  const slotRows = weekHours.flatMap(hour => {
     const timeLabel = new Intl.DateTimeFormat("en-US", {
       hour: "numeric"
     }).format(new Date(2000, 0, 1, hour, 0));
