@@ -19,6 +19,8 @@ export const BRANDING_TEMPLATE_OPTIONS = [
 const DEFAULT_TEMPLATE = "signature";
 const DEFAULT_ACCENT = "#2563eb";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const BUTTON_STYLES = new Set(["pill", "rounded", "crisp"]);
+const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 
 export function hasSavedBrandingProfile(profile = null) {
   return Boolean(cleanText(profile?.businessName, 80));
@@ -42,8 +44,11 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
 
   const businessName = cleanText(profile?.businessName, 80);
   const tagline = cleanText(profile?.tagline, 120);
+  const headerLabel = cleanText(profile?.headerLabel, 50);
   const accentColor = normalizeHexColor(profile?.accentColor) || DEFAULT_ACCENT;
   const logoUrl = normalizeUrl(profile?.logoUrl);
+  const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : "pill";
+  const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : "balanced";
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -53,8 +58,11 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     templateStyle,
     businessName: businessName || (forPreview ? "North Shore Wellness" : ""),
     tagline: tagline || (forPreview ? "Friendly appointment reminders that feel polished and trustworthy." : ""),
+    headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
     accentColor,
     logoUrl,
+    buttonStyle,
+    shapeIntensity,
     contactEmail,
     contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
     websiteUrl,
@@ -111,9 +119,10 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     ? `<div style="font-size:15px;font-weight:700;color:#0f172a;margin-top:8px;">${escapeHtml(parsed.closing)}</div>`
     : "";
   const ctaButtons = buildActionButtons(branding);
-  const calendarSection = buildCalendarSection(calendarLinks, branding.accentColor);
+  const calendarSection = buildCalendarSection(calendarLinks, branding);
   const footerContact = buildFooterContactLine(branding);
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
+  const heroLabel = escapeHtml(branding.headerLabel || "Appointment reminder");
   const tagline = branding.tagline ? `<div style="font-size:14px;line-height:1.65;color:#dbe7ff;margin-top:8px;">${escapeHtml(branding.tagline)}</div>` : "";
   const logoMarkup = branding.logoUrl
     ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${businessName} logo" style="width:52px;height:52px;border-radius:18px;display:block;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.35);">`
@@ -123,6 +132,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     brand: branding,
     logoMarkup,
     brandTitle: businessName,
+    heroLabel,
     tagline,
     greeting,
     intro,
@@ -161,6 +171,7 @@ function buildHeroContactChips(branding, palette = {}) {
 
 function buildHeroArtBlock(branding, options = {}) {
   const accentColor = options.accentColor || branding.accentColor || DEFAULT_ACCENT;
+  const shapeProfile = getShapeProfile(branding.shapeIntensity);
   const auraColor = options.auraColor || hexToRgba(accentColor, 0.32);
   const shardColor = options.shardColor || "rgba(255,255,255,0.72)";
   const shardSecondary = options.shardSecondary || hexToRgba(accentColor, 0.18);
@@ -170,12 +181,12 @@ function buildHeroArtBlock(branding, options = {}) {
   const lineColor = options.lineColor || "rgba(255,255,255,0.86)";
 
   return `
-    <div style="position:relative;height:160px;">
-      <div style="position:absolute;right:18px;top:16px;width:118px;height:118px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);"></div>
-      <div style="position:absolute;right:94px;top:8px;width:44px;height:136px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
-      <div style="position:absolute;right:40px;top:36px;width:44px;height:96px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
-      <div style="position:absolute;right:132px;top:62px;width:44px;height:80px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.26)}, rgba(255,255,255,0.04));"></div>
-      <div style="position:absolute;right:8px;top:16px;width:100px;height:124px;border-radius:28px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
+    <div style="position:relative;height:${shapeProfile.heroHeight}px;">
+      <div style="position:absolute;right:${shapeProfile.auraRight}px;top:${shapeProfile.auraTop}px;width:${shapeProfile.auraSize}px;height:${shapeProfile.auraSize}px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);opacity:${shapeProfile.auraOpacity};"></div>
+      <div style="position:absolute;right:${shapeProfile.shardOneRight}px;top:${shapeProfile.shardOneTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardOneHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, ${shardSecondary});"></div>
+      <div style="position:absolute;right:${shapeProfile.shardTwoRight}px;top:${shapeProfile.shardTwoTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardTwoHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${shardColor}, rgba(255,255,255,0.06));"></div>
+      <div style="position:absolute;right:${shapeProfile.shardThreeRight}px;top:${shapeProfile.shardThreeTop}px;width:${shapeProfile.shardWidth}px;height:${shapeProfile.shardThreeHeight}px;border-radius:16px;transform:skew(-24deg);background:linear-gradient(180deg, ${hexToRgba(accentColor, 0.26)}, rgba(255,255,255,0.04));"></div>
+      <div style="position:absolute;right:${shapeProfile.markRight}px;top:${shapeProfile.markTop}px;width:${shapeProfile.markWidth}px;height:${shapeProfile.markHeight}px;border-radius:28px;background:${markBackground};border:1px solid ${markBorder};box-shadow:0 18px 30px rgba(15,23,42,0.14);overflow:hidden;">
         <div style="position:absolute;top:-10px;left:30px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
         <div style="position:absolute;top:-10px;left:58px;width:4px;height:144px;border-radius:999px;background:${lineColor};transform:skew(-24deg);"></div>
         <div style="position:absolute;inset:16px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:${markTextColor};font-size:26px;font-weight:900;letter-spacing:-0.04em;">
@@ -201,7 +212,7 @@ function buildSignatureTemplate(content) {
               <div style="display:flex;align-items:center;gap:16px;">
                 ${content.logoMarkup}
                 <div>
-                  <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">Branded reminder</div>
+                  <div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">${content.heroLabel}</div>
                   <div style="font-size:31px;line-height:1.02;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -257,7 +268,7 @@ function buildSpotlightTemplate(content) {
               <div style="display:flex;align-items:center;gap:14px;">
                 ${content.logoMarkup}
                 <div>
-                  <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">Studio reminder</div>
+                  <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">${content.heroLabel}</div>
                   <div style="font-size:30px;line-height:1.03;font-weight:800;color:#0f172a;margin-top:5px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -316,7 +327,7 @@ function buildExecutiveTemplate(content) {
               <div style="display:flex;align-items:center;gap:14px;">
                 ${content.logoMarkup}
                 <div>
-                  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">Executive notice</div>
+                  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">${content.heroLabel}</div>
                   <div style="font-size:30px;line-height:1.04;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -376,7 +387,7 @@ function buildDefaultReminderEmail(message, calendarLinks) {
         <div style="padding:28px 24px;">
           ${formattedMessage}
         </div>
-        ${buildCalendarSection(calendarLinks, DEFAULT_ACCENT)}
+        ${buildCalendarSection(calendarLinks, { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" })}
       </div>
     </div>
   `;
@@ -384,6 +395,7 @@ function buildDefaultReminderEmail(message, calendarLinks) {
 
 function buildActionButtons(branding) {
   const buttons = [];
+  const radius = getButtonRadius(branding.buttonStyle);
 
   if (branding.contactPhone) {
     const digits = branding.contactPhone.replace(/\D/g, "");
@@ -392,7 +404,8 @@ function buildActionButtons(branding) {
         href: `tel:${digits}`,
         label: "Call us",
         background: branding.accentColor,
-        color: "#ffffff"
+        color: "#ffffff",
+        radius
       });
     }
   }
@@ -403,7 +416,8 @@ function buildActionButtons(branding) {
       label: "Visit website",
       background: "#ffffff",
       color: "#0f172a",
-      border: "#cbd5e1"
+      border: "#cbd5e1",
+      radius
     });
   }
 
@@ -412,7 +426,8 @@ function buildActionButtons(branding) {
       href: branding.rescheduleUrl,
       label: "Reschedule",
       background: "#0f172a",
-      color: "#ffffff"
+      color: "#ffffff",
+      radius
     });
   }
 
@@ -423,28 +438,118 @@ function buildActionButtons(branding) {
   return `
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;">
       ${buttons.map(button => `
-        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;border-radius:12px;text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
+        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;border-radius:${button.radius};text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
       `).join("")}
     </div>
   `;
 }
 
-function buildCalendarSection(calendarLinks, accentColor) {
+function buildCalendarSection(calendarLinks, brandingOrAccent) {
   if (!calendarLinks) {
     return "";
   }
+
+  const branding = typeof brandingOrAccent === "string"
+    ? { accentColor: brandingOrAccent, buttonStyle: "pill" }
+    : brandingOrAccent || { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" };
+  const accentColor = branding.accentColor || DEFAULT_ACCENT;
+  const radius = getButtonRadius(branding.buttonStyle);
 
   return `
     <div style="margin:4px 0 18px;padding:18px;border-radius:18px;background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
       <div style="margin:0 0 10px;color:#0f172a;font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;background:#1f2937;color:#ffffff;text-decoration:none;border-radius:12px;font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;background:${accentColor};color:#ffffff;text-decoration:none;border-radius:12px;font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:12px;font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;background:#1f2937;color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;background:${accentColor};color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;background:#0f766e;color:#ffffff;text-decoration:none;border-radius:${radius};font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;
+}
+
+function getButtonRadius(style) {
+  if (style === "crisp") {
+    return "10px";
+  }
+
+  if (style === "rounded") {
+    return "16px";
+  }
+
+  return "999px";
+}
+
+function getShapeProfile(intensity) {
+  if (intensity === "soft") {
+    return {
+      heroHeight: 150,
+      auraSize: 104,
+      auraOpacity: 0.72,
+      auraRight: 22,
+      auraTop: 20,
+      shardWidth: 38,
+      shardOneRight: 92,
+      shardOneTop: 14,
+      shardOneHeight: 120,
+      shardTwoRight: 46,
+      shardTwoTop: 40,
+      shardTwoHeight: 86,
+      shardThreeRight: 128,
+      shardThreeTop: 66,
+      shardThreeHeight: 68,
+      markRight: 10,
+      markTop: 18,
+      markWidth: 96,
+      markHeight: 118
+    };
+  }
+
+  if (intensity === "bold") {
+    return {
+      heroHeight: 172,
+      auraSize: 132,
+      auraOpacity: 0.96,
+      auraRight: 10,
+      auraTop: 10,
+      shardWidth: 50,
+      shardOneRight: 86,
+      shardOneTop: 0,
+      shardOneHeight: 148,
+      shardTwoRight: 24,
+      shardTwoTop: 32,
+      shardTwoHeight: 108,
+      shardThreeRight: 134,
+      shardThreeTop: 58,
+      shardThreeHeight: 94,
+      markRight: 0,
+      markTop: 10,
+      markWidth: 108,
+      markHeight: 132
+    };
+  }
+
+  return {
+    heroHeight: 160,
+    auraSize: 118,
+    auraOpacity: 0.86,
+    auraRight: 18,
+    auraTop: 16,
+    shardWidth: 44,
+    shardOneRight: 94,
+    shardOneTop: 8,
+    shardOneHeight: 136,
+    shardTwoRight: 40,
+    shardTwoTop: 36,
+    shardTwoHeight: 96,
+    shardThreeRight: 132,
+    shardThreeTop: 62,
+    shardThreeHeight: 80,
+    markRight: 8,
+    markTop: 16,
+    markWidth: 100,
+    markHeight: 124
+  };
 }
 
 function buildFooterContactLine(branding) {

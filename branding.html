@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401d">
+  <link rel="stylesheet" href="branding.css?v=20260401e">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -74,6 +74,11 @@
                       <input id="branding-tagline" class="branding-input" type="text" maxlength="120" placeholder="Friendly reminders that feel polished and professional.">
                     </div>
 
+                    <div class="field-span-2">
+                      <label class="branding-label" for="branding-header-label">Top label</label>
+                      <input id="branding-header-label" class="branding-input" type="text" maxlength="50" placeholder="Appointment reminder">
+                    </div>
+
                     <div>
                       <label class="branding-label" for="branding-accent-color">Brand color</label>
                       <div class="branding-color-row">
@@ -85,6 +90,24 @@
                     <div>
                       <label class="branding-label" for="branding-logo-url">Logo image URL</label>
                       <input id="branding-logo-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourdomain.com/logo.png">
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-button-style">Button shape</label>
+                      <select id="branding-button-style" class="branding-select">
+                        <option value="pill">Pill</option>
+                        <option value="rounded">Rounded</option>
+                        <option value="crisp">Crisp</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-shape-intensity">Shape intensity</label>
+                      <select id="branding-shape-intensity" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="bold">Bold</option>
+                      </select>
                     </div>
 
                     <div>
@@ -148,6 +171,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401c"></script>
+  <script type="module" src="branding.js?v=20260401d"></script>
 </body>
 </html>

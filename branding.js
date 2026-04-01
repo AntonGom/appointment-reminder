@@ -26,9 +26,12 @@ const fieldIds = {
   templateStyle: "branding-template-style",
   businessName: "branding-business-name",
   tagline: "branding-tagline",
+  headerLabel: "branding-header-label",
   accentColor: "branding-accent-color",
   accentHex: "branding-accent-hex",
   logoUrl: "branding-logo-url",
+  buttonStyle: "branding-button-style",
+  shapeIntensity: "branding-shape-intensity",
   contactEmail: "branding-contact-email",
   contactPhone: "branding-contact-phone",
   websiteUrl: "branding-website-url",
@@ -173,8 +176,11 @@ function getDraftBranding() {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     businessName: getFieldElement(fieldIds.businessName)?.value || "",
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
+    headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
+    buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     contactEmail: getFieldElement(fieldIds.contactEmail)?.value || "",
     contactPhone: getFieldElement(fieldIds.contactPhone)?.value || "",
     websiteUrl: getFieldElement(fieldIds.websiteUrl)?.value || "",
@@ -195,9 +201,12 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.templateStyle).value = normalized.templateStyle;
   getFieldElement(fieldIds.businessName).value = branding.businessName || "";
   getFieldElement(fieldIds.tagline).value = branding.tagline || "";
+  getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
   getFieldElement(fieldIds.accentColor).value = normalized.accentColor;
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
+  getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
+  getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.contactEmail).value = branding.contactEmail || currentUser?.email || "";
   getFieldElement(fieldIds.contactPhone).value = branding.contactPhone || "";
   getFieldElement(fieldIds.websiteUrl).value = branding.websiteUrl || "";
@@ -295,8 +304,11 @@ async function saveBranding() {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     businessName: (getFieldElement(fieldIds.businessName)?.value || "").trim(),
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
+    headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
+    buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
+    shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     contactEmail: (getFieldElement(fieldIds.contactEmail)?.value || "").trim(),
     contactPhone: (getFieldElement(fieldIds.contactPhone)?.value || "").trim(),
     websiteUrl: (getFieldElement(fieldIds.websiteUrl)?.value || "").trim(),
@@ -360,7 +372,7 @@ function renderTemplateCards() {
           <span class="signature-card-icon">www</span>
           <span class="signature-card-icon">@</span>
           <span class="signature-card-icon">in</span>
-          <span class="signature-card-icon">☎</span>
+          <span class="signature-card-icon">tel</span>
         </span>
         <span class="signature-card-copy-wrap">
           <span class="signature-card-badge">${option.label}</span>
@@ -418,6 +430,10 @@ function wireFormInputs() {
       accentColorInput.value = accentHexInput.value.trim();
     }
 
+    queuePreviewRender();
+  });
+
+  brandingForm.addEventListener("change", () => {
     queuePreviewRender();
   });
 
