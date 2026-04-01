@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401e">
+  <link rel="stylesheet" href="branding.css?v=20260401f">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -88,6 +88,14 @@
                     </div>
 
                     <div>
+                      <label class="branding-label" for="branding-secondary-color">Secondary color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-secondary-color" class="branding-color-input" type="color" value="#e8f1ff">
+                        <input id="branding-secondary-hex" class="branding-input" type="text" maxlength="7" value="#e8f1ff" placeholder="#e8f1ff">
+                      </div>
+                    </div>
+
+                    <div>
                       <label class="branding-label" for="branding-logo-url">Logo image URL</label>
                       <input id="branding-logo-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourdomain.com/logo.png">
                     </div>
@@ -107,6 +115,24 @@
                         <option value="soft">Soft</option>
                         <option value="balanced" selected>Balanced</option>
                         <option value="bold">Bold</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-shine-style">Glass shine</label>
+                      <select id="branding-shine-style" class="branding-select">
+                        <option value="on" selected>On</option>
+                        <option value="off">Off</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="branding-label" for="branding-motion-style">Motion style</label>
+                      <select id="branding-motion-style" class="branding-select">
+                        <option value="showcase" selected>Showcase</option>
+                        <option value="float">Float</option>
+                        <option value="pulse">Pulse</option>
+                        <option value="still">Still</option>
                       </select>
                     </div>
 
@@ -171,6 +197,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260401d"></script>
+  <script type="module" src="branding.js?v=20260401e"></script>
 </body>
 </html>

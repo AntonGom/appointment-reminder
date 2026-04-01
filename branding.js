@@ -29,9 +29,13 @@ const fieldIds = {
   headerLabel: "branding-header-label",
   accentColor: "branding-accent-color",
   accentHex: "branding-accent-hex",
+  secondaryColor: "branding-secondary-color",
+  secondaryHex: "branding-secondary-hex",
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
   shapeIntensity: "branding-shape-intensity",
+  shineStyle: "branding-shine-style",
+  motionStyle: "branding-motion-style",
   contactEmail: "branding-contact-email",
   contactPhone: "branding-contact-phone",
   websiteUrl: "branding-website-url",
@@ -178,9 +182,12 @@ function getDraftBranding() {
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
+    secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
+    shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
+    motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
     contactEmail: getFieldElement(fieldIds.contactEmail)?.value || "",
     contactPhone: getFieldElement(fieldIds.contactPhone)?.value || "",
     websiteUrl: getFieldElement(fieldIds.websiteUrl)?.value || "",
@@ -204,9 +211,13 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
   getFieldElement(fieldIds.accentColor).value = normalized.accentColor;
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
+  getFieldElement(fieldIds.secondaryColor).value = normalized.secondaryColor;
+  getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
+  getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
+  getFieldElement(fieldIds.motionStyle).value = normalized.motionStyle;
   getFieldElement(fieldIds.contactEmail).value = branding.contactEmail || currentUser?.email || "";
   getFieldElement(fieldIds.contactPhone).value = branding.contactPhone || "";
   getFieldElement(fieldIds.websiteUrl).value = branding.websiteUrl || "";
@@ -254,6 +265,8 @@ function renderPreview() {
     previewFrame.srcdoc = previewHtml;
   }
 
+  applyLiveBrandingState(draftBranding);
+
   if (previewSubject) {
     previewSubject.textContent = buildReminderEmailSubject(draftBranding);
   }
@@ -265,6 +278,26 @@ function renderPreview() {
   if (previewEmail) {
     previewEmail.textContent = draftBranding.contactEmail || currentUser?.email || "you@example.com";
   }
+}
+
+function applyLiveBrandingState(branding) {
+  document.body.style.setProperty("--branding-live-accent", branding.accentColor || "#2563eb");
+  document.body.style.setProperty("--branding-live-secondary", branding.secondaryColor || "#e8f1ff");
+  document.body.style.setProperty("--branding-live-button-radius", getLiveButtonRadius(branding.buttonStyle));
+  document.body.dataset.brandingShine = branding.shineStyle || "on";
+  document.body.dataset.brandingMotion = branding.motionStyle || "showcase";
+}
+
+function getLiveButtonRadius(style) {
+  if (style === "crisp") {
+    return "10px";
+  }
+
+  if (style === "rounded") {
+    return "18px";
+  }
+
+  return "999px";
 }
 
 function queuePreviewRender() {
@@ -306,9 +339,12 @@ async function saveBranding() {
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
+    secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
+    shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
+    motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
     contactEmail: (getFieldElement(fieldIds.contactEmail)?.value || "").trim(),
     contactPhone: (getFieldElement(fieldIds.contactPhone)?.value || "").trim(),
     websiteUrl: (getFieldElement(fieldIds.websiteUrl)?.value || "").trim(),
@@ -420,14 +456,24 @@ function wireFormInputs() {
 
   const accentColorInput = getFieldElement(fieldIds.accentColor);
   const accentHexInput = getFieldElement(fieldIds.accentHex);
+  const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
+  const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
 
   brandingForm.addEventListener("input", event => {
     if (event.target === accentColorInput && accentHexInput) {
       accentHexInput.value = accentColorInput.value;
     }
 
+    if (event.target === secondaryColorInput && secondaryHexInput) {
+      secondaryHexInput.value = secondaryColorInput.value;
+    }
+
     if (event.target === accentHexInput && accentColorInput && /^#[0-9a-f]{3,6}$/i.test(accentHexInput.value.trim())) {
       accentColorInput.value = accentHexInput.value.trim();
+    }
+
+    if (event.target === secondaryHexInput && secondaryColorInput && /^#[0-9a-f]{3,6}$/i.test(secondaryHexInput.value.trim())) {
+      secondaryColorInput.value = secondaryHexInput.value.trim();
     }
 
     queuePreviewRender();

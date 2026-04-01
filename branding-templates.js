@@ -18,9 +18,12 @@ export const BRANDING_TEMPLATE_OPTIONS = [
 
 const DEFAULT_TEMPLATE = "signature";
 const DEFAULT_ACCENT = "#2563eb";
+const DEFAULT_SECONDARY = "#e8f1ff";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const BUTTON_STYLES = new Set(["pill", "rounded", "crisp"]);
 const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
+const SHINE_STYLES = new Set(["on", "off"]);
+const MOTION_STYLES = new Set(["showcase", "float", "pulse", "still"]);
 
 export function hasSavedBrandingProfile(profile = null) {
   return Boolean(cleanText(profile?.businessName, 80));
@@ -46,9 +49,12 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const tagline = cleanText(profile?.tagline, 120);
   const headerLabel = cleanText(profile?.headerLabel, 50);
   const accentColor = normalizeHexColor(profile?.accentColor) || DEFAULT_ACCENT;
+  const secondaryColor = normalizeHexColor(profile?.secondaryColor) || DEFAULT_SECONDARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : "pill";
   const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : "balanced";
+  const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : "on";
+  const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : "showcase";
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -60,9 +66,12 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     tagline: tagline || (forPreview ? "Friendly appointment reminders that feel polished and trustworthy." : ""),
     headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
     accentColor,
+    secondaryColor,
     logoUrl,
     buttonStyle,
     shapeIntensity,
+    shineStyle,
+    motionStyle,
     contactEmail,
     contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
     websiteUrl,
@@ -104,7 +113,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
       </div>`
     : "";
   const detailsHtml = parsed.details
-    ? `<div style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:#f8fafc;border:1px solid #dbe4f2;">
+    ? `<div style="margin:0 0 18px;padding:16px 18px;border-radius:18px;background:${hexToRgba(branding.secondaryColor, 0.42)};border:1px solid ${hexToRgba(branding.accentColor, 0.12)};">
         <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
         <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
@@ -202,7 +211,7 @@ function buildSignatureTemplate(content) {
     <div style="margin:0;padding:34px 16px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.2)}, transparent 34%),
       radial-gradient(circle at 85% 8%, rgba(255,255,255,0.82), transparent 24%),
-      linear-gradient(180deg, #edf4ff, #f8fbff);font-family:Arial, sans-serif;">
+      linear-gradient(180deg, ${hexToRgba(content.brand.secondaryColor, 0.64)}, #f8fbff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.82);border-radius:34px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
         <div style="padding:28px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 28%),
@@ -258,7 +267,7 @@ function buildSpotlightTemplate(content) {
   return `
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.14)}, transparent 32%),
-      linear-gradient(180deg, #f8fbff, #eff6ff);font-family:Arial, sans-serif;">
+      linear-gradient(180deg, #f8fbff, ${hexToRgba(content.brand.secondaryColor, 0.52)});font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.96);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:34px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
         <div style="padding:24px 26px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.9), transparent 24%),
@@ -317,7 +326,7 @@ function buildExecutiveTemplate(content) {
   return `
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
-      linear-gradient(180deg, #eef2f7, #e8eef7);font-family:Arial, sans-serif;">
+      linear-gradient(180deg, #eef2f7, ${hexToRgba(content.brand.secondaryColor, 0.38)});font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:30px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
         <div style="padding:24px 28px;background:
           radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 24%),
@@ -414,9 +423,9 @@ function buildActionButtons(branding) {
     buttons.push({
       href: branding.websiteUrl,
       label: "Visit website",
-      background: "#ffffff",
+      background: hexToRgba(branding.secondaryColor, 0.86),
       color: "#0f172a",
-      border: "#cbd5e1",
+      border: hexToRgba(branding.accentColor, 0.2),
       radius
     });
   }
