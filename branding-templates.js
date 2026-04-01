@@ -22,7 +22,7 @@ const DEFAULT_SECONDARY = "#e8f1ff";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const BUTTON_STYLES = new Set(["pill", "rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
 const PANEL_STYLES = new Set(["rounded", "crisp", "bubbly", "cloudy", "parallelogram"]);
-const ART_SHAPES = new Set(["classic", "orbit", "stacked", "ribbon", "prism", "frame", "halo", "cascade", "split", "random"]);
+const ART_SHAPES = new Set(["none", "classic", "orbit", "stacked", "ribbon", "prism", "frame", "halo", "cascade", "split", "random"]);
 const REAL_ART_SHAPES = ["classic", "orbit", "stacked", "ribbon", "prism", "frame", "halo", "cascade", "split"];
 const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 const SHINE_STYLES = new Set(["on", "off"]);
@@ -236,6 +236,10 @@ function buildHeroArtBlock(branding, options = {}) {
   const artShape = branding.resolvedArtShape || branding.artShape || "classic";
   const initials = escapeHtml(getInitials(branding.businessName || "AR"));
 
+  if (artShape === "none") {
+    return "";
+  }
+
   return `
     <div data-preview-area="art" style="position:relative;height:${shapeProfile.heroHeight}px;">
       <div style="position:absolute;right:${shapeProfile.auraRight}px;top:${shapeProfile.auraTop}px;width:${shapeProfile.auraSize}px;height:${shapeProfile.auraSize}px;border-radius:999px;background:radial-gradient(circle, ${auraColor}, rgba(255,255,255,0));filter:blur(4px);opacity:${shapeProfile.auraOpacity};"></div>
@@ -243,6 +247,11 @@ function buildHeroArtBlock(branding, options = {}) {
       ${buildHeroMark({ artShape, shapeProfile, markBackground, markBorder, markTextColor, lineColor, initials })}
     </div>
   `;
+}
+
+function shouldRenderHeroArt(branding) {
+  const artShape = branding?.resolvedArtShape || branding?.artShape || "classic";
+  return artShape !== "none";
 }
 
 function buildHeroArtShape({ artShape, branding, shapeProfile, accentColor, shardColor, shardSecondary, lineColor }) {
@@ -414,6 +423,8 @@ function buildHeroMark({ artShape, shapeProfile, markBackground, markBorder, mar
 
 function buildSignatureTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
+  const hasHeroArt = shouldRenderHeroArt(content.brand);
+  const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:34px 16px;background:
@@ -423,7 +434,7 @@ function buildSignatureTemplate(content, options = {}) {
         <div data-preview-area="hero" style="padding:28px;background:
           radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.88)}, transparent 26%),
           linear-gradient(135deg, ${content.brand.accentColor} 0%, ${hexToRgba(content.brand.accentColor, 0.72)} 56%, #111827 100%);">
-          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
+          <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:16px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
@@ -439,7 +450,7 @@ function buildSignatureTemplate(content, options = {}) {
                 color: "#ffffff"
               })}
             </div>
-            ${buildHeroArtBlock(content.brand, {
+            ${hasHeroArt ? buildHeroArtBlock(content.brand, {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.36),
               shardColor: "rgba(255,255,255,0.74)",
@@ -447,7 +458,7 @@ function buildSignatureTemplate(content, options = {}) {
               markBackground: `linear-gradient(180deg, rgba(255,255,255,0.82), ${hexToRgba(content.brand.secondaryColor, 0.5)})`,
               markBorder: "rgba(255,255,255,0.34)",
               markTextColor: "#0f172a"
-            })}
+            }) : ""}
           </div>
         </div>
         <div style="padding:28px;">
@@ -472,6 +483,8 @@ function buildSignatureTemplate(content, options = {}) {
 
 function buildSpotlightTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
+  const hasHeroArt = shouldRenderHeroArt(content.brand);
+  const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
@@ -481,7 +494,7 @@ function buildSpotlightTemplate(content, options = {}) {
         <div data-preview-area="hero" style="padding:24px 26px;background:
           radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.78)}, transparent 20%),
           linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94) 52%, ${hexToRgba(content.brand.accentColor, 0.1)});border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
-          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
+          <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
@@ -497,7 +510,7 @@ function buildSpotlightTemplate(content, options = {}) {
                 color: "#0f172a"
               })}
             </div>
-            ${buildHeroArtBlock(content.brand, {
+            ${hasHeroArt ? buildHeroArtBlock(content.brand, {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.18),
               shardColor: "rgba(203,213,225,0.92)",
@@ -506,7 +519,7 @@ function buildSpotlightTemplate(content, options = {}) {
               markBorder: "rgba(203,213,225,0.72)",
               markTextColor: "#0f172a",
               lineColor: "rgba(255,255,255,0.92)"
-            })}
+            }) : ""}
           </div>
         </div>
         <div style="padding:28px;">
@@ -533,6 +546,8 @@ function buildSpotlightTemplate(content, options = {}) {
 
 function buildExecutiveTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
+  const hasHeroArt = shouldRenderHeroArt(content.brand);
+  const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
@@ -542,7 +557,7 @@ function buildExecutiveTemplate(content, options = {}) {
         <div data-preview-area="hero" style="padding:24px 28px;background:
           radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.34)}, transparent 24%),
           linear-gradient(135deg, #0f172a 0%, #182235 54%, #1f2937 100%);border-bottom:4px solid ${content.brand.accentColor};">
-          <div style="display:grid;grid-template-columns:minmax(0, 1fr) 188px;gap:18px;align-items:center;">
+          <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
@@ -558,7 +573,7 @@ function buildExecutiveTemplate(content, options = {}) {
                 color: "#e2e8f0"
               })}
             </div>
-            ${buildHeroArtBlock(content.brand, {
+            ${hasHeroArt ? buildHeroArtBlock(content.brand, {
               accentColor: content.brand.accentColor,
               auraColor: hexToRgba(content.brand.accentColor, 0.2),
               shardColor: "rgba(148,163,184,0.42)",
@@ -567,7 +582,7 @@ function buildExecutiveTemplate(content, options = {}) {
               markBorder: "rgba(255,255,255,0.18)",
               markTextColor: "#f8fafc",
               lineColor: "rgba(255,255,255,0.54)"
-            })}
+            }) : ""}
           </div>
         </div>
         <div style="padding:28px;">

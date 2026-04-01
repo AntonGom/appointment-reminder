@@ -5,7 +5,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401j";
+} from "./branding-templates.js?v=20260401k";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -481,6 +481,10 @@ function getPanelShapeHint() {
 
 function getArtShapeHint() {
   const value = getFieldElement(fieldIds.artShape)?.value || "classic";
+
+  if (value === "none") {
+    return "Turns the geometric hero art off completely for a cleaner, safer layout.";
+  }
 
   if (value === "orbit") {
     return "Uses rings and orbit-like shapes around the main mark.";
