@@ -49,6 +49,7 @@ let appPublicConfig = null;
 let currentSignedInUser = null;
 let currentUserTier = "free";
 let currentAuthUserId = "";
+let linkedPrefillClientId = "";
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -274,6 +275,7 @@ function applySavedClientPrefill() {
     }
 
     const client = JSON.parse(rawValue);
+    linkedPrefillClientId = String(client?.id || "").trim();
 
     const mappedFields = {
       name: client.name || "",
@@ -762,6 +764,18 @@ async function autoSaveBronzeContact() {
   }
 
   try {
+    if (linkedPrefillClientId) {
+      const { error } = await appSupabase
+        .from("clients")
+        .update(payload)
+        .eq("id", linkedPrefillClientId)
+        .eq("owner_id", payload.owner_id);
+
+      if (!error) {
+        return linkedPrefillClientId;
+      }
+    }
+
     const existingId = await findExistingBronzeContactId(payload);
 
     if (existingId) {
@@ -775,6 +789,7 @@ async function autoSaveBronzeContact() {
         throw error;
       }
 
+      linkedPrefillClientId = existingId;
       return existingId;
     }
 
@@ -788,6 +803,7 @@ async function autoSaveBronzeContact() {
       throw error;
     }
 
+    linkedPrefillClientId = data?.id || "";
     return data?.id || null;
   } catch (error) {
     console.warn("Unable to auto-save Bronze contact.", error);

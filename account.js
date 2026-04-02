@@ -1738,6 +1738,7 @@ function useClientInReminder(clientId) {
   window.sessionStorage.setItem(
     REMINDER_PREFILL_KEY,
     JSON.stringify({
+      id: client.id || "",
       name: client.client_name || "",
       email: client.client_email || "",
       phone: client.client_phone ? formatPhone(client.client_phone) : "",
