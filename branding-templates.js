@@ -193,6 +193,11 @@ function buildPreviewFocusStyles() {
         border-radius: 22px;
         box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.16);
       }
+      [data-preview-area].preview-hover {
+        outline: 2px dashed rgba(59, 130, 246, 0.78);
+        outline-offset: 4px;
+        cursor: pointer;
+      }
     </style>
   `;
 }
@@ -209,12 +214,13 @@ function resolveArtShape(artShape, randomSeed = 0) {
 function buildEmailContent({ message, branding, calendarLinks }) {
   const parsed = parseReminderMessage(message);
   const surfaceStyle = buildSurfaceStyle(branding.panelShape);
+  const summaryCount = Math.min(parsed.summary.length, 3);
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
-    ? `<div data-preview-area="secondary" style="display:grid;grid-template-columns:repeat(${Math.min(parsed.summary.length, 3)}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
+    ? `<div data-preview-area="secondary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="${surfaceStyle}padding:14px 16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);">
+          <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
@@ -737,6 +743,9 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const tagline = branding.tagline
     ? `<div style="font-size:14px;line-height:1.6;${paintTextColor(theme.taglineColor)}margin-top:8px;">${escapeHtml(branding.tagline)}</div>`
     : "";
+  const secondarySupport = `
+    <div data-preview-area="hero-secondary" style="width:84px;height:6px;border-radius:999px;margin-top:12px;background:linear-gradient(90deg, ${branding.secondaryColor || DEFAULT_SECONDARY}, ${hexToRgba(branding.secondaryColor || DEFAULT_SECONDARY, 0.34)});"></div>
+  `;
   const contactLineParts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
   const contactLine = contactLineParts.length
     ? `<div style="font-size:13px;line-height:1.6;${paintTextColor(theme.metaColor)}margin-top:12px;">${escapeHtml(contactLineParts.join(" | "))}</div>`
@@ -753,8 +762,8 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
     : "";
 
   const contentHtml = `
-    <div style="margin:0;padding:28px 12px;background:${theme.pageBackground};">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);">
+    <div style="margin:0;padding:28px 12px;min-width:664px;background:${theme.pageBackground};">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" bgcolor="#ffffff" style="width:640px;max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);table-layout:fixed;">
         <tr>
           <td data-preview-area="hero" bgcolor="${theme.heroBgColor}" style="padding:0;background:${theme.heroBackground};">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${theme.heroBgColor}">
@@ -772,6 +781,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
                         <div style="font-size:34px;line-height:1.02;font-weight:800;${paintTextColor(theme.titleColor)}margin-top:6px;">
                           ${businessName}
                         </div>
+                        ${secondarySupport}
                         ${tagline}
                         ${contactLine ? `<div data-preview-area="contact">${contactLine}</div>` : ""}
                       </td>
@@ -897,6 +907,8 @@ function buildHeroBackground(branding, templateStyle) {
   const style = branding.heroGradientStyle || "signature";
   const executiveTail = "#111827";
   const spotlightBase = "#ffffff";
+  const signatureGlow = `radial-gradient(circle at 84% 18%, ${hexToRgba(secondary, 0.92)} 0%, ${hexToRgba(secondary, 0.72)} 22%, transparent 48%)`;
+  const executiveGlow = `radial-gradient(circle at 82% 20%, ${secondary} 0%, ${hexToRgba(secondary, 0.82)} 18%, transparent 42%)`;
 
   if (templateStyle === "executive") {
     if (style === "solid") {
@@ -904,14 +916,14 @@ function buildHeroBackground(branding, templateStyle) {
     }
 
     if (style === "spotlight") {
-      return `radial-gradient(circle at 82% 20%, ${secondary} 0%, transparent 34%), linear-gradient(135deg, ${accent} 0%, ${executiveTail} 100%)`;
+      return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${executiveTail} 100%)`;
     }
 
     if (style === "split") {
       return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
     }
 
-    return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.88)} 52%, ${secondary} 100%)`;
+    return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.84)} 32%, ${secondary} 100%)`;
   }
 
   if (templateStyle === "spotlight") {
@@ -924,10 +936,10 @@ function buildHeroBackground(branding, templateStyle) {
     }
 
     if (style === "signature") {
-      return `linear-gradient(135deg, ${hexToRgba(accent, 0.32)} 0%, ${hexToRgba(accent, 0.16)} 50%, ${secondary} 100%)`;
+      return `${signatureGlow}, linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.1)} 28%, ${secondary} 100%)`;
     }
 
-    return `radial-gradient(circle at 82% 20%, ${secondary} 0%, transparent 32%), linear-gradient(135deg, ${hexToRgba(accent, 0.34)} 0%, ${spotlightBase} 100%)`;
+    return `${signatureGlow}, linear-gradient(135deg, ${hexToRgba(accent, 0.34)} 0%, ${spotlightBase} 100%)`;
   }
 
   if (style === "solid") {
@@ -935,14 +947,14 @@ function buildHeroBackground(branding, templateStyle) {
   }
 
   if (style === "spotlight") {
-    return `radial-gradient(circle at 82% 20%, ${secondary} 0%, transparent 32%), linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.88)} 100%)`;
+    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.88)} 100%)`;
   }
 
   if (style === "split") {
     return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
   }
 
-  return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 52%, ${secondary} 100%)`;
+  return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.86)} 28%, ${secondary} 100%)`;
 }
 
 function paintTextColor(color) {
@@ -1135,11 +1147,13 @@ function buildProductionSummary(summaryItems, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const cells = summaryItems.slice(0, 3).map(item => `
-    <td valign="top" style="padding:0 8px 0 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildPanelBackground(panelColor, 0.44)};">
+  const visibleItems = summaryItems.slice(0, 3);
+  const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
+  const cells = visibleItems.map((item, index) => `
+    <td valign="top" width="${columnWidth}" style="width:${columnWidth};padding:0 ${index === visibleItems.length - 1 ? 0 : 8}px 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildPanelBackground(panelColor, 0.44)};table-layout:fixed;">
         <tr>
-          <td style="padding:14px 14px 12px;">
+          <td height="106" valign="top" style="height:106px;padding:14px 14px 12px;">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor("#0f172a")}">${escapeHtml(item.value)}</div>
           </td>

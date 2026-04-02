@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260401p";
+} from "./branding-templates.js?v=20260402b";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -116,8 +116,8 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting the large top company section so you can color that area directly."
   },
   [fieldIds.secondaryColor]: {
-    iframeAreas: ["art", "secondary"],
-    note: "Highlighting where the supporting color appears inside the email card."
+    iframeAreas: ["hero-secondary", "art"],
+    note: "Highlighting the supporting color accent inside the top section and hero art."
   },
   [fieldIds.artShapeColor]: {
     iframeAreas: ["art"],
@@ -185,6 +185,18 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["buttons"],
     note: "Highlighting the reschedule button area."
   }
+};
+
+const PREVIEW_AREA_TO_FIELD_ID = {
+  hero: fieldIds.headerColor,
+  "hero-secondary": fieldIds.secondaryColor,
+  "hero-label": fieldIds.headerLabel,
+  logo: fieldIds.logoUrl,
+  contact: fieldIds.contactEmail,
+  art: fieldIds.artShapeColor,
+  secondary: fieldIds.panelColor,
+  buttons: fieldIds.buttonStyle,
+  footer: fieldIds.tertiaryColor
 };
 
 let supabase = null;
@@ -742,7 +754,7 @@ function getHeaderColorHint() {
 }
 
 function getSecondaryColorHint() {
-  return "Used as the supporting tone inside the hero art and lighter accent panels.";
+  return "Used as the support accent inside the top section and hero art.";
 }
 
 function getArtShapeColorHint() {
@@ -953,6 +965,18 @@ function clearIframePreviewHighlights() {
   });
 }
 
+function clearIframePreviewHover() {
+  const frameDocument = previewFrame?.contentDocument;
+
+  if (!frameDocument) {
+    return;
+  }
+
+  frameDocument.querySelectorAll(".preview-hover").forEach(element => {
+    element.classList.remove("preview-hover");
+  });
+}
+
 function applyIframePreviewHighlights(areas) {
   const frameDocument = previewFrame?.contentDocument;
 
@@ -966,6 +990,71 @@ function applyIframePreviewHighlights(areas) {
     frameDocument.querySelectorAll(`[data-preview-area="${area}"]`).forEach(element => {
       element.classList.add("preview-focus");
     });
+  });
+}
+
+function focusFieldFromPreviewArea(area) {
+  const targetFieldId = PREVIEW_AREA_TO_FIELD_ID[area];
+
+  if (!targetFieldId) {
+    return;
+  }
+
+  const field = getFieldElement(targetFieldId);
+
+  if (!field) {
+    return;
+  }
+
+  applyPreviewHighlight(targetFieldId);
+  field.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  window.setTimeout(() => {
+    field.focus({ preventScroll: true });
+    if (typeof field.select === "function" && (field.tagName === "INPUT" || field.tagName === "TEXTAREA")) {
+      field.select();
+    }
+  }, 120);
+}
+
+function wirePreviewFrameInteractions() {
+  const frameDocument = previewFrame?.contentDocument;
+
+  if (!frameDocument) {
+    return;
+  }
+
+  frameDocument.querySelectorAll("[data-preview-area]").forEach(element => {
+    if (element.dataset.previewInteractiveBound === "true") {
+      return;
+    }
+
+    element.dataset.previewInteractiveBound = "true";
+
+    element.addEventListener("mouseenter", () => {
+      clearIframePreviewHover();
+      element.classList.add("preview-hover");
+    });
+
+    element.addEventListener("mouseleave", () => {
+      element.classList.remove("preview-hover");
+    });
+
+    element.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      clearIframePreviewHover();
+      focusFieldFromPreviewArea(element.dataset.previewArea || "");
+    });
+  });
+
+  frameDocument.addEventListener("click", event => {
+    const interactiveArea = event.target?.closest?.("[data-preview-area]");
+
+    if (!interactiveArea) {
+      applyPreviewHighlight("");
+      clearIframePreviewHover();
+    }
   });
 }
 
@@ -1286,6 +1375,7 @@ function wireFormInputs() {
 
   if (previewFrame) {
     previewFrame.addEventListener("load", () => {
+      wirePreviewFrameInteractions();
       applyPreviewHighlight(currentPreviewFocusField);
     });
   }
