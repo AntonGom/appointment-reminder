@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260401q">
+  <link rel="stylesheet" href="branding.css?v=20260402d">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -56,10 +56,14 @@
               <div id="template-grid" class="signature-gallery"></div>
             </section>
 
-            <div class="branding-layout">
-              <section class="section-card branding-card">
-                <h2>Business Branding Profile</h2>
-                <p class="branding-copy">Save the brand details that should appear in your reminder emails. Your actual automated reminder email will use this profile when branding is turned on.</p>
+            <div class="branding-layout branding-studio-layout">
+              <section class="section-card branding-card branding-editor-card">
+                <div class="branding-editor-head">
+                  <div>
+                    <h2 id="branding-editor-title">Click a part of the email to edit it</h2>
+                    <p id="branding-editor-copy" class="branding-copy">Hover the preview and click the area you want to change. Only the matching controls will stay visible here.</p>
+                  </div>
+                </div>
 
                 <form id="branding-form">
                   <input id="branding-template-style" type="hidden" value="signature">
@@ -77,23 +81,23 @@
                     <p id="branding-enabled-note" class="field-hint branding-helper">When off, your design stays saved here, but outgoing emails use the standard reminder format.</p>
                   </div>
 
-                  <div class="branding-field-grid">
-                    <div class="field-span-2">
+                  <div class="branding-field-grid branding-editor-grid">
+                    <div class="field-span-2" data-editor-group="hero">
                       <label class="branding-label" for="branding-business-name">Business name</label>
                       <input id="branding-business-name" class="branding-input" type="text" maxlength="80" placeholder="North Shore Wellness" required>
                     </div>
 
-                    <div class="field-span-2">
+                    <div class="field-span-2" data-editor-group="hero">
                       <label class="branding-label" for="branding-tagline">Short tagline</label>
                       <input id="branding-tagline" class="branding-input" type="text" maxlength="120" placeholder="Friendly reminders that feel polished and professional.">
                     </div>
 
-                    <div class="field-span-2">
+                    <div class="field-span-2" data-editor-group="hero">
                       <label class="branding-label" for="branding-header-label">Top label</label>
                       <input id="branding-header-label" class="branding-input" type="text" maxlength="50" placeholder="Appointment reminder">
                     </div>
 
-                    <div>
+                    <div data-editor-group="hero">
                       <label class="branding-label" for="branding-accent-color">Brand color</label>
                       <div class="branding-color-row">
                         <input id="branding-accent-color" class="branding-color-input" type="color" value="#2563eb">
@@ -101,7 +105,7 @@
                       </div>
                     </div>
 
-                    <div>
+                    <div data-editor-group="hero">
                       <label class="branding-label" for="branding-header-color">Top section color</label>
                       <div class="branding-color-row">
                         <input id="branding-header-color" class="branding-color-input" type="color" value="#2563eb">
@@ -110,7 +114,7 @@
                       <p id="branding-header-color-hint" class="field-hint branding-helper">Changes the large top company section you pointed to in the preview.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="hero">
                       <label class="branding-label" for="branding-secondary-color">Secondary color</label>
                       <div class="branding-color-row">
                         <input id="branding-secondary-color" class="branding-color-input" type="color" value="#e8f1ff">
@@ -119,7 +123,7 @@
                       <p id="branding-secondary-color-hint" class="field-hint branding-helper">Adds a supporting tone inside the hero art and accent surfaces.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="art">
                       <label class="branding-label" for="branding-art-shape-color">Art shape color</label>
                       <div class="branding-color-row">
                         <input id="branding-art-shape-color" class="branding-color-input" type="color" value="#2563eb">
@@ -128,7 +132,7 @@
                       <p id="branding-art-shape-color-hint" class="field-hint branding-helper">Changes the geometric art itself without recoloring the whole header.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="panels">
                       <label class="branding-label" for="branding-panel-color">Panel color</label>
                       <div class="branding-color-row">
                         <input id="branding-panel-color" class="branding-color-input" type="color" value="#f3f7ff">
@@ -137,7 +141,7 @@
                       <p id="branding-panel-color-hint" class="field-hint branding-helper">Changes the fill color used behind the info cards and detail panels.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="buttons">
                       <label class="branding-label" for="branding-tertiary-color">Tertiary color</label>
                       <div class="branding-color-row">
                         <input id="branding-tertiary-color" class="branding-color-input" type="color" value="#1f2937">
@@ -146,12 +150,12 @@
                       <p id="branding-tertiary-color-hint" class="field-hint branding-helper">Changes the supporting accent areas like the website button and footer tint.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="contact">
                       <label class="branding-label" for="branding-logo-url">Logo image URL</label>
                       <input id="branding-logo-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourdomain.com/logo.png">
                     </div>
 
-                    <div>
+                    <div data-editor-group="buttons">
                       <label class="branding-label" for="branding-button-style">Button shape</label>
                       <select id="branding-button-style" class="branding-select">
                         <option value="pill">Pill</option>
@@ -164,7 +168,7 @@
                       <p id="branding-button-style-hint" class="field-hint branding-helper">Changes the shape of the call-to-action buttons and chips.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="panels">
                       <label class="branding-label" for="branding-panel-shape">Panel shape</label>
                       <select id="branding-panel-shape" class="branding-select">
                         <option value="rounded" selected>Rounded</option>
@@ -176,7 +180,7 @@
                       <p id="branding-panel-shape-hint" class="field-hint branding-helper">Changes the shape of the email info boxes and panels.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="hero">
                       <label class="branding-label" for="branding-hero-gradient">Top gradient</label>
                       <select id="branding-hero-gradient" class="branding-select">
                         <option value="signature">Signature blend</option>
@@ -187,7 +191,7 @@
                       <p id="branding-hero-gradient-hint" class="field-hint branding-helper">Controls how the top company section blends your main and secondary colors.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="art">
                       <label class="branding-label" for="branding-art-shape">Art shape</label>
                       <select id="branding-art-shape" class="branding-select">
                         <option value="none">No shape</option>
@@ -205,7 +209,7 @@
                       <p id="branding-art-shape-hint" class="field-hint branding-helper">Choose the geometric art style shown on the right.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="art">
                       <label class="branding-label" for="branding-shape-intensity">Shape intensity</label>
                       <select id="branding-shape-intensity" class="branding-select">
                         <option value="soft">Soft</option>
@@ -215,7 +219,7 @@
                       <p id="branding-shape-intensity-hint" class="field-hint branding-helper">Controls how strong the geometric art feels on the right side.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="art">
                       <label class="branding-label" for="branding-shine-style">Glass shine</label>
                       <select id="branding-shine-style" class="branding-select">
                         <option value="on" selected>On</option>
@@ -224,7 +228,7 @@
                       <p id="branding-shine-style-hint" class="field-hint branding-helper">Adds or removes the glossy sweep on the preview cards.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="art">
                       <label class="branding-label" for="branding-motion-style">Motion style</label>
                       <select id="branding-motion-style" class="branding-select">
                         <option value="showcase" selected>Showcase</option>
@@ -235,41 +239,36 @@
                       <p id="branding-motion-style-hint" class="field-hint branding-helper">Changes how the preview art animates while you design it.</p>
                     </div>
 
-                    <div>
+                    <div data-editor-group="contact">
                       <label class="branding-label" for="branding-contact-email">Business email</label>
                       <input id="branding-contact-email" class="branding-input" type="email" inputmode="email" placeholder="hello@yourbusiness.com">
                     </div>
 
-                    <div>
+                    <div data-editor-group="contact">
                       <label class="branding-label" for="branding-contact-phone">Business phone</label>
                       <input id="branding-contact-phone" class="branding-input" type="text" placeholder="(305) 555-0188">
                     </div>
 
-                    <div>
+                    <div data-editor-group="buttons">
                       <label class="branding-label" for="branding-website-url">Website link</label>
                       <input id="branding-website-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourbusiness.com">
                     </div>
 
-                    <div>
+                    <div data-editor-group="buttons">
                       <label class="branding-label" for="branding-reschedule-url">Reschedule link</label>
                       <input id="branding-reschedule-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourbusiness.com/reschedule">
                     </div>
                   </div>
 
-                  <div class="branding-actions">
-                    <button id="save-branding-button" class="primary-button" type="submit">Save Branding</button>
-                    <button id="reset-branding-button" class="secondary-button" type="button">Reset to Saved</button>
-                    <button id="branding-sign-out" class="secondary-button" type="button">Sign Out</button>
-                  </div>
                 </form>
               </section>
 
-              <section class="section-card branding-card">
+              <section class="section-card branding-card branding-preview-card">
                 <div class="branding-preview-head">
                   <div>
-                    <h3>Live email preview</h3>
-                    <p>This preview updates as you type and uses the same renderer as your actual automated reminder emails.</p>
-                    <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Click or focus a setting and the preview will highlight the part it changes.</p>
+                    <h3>Click-to-edit email studio</h3>
+                    <p>This preview updates as you design and uses the same renderer as your actual automated reminder emails.</p>
+                    <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Hover and click any editable part of the preview to open the matching controls.</p>
                   </div>
                   <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
                 </div>
@@ -287,6 +286,12 @@
                     </div>
                   </div>
                   <iframe id="branding-preview-frame" class="branding-preview-frame" title="Branded email preview"></iframe>
+                </div>
+
+                <div class="branding-studio-actions">
+                  <button id="save-branding-button" class="primary-button" type="submit" form="branding-form">Save Branding</button>
+                  <button id="reset-branding-button" class="secondary-button" type="button">Reset to Saved</button>
+                  <button id="branding-sign-out" class="secondary-button" type="button">Sign Out</button>
                 </div>
               </section>
             </div>
@@ -344,6 +349,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402b"></script>
+  <script type="module" src="branding.js?v=20260402d"></script>
 </body>
 </html>

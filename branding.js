@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402b";
+} from "./branding-templates.js?v=20260402d";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -23,6 +23,8 @@ const previewFrom = document.getElementById("branding-preview-from");
 const previewEmail = document.getElementById("branding-preview-email");
 const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
+const editorTitle = document.getElementById("branding-editor-title");
+const editorCopy = document.getElementById("branding-editor-copy");
 const brandingEnabledNote = document.getElementById("branding-enabled-note");
 const signOutButton = document.getElementById("branding-sign-out");
 const qaToolsShell = document.getElementById("branding-qa-tools");
@@ -199,6 +201,72 @@ const PREVIEW_AREA_TO_FIELD_ID = {
   footer: fieldIds.tertiaryColor
 };
 
+const FIELD_TO_EDITOR_GROUP = {
+  [fieldIds.brandingEnabled]: "hero",
+  [fieldIds.businessName]: "hero",
+  [fieldIds.tagline]: "hero",
+  [fieldIds.headerLabel]: "hero",
+  [fieldIds.accentColor]: "hero",
+  [fieldIds.accentHex]: "hero",
+  [fieldIds.headerColor]: "hero",
+  [fieldIds.headerHex]: "hero",
+  [fieldIds.secondaryColor]: "hero",
+  [fieldIds.secondaryHex]: "hero",
+  [fieldIds.heroGradientStyle]: "hero",
+  [fieldIds.artShape]: "art",
+  [fieldIds.artShapeColor]: "art",
+  [fieldIds.artShapeHex]: "art",
+  [fieldIds.shapeIntensity]: "art",
+  [fieldIds.shineStyle]: "art",
+  [fieldIds.motionStyle]: "art",
+  [fieldIds.panelColor]: "panels",
+  [fieldIds.panelHex]: "panels",
+  [fieldIds.panelShape]: "panels",
+  [fieldIds.buttonStyle]: "buttons",
+  [fieldIds.tertiaryColor]: "buttons",
+  [fieldIds.tertiaryHex]: "buttons",
+  [fieldIds.websiteUrl]: "buttons",
+  [fieldIds.rescheduleUrl]: "buttons",
+  [fieldIds.logoUrl]: "contact",
+  [fieldIds.contactEmail]: "contact",
+  [fieldIds.contactPhone]: "contact"
+};
+
+const PREVIEW_AREA_TO_EDITOR_GROUP = {
+  hero: "hero",
+  "hero-secondary": "hero",
+  "hero-label": "hero",
+  logo: "contact",
+  contact: "contact",
+  art: "art",
+  secondary: "panels",
+  buttons: "buttons",
+  footer: "buttons"
+};
+
+const EDITOR_GROUP_COPY = {
+  hero: {
+    title: "Top section controls",
+    copy: "Change the business name, hero copy, brand color, top section color, and secondary accent that appear at the top of the email."
+  },
+  art: {
+    title: "Hero art controls",
+    copy: "Change the geometric art style, art color, shape intensity, shine, and preview motion for the top-right artwork."
+  },
+  panels: {
+    title: "Info panel controls",
+    copy: "Adjust the fill color and panel shape for the date, time, location, and details boxes inside the email body."
+  },
+  buttons: {
+    title: "Button and footer controls",
+    copy: "Adjust the button shape, supporting accent color, and the website or reschedule links that appear lower in the email."
+  },
+  contact: {
+    title: "Logo and contact controls",
+    copy: "Update the logo, business email, and phone details that show up in the hero area and footer."
+  }
+};
+
 let supabase = null;
 let appConfig = null;
 let runtimeConfig = null;
@@ -208,6 +276,7 @@ let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
 let currentPreviewFocusField = "";
+let currentEditorGroup = "hero";
 let previewRandomNonce = 0;
 let lastSentEmailRecord = null;
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
@@ -920,6 +989,37 @@ function getMotionStyleHint() {
   return "Mixes floating, pulsing, and shine for the most premium preview.";
 }
 
+function setActiveEditorGroup(groupId = "hero") {
+  currentEditorGroup = EDITOR_GROUP_COPY[groupId] ? groupId : "hero";
+
+  document.querySelectorAll("[data-editor-group]").forEach(element => {
+    const isActive = element.dataset.editorGroup === currentEditorGroup;
+    element.classList.toggle("is-active", isActive);
+    element.hidden = !isActive;
+  });
+
+  if (editorTitle) {
+    editorTitle.textContent = EDITOR_GROUP_COPY[currentEditorGroup]?.title || "Click a part of the email to edit it";
+  }
+
+  if (editorCopy) {
+    editorCopy.textContent = EDITOR_GROUP_COPY[currentEditorGroup]?.copy
+      || "Hover the preview and click the area you want to change. Only the matching controls will stay visible here.";
+  }
+}
+
+function openEditorGroupForField(fieldId) {
+  if (!fieldId) {
+    return;
+  }
+
+  const groupId = FIELD_TO_EDITOR_GROUP[fieldId];
+
+  if (groupId) {
+    setActiveEditorGroup(groupId);
+  }
+}
+
 function applyPreviewHighlight(fieldId) {
   currentPreviewFocusField = fieldId || "";
   const config = PREVIEW_HIGHLIGHT_CONFIG[currentPreviewFocusField];
@@ -995,6 +1095,11 @@ function applyIframePreviewHighlights(areas) {
 
 function focusFieldFromPreviewArea(area) {
   const targetFieldId = PREVIEW_AREA_TO_FIELD_ID[area];
+  const groupId = PREVIEW_AREA_TO_EDITOR_GROUP[area];
+
+  if (groupId) {
+    setActiveEditorGroup(groupId);
+  }
 
   if (!targetFieldId) {
     return;
@@ -1252,6 +1357,7 @@ function renderTemplateCards() {
     const nextTemplate = button.dataset.template || "signature";
     getFieldElement(fieldIds.templateStyle).value = nextTemplate;
     applyTemplatePreset(nextTemplate);
+    setActiveEditorGroup("hero");
     applyPreviewHighlight("");
     syncTemplateCards();
     updateHelperHints();
@@ -1328,6 +1434,7 @@ function wireFormInputs() {
     }
 
     if (event.target?.id) {
+      openEditorGroupForField(event.target.id);
       applyPreviewHighlight(event.target.id);
     }
 
@@ -1347,6 +1454,7 @@ function wireFormInputs() {
         applyPreviewHighlight("");
       }, 0);
     } else if (event.target?.id) {
+      openEditorGroupForField(event.target.id);
       applyPreviewHighlight(event.target.id);
     }
 
@@ -1356,6 +1464,7 @@ function wireFormInputs() {
 
   brandingForm.addEventListener("focusin", event => {
     if (event.target?.id) {
+      openEditorGroupForField(event.target.id);
       applyPreviewHighlight(event.target.id);
     }
   });
@@ -1420,6 +1529,7 @@ function wireFormInputs() {
 async function initBrandingPage() {
   renderTemplateCards();
   wireFormInputs();
+  setActiveEditorGroup("hero");
 
   try {
     [appConfig, runtimeConfig] = await Promise.all([

@@ -26,8 +26,12 @@ body[data-page="branding"] .section-card {
 
 .branding-layout {
   display: grid;
-  grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 1.28fr) minmax(300px, 0.72fr);
   gap: 18px;
+  align-items: start;
+}
+
+.branding-studio-layout {
   align-items: start;
 }
 
@@ -44,6 +48,66 @@ body[data-page="branding"] .section-card {
 
 .branding-card {
   padding: 22px;
+}
+
+.branding-editor-card {
+  position: sticky;
+  top: 18px;
+}
+
+.branding-preview-card {
+  min-width: 0;
+  order: -1;
+}
+
+.branding-editor-head {
+  margin-bottom: 18px;
+}
+
+.branding-editor-head h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.branding-editor-grid > [data-editor-group] {
+  display: none;
+}
+
+.branding-editor-grid > [data-editor-group].is-active {
+  display: block;
+}
+
+.branding-editor-group-head {
+  grid-column: 1 / -1;
+  margin-bottom: -2px;
+}
+
+.branding-editor-group-head h4 {
+  margin: 0 0 6px;
+  color: var(--branding-ink);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.branding-editor-group-head p {
+  margin: 0;
+  color: var(--branding-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.branding-studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.branding-studio-actions button {
+  width: auto;
+  min-width: 170px;
 }
 
 .branding-card:first-child {
@@ -770,7 +834,7 @@ body[data-branding-motion="float"] .signature-card-aura {
 .branding-preview-frame {
   display: block;
   width: 100%;
-  min-height: 700px;
+  min-height: 860px;
   border: 0;
   background: #eef4ff;
   position: relative;
@@ -991,6 +1055,10 @@ body[data-branding-motion="float"] .signature-card-aura {
     grid-template-columns: 1fr;
   }
 
+  .branding-editor-card {
+    position: static;
+  }
+
   .signature-gallery {
     grid-template-columns: 1fr;
   }
@@ -1030,12 +1098,21 @@ body[data-branding-motion="float"] .signature-card-aura {
   }
 
   .branding-preview-frame {
-    min-height: 680px;
+    min-height: 720px;
   }
 
   .qa-email-frame,
   .qa-email-source {
     min-height: 620px;
+  }
+
+  .branding-studio-actions {
+    justify-content: stretch;
+  }
+
+  .branding-studio-actions button {
+    width: 100%;
+    min-width: 0;
   }
 
   .branding-actions button {
