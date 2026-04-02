@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402d">
+  <link rel="stylesheet" href="branding.css?v=20260402e">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -57,12 +57,14 @@
             </section>
 
             <div class="branding-layout branding-studio-layout">
-              <section class="section-card branding-card branding-editor-card">
+              <section id="branding-editor-modal" class="branding-editor-modal" hidden role="dialog" aria-modal="true" aria-labelledby="branding-editor-title">
+                <div class="section-card branding-card branding-editor-card">
                 <div class="branding-editor-head">
                   <div>
                     <h2 id="branding-editor-title">Click a part of the email to edit it</h2>
                     <p id="branding-editor-copy" class="branding-copy">Hover the preview and click the area you want to change. Only the matching controls will stay visible here.</p>
                   </div>
+                  <button id="branding-editor-close" class="branding-editor-close" type="button" aria-label="Close editor">&times;</button>
                 </div>
 
                 <form id="branding-form">
@@ -132,16 +134,67 @@
                       <p id="branding-art-shape-color-hint" class="field-hint branding-helper">Changes the geometric art itself without recoloring the whole header.</p>
                     </div>
 
-                    <div data-editor-group="panels">
-                      <label class="branding-label" for="branding-panel-color">Panel color</label>
+                    <div data-editor-group="summary">
+                      <label class="branding-label" for="branding-panel-color">Summary card color</label>
                       <div class="branding-color-row">
                         <input id="branding-panel-color" class="branding-color-input" type="color" value="#f3f7ff">
                         <input id="branding-panel-hex" class="branding-input" type="text" maxlength="7" value="#f3f7ff" placeholder="#f3f7ff">
                       </div>
-                      <p id="branding-panel-color-hint" class="field-hint branding-helper">Changes the fill color used behind the info cards and detail panels.</p>
+                      <p id="branding-panel-color-hint" class="field-hint branding-helper">Changes the fill color used behind the date, time, and location cards.</p>
                     </div>
 
-                    <div data-editor-group="buttons">
+                    <div data-editor-group="summary">
+                      <label class="branding-label" for="branding-summary-gradient">Summary gradient</label>
+                      <select id="branding-summary-gradient" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="solid">Solid</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p class="field-hint branding-helper">Controls how the summary cards blend from white into their section color.</p>
+                    </div>
+
+                    <div data-editor-group="details">
+                      <label class="branding-label" for="branding-details-color">Details card color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-details-color" class="branding-color-input" type="color" value="#f3f7ff">
+                        <input id="branding-details-hex" class="branding-input" type="text" maxlength="7" value="#f3f7ff" placeholder="#f3f7ff">
+                      </div>
+                      <p id="branding-details-color-hint" class="field-hint branding-helper">Changes the fill color used behind the additional details section.</p>
+                    </div>
+
+                    <div data-editor-group="details">
+                      <label class="branding-label" for="branding-details-gradient">Details gradient</label>
+                      <select id="branding-details-gradient" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="solid">Solid</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p class="field-hint branding-helper">Controls how the additional details card blends its background.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-color">Calendar card color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-calendar-color" class="branding-color-input" type="color" value="#f3f7ff">
+                        <input id="branding-calendar-hex" class="branding-input" type="text" maxlength="7" value="#f3f7ff" placeholder="#f3f7ff">
+                      </div>
+                      <p id="branding-calendar-color-hint" class="field-hint branding-helper">Changes the fill color used behind the add-to-calendar section.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-gradient">Calendar gradient</label>
+                      <select id="branding-calendar-gradient" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="solid">Solid</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p class="field-hint branding-helper">Controls how the add-to-calendar section blends its background.</p>
+                    </div>
+
+                    <div data-editor-group="buttons calendar">
                       <label class="branding-label" for="branding-tertiary-color">Tertiary color</label>
                       <div class="branding-color-row">
                         <input id="branding-tertiary-color" class="branding-color-input" type="color" value="#1f2937">
@@ -155,7 +208,7 @@
                       <input id="branding-logo-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourdomain.com/logo.png">
                     </div>
 
-                    <div data-editor-group="buttons">
+                    <div data-editor-group="buttons calendar">
                       <label class="branding-label" for="branding-button-style">Button shape</label>
                       <select id="branding-button-style" class="branding-select">
                         <option value="pill">Pill</option>
@@ -168,7 +221,7 @@
                       <p id="branding-button-style-hint" class="field-hint branding-helper">Changes the shape of the call-to-action buttons and chips.</p>
                     </div>
 
-                    <div data-editor-group="panels">
+                    <div data-editor-group="summary details calendar">
                       <label class="branding-label" for="branding-panel-shape">Panel shape</label>
                       <select id="branding-panel-shape" class="branding-select">
                         <option value="rounded" selected>Rounded</option>
@@ -177,7 +230,7 @@
                         <option value="cloudy">Cloudy</option>
                         <option value="parallelogram">Parallelogram</option>
                       </select>
-                      <p id="branding-panel-shape-hint" class="field-hint branding-helper">Changes the shape of the email info boxes and panels.</p>
+                      <p id="branding-panel-shape-hint" class="field-hint branding-helper">Changes the shape of the summary, details, and calendar panels.</p>
                     </div>
 
                     <div data-editor-group="hero">
@@ -261,6 +314,7 @@
                   </div>
 
                 </form>
+                </div>
               </section>
 
               <section class="section-card branding-card branding-preview-card">
@@ -268,7 +322,7 @@
                   <div>
                     <h3>Click-to-edit email studio</h3>
                     <p>This preview updates as you design and uses the same renderer as your actual automated reminder emails.</p>
-                    <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Hover and click any editable part of the preview to open the matching controls.</p>
+                    <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Hover and click any editable part of the preview to open a small section editor.</p>
                   </div>
                   <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
                 </div>
@@ -349,6 +403,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402d"></script>
+  <script type="module" src="branding.js?v=20260402e"></script>
 </body>
 </html>

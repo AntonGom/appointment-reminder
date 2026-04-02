@@ -25,14 +25,11 @@ body[data-page="branding"] .section-card {
 }
 
 .branding-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.28fr) minmax(300px, 0.72fr);
-  gap: 18px;
-  align-items: start;
+  display: block;
 }
 
 .branding-studio-layout {
-  align-items: start;
+  position: relative;
 }
 
 .branding-gallery-card {
@@ -50,17 +47,41 @@ body[data-page="branding"] .section-card {
   padding: 22px;
 }
 
+.branding-editor-modal[hidden] {
+  display: none !important;
+}
+
+.branding-editor-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(15, 23, 42, 0.44);
+  backdrop-filter: blur(12px);
+}
+
 .branding-editor-card {
-  position: sticky;
-  top: 18px;
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(88vh, 980px);
+  overflow: auto;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.26);
 }
 
 .branding-preview-card {
   min-width: 0;
-  order: -1;
+  width: min(100%, 1160px);
+  margin: 0 auto;
 }
 
 .branding-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
   margin-bottom: 18px;
 }
 
@@ -68,6 +89,26 @@ body[data-page="branding"] .section-card {
   margin: 0 0 8px;
   font-size: 28px;
   line-height: 1.15;
+}
+
+.branding-editor-close {
+  flex: 0 0 auto;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.branding-editor-close:hover {
+  transform: translateY(-1px);
 }
 
 .branding-editor-grid > [data-editor-group] {
@@ -956,6 +997,10 @@ body[data-branding-motion="float"] .signature-card-aura {
   outline: none;
 }
 
+body.branding-modal-open {
+  overflow: hidden;
+}
+
 @keyframes brandingShine {
   0%, 12% {
     transform: translateX(0) skewX(-24deg);
@@ -1051,20 +1096,23 @@ body[data-branding-motion="float"] .signature-card-aura {
 }
 
 @media (max-width: 1040px) {
-  .branding-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .branding-editor-card {
-    position: static;
-  }
-
   .signature-gallery {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
+  .branding-editor-modal {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .branding-editor-card {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 28px 28px 20px 20px;
+  }
+
   .branding-toggle-row {
     align-items: flex-start;
   }

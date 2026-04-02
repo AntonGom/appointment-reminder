@@ -30,6 +30,7 @@ const SHAPE_INTENSITIES = new Set(["soft", "balanced", "bold"]);
 const SHINE_STYLES = new Set(["on", "off"]);
 const MOTION_STYLES = new Set(["showcase", "float", "pulse", "still"]);
 const HERO_GRADIENT_STYLES = new Set(["signature", "spotlight", "split", "solid"]);
+const SECTION_GRADIENT_STYLES = new Set(["soft", "glow", "solid", "split"]);
 
 export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   signature: Object.freeze({
@@ -38,9 +39,14 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     secondaryColor: "#e8f1ff",
     artShapeColor: "#c7dcff",
     panelColor: "#eef4ff",
+    detailsColor: "#eef4ff",
+    calendarColor: "#eef4ff",
     tertiaryColor: "#1f2937",
     buttonStyle: "pill",
     panelShape: "rounded",
+    summaryGradientStyle: "soft",
+    detailsGradientStyle: "soft",
+    calendarGradientStyle: "soft",
     artShape: "classic",
     shapeIntensity: "balanced",
     shineStyle: "on",
@@ -53,9 +59,14 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     secondaryColor: "#e6fbf4",
     artShapeColor: "#66dbc6",
     panelColor: "#ecfbf6",
+    detailsColor: "#ecfbf6",
+    calendarColor: "#ecfbf6",
     tertiaryColor: "#134e4a",
     buttonStyle: "rounded",
     panelShape: "rounded",
+    summaryGradientStyle: "glow",
+    detailsGradientStyle: "soft",
+    calendarGradientStyle: "glow",
     artShape: "ribbon",
     shapeIntensity: "soft",
     shineStyle: "on",
@@ -68,9 +79,14 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     secondaryColor: "#dbe2ea",
     artShapeColor: "#94a3b8",
     panelColor: "#edf2f7",
+    detailsColor: "#edf2f7",
+    calendarColor: "#edf2f7",
     tertiaryColor: "#334155",
     buttonStyle: "crisp",
     panelShape: "crisp",
+    summaryGradientStyle: "split",
+    detailsGradientStyle: "soft",
+    calendarGradientStyle: "split",
     artShape: "frame",
     shapeIntensity: "bold",
     shineStyle: "off",
@@ -115,6 +131,8 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
+  const detailsColor = normalizeHexColor(profile?.detailsColor) || templatePreset.detailsColor || panelColor;
+  const calendarColor = normalizeHexColor(profile?.calendarColor) || templatePreset.calendarColor || panelColor;
   const tertiaryColor = normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const brandingEnabled = profile?.brandingEnabled !== false;
@@ -125,6 +143,9 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : templatePreset.shineStyle || "on";
   const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : templatePreset.motionStyle || "showcase";
   const heroGradientStyle = HERO_GRADIENT_STYLES.has(profile?.heroGradientStyle) ? profile.heroGradientStyle : templatePreset.heroGradientStyle || "signature";
+  const summaryGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.summaryGradientStyle) ? profile.summaryGradientStyle : templatePreset.summaryGradientStyle || "soft";
+  const detailsGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.detailsGradientStyle) ? profile.detailsGradientStyle : templatePreset.detailsGradientStyle || "soft";
+  const calendarGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.calendarGradientStyle) ? profile.calendarGradientStyle : templatePreset.calendarGradientStyle || "soft";
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -140,6 +161,8 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     secondaryColor,
     artShapeColor,
     panelColor,
+    detailsColor,
+    calendarColor,
     tertiaryColor,
     logoUrl,
     brandingEnabled,
@@ -150,6 +173,9 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     shineStyle,
     motionStyle,
     heroGradientStyle,
+    summaryGradientStyle,
+    detailsGradientStyle,
+    calendarGradientStyle,
     contactEmail,
     contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
     websiteUrl,
@@ -202,6 +228,24 @@ function buildPreviewFocusStyles() {
   `;
 }
 
+function buildSectionBackground(sectionColor, gradientStyle = "soft", alpha = 0.38) {
+  const color = sectionColor || DEFAULT_PANEL;
+
+  if (gradientStyle === "solid") {
+    return color;
+  }
+
+  if (gradientStyle === "split") {
+    return `linear-gradient(135deg, #ffffff 0%, #ffffff 46%, ${hexToRgba(color, Math.min(alpha + 0.16, 0.92))} 100%)`;
+  }
+
+  if (gradientStyle === "glow") {
+    return `radial-gradient(circle at top right, ${hexToRgba(color, Math.min(alpha + 0.22, 0.92))} 0%, transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.98), ${hexToRgba(color, alpha)})`;
+  }
+
+  return `linear-gradient(180deg, #ffffff, ${hexToRgba(color, alpha)})`;
+}
+
 function resolveArtShape(artShape, randomSeed = 0) {
   if (artShape && artShape !== "random") {
     return artShape;
@@ -218,16 +262,16 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
-    ? `<div data-preview-area="secondary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
+    ? `<div data-preview-area="summary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));border:1px solid ${hexToRgba(branding.accentColor, 0.18)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
+          <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:${buildSectionBackground(branding.panelColor, branding.summaryGradientStyle, 0.48)};border:1px solid ${hexToRgba(branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
-    ? `<div data-preview-area="secondary" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));border:1px solid ${hexToRgba(branding.accentColor, 0.12)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
+    ? `<div data-preview-area="details" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
         <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
         <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
@@ -973,7 +1017,7 @@ function getReadableTextColor(color, options = {}) {
 }
 
 function buildPanelBackground(panelColor, alpha = 0.34) {
-  return `linear-gradient(180deg, #ffffff, ${hexToRgba(panelColor, alpha)})`;
+  return buildSectionBackground(panelColor, "soft", alpha);
 }
 
 function buildProductionHeroArt(branding, theme) {
@@ -1151,7 +1195,7 @@ function buildProductionSummary(summaryItems, branding) {
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
     <td valign="top" width="${columnWidth}" style="width:${columnWidth};padding:0 ${index === visibleItems.length - 1 ? 0 : 8}px 0 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildPanelBackground(panelColor, 0.44)};table-layout:fixed;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildSectionBackground(panelColor, branding.summaryGradientStyle, 0.44)};table-layout:fixed;">
         <tr>
           <td height="106" valign="top" style="height:106px;padding:14px 14px 12px;">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
@@ -1164,7 +1208,7 @@ function buildProductionSummary(summaryItems, branding) {
 
   return `
     <tr>
-      <td data-preview-area="secondary" style="padding:0 0 18px;">
+      <td data-preview-area="summary" style="padding:0 0 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>${cells}</tr>
         </table>
@@ -1175,12 +1219,12 @@ function buildProductionSummary(summaryItems, branding) {
 
 function buildProductionDetails(details, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
-  const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
 
   return `
     <tr>
-      <td data-preview-area="secondary" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.38)};${radius}background:${buildPanelBackground(panelColor, 0.5)};">
+      <td data-preview-area="details" style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(detailsColor, 0.38)};${radius}background:${buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5)};">
           <tr>
             <td style="padding:16px 18px;">
               <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Additional details</div>
@@ -1254,12 +1298,12 @@ function buildProductionCalendar(calendarLinks, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
-  const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
 
   return `
     <tr>
-      <td data-preview-area="buttons" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${buildPanelBackground(panelColor, 0.42)};border:1px solid ${hexToRgba(panelColor, 0.38)};">
+      <td data-preview-area="calendar" style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.38)};">
           <tr>
             <td style="padding:18px;">
               <div style="font-size:15px;font-weight:800;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Add to Calendar</div>
@@ -1423,11 +1467,12 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
     ? { accentColor: brandingOrAccent, buttonStyle: "pill" }
     : brandingOrAccent || { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" };
   const accentColor = branding.accentColor || DEFAULT_ACCENT;
+  const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
   const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
 
   return `
-    <div data-preview-area="buttons" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${hexToRgba(accentColor, 0.06)};border:1px solid ${hexToRgba(accentColor, 0.16)};">
+    <div data-preview-area="calendar" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.2)};">
       <div style="margin:0 0 10px;color:#0f172a;font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
