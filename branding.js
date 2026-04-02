@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402j";
+} from "./branding-templates.js?v=20260402k";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -289,7 +289,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting where your business email appears."
   },
   [fieldIds.contactPhone]: {
-    iframeAreas: ["contact", "buttons"],
+    iframeAreas: ["contact"],
     note: "Highlighting where your business phone appears."
   },
   [fieldIds.websiteUrl]: {

@@ -1056,8 +1056,8 @@ function buildHeroBackground(branding, templateStyle) {
   const accent = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
   const secondary = branding.heroGradientColor || branding.secondaryColor || DEFAULT_SECONDARY;
   const style = branding.heroGradientStyle || "signature";
-  const signatureGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.94)} 0%, ${hexToRgba(secondary, 0.78)} 20%, transparent 46%)`;
-  const executiveGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.7)} 0%, ${hexToRgba(secondary, 0.42)} 18%, transparent 42%)`;
+  const signatureGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.92)} 0%, ${hexToRgba(secondary, 0.74)} 18%, transparent 44%)`;
+  const executiveGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.74)} 0%, ${hexToRgba(secondary, 0.42)} 18%, transparent 40%)`;
 
   if (templateStyle === "executive") {
     if (style === "solid") {
@@ -1065,14 +1065,14 @@ function buildHeroBackground(branding, templateStyle) {
     }
 
     if (style === "spotlight") {
-      return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.94)} 44%, ${secondary} 100%)`;
+      return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 52%, ${secondary} 100%)`;
     }
 
     if (style === "split") {
-      return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
+      return `linear-gradient(118deg, ${accent} 0%, ${accent} 48%, ${secondary} 48%, ${secondary} 100%)`;
     }
 
-    return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 42%, ${secondary} 100%)`;
+    return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 38%, ${secondary} 100%)`;
   }
 
   if (templateStyle === "spotlight") {
@@ -1081,14 +1081,14 @@ function buildHeroBackground(branding, templateStyle) {
     }
 
     if (style === "split") {
-      return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
+      return `linear-gradient(118deg, ${accent} 0%, ${accent} 48%, ${secondary} 48%, ${secondary} 100%)`;
     }
 
     if (style === "signature") {
-      return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.72)} 42%, ${secondary} 100%)`;
+      return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 40%, ${secondary} 100%)`;
     }
 
-    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.82)} 54%, ${secondary} 100%)`;
+    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 56%, ${secondary} 100%)`;
   }
 
   if (style === "solid") {
@@ -1096,14 +1096,14 @@ function buildHeroBackground(branding, templateStyle) {
   }
 
   if (style === "spotlight") {
-    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.88)} 100%)`;
+    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 56%, ${secondary} 100%)`;
   }
 
   if (style === "split") {
-    return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
+    return `linear-gradient(118deg, ${accent} 0%, ${accent} 48%, ${secondary} 48%, ${secondary} 100%)`;
   }
 
-  return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.86)} 28%, ${secondary} 100%)`;
+  return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${accent} 40%, ${secondary} 100%)`;
 }
 
 function paintTextColor(color) {
@@ -1354,26 +1354,14 @@ function buildProductionButtons(branding) {
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
   const buttonBackground = buildButtonBackground(buttonColor, tertiaryColor, branding.buttonGradientStyle || "solid");
   const buttonTextColor = branding.buttonTextColor || "#ffffff";
-
-  if (branding.contactPhone) {
-    const digits = branding.contactPhone.replace(/\D/g, "");
-    if (digits) {
-      buttons.push({
-        href: `tel:${digits}`,
-        label: "Call us",
-        background: buttonBackground,
-        color: buttonTextColor,
-        border: buttonColor
-      });
-    }
-  }
+  const buttonTextStyle = `color:${buttonTextColor} !important;-webkit-text-fill-color:${buttonTextColor} !important;text-decoration:none !important;`;
 
   if (branding.websiteUrl) {
     buttons.push({
       href: branding.websiteUrl,
       label: "Visit website",
       background: buttonBackground,
-      color: buttonTextColor,
+      textStyle: buttonTextStyle,
       border: buttonColor
     });
   }
@@ -1383,7 +1371,7 @@ function buildProductionButtons(branding) {
       href: branding.rescheduleUrl,
       label: "Reschedule",
       background: buttonBackground,
-      color: buttonTextColor,
+      textStyle: buttonTextStyle,
       border: buttonColor
     });
   }
@@ -1396,7 +1384,7 @@ function buildProductionButtons(branding) {
     <tr>
       <td data-preview-area="buttons" style="padding:0 0 18px;">
         ${buttons.map(button => `
-          <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};${paintTextColor(button.color)}border:1px solid ${button.border};text-decoration:none;font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
+          <a href="${escapeAttribute(button.href)}" style="display:inline-block;margin:0 10px 10px 0;padding:12px 16px;${radius}background:${button.background};${button.textStyle}border:1px solid ${button.border};font-size:14px;font-weight:800;line-height:1.2;">${escapeHtml(button.label)}</a>
         `).join("")}
       </td>
     </tr>
@@ -1415,6 +1403,7 @@ function buildProductionCalendar(calendarLinks, branding) {
   const buttonColor = branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
   const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
   const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
+  const calendarButtonTextStyle = `color:${calendarButtonTextColor} !important;-webkit-text-fill-color:${calendarButtonTextColor} !important;text-decoration:none !important;`;
 
   return `
     <tr>
@@ -1424,9 +1413,9 @@ function buildProductionCalendar(calendarLinks, branding) {
             <td style="padding:18px;">
               <div style="font-size:15px;font-weight:800;${paintTextColor(calendarTextColor)}margin:0 0 8px;">Add to Calendar</div>
               <div style="font-size:13px;line-height:1.65;${paintTextColor(calendarTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
-              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${calendarButtonTextStyle}border:1px solid ${buttonColor};font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${calendarButtonTextStyle}border:1px solid ${buttonColor};font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${calendarButtonTextStyle}border:1px solid ${buttonColor};font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
             </td>
           </tr>
         </table>
@@ -1530,27 +1519,14 @@ function buildActionButtons(branding) {
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
   const buttonBackground = buildButtonBackground(buttonColor, tertiaryColor, branding.buttonGradientStyle || "solid");
   const buttonTextColor = branding.buttonTextColor || "#ffffff";
-
-  if (branding.contactPhone) {
-    const digits = branding.contactPhone.replace(/\D/g, "");
-    if (digits) {
-      buttons.push({
-        href: `tel:${digits}`,
-        label: "Call us",
-        background: buttonBackground,
-        color: buttonTextColor,
-        border: buttonColor,
-        style: buttonShapeStyle
-      });
-    }
-  }
+  const buttonTextStyle = `color:${buttonTextColor} !important;-webkit-text-fill-color:${buttonTextColor} !important;text-decoration:none !important;`;
 
   if (branding.websiteUrl) {
       buttons.push({
         href: branding.websiteUrl,
         label: "Visit website",
         background: buttonBackground,
-        color: buttonTextColor,
+        textStyle: buttonTextStyle,
         border: buttonColor,
         style: buttonShapeStyle
     });
@@ -1561,7 +1537,7 @@ function buildActionButtons(branding) {
         href: branding.rescheduleUrl,
         label: "Reschedule",
         background: buttonBackground,
-        color: buttonTextColor,
+        textStyle: buttonTextStyle,
         border: buttonColor,
         style: buttonShapeStyle
       });
@@ -1574,7 +1550,7 @@ function buildActionButtons(branding) {
   return `
     <div data-preview-area="buttons" style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;">
       ${buttons.map(button => `
-        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;${button.style}text-decoration:none;font-size:14px;font-weight:800;background:${button.background};color:${button.color};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
+        <a href="${escapeAttribute(button.href)}" style="display:inline-block;padding:12px 16px;${button.style}${button.textStyle}font-size:14px;font-weight:800;background:${button.background};border:${button.border ? `1px solid ${button.border}` : "none"};">${escapeHtml(button.label)}</a>
       `).join("")}
     </div>
   `;
@@ -1596,15 +1572,16 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
   const buttonColor = branding.buttonColor || accentColor;
   const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
   const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
+  const calendarButtonTextStyle = `color:${calendarButtonTextColor} !important;-webkit-text-fill-color:${calendarButtonTextColor} !important;text-decoration:none !important;`;
 
   return `
     <div data-preview-area="calendar" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.2)};">
       <div style="margin:0 0 10px;color:${calendarTextColor};font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:${calendarTextColor};margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}${calendarButtonTextStyle}background:${buttonBackground};border:1px solid ${buttonColor};font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}${calendarButtonTextStyle}background:${buttonBackground};border:1px solid ${buttonColor};font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}${calendarButtonTextStyle}background:${buttonBackground};border:1px solid ${buttonColor};font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;
