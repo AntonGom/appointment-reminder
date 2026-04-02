@@ -911,10 +911,10 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
     <div style="margin:0;padding:28px 12px;min-width:664px;background:${theme.pageBackground};">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" bgcolor="#ffffff" style="width:640px;max-width:640px;margin:0 auto;background:#ffffff;border:1px solid ${theme.shellBorder};border-radius:28px;overflow:hidden;box-shadow:0 18px 38px rgba(15,23,42,0.12);table-layout:fixed;">
         <tr>
-          <td data-preview-area="hero" bgcolor="${theme.heroBgColor}" style="padding:0;background:${theme.heroBackground};">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${theme.heroBgColor}">
+          <td data-preview-area="hero" bgcolor="${theme.heroBgColor}" style="padding:0;background:${theme.heroBgColor};">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="padding:26px 28px;">
+                <td bgcolor="${theme.heroBgColor}" style="padding:26px 28px;background:${theme.heroBackground};">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
                       <td valign="top" style="width:72px;padding-right:16px;">
