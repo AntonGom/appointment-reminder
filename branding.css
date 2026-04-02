@@ -55,20 +55,22 @@ body[data-page="branding"] .section-card {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px;
-  background: rgba(15, 23, 42, 0.44);
-  backdrop-filter: blur(12px);
+  pointer-events: none;
 }
 
 .branding-editor-card {
-  position: relative;
-  width: min(720px, 100%);
-  max-height: min(88vh, 980px);
+  position: fixed;
+  top: var(--branding-editor-top, 104px);
+  left: var(--branding-editor-left, calc(100vw - 420px));
+  width: min(380px, calc(100vw - 40px));
+  max-height: min(76vh, 780px);
   overflow: auto;
-  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.26);
+  pointer-events: auto;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.24);
+  border: 1px solid rgba(191, 219, 254, 0.68);
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.98), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,247,252,0.98));
 }
 
 .branding-preview-card {
@@ -83,12 +85,34 @@ body[data-page="branding"] .section-card {
   justify-content: space-between;
   gap: 18px;
   margin-bottom: 18px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
 .branding-editor-head h2 {
   margin: 0 0 8px;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1.15;
+}
+
+.branding-editor-head:active {
+  cursor: grabbing;
+}
+
+.branding-editor-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.branding-editor-handle span {
+  display: block;
+  width: 18px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.9);
 }
 
 .branding-editor-close {
@@ -117,6 +141,14 @@ body[data-page="branding"] .section-card {
 
 .branding-editor-grid > [data-editor-group].is-active {
   display: block;
+}
+
+.branding-editor-grid {
+  grid-template-columns: 1fr;
+}
+
+.branding-editor-grid .field-span-2 {
+  grid-column: auto;
 }
 
 .branding-editor-group-head {
@@ -998,7 +1030,7 @@ body[data-branding-motion="float"] .signature-card-aura {
 }
 
 body.branding-modal-open {
-  overflow: hidden;
+  overflow: auto;
 }
 
 @keyframes brandingShine {
@@ -1103,11 +1135,19 @@ body.branding-modal-open {
 
 @media (max-width: 760px) {
   .branding-editor-modal {
+    pointer-events: auto;
+    display: flex;
     align-items: flex-end;
+    justify-content: center;
     padding: 12px;
+    background: rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(8px);
   }
 
   .branding-editor-card {
+    position: relative;
+    top: auto;
+    left: auto;
     width: 100%;
     max-height: 88vh;
     border-radius: 28px 28px 20px 20px;
