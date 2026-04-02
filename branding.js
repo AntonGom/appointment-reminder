@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402g";
+} from "./branding-templates.js?v=20260402h";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -192,8 +192,8 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting the supporting button color used for secondary actions."
   },
   [fieldIds.buttonTextColor]: {
-    iframeAreas: ["buttons", "calendar"],
-    note: "Highlighting the text used inside the action and calendar buttons."
+    iframeAreas: ["buttons"],
+    note: "Highlighting the text used inside the main action buttons."
   },
   [fieldIds.logoUrl]: {
     iframeAreas: ["logo"],
@@ -202,7 +202,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.buttonStyle]: {
     iframeAreas: ["buttons"],
     selectors: ["#branding-preview-subject", ".signature-card-cta"],
-    note: "Highlighting the buttons and chips whose corners change shape."
+    note: "Highlighting the main action buttons whose corners change shape."
   },
   [fieldIds.panelShape]: {
     iframeAreas: ["summary", "details", "calendar"],
@@ -546,6 +546,9 @@ function buildSampleMessage(profile) {
 }
 
 function getDraftBranding() {
+  const showHeroArt = Boolean(getFieldElement(fieldIds.showHeroArt)?.checked);
+  const selectedArtShape = getFieldElement(fieldIds.artShape)?.value || "classic";
+  const effectiveArtShape = showHeroArt && selectedArtShape === "none" ? "classic" : selectedArtShape;
   const rawDraft = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
@@ -570,8 +573,8 @@ function getDraftBranding() {
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
-    showHeroArt: Boolean(getFieldElement(fieldIds.showHeroArt)?.checked),
-    artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
+    showHeroArt,
+    artShape: effectiveArtShape,
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
@@ -628,7 +631,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = normalized.heroGradientStyle;
-  getFieldElement(fieldIds.showHeroArt).checked = normalized.showHeroArt !== false;
+  getFieldElement(fieldIds.showHeroArt).checked = normalized.showHeroArt !== false && normalized.artShape !== "none";
   getFieldElement(fieldIds.artShape).value = normalized.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
@@ -1024,7 +1027,7 @@ function getTertiaryColorHint() {
 }
 
 function getButtonTextColorHint() {
-  return "Changes the text color used on the action and calendar buttons.";
+  return "Changes the text color used on the main action buttons.";
 }
 
 function getShowHeroArtHint() {
@@ -1503,6 +1506,9 @@ async function saveBranding() {
     return;
   }
 
+  const showHeroArt = Boolean(getFieldElement(fieldIds.showHeroArt)?.checked);
+  const selectedArtShape = getFieldElement(fieldIds.artShape)?.value || "classic";
+  const effectiveArtShape = showHeroArt && selectedArtShape === "none" ? "classic" : selectedArtShape;
   const rawBranding = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
@@ -1527,8 +1533,8 @@ async function saveBranding() {
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
-    showHeroArt: Boolean(getFieldElement(fieldIds.showHeroArt)?.checked),
-    artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
+    showHeroArt,
+    artShape: effectiveArtShape,
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
@@ -1679,6 +1685,7 @@ function wireFormInputs() {
   const footerTextColorInput = getFieldElement(fieldIds.footerTextColor);
   const footerTextHexInput = getFieldElement(fieldIds.footerTextHex);
   const artShapeInput = getFieldElement(fieldIds.artShape);
+  const showHeroArtInput = getFieldElement(fieldIds.showHeroArt);
 
   brandingForm.addEventListener("input", event => {
     if (event.target === accentColorInput && accentHexInput) {
@@ -1795,9 +1802,21 @@ function wireFormInputs() {
   });
 
   brandingForm.addEventListener("change", event => {
+    if (event.target === showHeroArtInput && showHeroArtInput?.checked && artShapeInput?.value === "none") {
+      artShapeInput.value = "classic";
+    }
+
     if (event.target === artShapeInput && artShapeInput?.value === "random") {
       previewRandomNonce += 1;
       setStatus("Random art mode is on. The preview will generate fresh geometric art live.", "info");
+    }
+
+    if (event.target === artShapeInput && showHeroArtInput) {
+      if (artShapeInput.value === "none") {
+        showHeroArtInput.checked = false;
+      } else if (!showHeroArtInput.checked) {
+        showHeroArtInput.checked = true;
+      }
     }
 
     if (event.target instanceof HTMLSelectElement) {

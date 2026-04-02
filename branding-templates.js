@@ -574,15 +574,14 @@ function buildSignatureTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
   const hasHeroArt = shouldRenderHeroArt(content.brand);
   const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
+  const heroBackground = buildHeroBackground(content.brand, "signature");
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:34px 16px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.18)}, transparent 34%),
       linear-gradient(180deg, #f6f9ff, #f8fbff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.82);border-radius:34px;overflow:hidden;box-shadow:0 28px 60px rgba(15,23,42,0.16);">
-        <div data-preview-area="hero" style="padding:28px;background:
-          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.88)}, transparent 26%),
-          linear-gradient(135deg, ${content.brand.accentColor} 0%, ${hexToRgba(content.brand.accentColor, 0.72)} 56%, #111827 100%);">
+        <div data-preview-area="hero" style="padding:28px;background:${heroBackground};">
           <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:16px;">
@@ -634,15 +633,14 @@ function buildSpotlightTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
   const hasHeroArt = shouldRenderHeroArt(content.brand);
   const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
+  const heroBackground = buildHeroBackground(content.brand, "spotlight");
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, ${hexToRgba(content.brand.accentColor, 0.12)}, transparent 32%),
       linear-gradient(180deg, #f8fbff, #f6f9ff);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:rgba(255,255,255,0.96);border:1px solid ${hexToRgba(content.brand.accentColor, 0.16)};border-radius:34px;overflow:hidden;box-shadow:0 24px 54px rgba(15,23,42,0.11);">
-        <div data-preview-area="hero" style="padding:24px 26px;background:
-          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.78)}, transparent 20%),
-          linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94) 52%, ${hexToRgba(content.brand.accentColor, 0.1)});border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
+        <div data-preview-area="hero" style="padding:24px 26px;background:${heroBackground};border-bottom:1px solid ${hexToRgba(content.brand.accentColor, 0.14)};">
           <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
@@ -697,15 +695,14 @@ function buildExecutiveTemplate(content, options = {}) {
   const includePreviewStyles = Boolean(options.includePreviewStyles);
   const hasHeroArt = shouldRenderHeroArt(content.brand);
   const heroColumns = hasHeroArt ? "minmax(0, 1fr) 188px" : "minmax(0, 1fr)";
+  const heroBackground = buildHeroBackground(content.brand, "executive");
   return `
     ${includePreviewStyles ? buildPreviewFocusStyles() : ""}
     <div style="margin:0;padding:30px 14px;background:
       radial-gradient(circle at top left, rgba(15,23,42,0.18), transparent 32%),
       linear-gradient(180deg, #eef2f7, #f3f6fb);font-family:Arial, sans-serif;">
       <div style="max-width:700px;margin:0 auto;background:#ffffff;border:1px solid #d5dde8;border-radius:30px;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,0.16);">
-        <div data-preview-area="hero" style="padding:24px 28px;background:
-          radial-gradient(circle at top right, ${hexToRgba(content.brand.secondaryColor, 0.34)}, transparent 24%),
-          linear-gradient(135deg, #0f172a 0%, #182235 54%, #1f2937 100%);border-bottom:4px solid ${content.brand.accentColor};">
+        <div data-preview-area="hero" style="padding:24px 28px;background:${heroBackground};border-bottom:4px solid ${content.brand.accentColor};">
           <div style="display:grid;grid-template-columns:${heroColumns};gap:18px;align-items:center;">
             <div>
               <div style="display:flex;align-items:center;gap:14px;">
@@ -986,41 +983,39 @@ function buildHeroBackground(branding, templateStyle) {
   const accent = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
   const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
   const style = branding.heroGradientStyle || "signature";
-  const executiveTail = "#111827";
-  const spotlightBase = "#ffffff";
-  const signatureGlow = `radial-gradient(circle at 84% 18%, ${hexToRgba(secondary, 0.92)} 0%, ${hexToRgba(secondary, 0.72)} 22%, transparent 48%)`;
-  const executiveGlow = `radial-gradient(circle at 82% 20%, ${secondary} 0%, ${hexToRgba(secondary, 0.82)} 18%, transparent 42%)`;
+  const signatureGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.94)} 0%, ${hexToRgba(secondary, 0.78)} 20%, transparent 46%)`;
+  const executiveGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.7)} 0%, ${hexToRgba(secondary, 0.42)} 18%, transparent 42%)`;
 
   if (templateStyle === "executive") {
     if (style === "solid") {
-      return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.92)} 100%)`;
+      return `linear-gradient(135deg, ${accent} 0%, ${accent} 100%)`;
     }
 
     if (style === "spotlight") {
-      return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${executiveTail} 100%)`;
+      return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.94)} 44%, ${secondary} 100%)`;
     }
 
     if (style === "split") {
       return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
     }
 
-    return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.84)} 32%, ${secondary} 100%)`;
+    return `${executiveGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.9)} 42%, ${secondary} 100%)`;
   }
 
   if (templateStyle === "spotlight") {
     if (style === "solid") {
-      return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.18)} 100%)`;
+      return `linear-gradient(135deg, ${accent} 0%, ${accent} 100%)`;
     }
 
     if (style === "split") {
-      return `linear-gradient(118deg, ${hexToRgba(accent, 0.22)} 0%, ${hexToRgba(accent, 0.22)} 50%, ${secondary} 50%, ${hexToRgba(secondary, 0.92)} 100%)`;
+      return `linear-gradient(118deg, ${accent} 0%, ${accent} 50%, ${secondary} 50%, ${secondary} 100%)`;
     }
 
     if (style === "signature") {
-      return `${signatureGlow}, linear-gradient(135deg, ${hexToRgba(accent, 0.28)} 0%, ${hexToRgba(accent, 0.1)} 28%, ${secondary} 100%)`;
+      return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.72)} 42%, ${secondary} 100%)`;
     }
 
-    return `${signatureGlow}, linear-gradient(135deg, ${hexToRgba(accent, 0.34)} 0%, ${spotlightBase} 100%)`;
+    return `${signatureGlow}, linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent, 0.82)} 54%, ${secondary} 100%)`;
   }
 
   if (style === "solid") {
@@ -1309,13 +1304,13 @@ function buildProductionButtons(branding) {
   }
 
   if (branding.rescheduleUrl) {
-      buttons.push({
+    buttons.push({
       href: branding.rescheduleUrl,
       label: "Reschedule",
-        background: "#0f172a",
-        color: buttonTextColor,
-        border: "#0f172a"
-      });
+      background: tertiaryColor,
+      color: buttonTextColor,
+      border: tertiaryColor
+    });
   }
 
   if (!buttons.length) {
@@ -1339,10 +1334,11 @@ function buildProductionCalendar(calendarLinks, branding) {
   }
 
   const radius = getSafePanelRadius(branding.panelShape);
-  const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
+  const buttonRadius = getSafeButtonRadius("rounded");
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
-  const buttonTextColor = branding.buttonTextColor || "#ffffff";
+  const calendarButtonTextColor = "#ffffff";
+  const googleButtonColor = "#0f766e";
 
   return `
     <tr>
@@ -1352,9 +1348,9 @@ function buildProductionCalendar(calendarLinks, branding) {
             <td style="padding:18px;">
               <div style="font-size:15px;font-weight:800;${paintTextColor(bodyTextColor)}margin:0 0 8px;">Add to Calendar</div>
               <div style="font-size:13px;line-height:1.65;${paintTextColor(bodyTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
-              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor(buttonTextColor)}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor(buttonTextColor)}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.tertiaryColor || "#0f766e"};${paintTextColor(buttonTextColor)}border:1px solid ${branding.tertiaryColor || "#0f766e"};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor(calendarButtonTextColor)}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor(calendarButtonTextColor)}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${googleButtonColor};${paintTextColor(calendarButtonTextColor)}border:1px solid ${googleButtonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
             </td>
           </tr>
         </table>
@@ -1483,7 +1479,7 @@ function buildActionButtons(branding) {
     buttons.push({
         href: branding.rescheduleUrl,
         label: "Reschedule",
-        background: "#0f172a",
+        background: branding.tertiaryColor || "#1f2937",
         color: branding.buttonTextColor || "#ffffff",
         style: buttonShapeStyle
       });
@@ -1512,19 +1508,20 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
     : brandingOrAccent || { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" };
   const accentColor = branding.accentColor || DEFAULT_ACCENT;
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
+  const buttonShapeStyle = buildButtonStyle("rounded");
   const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
-  const buttonTextColor = branding.buttonTextColor || "#ffffff";
+  const calendarButtonTextColor = "#ffffff";
+  const googleButtonColor = "#0f766e";
 
   return `
     <div data-preview-area="calendar" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.2)};">
       <div style="margin:0 0 10px;color:${bodyTextColor};font-size:15px;font-weight:800;">Add to Calendar</div>
       <div style="font-size:13px;line-height:1.65;color:${bodyTextColor};margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${branding.tertiaryColor || "#0f766e"};color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${googleButtonColor};color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;
