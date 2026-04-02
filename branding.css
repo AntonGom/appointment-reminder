@@ -358,6 +358,26 @@ body[data-page="branding"] .section-card {
   cursor: pointer;
 }
 
+.branding-inline-toggle {
+  padding: 4px 0;
+}
+
+.branding-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--branding-ink);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.branding-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--branding-live-accent);
+}
+
 .branding-preview-head h3 {
   margin: 0;
   font-size: 18px;

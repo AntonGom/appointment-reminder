@@ -37,16 +37,22 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     accentColor: "#2563eb",
     headerColor: "#2563eb",
     secondaryColor: "#e8f1ff",
+    heroTextColor: "#ffffff",
     artShapeColor: "#c7dcff",
     panelColor: "#eef4ff",
+    bodyTextColor: "#0f172a",
     detailsColor: "#eef4ff",
     calendarColor: "#eef4ff",
     tertiaryColor: "#1f2937",
+    buttonTextColor: "#ffffff",
+    footerColor: "#f8fafc",
+    footerTextColor: "#64748b",
     buttonStyle: "pill",
     panelShape: "rounded",
     summaryGradientStyle: "soft",
     detailsGradientStyle: "soft",
     calendarGradientStyle: "soft",
+    showHeroArt: true,
     artShape: "classic",
     shapeIntensity: "balanced",
     shineStyle: "on",
@@ -57,16 +63,22 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     accentColor: "#0f766e",
     headerColor: "#0f766e",
     secondaryColor: "#e6fbf4",
+    heroTextColor: "#0f172a",
     artShapeColor: "#66dbc6",
     panelColor: "#ecfbf6",
+    bodyTextColor: "#0f172a",
     detailsColor: "#ecfbf6",
     calendarColor: "#ecfbf6",
     tertiaryColor: "#134e4a",
+    buttonTextColor: "#ffffff",
+    footerColor: "#eff6ff",
+    footerTextColor: "#475569",
     buttonStyle: "rounded",
     panelShape: "rounded",
     summaryGradientStyle: "glow",
     detailsGradientStyle: "soft",
     calendarGradientStyle: "glow",
+    showHeroArt: true,
     artShape: "ribbon",
     shapeIntensity: "soft",
     shineStyle: "on",
@@ -77,16 +89,22 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     accentColor: "#0f172a",
     headerColor: "#0f172a",
     secondaryColor: "#dbe2ea",
+    heroTextColor: "#ffffff",
     artShapeColor: "#94a3b8",
     panelColor: "#edf2f7",
+    bodyTextColor: "#0f172a",
     detailsColor: "#edf2f7",
     calendarColor: "#edf2f7",
     tertiaryColor: "#334155",
+    buttonTextColor: "#ffffff",
+    footerColor: "#0f172a",
+    footerTextColor: "#cbd5e1",
     buttonStyle: "crisp",
     panelShape: "crisp",
     summaryGradientStyle: "split",
     detailsGradientStyle: "soft",
     calendarGradientStyle: "split",
+    showHeroArt: true,
     artShape: "frame",
     shapeIntensity: "bold",
     shineStyle: "off",
@@ -129,11 +147,16 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
   const headerColor = normalizeHexColor(profile?.headerColor) || templatePreset.headerColor || accentColor;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
+  const heroTextColor = normalizeHexColor(profile?.heroTextColor) || templatePreset.heroTextColor || getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" });
   const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
+  const bodyTextColor = normalizeHexColor(profile?.bodyTextColor) || templatePreset.bodyTextColor || "#0f172a";
   const detailsColor = normalizeHexColor(profile?.detailsColor) || templatePreset.detailsColor || panelColor;
   const calendarColor = normalizeHexColor(profile?.calendarColor) || templatePreset.calendarColor || panelColor;
   const tertiaryColor = normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
+  const buttonTextColor = normalizeHexColor(profile?.buttonTextColor) || templatePreset.buttonTextColor || "#ffffff";
+  const footerColor = normalizeHexColor(profile?.footerColor) || templatePreset.footerColor || "#f8fafc";
+  const footerTextColor = normalizeHexColor(profile?.footerTextColor) || templatePreset.footerTextColor || "#64748b";
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const brandingEnabled = profile?.brandingEnabled !== false;
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : templatePreset.buttonStyle || "pill";
@@ -146,6 +169,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const summaryGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.summaryGradientStyle) ? profile.summaryGradientStyle : templatePreset.summaryGradientStyle || "soft";
   const detailsGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.detailsGradientStyle) ? profile.detailsGradientStyle : templatePreset.detailsGradientStyle || "soft";
   const calendarGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.calendarGradientStyle) ? profile.calendarGradientStyle : templatePreset.calendarGradientStyle || "soft";
+  const showHeroArt = profile?.showHeroArt !== false && templatePreset.showHeroArt !== false;
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -159,11 +183,16 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     accentColor,
     headerColor,
     secondaryColor,
+    heroTextColor,
     artShapeColor,
     panelColor,
+    bodyTextColor,
     detailsColor,
     calendarColor,
     tertiaryColor,
+    buttonTextColor,
+    footerColor,
+    footerTextColor,
     logoUrl,
     brandingEnabled,
     buttonStyle,
@@ -176,6 +205,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     summaryGradientStyle,
     detailsGradientStyle,
     calendarGradientStyle,
+    showHeroArt,
     contactEmail,
     contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
     websiteUrl,
@@ -259,41 +289,44 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const parsed = parseReminderMessage(message);
   const surfaceStyle = buildSurfaceStyle(branding.panelShape);
   const summaryCount = Math.min(parsed.summary.length, 3);
-  const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:#0f172a;margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
-  const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const buttonTextColor = branding.buttonTextColor || "#ffffff";
+  const footerTextColor = branding.footerTextColor || "#64748b";
+  const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:${bodyTextColor};margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
+  const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:${bodyTextColor};margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
     ? `<div data-preview-area="summary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
           <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:${buildSectionBackground(branding.panelColor, branding.summaryGradientStyle, 0.48)};border:1px solid ${hexToRgba(branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${branding.accentColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.45;">${escapeHtml(item.value)}</div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${bodyTextColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:15px;font-weight:700;color:${bodyTextColor};line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
     ? `<div data-preview-area="details" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin:0 0 8px;">Additional details</div>
-        <div style="font-size:15px;line-height:1.7;color:#0f172a;">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${bodyTextColor};margin:0 0 8px;">Additional details</div>
+        <div style="font-size:15px;line-height:1.7;color:${bodyTextColor};">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
     : "";
   const bodyHtml = parsed.body.length
-    ? parsed.body.map(paragraph => `<p style="margin:0 0 14px;font-size:15px;line-height:1.75;color:#334155;">${escapeHtml(paragraph)}</p>`).join("")
+    ? parsed.body.map(paragraph => `<p style="margin:0 0 14px;font-size:15px;line-height:1.75;color:${bodyTextColor};">${escapeHtml(paragraph)}</p>`).join("")
     : "";
   const contactPrompt = parsed.contactPrompt
-    ? `<p style="margin:0 0 18px;font-size:15px;line-height:1.75;color:#334155;">${escapeHtml(parsed.contactPrompt)}</p>`
+    ? `<p style="margin:0 0 18px;font-size:15px;line-height:1.75;color:${bodyTextColor};">${escapeHtml(parsed.contactPrompt)}</p>`
     : "";
   const closing = parsed.closing
-    ? `<div style="font-size:15px;font-weight:700;color:#0f172a;margin-top:8px;">${escapeHtml(parsed.closing)}</div>`
+    ? `<div style="font-size:15px;font-weight:700;color:${bodyTextColor};margin-top:8px;">${escapeHtml(parsed.closing)}</div>`
     : "";
   const ctaButtons = buildActionButtons(branding);
   const calendarSection = buildCalendarSection(calendarLinks, branding);
   const footerContact = buildFooterContactLine(branding);
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
   const heroLabel = escapeHtml(branding.headerLabel || "Appointment reminder");
-  const tagline = branding.tagline ? `<div style="font-size:14px;line-height:1.65;color:#dbe7ff;margin-top:8px;">${escapeHtml(branding.tagline)}</div>` : "";
+  const tagline = branding.tagline ? `<div style="font-size:14px;line-height:1.65;color:${branding.heroTextColor};margin-top:8px;">${escapeHtml(branding.tagline)}</div>` : "";
   const logoMarkup = branding.logoUrl
     ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${businessName} logo" style="width:52px;height:52px;border-radius:18px;display:block;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.35);">`
-    : `<div style="width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.24);color:#ffffff;font-size:18px;font-weight:800;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
+    : `<div style="width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.24);color:${branding.heroTextColor};font-size:18px;font-weight:800;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
 
   return {
     brand: branding,
@@ -301,6 +334,9 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     brandTitle: businessName,
     heroLabel,
     tagline,
+    bodyTextColor,
+    buttonTextColor,
+    footerTextColor,
     greeting,
     intro,
     summaryHtml,
@@ -364,7 +400,7 @@ function buildHeroArtBlock(branding, options = {}) {
 
 function shouldRenderHeroArt(branding) {
   const artShape = branding?.resolvedArtShape || branding?.artShape || "classic";
-  return artShape !== "none";
+  return branding?.showHeroArt !== false && artShape !== "none";
 }
 
 function buildHeroArtShape({ artShape, branding, shapeProfile, accentColor, shardColor, shardSecondary, lineColor }) {
@@ -552,15 +588,15 @@ function buildSignatureTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:16px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:rgba(219,234,254,0.92);">${content.heroLabel}</div>
-                  <div style="font-size:31px;line-height:1.02;font-weight:800;color:#ffffff;margin-top:6px;">${content.brandTitle}</div>
+                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  <div style="font-size:31px;line-height:1.02;font-weight:800;color:${content.brand.heroTextColor};margin-top:6px;">${content.brandTitle}</div>
                 </div>
               </div>
               ${content.tagline}
               ${buildHeroContactChips(content.brand, {
                 background: "rgba(255,255,255,0.14)",
                 border: "rgba(255,255,255,0.2)",
-                color: "#ffffff"
+                color: content.brand.heroTextColor
               })}
             </div>
             ${hasHeroArt ? buildHeroArtBlock(content.brand, {
@@ -585,8 +621,8 @@ function buildSignatureTemplate(content, options = {}) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:rgba(248,250,252,0.92);color:#64748b;font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
+        <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
+          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
       </div>
@@ -612,15 +648,15 @@ function buildSpotlightTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.accentColor};">${content.heroLabel}</div>
-                  <div style="font-size:30px;line-height:1.03;font-weight:800;color:#0f172a;margin-top:5px;">${content.brandTitle}</div>
+                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  <div style="font-size:30px;line-height:1.03;font-weight:800;color:${content.brand.heroTextColor};margin-top:5px;">${content.brandTitle}</div>
                 </div>
               </div>
-              ${content.brand.tagline ? `<div style="font-size:14px;line-height:1.7;color:#475569;margin-top:10px;">${escapeHtml(content.brand.tagline)}</div>` : ""}
+              ${content.brand.tagline ? `<div style="font-size:14px;line-height:1.7;color:${content.brand.heroTextColor};margin-top:10px;">${escapeHtml(content.brand.tagline)}</div>` : ""}
               ${buildHeroContactChips(content.brand, {
                 background: "rgba(255,255,255,0.78)",
                 border: hexToRgba(content.brand.accentColor, 0.16),
-                color: "#0f172a"
+                color: content.brand.heroTextColor
               })}
             </div>
             ${hasHeroArt ? buildHeroArtBlock(content.brand, {
@@ -648,8 +684,8 @@ function buildSpotlightTemplate(content, options = {}) {
           ${content.calendarSection}
           <div style="margin-top:18px;">${content.closing}</div>
         </div>
-        <div data-preview-area="footer" style="padding:18px 28px;background:#eff6ff;border-top:1px solid #dbeafe;color:#475569;font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">${content.brandTitle}</div>
+        <div data-preview-area="footer" style="padding:18px 28px;background:${content.brand.footerColor};border-top:1px solid #dbeafe;color:${content.footerTextColor};font-size:13px;line-height:1.7;">
+          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
       </div>
@@ -675,15 +711,15 @@ function buildExecutiveTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">${content.heroLabel}</div>
-                  <div style="font-size:30px;line-height:1.04;font-weight:800;color:#ffffff;margin-top:4px;">${content.brandTitle}</div>
+                  <div data-preview-area="hero-label" style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  <div style="font-size:30px;line-height:1.04;font-weight:800;color:${content.brand.heroTextColor};margin-top:4px;">${content.brandTitle}</div>
                 </div>
               </div>
-              <div style="font-size:14px;line-height:1.7;color:#cbd5e1;margin-top:10px;">${escapeHtml(content.brand.tagline || "Professional reminders for a polished client experience.")}</div>
+              <div style="font-size:14px;line-height:1.7;color:${content.brand.heroTextColor};margin-top:10px;">${escapeHtml(content.brand.tagline || "Professional reminders for a polished client experience.")}</div>
               ${buildHeroContactChips(content.brand, {
                 background: "rgba(255,255,255,0.08)",
                 border: "rgba(148,163,184,0.24)",
-                color: "#e2e8f0"
+                color: content.brand.heroTextColor
               })}
             </div>
             ${hasHeroArt ? buildHeroArtBlock(content.brand, {
@@ -709,8 +745,8 @@ function buildExecutiveTemplate(content, options = {}) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div data-preview-area="footer" style="padding:18px 26px;background:#0f172a;color:#cbd5e1;font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:#ffffff;margin-bottom:4px;">${content.brandTitle}</div>
+        <div data-preview-area="footer" style="padding:18px 26px;background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
+          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
         </div>
       </div>
@@ -749,13 +785,14 @@ function buildDefaultReminderEmail(message, calendarLinks, options = {}) {
 function buildProductionBrandedEmail({ message, calendarLinks, branding, includePreviewStyles = false }) {
   const parsed = parseReminderMessage(message);
   const theme = getProductionTheme(branding);
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
   const summaryHtml = buildProductionSummary(parsed.summary, branding);
   const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding) : "";
   const hasHeroArt = shouldRenderHeroArt(branding);
   const bodyHtml = parsed.body.length
     ? parsed.body.map(paragraph => `
         <tr>
-          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
+          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
             ${escapeHtml(paragraph)}
           </td>
         </tr>
@@ -764,7 +801,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const contactPromptHtml = parsed.contactPrompt
     ? `
       <tr>
-        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
+        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
           ${escapeHtml(parsed.contactPrompt)}
         </td>
       </tr>
@@ -773,7 +810,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const closingHtml = parsed.closing
     ? `
       <tr>
-        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;${paintTextColor("#0f172a")}">
+        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;${paintTextColor(bodyTextColor)}">
           ${escapeHtml(parsed.closing)}
         </td>
       </tr>
@@ -841,13 +878,13 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           <td style="padding:28px 28px 14px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor("#0f172a")}">
+                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor(bodyTextColor)}">
                   ${escapeHtml(parsed.greeting || "Hello,")}
                 </td>
               </tr>
               ${parsed.intro ? `
                 <tr>
-                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;${paintTextColor("#334155")}">
+                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
                     ${escapeHtml(parsed.intro)}
                   </td>
                 </tr>
@@ -1111,10 +1148,13 @@ function getProductionTheme(branding) {
   const artColor = branding.artShapeColor || branding.accentColor || DEFAULT_ACCENT;
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
   const headerColor = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
-  const darkHeroText = getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" }) === "#0f172a";
-  const labelColor = darkHeroText ? hexToRgba(branding.accentColor || headerColor, 0.92) : "rgba(255,255,255,0.82)";
-  const titleColor = darkHeroText ? "#0f172a" : "#ffffff";
-  const supportingHeroColor = darkHeroText ? "#334155" : "rgba(255,255,255,0.84)";
+  const heroTextColor = branding.heroTextColor || getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" });
+  const supportingHeroColor = heroTextColor;
+  const labelColor = heroTextColor;
+  const titleColor = heroTextColor;
+  const footerColor = branding.footerTextColor || "#64748b";
+  const footerBackground = branding.footerColor || "#f8fafc";
+  const footerTitleColor = footerColor;
 
   if (branding.templateStyle === "executive") {
     return {
@@ -1132,10 +1172,10 @@ function getProductionTheme(branding) {
       markText: "#ffffff",
       heroLineColor: "rgba(255,255,255,0.24)",
       heroMarkCore: `linear-gradient(140deg, rgba(15,23,42,0.92), ${hexToRgba(artColor, 0.34)})`,
-      footerBackground: `linear-gradient(180deg, #0f172a 0%, ${hexToRgba(tertiaryColor, 0.28)} 100%)`,
-      footerBgColor: "#0f172a",
-      footerColor: "#cbd5e1",
-      footerTitleColor: "#ffffff"
+      footerBackground,
+      footerBgColor: footerBackground,
+      footerColor,
+      footerTitleColor
     };
   }
 
@@ -1155,10 +1195,10 @@ function getProductionTheme(branding) {
       markText: "#0f172a",
       heroLineColor: "rgba(255,255,255,0.86)",
       heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(artColor, 0.2)} 44%, ${hexToRgba(branding.secondaryColor, 0.72)} 100%)`,
-      footerBackground: `linear-gradient(180deg, #eff6ff 0%, ${hexToRgba(tertiaryColor, 0.12)} 100%)`,
-      footerBgColor: "#eff6ff",
-      footerColor: "#475569",
-      footerTitleColor: "#0f172a"
+      footerBackground,
+      footerBgColor: footerBackground,
+      footerColor,
+      footerTitleColor
     };
   }
 
@@ -1177,10 +1217,10 @@ function getProductionTheme(branding) {
     markText: "#0f172a",
     heroLineColor: "rgba(255,255,255,0.76)",
     heroMarkCore: `linear-gradient(140deg, rgba(255,255,255,0.94), ${hexToRgba(artColor, 0.18)} 42%, ${hexToRgba(branding.secondaryColor, 0.8)} 100%)`,
-    footerBackground: `linear-gradient(180deg, #f8fafc 0%, ${hexToRgba(tertiaryColor, 0.12)} 100%)`,
-    footerBgColor: "#f8fafc",
-    footerColor: "#64748b",
-    footerTitleColor: "#0f172a"
+    footerBackground,
+    footerBgColor: footerBackground,
+    footerColor,
+    footerTitleColor
   };
 }
 
@@ -1191,6 +1231,7 @@ function buildProductionSummary(summaryItems, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
   const visibleItems = summaryItems.slice(0, 3);
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
@@ -1198,8 +1239,8 @@ function buildProductionSummary(summaryItems, branding) {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildSectionBackground(panelColor, branding.summaryGradientStyle, 0.44)};table-layout:fixed;">
         <tr>
           <td height="106" valign="top" style="height:106px;padding:14px 14px 12px;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor("#0f172a")}">${escapeHtml(item.value)}</div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(bodyTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(bodyTextColor)}">${escapeHtml(item.value)}</div>
           </td>
         </tr>
       </table>
@@ -1220,6 +1261,7 @@ function buildProductionSummary(summaryItems, branding) {
 function buildProductionDetails(details, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
 
   return `
     <tr>
@@ -1227,8 +1269,8 @@ function buildProductionDetails(details, branding) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(detailsColor, 0.38)};${radius}background:${buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5)};">
           <tr>
             <td style="padding:16px 18px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Additional details</div>
-              <div style="font-size:15px;line-height:1.7;${paintTextColor("#0f172a")}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(bodyTextColor)}margin:0 0 8px;">Additional details</div>
+              <div style="font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
         </table>
@@ -1241,7 +1283,7 @@ function buildProductionButtons(branding) {
   const buttons = [];
   const radius = getSafeButtonRadius(branding.buttonStyle);
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
-  const tertiaryText = getReadableTextColor(tertiaryColor);
+  const buttonTextColor = branding.buttonTextColor || "#ffffff";
 
   if (branding.contactPhone) {
     const digits = branding.contactPhone.replace(/\D/g, "");
@@ -1250,7 +1292,7 @@ function buildProductionButtons(branding) {
         href: `tel:${digits}`,
         label: "Call us",
         background: branding.accentColor,
-        color: "#ffffff",
+        color: buttonTextColor,
         border: branding.accentColor
       });
     }
@@ -1261,19 +1303,19 @@ function buildProductionButtons(branding) {
       href: branding.websiteUrl,
       label: "Visit website",
       background: tertiaryColor,
-      color: tertiaryText,
+      color: buttonTextColor,
       border: tertiaryColor
     });
   }
 
   if (branding.rescheduleUrl) {
-    buttons.push({
+      buttons.push({
       href: branding.rescheduleUrl,
       label: "Reschedule",
-      background: "#0f172a",
-      color: "#ffffff",
-      border: "#0f172a"
-    });
+        background: "#0f172a",
+        color: buttonTextColor,
+        border: "#0f172a"
+      });
   }
 
   if (!buttons.length) {
@@ -1299,6 +1341,8 @@ function buildProductionCalendar(calendarLinks, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const buttonTextColor = branding.buttonTextColor || "#ffffff";
 
   return `
     <tr>
@@ -1306,11 +1350,11 @@ function buildProductionCalendar(calendarLinks, branding) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.38)};">
           <tr>
             <td style="padding:18px;">
-              <div style="font-size:15px;font-weight:800;${paintTextColor(branding.accentColor)}margin:0 0 8px;">Add to Calendar</div>
-              <div style="font-size:13px;line-height:1.65;${paintTextColor("#475569")}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
-              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor("#ffffff")}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor("#ffffff")}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#0f766e;${paintTextColor("#ffffff")}border:1px solid #0f766e;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+              <div style="font-size:15px;font-weight:800;${paintTextColor(bodyTextColor)}margin:0 0 8px;">Add to Calendar</div>
+              <div style="font-size:13px;line-height:1.65;${paintTextColor(bodyTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor(buttonTextColor)}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor(buttonTextColor)}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.tertiaryColor || "#0f766e"};${paintTextColor(buttonTextColor)}border:1px solid ${branding.tertiaryColor || "#0f766e"};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
             </td>
           </tr>
         </table>
@@ -1428,8 +1472,8 @@ function buildActionButtons(branding) {
       buttons.push({
         href: branding.websiteUrl,
         label: "Visit website",
-        background: `linear-gradient(135deg, ${hexToRgba(branding.secondaryColor, 0.92)}, rgba(255,255,255,0.98))`,
-        color: "#0f172a",
+        background: branding.tertiaryColor || "#1f2937",
+        color: branding.buttonTextColor || "#ffffff",
         border: hexToRgba(branding.accentColor, 0.2),
         style: buttonShapeStyle
     });
@@ -1437,10 +1481,10 @@ function buildActionButtons(branding) {
 
   if (branding.rescheduleUrl) {
     buttons.push({
-      href: branding.rescheduleUrl,
+        href: branding.rescheduleUrl,
         label: "Reschedule",
         background: "#0f172a",
-        color: "#ffffff",
+        color: branding.buttonTextColor || "#ffffff",
         style: buttonShapeStyle
       });
     }
@@ -1470,15 +1514,17 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
   const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
+  const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const buttonTextColor = branding.buttonTextColor || "#ffffff";
 
   return `
     <div data-preview-area="calendar" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.2)};">
-      <div style="margin:0 0 10px;color:#0f172a;font-size:15px;font-weight:800;">Add to Calendar</div>
-      <div style="font-size:13px;line-height:1.65;color:#475569;margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+      <div style="margin:0 0 10px;color:${bodyTextColor};font-size:15px;font-weight:800;">Add to Calendar</div>
+      <div style="font-size:13px;line-height:1.65;color:${bodyTextColor};margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#0f766e;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${branding.tertiaryColor || "#0f766e"};color:${buttonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;

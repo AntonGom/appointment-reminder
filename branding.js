@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402e";
+} from "./branding-templates.js?v=20260402g";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -56,11 +56,15 @@ const fieldIds = {
   headerHex: "branding-header-hex",
   secondaryColor: "branding-secondary-color",
   secondaryHex: "branding-secondary-hex",
+  heroTextColor: "branding-hero-text-color",
+  heroTextHex: "branding-hero-text-hex",
   artShapeColor: "branding-art-shape-color",
   artShapeHex: "branding-art-shape-hex",
   panelColor: "branding-panel-color",
   panelHex: "branding-panel-hex",
   summaryGradientStyle: "branding-summary-gradient",
+  bodyTextColor: "branding-body-text-color",
+  bodyTextHex: "branding-body-text-hex",
   detailsColor: "branding-details-color",
   detailsHex: "branding-details-hex",
   detailsGradientStyle: "branding-details-gradient",
@@ -69,10 +73,13 @@ const fieldIds = {
   calendarGradientStyle: "branding-calendar-gradient",
   tertiaryColor: "branding-tertiary-color",
   tertiaryHex: "branding-tertiary-hex",
+  buttonTextColor: "branding-button-text-color",
+  buttonTextHex: "branding-button-text-hex",
   logoUrl: "branding-logo-url",
   buttonStyle: "branding-button-style",
   panelShape: "branding-panel-shape",
   heroGradientStyle: "branding-hero-gradient",
+  showHeroArt: "branding-show-hero-art",
   artShape: "branding-art-shape",
   shapeIntensity: "branding-shape-intensity",
   shineStyle: "branding-shine-style",
@@ -80,24 +87,34 @@ const fieldIds = {
   contactEmail: "branding-contact-email",
   contactPhone: "branding-contact-phone",
   websiteUrl: "branding-website-url",
-  rescheduleUrl: "branding-reschedule-url"
+  rescheduleUrl: "branding-reschedule-url",
+  footerColor: "branding-footer-color",
+  footerHex: "branding-footer-hex",
+  footerTextColor: "branding-footer-text-color",
+  footerTextHex: "branding-footer-text-hex"
 };
 
 const helperTextIds = {
   headerColor: "branding-header-color-hint",
   secondaryColor: "branding-secondary-color-hint",
+  heroTextColor: "branding-hero-text-color-hint",
   artShapeColor: "branding-art-shape-color-hint",
   panelColor: "branding-panel-color-hint",
+  bodyTextColor: "branding-body-text-color-hint",
   detailsColor: "branding-details-color-hint",
   calendarColor: "branding-calendar-color-hint",
   tertiaryColor: "branding-tertiary-color-hint",
+  buttonTextColor: "branding-button-text-color-hint",
+  showHeroArt: "branding-show-hero-art-hint",
   buttonStyle: "branding-button-style-hint",
   panelShape: "branding-panel-shape-hint",
   heroGradientStyle: "branding-hero-gradient-hint",
   artShape: "branding-art-shape-hint",
   shapeIntensity: "branding-shape-intensity-hint",
   shineStyle: "branding-shine-style-hint",
-  motionStyle: "branding-motion-style-hint"
+  motionStyle: "branding-motion-style-hint",
+  footerColor: "branding-footer-color-hint",
+  footerTextColor: "branding-footer-text-color-hint"
 };
 
 const defaultPreviewFocusNote = "Click or focus a setting and the preview will highlight the part it changes.";
@@ -134,6 +151,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["hero-secondary", "art"],
     note: "Highlighting the supporting color accent inside the top section and hero art."
   },
+  [fieldIds.heroTextColor]: {
+    iframeAreas: ["hero", "hero-label", "contact"],
+    note: "Highlighting the text that appears in the top company section."
+  },
   [fieldIds.artShapeColor]: {
     iframeAreas: ["art"],
     note: "Highlighting the geometric art that uses your dedicated art color."
@@ -145,6 +166,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.summaryGradientStyle]: {
     iframeAreas: ["summary"],
     note: "Highlighting how the summary cards blend their background color."
+  },
+  [fieldIds.bodyTextColor]: {
+    iframeAreas: ["summary", "details", "calendar"],
+    note: "Highlighting the main text used in the cards and body sections."
   },
   [fieldIds.detailsColor]: {
     iframeAreas: ["details"],
@@ -163,8 +188,12 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting how the add-to-calendar section blends its background."
   },
   [fieldIds.tertiaryColor]: {
-    iframeAreas: ["buttons", "footer"],
-    note: "Highlighting the supporting accent areas like the website button and footer tint."
+    iframeAreas: ["buttons"],
+    note: "Highlighting the supporting button color used for secondary actions."
+  },
+  [fieldIds.buttonTextColor]: {
+    iframeAreas: ["buttons", "calendar"],
+    note: "Highlighting the text used inside the action and calendar buttons."
   },
   [fieldIds.logoUrl]: {
     iframeAreas: ["logo"],
@@ -182,6 +211,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.heroGradientStyle]: {
     iframeAreas: ["hero"],
     note: "Highlighting the top company section where the main and secondary colors blend together."
+  },
+  [fieldIds.showHeroArt]: {
+    iframeAreas: ["art"],
+    note: "Highlighting the hero art area that can be shown or hidden in the top section."
   },
   [fieldIds.artShape]: {
     iframeAreas: ["art"],
@@ -219,6 +252,14 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.rescheduleUrl]: {
     iframeAreas: ["buttons"],
     note: "Highlighting the reschedule button area."
+  },
+  [fieldIds.footerColor]: {
+    iframeAreas: ["footer"],
+    note: "Highlighting the footer background and tint at the bottom of the email."
+  },
+  [fieldIds.footerTextColor]: {
+    iframeAreas: ["footer"],
+    note: "Highlighting the footer text color."
   }
 };
 
@@ -233,7 +274,7 @@ const PREVIEW_AREA_TO_FIELD_ID = {
   details: fieldIds.detailsColor,
   calendar: fieldIds.calendarColor,
   buttons: fieldIds.buttonStyle,
-  footer: fieldIds.tertiaryColor
+  footer: fieldIds.footerColor
 };
 
 const FIELD_TO_EDITOR_GROUP = {
@@ -247,7 +288,10 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.headerHex]: "hero",
   [fieldIds.secondaryColor]: "hero",
   [fieldIds.secondaryHex]: "hero",
+  [fieldIds.heroTextColor]: "hero",
+  [fieldIds.heroTextHex]: "hero",
   [fieldIds.heroGradientStyle]: "hero",
+  [fieldIds.showHeroArt]: "hero",
   [fieldIds.artShape]: "art",
   [fieldIds.artShapeColor]: "art",
   [fieldIds.artShapeHex]: "art",
@@ -257,6 +301,8 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.panelColor]: "summary",
   [fieldIds.panelHex]: "summary",
   [fieldIds.summaryGradientStyle]: "summary",
+  [fieldIds.bodyTextColor]: "summary",
+  [fieldIds.bodyTextHex]: "summary",
   [fieldIds.detailsColor]: "details",
   [fieldIds.detailsHex]: "details",
   [fieldIds.detailsGradientStyle]: "details",
@@ -267,8 +313,14 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.buttonStyle]: "buttons",
   [fieldIds.tertiaryColor]: "buttons",
   [fieldIds.tertiaryHex]: "buttons",
+  [fieldIds.buttonTextColor]: "buttons",
+  [fieldIds.buttonTextHex]: "buttons",
   [fieldIds.websiteUrl]: "buttons",
   [fieldIds.rescheduleUrl]: "buttons",
+  [fieldIds.footerColor]: "footer",
+  [fieldIds.footerHex]: "footer",
+  [fieldIds.footerTextColor]: "footer",
+  [fieldIds.footerTextHex]: "footer",
   [fieldIds.logoUrl]: "contact",
   [fieldIds.contactEmail]: "contact",
   [fieldIds.contactPhone]: "contact"
@@ -285,7 +337,7 @@ const PREVIEW_AREA_TO_EDITOR_GROUP = {
   details: "details",
   calendar: "calendar",
   buttons: "buttons",
-  footer: "buttons"
+  footer: "footer"
 };
 
 const EDITOR_GROUP_COPY = {
@@ -314,8 +366,12 @@ const EDITOR_GROUP_COPY = {
     copy: "Adjust the color, gradient, and button feel of the add-to-calendar section."
   },
   buttons: {
-    title: "Button and footer controls",
-    copy: "Adjust the button shape, supporting accent color, and the website or reschedule links that appear lower in the email."
+    title: "Button controls",
+    copy: "Adjust the button shape, supporting button color, text color, and the website or reschedule links."
+  },
+  footer: {
+    title: "Footer controls",
+    copy: "Adjust the footer background tint and text color shown at the bottom of the email."
   },
   contact: {
     title: "Logo and contact controls",
@@ -499,18 +555,22 @@ function getDraftBranding() {
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
+    bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
     detailsColor: getFieldElement(fieldIds.detailsColor)?.value || getFieldElement(fieldIds.detailsHex)?.value || "",
     detailsGradientStyle: getFieldElement(fieldIds.detailsGradientStyle)?.value || "soft",
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
+    buttonTextColor: getFieldElement(fieldIds.buttonTextColor)?.value || getFieldElement(fieldIds.buttonTextHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
+    showHeroArt: Boolean(getFieldElement(fieldIds.showHeroArt)?.checked),
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -518,7 +578,9 @@ function getDraftBranding() {
     contactEmail: getFieldElement(fieldIds.contactEmail)?.value || "",
     contactPhone: getFieldElement(fieldIds.contactPhone)?.value || "",
     websiteUrl: getFieldElement(fieldIds.websiteUrl)?.value || "",
-    rescheduleUrl: getFieldElement(fieldIds.rescheduleUrl)?.value || ""
+    rescheduleUrl: getFieldElement(fieldIds.rescheduleUrl)?.value || "",
+    footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
+    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
   };
 
   return normalizeBrandingProfile(rawDraft, {
@@ -543,11 +605,15 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.headerHex).value = normalized.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = normalized.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
+  getFieldElement(fieldIds.heroTextColor).value = normalized.heroTextColor;
+  getFieldElement(fieldIds.heroTextHex).value = normalized.heroTextColor;
   getFieldElement(fieldIds.artShapeColor).value = normalized.artShapeColor;
   getFieldElement(fieldIds.artShapeHex).value = normalized.artShapeColor;
   getFieldElement(fieldIds.panelColor).value = normalized.panelColor;
   getFieldElement(fieldIds.panelHex).value = normalized.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = normalized.summaryGradientStyle;
+  getFieldElement(fieldIds.bodyTextColor).value = normalized.bodyTextColor;
+  getFieldElement(fieldIds.bodyTextHex).value = normalized.bodyTextColor;
   getFieldElement(fieldIds.detailsColor).value = normalized.detailsColor;
   getFieldElement(fieldIds.detailsHex).value = normalized.detailsColor;
   getFieldElement(fieldIds.detailsGradientStyle).value = normalized.detailsGradientStyle;
@@ -556,10 +622,13 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.calendarGradientStyle).value = normalized.calendarGradientStyle;
   getFieldElement(fieldIds.tertiaryColor).value = normalized.tertiaryColor;
   getFieldElement(fieldIds.tertiaryHex).value = normalized.tertiaryColor;
+  getFieldElement(fieldIds.buttonTextColor).value = normalized.buttonTextColor;
+  getFieldElement(fieldIds.buttonTextHex).value = normalized.buttonTextColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = normalized.heroGradientStyle;
+  getFieldElement(fieldIds.showHeroArt).checked = normalized.showHeroArt !== false;
   getFieldElement(fieldIds.artShape).value = normalized.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
@@ -568,6 +637,10 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.contactPhone).value = branding.contactPhone || "";
   getFieldElement(fieldIds.websiteUrl).value = branding.websiteUrl || "";
   getFieldElement(fieldIds.rescheduleUrl).value = branding.rescheduleUrl || "";
+  getFieldElement(fieldIds.footerColor).value = normalized.footerColor;
+  getFieldElement(fieldIds.footerHex).value = normalized.footerColor;
+  getFieldElement(fieldIds.footerTextColor).value = normalized.footerTextColor;
+  getFieldElement(fieldIds.footerTextHex).value = normalized.footerTextColor;
   updateHelperHints();
   syncTemplateCards();
   renderPreview();
@@ -601,11 +674,15 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.headerHex).value = preset.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = preset.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
+  getFieldElement(fieldIds.heroTextColor).value = preset.heroTextColor;
+  getFieldElement(fieldIds.heroTextHex).value = preset.heroTextColor;
   getFieldElement(fieldIds.artShapeColor).value = preset.artShapeColor;
   getFieldElement(fieldIds.artShapeHex).value = preset.artShapeColor;
   getFieldElement(fieldIds.panelColor).value = preset.panelColor;
   getFieldElement(fieldIds.panelHex).value = preset.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = preset.summaryGradientStyle;
+  getFieldElement(fieldIds.bodyTextColor).value = preset.bodyTextColor;
+  getFieldElement(fieldIds.bodyTextHex).value = preset.bodyTextColor;
   getFieldElement(fieldIds.detailsColor).value = preset.detailsColor;
   getFieldElement(fieldIds.detailsHex).value = preset.detailsColor;
   getFieldElement(fieldIds.detailsGradientStyle).value = preset.detailsGradientStyle;
@@ -614,13 +691,20 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.calendarGradientStyle).value = preset.calendarGradientStyle;
   getFieldElement(fieldIds.tertiaryColor).value = preset.tertiaryColor;
   getFieldElement(fieldIds.tertiaryHex).value = preset.tertiaryColor;
+  getFieldElement(fieldIds.buttonTextColor).value = preset.buttonTextColor;
+  getFieldElement(fieldIds.buttonTextHex).value = preset.buttonTextColor;
   getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = preset.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = preset.heroGradientStyle;
+  getFieldElement(fieldIds.showHeroArt).checked = preset.showHeroArt !== false;
   getFieldElement(fieldIds.artShape).value = preset.artShape;
   getFieldElement(fieldIds.shapeIntensity).value = preset.shapeIntensity;
   getFieldElement(fieldIds.shineStyle).value = preset.shineStyle;
   getFieldElement(fieldIds.motionStyle).value = preset.motionStyle;
+  getFieldElement(fieldIds.footerColor).value = preset.footerColor;
+  getFieldElement(fieldIds.footerHex).value = preset.footerColor;
+  getFieldElement(fieldIds.footerTextColor).value = preset.footerTextColor;
+  getFieldElement(fieldIds.footerTextHex).value = preset.footerTextColor;
 }
 
 function renderPreview() {
@@ -875,11 +959,15 @@ function applyLiveBrandingState(branding) {
 function updateHelperHints() {
   updateHelperHint(helperTextIds.headerColor, getHeaderColorHint());
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
+  updateHelperHint(helperTextIds.heroTextColor, getHeroTextColorHint());
   updateHelperHint(helperTextIds.artShapeColor, getArtShapeColorHint());
   updateHelperHint(helperTextIds.panelColor, getPanelColorHint());
+  updateHelperHint(helperTextIds.bodyTextColor, getBodyTextColorHint());
   updateHelperHint(helperTextIds.detailsColor, getDetailsColorHint());
   updateHelperHint(helperTextIds.calendarColor, getCalendarColorHint());
   updateHelperHint(helperTextIds.tertiaryColor, getTertiaryColorHint());
+  updateHelperHint(helperTextIds.buttonTextColor, getButtonTextColorHint());
+  updateHelperHint(helperTextIds.showHeroArt, getShowHeroArtHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
   updateHelperHint(helperTextIds.panelShape, getPanelShapeHint());
   updateHelperHint(helperTextIds.heroGradientStyle, getHeroGradientHint());
@@ -887,6 +975,8 @@ function updateHelperHints() {
   updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
   updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
   updateHelperHint(helperTextIds.motionStyle, getMotionStyleHint());
+  updateHelperHint(helperTextIds.footerColor, getFooterColorHint());
+  updateHelperHint(helperTextIds.footerTextColor, getFooterTextColorHint());
 }
 
 function updateHelperHint(elementId, text) {
@@ -905,12 +995,20 @@ function getSecondaryColorHint() {
   return "Used as the support accent inside the top section and hero art.";
 }
 
+function getHeroTextColorHint() {
+  return "Changes the business name, tagline, and contact text inside the top section.";
+}
+
 function getArtShapeColorHint() {
   return "Changes the geometric art itself without recoloring the entire header.";
 }
 
 function getPanelColorHint() {
   return "Used behind the date, time, and location summary cards.";
+}
+
+function getBodyTextColorHint() {
+  return "Changes the main text used inside the body cards and message sections.";
 }
 
 function getDetailsColorHint() {
@@ -922,7 +1020,25 @@ function getCalendarColorHint() {
 }
 
 function getTertiaryColorHint() {
-  return "Used for the supporting accent areas like the website button and footer tint.";
+  return "Used for the supporting button color on secondary actions.";
+}
+
+function getButtonTextColorHint() {
+  return "Changes the text color used on the action and calendar buttons.";
+}
+
+function getShowHeroArtHint() {
+  return getFieldElement(fieldIds.showHeroArt)?.checked
+    ? "Hero art is on. Turn this off for a cleaner top section with no artwork."
+    : "Hero art is off. Turn this on to show the geometric artwork again.";
+}
+
+function getFooterColorHint() {
+  return "Changes the footer background and tint at the bottom of the email.";
+}
+
+function getFooterTextColorHint() {
+  return "Changes the text color used in the footer area.";
 }
 
 function getButtonStyleHint() {
@@ -1159,6 +1275,15 @@ function openEditorGroupForField(fieldId) {
     return;
   }
 
+  const field = getFieldElement(fieldId);
+  const host = field?.closest?.("[data-editor-group]");
+  const groups = String(host?.dataset?.editorGroup || "").split(/\s+/).filter(Boolean);
+
+  if (groups.includes(currentEditorGroup)) {
+    setActiveEditorGroup(currentEditorGroup);
+    return;
+  }
+
   const groupId = FIELD_TO_EDITOR_GROUP[fieldId];
 
   if (groupId) {
@@ -1387,18 +1512,22 @@ async function saveBranding() {
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
+    bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
     detailsColor: getFieldElement(fieldIds.detailsColor)?.value || getFieldElement(fieldIds.detailsHex)?.value || "",
     detailsGradientStyle: getFieldElement(fieldIds.detailsGradientStyle)?.value || "soft",
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
+    buttonTextColor: getFieldElement(fieldIds.buttonTextColor)?.value || getFieldElement(fieldIds.buttonTextHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
+    showHeroArt: Boolean(getFieldElement(fieldIds.showHeroArt)?.checked),
     artShape: getFieldElement(fieldIds.artShape)?.value || "classic",
     shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
@@ -1406,7 +1535,9 @@ async function saveBranding() {
     contactEmail: (getFieldElement(fieldIds.contactEmail)?.value || "").trim(),
     contactPhone: (getFieldElement(fieldIds.contactPhone)?.value || "").trim(),
     websiteUrl: (getFieldElement(fieldIds.websiteUrl)?.value || "").trim(),
-    rescheduleUrl: (getFieldElement(fieldIds.rescheduleUrl)?.value || "").trim()
+    rescheduleUrl: (getFieldElement(fieldIds.rescheduleUrl)?.value || "").trim(),
+    footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
+    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
   };
 
   if (!rawBranding.businessName) {
@@ -1527,16 +1658,26 @@ function wireFormInputs() {
   const headerHexInput = getFieldElement(fieldIds.headerHex);
   const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
   const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
+  const heroTextColorInput = getFieldElement(fieldIds.heroTextColor);
+  const heroTextHexInput = getFieldElement(fieldIds.heroTextHex);
   const artShapeColorInput = getFieldElement(fieldIds.artShapeColor);
   const artShapeHexInput = getFieldElement(fieldIds.artShapeHex);
   const panelColorInput = getFieldElement(fieldIds.panelColor);
   const panelHexInput = getFieldElement(fieldIds.panelHex);
+  const bodyTextColorInput = getFieldElement(fieldIds.bodyTextColor);
+  const bodyTextHexInput = getFieldElement(fieldIds.bodyTextHex);
   const detailsColorInput = getFieldElement(fieldIds.detailsColor);
   const detailsHexInput = getFieldElement(fieldIds.detailsHex);
   const calendarColorInput = getFieldElement(fieldIds.calendarColor);
   const calendarHexInput = getFieldElement(fieldIds.calendarHex);
   const tertiaryColorInput = getFieldElement(fieldIds.tertiaryColor);
   const tertiaryHexInput = getFieldElement(fieldIds.tertiaryHex);
+  const buttonTextColorInput = getFieldElement(fieldIds.buttonTextColor);
+  const buttonTextHexInput = getFieldElement(fieldIds.buttonTextHex);
+  const footerColorInput = getFieldElement(fieldIds.footerColor);
+  const footerHexInput = getFieldElement(fieldIds.footerHex);
+  const footerTextColorInput = getFieldElement(fieldIds.footerTextColor);
+  const footerTextHexInput = getFieldElement(fieldIds.footerTextHex);
   const artShapeInput = getFieldElement(fieldIds.artShape);
 
   brandingForm.addEventListener("input", event => {
@@ -1552,12 +1693,20 @@ function wireFormInputs() {
       secondaryHexInput.value = secondaryColorInput.value;
     }
 
+    if (event.target === heroTextColorInput && heroTextHexInput) {
+      heroTextHexInput.value = heroTextColorInput.value;
+    }
+
     if (event.target === artShapeColorInput && artShapeHexInput) {
       artShapeHexInput.value = artShapeColorInput.value;
     }
 
     if (event.target === panelColorInput && panelHexInput) {
       panelHexInput.value = panelColorInput.value;
+    }
+
+    if (event.target === bodyTextColorInput && bodyTextHexInput) {
+      bodyTextHexInput.value = bodyTextColorInput.value;
     }
 
     if (event.target === detailsColorInput && detailsHexInput) {
@@ -1572,6 +1721,18 @@ function wireFormInputs() {
       tertiaryHexInput.value = tertiaryColorInput.value;
     }
 
+    if (event.target === buttonTextColorInput && buttonTextHexInput) {
+      buttonTextHexInput.value = buttonTextColorInput.value;
+    }
+
+    if (event.target === footerColorInput && footerHexInput) {
+      footerHexInput.value = footerColorInput.value;
+    }
+
+    if (event.target === footerTextColorInput && footerTextHexInput) {
+      footerTextHexInput.value = footerTextColorInput.value;
+    }
+
     if (event.target === accentHexInput && accentColorInput && /^#[0-9a-f]{3,6}$/i.test(accentHexInput.value.trim())) {
       accentColorInput.value = accentHexInput.value.trim();
     }
@@ -1584,12 +1745,20 @@ function wireFormInputs() {
       secondaryColorInput.value = secondaryHexInput.value.trim();
     }
 
+    if (event.target === heroTextHexInput && heroTextColorInput && /^#[0-9a-f]{3,6}$/i.test(heroTextHexInput.value.trim())) {
+      heroTextColorInput.value = heroTextHexInput.value.trim();
+    }
+
     if (event.target === artShapeHexInput && artShapeColorInput && /^#[0-9a-f]{3,6}$/i.test(artShapeHexInput.value.trim())) {
       artShapeColorInput.value = artShapeHexInput.value.trim();
     }
 
     if (event.target === panelHexInput && panelColorInput && /^#[0-9a-f]{3,6}$/i.test(panelHexInput.value.trim())) {
       panelColorInput.value = panelHexInput.value.trim();
+    }
+
+    if (event.target === bodyTextHexInput && bodyTextColorInput && /^#[0-9a-f]{3,6}$/i.test(bodyTextHexInput.value.trim())) {
+      bodyTextColorInput.value = bodyTextHexInput.value.trim();
     }
 
     if (event.target === detailsHexInput && detailsColorInput && /^#[0-9a-f]{3,6}$/i.test(detailsHexInput.value.trim())) {
@@ -1602,6 +1771,18 @@ function wireFormInputs() {
 
     if (event.target === tertiaryHexInput && tertiaryColorInput && /^#[0-9a-f]{3,6}$/i.test(tertiaryHexInput.value.trim())) {
       tertiaryColorInput.value = tertiaryHexInput.value.trim();
+    }
+
+    if (event.target === buttonTextHexInput && buttonTextColorInput && /^#[0-9a-f]{3,6}$/i.test(buttonTextHexInput.value.trim())) {
+      buttonTextColorInput.value = buttonTextHexInput.value.trim();
+    }
+
+    if (event.target === footerHexInput && footerColorInput && /^#[0-9a-f]{3,6}$/i.test(footerHexInput.value.trim())) {
+      footerColorInput.value = footerHexInput.value.trim();
+    }
+
+    if (event.target === footerTextHexInput && footerTextColorInput && /^#[0-9a-f]{3,6}$/i.test(footerTextHexInput.value.trim())) {
+      footerTextColorInput.value = footerTextHexInput.value.trim();
     }
 
     if (event.target?.id) {

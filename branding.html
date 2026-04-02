@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402f">
+  <link rel="stylesheet" href="branding.css?v=20260402g">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -130,6 +130,15 @@
                       <p id="branding-secondary-color-hint" class="field-hint branding-helper">Adds a supporting tone inside the hero art and accent surfaces.</p>
                     </div>
 
+                    <div data-editor-group="hero">
+                      <label class="branding-label" for="branding-hero-text-color">Top text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-hero-text-color" class="branding-color-input" type="color" value="#ffffff">
+                        <input id="branding-hero-text-hex" class="branding-input" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff">
+                      </div>
+                      <p id="branding-hero-text-color-hint" class="field-hint branding-helper">Changes the business name, tagline, and contact text inside the top section.</p>
+                    </div>
+
                     <div data-editor-group="art">
                       <label class="branding-label" for="branding-art-shape-color">Art shape color</label>
                       <div class="branding-color-row">
@@ -157,6 +166,15 @@
                         <option value="split">Split</option>
                       </select>
                       <p class="field-hint branding-helper">Controls how the summary cards blend from white into their section color.</p>
+                    </div>
+
+                    <div data-editor-group="summary details calendar">
+                      <label class="branding-label" for="branding-body-text-color">Body text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-body-text-color" class="branding-color-input" type="color" value="#0f172a">
+                        <input id="branding-body-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
+                      </div>
+                      <p id="branding-body-text-color-hint" class="field-hint branding-helper">Changes the main text used in the body, cards, and calendar section.</p>
                     </div>
 
                     <div data-editor-group="details">
@@ -199,13 +217,22 @@
                       <p class="field-hint branding-helper">Controls how the add-to-calendar section blends its background.</p>
                     </div>
 
-                    <div data-editor-group="buttons calendar">
-                      <label class="branding-label" for="branding-tertiary-color">Tertiary color</label>
+                    <div data-editor-group="buttons">
+                      <label class="branding-label" for="branding-tertiary-color">Button accent color</label>
                       <div class="branding-color-row">
                         <input id="branding-tertiary-color" class="branding-color-input" type="color" value="#1f2937">
                         <input id="branding-tertiary-hex" class="branding-input" type="text" maxlength="7" value="#1f2937" placeholder="#1f2937">
                       </div>
-                      <p id="branding-tertiary-color-hint" class="field-hint branding-helper">Changes the supporting accent areas like the website button and footer tint.</p>
+                      <p id="branding-tertiary-color-hint" class="field-hint branding-helper">Changes the supporting button color used for secondary actions.</p>
+                    </div>
+
+                    <div data-editor-group="buttons calendar">
+                      <label class="branding-label" for="branding-button-text-color">Button text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-button-text-color" class="branding-color-input" type="color" value="#ffffff">
+                        <input id="branding-button-text-hex" class="branding-input" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff">
+                      </div>
+                      <p id="branding-button-text-color-hint" class="field-hint branding-helper">Changes the text color used on the action and calendar buttons.</p>
                     </div>
 
                     <div data-editor-group="contact">
@@ -247,6 +274,14 @@
                         <option value="solid">Solid accent</option>
                       </select>
                       <p id="branding-hero-gradient-hint" class="field-hint branding-helper">Controls how the top company section blends your main and secondary colors.</p>
+                    </div>
+
+                    <div class="field-span-2 branding-inline-toggle" data-editor-group="hero">
+                      <label class="branding-check" for="branding-show-hero-art">
+                        <input id="branding-show-hero-art" type="checkbox" checked>
+                        <span>Include art shapes in top section</span>
+                      </label>
+                      <p id="branding-show-hero-art-hint" class="field-hint branding-helper">Turn this off for a cleaner top section with no hero artwork.</p>
                     </div>
 
                     <div data-editor-group="art">
@@ -315,6 +350,24 @@
                     <div data-editor-group="buttons">
                       <label class="branding-label" for="branding-reschedule-url">Reschedule link</label>
                       <input id="branding-reschedule-url" class="branding-input" type="url" inputmode="url" placeholder="https://yourbusiness.com/reschedule">
+                    </div>
+
+                    <div data-editor-group="footer">
+                      <label class="branding-label" for="branding-footer-color">Footer color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-footer-color" class="branding-color-input" type="color" value="#f8fafc">
+                        <input id="branding-footer-hex" class="branding-input" type="text" maxlength="7" value="#f8fafc" placeholder="#f8fafc">
+                      </div>
+                      <p id="branding-footer-color-hint" class="field-hint branding-helper">Changes the footer background and tint at the bottom of the email.</p>
+                    </div>
+
+                    <div data-editor-group="footer">
+                      <label class="branding-label" for="branding-footer-text-color">Footer text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-footer-text-color" class="branding-color-input" type="color" value="#64748b">
+                        <input id="branding-footer-text-hex" class="branding-input" type="text" maxlength="7" value="#64748b" placeholder="#64748b">
+                      </div>
+                      <p id="branding-footer-text-color-hint" class="field-hint branding-helper">Changes the text color used in the footer area.</p>
                     </div>
                   </div>
 
@@ -408,6 +461,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402f"></script>
+  <script type="module" src="branding.js?v=20260402g"></script>
 </body>
 </html>
