@@ -1018,6 +1018,14 @@ function wrapEmailDocument(contentHtml, options = {}) {
       <meta name="color-scheme" content="light only">
       <meta name="supported-color-schemes" content="light">
       <style>
+        :root {
+          color-scheme: light only;
+          supported-color-schemes: light;
+        }
+        html {
+          background: #f4f7fb !important;
+          color: #0f172a !important;
+        }
         body, table, td, div, p, a, span {
           font-family: Arial, "Segoe UI", Helvetica, sans-serif !important;
         }
