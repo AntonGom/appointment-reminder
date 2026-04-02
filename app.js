@@ -64,6 +64,7 @@ function getSavedBrandingProfile() {
   }
 
   return {
+    ...profile,
     templateStyle: String(profile.templateStyle || "").trim(),
     brandingEnabled: profile.brandingEnabled !== false,
     businessName,
@@ -71,22 +72,40 @@ function getSavedBrandingProfile() {
     headerLabel: String(profile.headerLabel || "").trim(),
     accentColor: String(profile.accentColor || "").trim(),
     headerColor: String(profile.headerColor || "").trim(),
+    heroGradientColor: String(profile.heroGradientColor || "").trim(),
     secondaryColor: String(profile.secondaryColor || "").trim(),
+    heroTextColor: String(profile.heroTextColor || "").trim(),
     artShapeColor: String(profile.artShapeColor || "").trim(),
     panelColor: String(profile.panelColor || "").trim(),
+    bodyTextColor: String(profile.bodyTextColor || "").trim(),
+    bodyColor: String(profile.bodyColor || "").trim(),
+    bodyGradientStyle: String(profile.bodyGradientStyle || "").trim(),
+    detailsColor: String(profile.detailsColor || "").trim(),
+    detailsTextColor: String(profile.detailsTextColor || "").trim(),
+    calendarColor: String(profile.calendarColor || "").trim(),
+    calendarTextColor: String(profile.calendarTextColor || "").trim(),
+    buttonColor: String(profile.buttonColor || "").trim(),
     tertiaryColor: String(profile.tertiaryColor || "").trim(),
+    buttonGradientStyle: String(profile.buttonGradientStyle || "").trim(),
+    buttonTextColor: String(profile.buttonTextColor || "").trim(),
     logoUrl: String(profile.logoUrl || "").trim(),
     buttonStyle: String(profile.buttonStyle || "").trim(),
     panelShape: String(profile.panelShape || "").trim(),
     heroGradientStyle: String(profile.heroGradientStyle || "").trim(),
+    summaryGradientStyle: String(profile.summaryGradientStyle || "").trim(),
+    detailsGradientStyle: String(profile.detailsGradientStyle || "").trim(),
+    calendarGradientStyle: String(profile.calendarGradientStyle || "").trim(),
     artShape: String(profile.artShape || "").trim(),
     shapeIntensity: String(profile.shapeIntensity || "").trim(),
     shineStyle: String(profile.shineStyle || "").trim(),
     motionStyle: String(profile.motionStyle || "").trim(),
+    showHeroArt: profile.showHeroArt !== false,
     contactEmail: String(profile.contactEmail || "").trim(),
     contactPhone: String(profile.contactPhone || "").trim(),
     websiteUrl: String(profile.websiteUrl || "").trim(),
-    rescheduleUrl: String(profile.rescheduleUrl || "").trim()
+    rescheduleUrl: String(profile.rescheduleUrl || "").trim(),
+    footerColor: String(profile.footerColor || "").trim(),
+    footerTextColor: String(profile.footerTextColor || "").trim()
   };
 }
 

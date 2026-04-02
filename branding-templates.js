@@ -56,15 +56,15 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     footerTextColor: "#64748b",
     buttonStyle: "pill",
     panelShape: "rounded",
-    summaryGradientStyle: "soft",
-    detailsGradientStyle: "soft",
-    calendarGradientStyle: "soft",
+    summaryGradientStyle: "solid",
+    detailsGradientStyle: "solid",
+    calendarGradientStyle: "solid",
     showHeroArt: true,
     artShape: "classic",
     shapeIntensity: "balanced",
     shineStyle: "on",
     motionStyle: "showcase",
-    heroGradientStyle: "signature"
+    heroGradientStyle: "solid"
   }),
   spotlight: Object.freeze({
     accentColor: "#0f766e",
@@ -83,21 +83,21 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     calendarTextColor: "#0f172a",
     buttonColor: "#0f766e",
     tertiaryColor: "#134e4a",
-    buttonGradientStyle: "glow",
+    buttonGradientStyle: "solid",
     buttonTextColor: "#ffffff",
     footerColor: "#eff6ff",
     footerTextColor: "#475569",
     buttonStyle: "rounded",
     panelShape: "rounded",
-    summaryGradientStyle: "glow",
-    detailsGradientStyle: "soft",
-    calendarGradientStyle: "glow",
+    summaryGradientStyle: "solid",
+    detailsGradientStyle: "solid",
+    calendarGradientStyle: "solid",
     showHeroArt: true,
     artShape: "ribbon",
     shapeIntensity: "soft",
     shineStyle: "on",
     motionStyle: "float",
-    heroGradientStyle: "spotlight"
+    heroGradientStyle: "solid"
   }),
   executive: Object.freeze({
     accentColor: "#0f172a",
@@ -116,21 +116,21 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     calendarTextColor: "#0f172a",
     buttonColor: "#0f172a",
     tertiaryColor: "#334155",
-    buttonGradientStyle: "split",
+    buttonGradientStyle: "solid",
     buttonTextColor: "#ffffff",
     footerColor: "#0f172a",
     footerTextColor: "#cbd5e1",
     buttonStyle: "crisp",
     panelShape: "crisp",
-    summaryGradientStyle: "split",
-    detailsGradientStyle: "soft",
-    calendarGradientStyle: "split",
+    summaryGradientStyle: "solid",
+    detailsGradientStyle: "solid",
+    calendarGradientStyle: "solid",
     showHeroArt: true,
     artShape: "frame",
     shapeIntensity: "bold",
     shineStyle: "off",
     motionStyle: "still",
-    heroGradientStyle: "split"
+    heroGradientStyle: "solid"
   })
 });
 
@@ -892,9 +892,9 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const secondarySupport = `
     <div data-preview-area="hero-secondary" style="width:84px;height:6px;border-radius:999px;margin-top:12px;background:linear-gradient(90deg, ${branding.secondaryColor || DEFAULT_SECONDARY}, ${hexToRgba(branding.secondaryColor || DEFAULT_SECONDARY, 0.34)});"></div>
   `;
-  const contactLineParts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
-  const contactLine = contactLineParts.length
-    ? `<div style="font-size:13px;line-height:1.6;${paintTextColor(theme.metaColor)}margin-top:12px;">${escapeHtml(contactLineParts.join(" | "))}</div>`
+  const contactLine = buildProductionContactLine(branding, theme.metaColor);
+  const contactLineMarkup = contactLine
+    ? `<div style="font-size:13px;line-height:1.6;${paintTextColor(theme.metaColor)}margin-top:12px;">${contactLine}</div>`
     : "";
   const productionButtons = buildProductionButtons(branding);
   const productionCalendar = buildProductionCalendar(calendarLinks, branding);
@@ -929,7 +929,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
                         </div>
                         ${secondarySupport}
                         ${tagline}
-                        ${contactLine ? `<div data-preview-area="contact">${contactLine}</div>` : ""}
+                        ${contactLineMarkup ? `<div data-preview-area="contact">${contactLineMarkup}</div>` : ""}
                       </td>
                       ${heroArtCell}
                     </tr>
@@ -968,7 +968,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           <td data-preview-area="footer" bgcolor="${theme.footerBgColor}" style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
             <div style="font-size:13px;line-height:1.7;${paintTextColor(theme.footerColor)}">
               <strong style="${paintTextColor(theme.footerTitleColor)}">${businessName}</strong><br>
-              ${escapeHtml(buildFooterContactLine(branding))}
+              ${buildProductionContactLine(branding, theme.footerColor) || buildFooterContactLine(branding)}
             </div>
           </td>
         </tr>
@@ -1007,8 +1007,13 @@ function wrapEmailDocument(contentHtml, options = {}) {
           -webkit-text-size-adjust: 100%;
           -ms-text-size-adjust: 100%;
         }
-        a {
-          color: inherit;
+        a,
+        a:link,
+        a:visited,
+        a:hover,
+        a:active {
+          color: inherit !important;
+          text-decoration: none !important;
         }
         a[x-apple-data-detectors] {
           color: inherit !important;
@@ -1329,7 +1334,7 @@ function buildProductionDetails(details, branding) {
   return `
     <tr>
       <td data-preview-area="details" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(detailsColor, 0.38)};${radius}background:${buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5)};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:none;${radius}background:${buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5)};">
           <tr>
             <td style="padding:16px 18px;">
               <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">Additional details</div>
@@ -1680,6 +1685,32 @@ function getShapeProfile(intensity) {
 function buildFooterContactLine(branding) {
   const parts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
   return parts.length ? escapeHtml(parts.join(" | ")) : "Professional appointment reminders sent from this business.";
+}
+
+function buildProductionContactLine(branding, color) {
+  const pieces = [];
+  const safeColor = color || "#ffffff";
+  const inlineTextStyle = `color:${safeColor} !important;-webkit-text-fill-color:${safeColor} !important;text-decoration:none !important;`;
+  const separator = `<span style="${inlineTextStyle}"> | </span>`;
+
+  if (branding.contactEmail) {
+    pieces.push(`<a href="mailto:${escapeAttribute(branding.contactEmail)}" style="${inlineTextStyle}">${escapeHtml(branding.contactEmail)}</a>`);
+  }
+
+  if (branding.contactPhone) {
+    const digits = branding.contactPhone.replace(/\D/g, "");
+    if (digits) {
+      pieces.push(`<a href="tel:${escapeAttribute(digits)}" style="${inlineTextStyle}">${escapeHtml(branding.contactPhone)}</a>`);
+    } else {
+      pieces.push(`<span style="${inlineTextStyle}">${escapeHtml(branding.contactPhone)}</span>`);
+    }
+  }
+
+  if (branding.websiteUrl) {
+    pieces.push(`<a href="${escapeAttribute(branding.websiteUrl)}" style="${inlineTextStyle}">${escapeHtml(formatUrlLabel(branding.websiteUrl))}</a>`);
+  }
+
+  return pieces.join(separator);
 }
 
 function parseReminderMessage(message) {
