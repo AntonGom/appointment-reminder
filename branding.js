@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402h";
+} from "./branding-templates.js?v=20260402i";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -56,6 +56,8 @@ const fieldIds = {
   headerHex: "branding-header-hex",
   secondaryColor: "branding-secondary-color",
   secondaryHex: "branding-secondary-hex",
+  heroGradientColor: "branding-hero-gradient-color",
+  heroGradientHex: "branding-hero-gradient-hex",
   heroTextColor: "branding-hero-text-color",
   heroTextHex: "branding-hero-text-hex",
   artShapeColor: "branding-art-shape-color",
@@ -65,14 +67,24 @@ const fieldIds = {
   summaryGradientStyle: "branding-summary-gradient",
   bodyTextColor: "branding-body-text-color",
   bodyTextHex: "branding-body-text-hex",
+  bodyColor: "branding-body-color",
+  bodyHex: "branding-body-hex",
+  bodyGradientStyle: "branding-body-gradient",
   detailsColor: "branding-details-color",
   detailsHex: "branding-details-hex",
   detailsGradientStyle: "branding-details-gradient",
+  detailsTextColor: "branding-details-text-color",
+  detailsTextHex: "branding-details-text-hex",
   calendarColor: "branding-calendar-color",
   calendarHex: "branding-calendar-hex",
   calendarGradientStyle: "branding-calendar-gradient",
+  calendarTextColor: "branding-calendar-text-color",
+  calendarTextHex: "branding-calendar-text-hex",
+  buttonColor: "branding-button-color",
+  buttonHex: "branding-button-hex",
   tertiaryColor: "branding-tertiary-color",
   tertiaryHex: "branding-tertiary-hex",
+  buttonGradientStyle: "branding-button-gradient",
   buttonTextColor: "branding-button-text-color",
   buttonTextHex: "branding-button-text-hex",
   logoUrl: "branding-logo-url",
@@ -97,13 +109,20 @@ const fieldIds = {
 const helperTextIds = {
   headerColor: "branding-header-color-hint",
   secondaryColor: "branding-secondary-color-hint",
+  heroGradientColor: "branding-hero-gradient-color-hint",
   heroTextColor: "branding-hero-text-color-hint",
   artShapeColor: "branding-art-shape-color-hint",
   panelColor: "branding-panel-color-hint",
   bodyTextColor: "branding-body-text-color-hint",
+  bodyColor: "branding-body-color-hint",
+  bodyGradientStyle: "branding-body-gradient-hint",
   detailsColor: "branding-details-color-hint",
+  detailsTextColor: "branding-details-text-color-hint",
   calendarColor: "branding-calendar-color-hint",
+  calendarTextColor: "branding-calendar-text-color-hint",
+  buttonColor: "branding-button-color-hint",
   tertiaryColor: "branding-tertiary-color-hint",
+  buttonGradientStyle: "branding-button-gradient-hint",
   buttonTextColor: "branding-button-text-color-hint",
   showHeroArt: "branding-show-hero-art-hint",
   buttonStyle: "branding-button-style-hint",
@@ -147,6 +166,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["hero"],
     note: "Highlighting the large top company section so you can color that area directly."
   },
+  [fieldIds.heroGradientColor]: {
+    iframeAreas: ["hero"],
+    note: "Highlighting the second color used in the top section gradient."
+  },
   [fieldIds.secondaryColor]: {
     iframeAreas: ["hero-secondary", "art"],
     note: "Highlighting the supporting color accent inside the top section and hero art."
@@ -167,9 +190,17 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["summary"],
     note: "Highlighting how the summary cards blend their background color."
   },
+  [fieldIds.bodyColor]: {
+    iframeAreas: ["body"],
+    note: "Highlighting the background area behind the main body copy."
+  },
+  [fieldIds.bodyGradientStyle]: {
+    iframeAreas: ["body"],
+    note: "Highlighting how the main body section blends its background."
+  },
   [fieldIds.bodyTextColor]: {
-    iframeAreas: ["summary", "details", "calendar"],
-    note: "Highlighting the main text used in the cards and body sections."
+    iframeAreas: ["body"],
+    note: "Highlighting the main body copy text."
   },
   [fieldIds.detailsColor]: {
     iframeAreas: ["details"],
@@ -179,6 +210,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["details"],
     note: "Highlighting how the additional details card blends its background."
   },
+  [fieldIds.detailsTextColor]: {
+    iframeAreas: ["details"],
+    note: "Highlighting the text inside the additional details card."
+  },
   [fieldIds.calendarColor]: {
     iframeAreas: ["calendar"],
     note: "Highlighting the add-to-calendar section color."
@@ -187,22 +222,34 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["calendar"],
     note: "Highlighting how the add-to-calendar section blends its background."
   },
+  [fieldIds.calendarTextColor]: {
+    iframeAreas: ["calendar"],
+    note: "Highlighting the text used in the add-to-calendar section."
+  },
+  [fieldIds.buttonColor]: {
+    iframeAreas: ["buttons", "calendar"],
+    note: "Highlighting the main button color used across all reminder buttons."
+  },
   [fieldIds.tertiaryColor]: {
-    iframeAreas: ["buttons"],
-    note: "Highlighting the supporting button color used for secondary actions."
+    iframeAreas: ["buttons", "calendar"],
+    note: "Highlighting the secondary tone used in button gradients."
+  },
+  [fieldIds.buttonGradientStyle]: {
+    iframeAreas: ["buttons", "calendar"],
+    note: "Highlighting how the reminder buttons blend their two button colors."
   },
   [fieldIds.buttonTextColor]: {
-    iframeAreas: ["buttons"],
-    note: "Highlighting the text used inside the main action buttons."
+    iframeAreas: ["buttons", "calendar"],
+    note: "Highlighting the text used inside all reminder buttons."
   },
   [fieldIds.logoUrl]: {
     iframeAreas: ["logo"],
     note: "Highlighting the logo area."
   },
   [fieldIds.buttonStyle]: {
-    iframeAreas: ["buttons"],
+    iframeAreas: ["buttons", "calendar"],
     selectors: ["#branding-preview-subject", ".signature-card-cta"],
-    note: "Highlighting the main action buttons whose corners change shape."
+    note: "Highlighting the reminder buttons whose corners change shape."
   },
   [fieldIds.panelShape]: {
     iframeAreas: ["summary", "details", "calendar"],
@@ -270,6 +317,7 @@ const PREVIEW_AREA_TO_FIELD_ID = {
   logo: fieldIds.logoUrl,
   contact: fieldIds.contactEmail,
   art: fieldIds.artShapeColor,
+  body: fieldIds.bodyTextColor,
   summary: fieldIds.panelColor,
   details: fieldIds.detailsColor,
   calendar: fieldIds.calendarColor,
@@ -288,6 +336,8 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.headerHex]: "hero",
   [fieldIds.secondaryColor]: "hero",
   [fieldIds.secondaryHex]: "hero",
+  [fieldIds.heroGradientColor]: "hero",
+  [fieldIds.heroGradientHex]: "hero",
   [fieldIds.heroTextColor]: "hero",
   [fieldIds.heroTextHex]: "hero",
   [fieldIds.heroGradientStyle]: "hero",
@@ -301,18 +351,28 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.panelColor]: "summary",
   [fieldIds.panelHex]: "summary",
   [fieldIds.summaryGradientStyle]: "summary",
-  [fieldIds.bodyTextColor]: "summary",
-  [fieldIds.bodyTextHex]: "summary",
+  [fieldIds.bodyTextColor]: "body",
+  [fieldIds.bodyTextHex]: "body",
+  [fieldIds.bodyColor]: "body",
+  [fieldIds.bodyHex]: "body",
+  [fieldIds.bodyGradientStyle]: "body",
   [fieldIds.detailsColor]: "details",
   [fieldIds.detailsHex]: "details",
   [fieldIds.detailsGradientStyle]: "details",
+  [fieldIds.detailsTextColor]: "details",
+  [fieldIds.detailsTextHex]: "details",
   [fieldIds.calendarColor]: "calendar",
   [fieldIds.calendarHex]: "calendar",
   [fieldIds.calendarGradientStyle]: "calendar",
+  [fieldIds.calendarTextColor]: "calendar",
+  [fieldIds.calendarTextHex]: "calendar",
   [fieldIds.panelShape]: "summary",
   [fieldIds.buttonStyle]: "buttons",
+  [fieldIds.buttonColor]: "buttons",
+  [fieldIds.buttonHex]: "buttons",
   [fieldIds.tertiaryColor]: "buttons",
   [fieldIds.tertiaryHex]: "buttons",
+  [fieldIds.buttonGradientStyle]: "buttons",
   [fieldIds.buttonTextColor]: "buttons",
   [fieldIds.buttonTextHex]: "buttons",
   [fieldIds.websiteUrl]: "buttons",
@@ -333,6 +393,7 @@ const PREVIEW_AREA_TO_EDITOR_GROUP = {
   logo: "contact",
   contact: "contact",
   art: "art",
+  body: "body",
   summary: "summary",
   details: "details",
   calendar: "calendar",
@@ -348,6 +409,10 @@ const EDITOR_GROUP_COPY = {
   art: {
     title: "Hero art controls",
     copy: "Change the geometric art style, art color, shape intensity, shine, and preview motion for the top-right artwork."
+  },
+  body: {
+    title: "Body controls",
+    copy: "Adjust the main body text color and the background section behind the reminder copy."
   },
   panels: {
     title: "Info panel controls",
@@ -558,16 +623,23 @@ function getDraftBranding() {
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
     heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
+    bodyColor: getFieldElement(fieldIds.bodyColor)?.value || getFieldElement(fieldIds.bodyHex)?.value || "",
+    bodyGradientStyle: getFieldElement(fieldIds.bodyGradientStyle)?.value || "solid",
     detailsColor: getFieldElement(fieldIds.detailsColor)?.value || getFieldElement(fieldIds.detailsHex)?.value || "",
     detailsGradientStyle: getFieldElement(fieldIds.detailsGradientStyle)?.value || "soft",
+    detailsTextColor: getFieldElement(fieldIds.detailsTextColor)?.value || getFieldElement(fieldIds.detailsTextHex)?.value || "",
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
+    calendarTextColor: getFieldElement(fieldIds.calendarTextColor)?.value || getFieldElement(fieldIds.calendarTextHex)?.value || "",
+    buttonColor: getFieldElement(fieldIds.buttonColor)?.value || getFieldElement(fieldIds.buttonHex)?.value || "",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
+    buttonGradientStyle: getFieldElement(fieldIds.buttonGradientStyle)?.value || "solid",
     buttonTextColor: getFieldElement(fieldIds.buttonTextColor)?.value || getFieldElement(fieldIds.buttonTextHex)?.value || "",
     logoUrl: getFieldElement(fieldIds.logoUrl)?.value || "",
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
@@ -608,6 +680,8 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.headerHex).value = normalized.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = normalized.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = normalized.secondaryColor;
+  getFieldElement(fieldIds.heroGradientColor).value = normalized.heroGradientColor;
+  getFieldElement(fieldIds.heroGradientHex).value = normalized.heroGradientColor;
   getFieldElement(fieldIds.heroTextColor).value = normalized.heroTextColor;
   getFieldElement(fieldIds.heroTextHex).value = normalized.heroTextColor;
   getFieldElement(fieldIds.artShapeColor).value = normalized.artShapeColor;
@@ -617,14 +691,24 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.summaryGradientStyle).value = normalized.summaryGradientStyle;
   getFieldElement(fieldIds.bodyTextColor).value = normalized.bodyTextColor;
   getFieldElement(fieldIds.bodyTextHex).value = normalized.bodyTextColor;
+  getFieldElement(fieldIds.bodyColor).value = normalized.bodyColor;
+  getFieldElement(fieldIds.bodyHex).value = normalized.bodyColor;
+  getFieldElement(fieldIds.bodyGradientStyle).value = normalized.bodyGradientStyle;
   getFieldElement(fieldIds.detailsColor).value = normalized.detailsColor;
   getFieldElement(fieldIds.detailsHex).value = normalized.detailsColor;
   getFieldElement(fieldIds.detailsGradientStyle).value = normalized.detailsGradientStyle;
+  getFieldElement(fieldIds.detailsTextColor).value = normalized.detailsTextColor;
+  getFieldElement(fieldIds.detailsTextHex).value = normalized.detailsTextColor;
   getFieldElement(fieldIds.calendarColor).value = normalized.calendarColor;
   getFieldElement(fieldIds.calendarHex).value = normalized.calendarColor;
   getFieldElement(fieldIds.calendarGradientStyle).value = normalized.calendarGradientStyle;
+  getFieldElement(fieldIds.calendarTextColor).value = normalized.calendarTextColor;
+  getFieldElement(fieldIds.calendarTextHex).value = normalized.calendarTextColor;
+  getFieldElement(fieldIds.buttonColor).value = normalized.buttonColor;
+  getFieldElement(fieldIds.buttonHex).value = normalized.buttonColor;
   getFieldElement(fieldIds.tertiaryColor).value = normalized.tertiaryColor;
   getFieldElement(fieldIds.tertiaryHex).value = normalized.tertiaryColor;
+  getFieldElement(fieldIds.buttonGradientStyle).value = normalized.buttonGradientStyle;
   getFieldElement(fieldIds.buttonTextColor).value = normalized.buttonTextColor;
   getFieldElement(fieldIds.buttonTextHex).value = normalized.buttonTextColor;
   getFieldElement(fieldIds.logoUrl).value = branding.logoUrl || "";
@@ -677,6 +761,8 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.headerHex).value = preset.headerColor;
   getFieldElement(fieldIds.secondaryColor).value = preset.secondaryColor;
   getFieldElement(fieldIds.secondaryHex).value = preset.secondaryColor;
+  getFieldElement(fieldIds.heroGradientColor).value = preset.heroGradientColor;
+  getFieldElement(fieldIds.heroGradientHex).value = preset.heroGradientColor;
   getFieldElement(fieldIds.heroTextColor).value = preset.heroTextColor;
   getFieldElement(fieldIds.heroTextHex).value = preset.heroTextColor;
   getFieldElement(fieldIds.artShapeColor).value = preset.artShapeColor;
@@ -686,14 +772,24 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.summaryGradientStyle).value = preset.summaryGradientStyle;
   getFieldElement(fieldIds.bodyTextColor).value = preset.bodyTextColor;
   getFieldElement(fieldIds.bodyTextHex).value = preset.bodyTextColor;
+  getFieldElement(fieldIds.bodyColor).value = preset.bodyColor;
+  getFieldElement(fieldIds.bodyHex).value = preset.bodyColor;
+  getFieldElement(fieldIds.bodyGradientStyle).value = preset.bodyGradientStyle;
   getFieldElement(fieldIds.detailsColor).value = preset.detailsColor;
   getFieldElement(fieldIds.detailsHex).value = preset.detailsColor;
   getFieldElement(fieldIds.detailsGradientStyle).value = preset.detailsGradientStyle;
+  getFieldElement(fieldIds.detailsTextColor).value = preset.detailsTextColor;
+  getFieldElement(fieldIds.detailsTextHex).value = preset.detailsTextColor;
   getFieldElement(fieldIds.calendarColor).value = preset.calendarColor;
   getFieldElement(fieldIds.calendarHex).value = preset.calendarColor;
   getFieldElement(fieldIds.calendarGradientStyle).value = preset.calendarGradientStyle;
+  getFieldElement(fieldIds.calendarTextColor).value = preset.calendarTextColor;
+  getFieldElement(fieldIds.calendarTextHex).value = preset.calendarTextColor;
+  getFieldElement(fieldIds.buttonColor).value = preset.buttonColor;
+  getFieldElement(fieldIds.buttonHex).value = preset.buttonColor;
   getFieldElement(fieldIds.tertiaryColor).value = preset.tertiaryColor;
   getFieldElement(fieldIds.tertiaryHex).value = preset.tertiaryColor;
+  getFieldElement(fieldIds.buttonGradientStyle).value = preset.buttonGradientStyle;
   getFieldElement(fieldIds.buttonTextColor).value = preset.buttonTextColor;
   getFieldElement(fieldIds.buttonTextHex).value = preset.buttonTextColor;
   getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
@@ -962,13 +1058,20 @@ function applyLiveBrandingState(branding) {
 function updateHelperHints() {
   updateHelperHint(helperTextIds.headerColor, getHeaderColorHint());
   updateHelperHint(helperTextIds.secondaryColor, getSecondaryColorHint());
+  updateHelperHint(helperTextIds.heroGradientColor, getHeroGradientColorHint());
   updateHelperHint(helperTextIds.heroTextColor, getHeroTextColorHint());
   updateHelperHint(helperTextIds.artShapeColor, getArtShapeColorHint());
   updateHelperHint(helperTextIds.panelColor, getPanelColorHint());
   updateHelperHint(helperTextIds.bodyTextColor, getBodyTextColorHint());
+  updateHelperHint(helperTextIds.bodyColor, getBodyColorHint());
+  updateHelperHint(helperTextIds.bodyGradientStyle, getBodyGradientHint());
   updateHelperHint(helperTextIds.detailsColor, getDetailsColorHint());
+  updateHelperHint(helperTextIds.detailsTextColor, getDetailsTextColorHint());
   updateHelperHint(helperTextIds.calendarColor, getCalendarColorHint());
+  updateHelperHint(helperTextIds.calendarTextColor, getCalendarTextColorHint());
+  updateHelperHint(helperTextIds.buttonColor, getButtonColorHint());
   updateHelperHint(helperTextIds.tertiaryColor, getTertiaryColorHint());
+  updateHelperHint(helperTextIds.buttonGradientStyle, getButtonGradientHint());
   updateHelperHint(helperTextIds.buttonTextColor, getButtonTextColorHint());
   updateHelperHint(helperTextIds.showHeroArt, getShowHeroArtHint());
   updateHelperHint(helperTextIds.buttonStyle, getButtonStyleHint());
@@ -1011,7 +1114,7 @@ function getPanelColorHint() {
 }
 
 function getBodyTextColorHint() {
-  return "Changes the main text used inside the body cards and message sections.";
+  return "Changes the main body copy text color.";
 }
 
 function getDetailsColorHint() {
@@ -1022,12 +1125,40 @@ function getCalendarColorHint() {
   return "Used behind the add-to-calendar section.";
 }
 
+function getHeroGradientColorHint() {
+  return "Used as the second color in the top section gradient.";
+}
+
+function getBodyColorHint() {
+  return "Used behind the main body copy area.";
+}
+
+function getBodyGradientHint() {
+  return "Controls how the body section blends from white into its chosen color.";
+}
+
+function getDetailsTextColorHint() {
+  return "Changes the text color inside the additional details card.";
+}
+
+function getCalendarTextColorHint() {
+  return "Changes the text color inside the add-to-calendar section.";
+}
+
+function getButtonColorHint() {
+  return "Used as the main color across all reminder buttons.";
+}
+
 function getTertiaryColorHint() {
-  return "Used for the supporting button color on secondary actions.";
+  return "Used as the second color when button gradients are enabled.";
+}
+
+function getButtonGradientHint() {
+  return "Controls how the main and secondary button colors blend together.";
 }
 
 function getButtonTextColorHint() {
-  return "Changes the text color used on the main action buttons.";
+  return "Changes the text color used on all reminder buttons.";
 }
 
 function getShowHeroArtHint() {
@@ -1518,16 +1649,23 @@ async function saveBranding() {
     accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
+    heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
     heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
     artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
+    bodyColor: getFieldElement(fieldIds.bodyColor)?.value || getFieldElement(fieldIds.bodyHex)?.value || "",
+    bodyGradientStyle: getFieldElement(fieldIds.bodyGradientStyle)?.value || "solid",
     detailsColor: getFieldElement(fieldIds.detailsColor)?.value || getFieldElement(fieldIds.detailsHex)?.value || "",
     detailsGradientStyle: getFieldElement(fieldIds.detailsGradientStyle)?.value || "soft",
+    detailsTextColor: getFieldElement(fieldIds.detailsTextColor)?.value || getFieldElement(fieldIds.detailsTextHex)?.value || "",
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
+    calendarTextColor: getFieldElement(fieldIds.calendarTextColor)?.value || getFieldElement(fieldIds.calendarTextHex)?.value || "",
+    buttonColor: getFieldElement(fieldIds.buttonColor)?.value || getFieldElement(fieldIds.buttonHex)?.value || "",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
+    buttonGradientStyle: getFieldElement(fieldIds.buttonGradientStyle)?.value || "solid",
     buttonTextColor: getFieldElement(fieldIds.buttonTextColor)?.value || getFieldElement(fieldIds.buttonTextHex)?.value || "",
     logoUrl: (getFieldElement(fieldIds.logoUrl)?.value || "").trim(),
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
@@ -1664,6 +1802,8 @@ function wireFormInputs() {
   const headerHexInput = getFieldElement(fieldIds.headerHex);
   const secondaryColorInput = getFieldElement(fieldIds.secondaryColor);
   const secondaryHexInput = getFieldElement(fieldIds.secondaryHex);
+  const heroGradientColorInput = getFieldElement(fieldIds.heroGradientColor);
+  const heroGradientHexInput = getFieldElement(fieldIds.heroGradientHex);
   const heroTextColorInput = getFieldElement(fieldIds.heroTextColor);
   const heroTextHexInput = getFieldElement(fieldIds.heroTextHex);
   const artShapeColorInput = getFieldElement(fieldIds.artShapeColor);
@@ -1672,10 +1812,18 @@ function wireFormInputs() {
   const panelHexInput = getFieldElement(fieldIds.panelHex);
   const bodyTextColorInput = getFieldElement(fieldIds.bodyTextColor);
   const bodyTextHexInput = getFieldElement(fieldIds.bodyTextHex);
+  const bodyColorInput = getFieldElement(fieldIds.bodyColor);
+  const bodyHexInput = getFieldElement(fieldIds.bodyHex);
   const detailsColorInput = getFieldElement(fieldIds.detailsColor);
   const detailsHexInput = getFieldElement(fieldIds.detailsHex);
+  const detailsTextColorInput = getFieldElement(fieldIds.detailsTextColor);
+  const detailsTextHexInput = getFieldElement(fieldIds.detailsTextHex);
   const calendarColorInput = getFieldElement(fieldIds.calendarColor);
   const calendarHexInput = getFieldElement(fieldIds.calendarHex);
+  const calendarTextColorInput = getFieldElement(fieldIds.calendarTextColor);
+  const calendarTextHexInput = getFieldElement(fieldIds.calendarTextHex);
+  const buttonColorInput = getFieldElement(fieldIds.buttonColor);
+  const buttonHexInput = getFieldElement(fieldIds.buttonHex);
   const tertiaryColorInput = getFieldElement(fieldIds.tertiaryColor);
   const tertiaryHexInput = getFieldElement(fieldIds.tertiaryHex);
   const buttonTextColorInput = getFieldElement(fieldIds.buttonTextColor);
@@ -1700,6 +1848,10 @@ function wireFormInputs() {
       secondaryHexInput.value = secondaryColorInput.value;
     }
 
+    if (event.target === heroGradientColorInput && heroGradientHexInput) {
+      heroGradientHexInput.value = heroGradientColorInput.value;
+    }
+
     if (event.target === heroTextColorInput && heroTextHexInput) {
       heroTextHexInput.value = heroTextColorInput.value;
     }
@@ -1716,12 +1868,28 @@ function wireFormInputs() {
       bodyTextHexInput.value = bodyTextColorInput.value;
     }
 
+    if (event.target === bodyColorInput && bodyHexInput) {
+      bodyHexInput.value = bodyColorInput.value;
+    }
+
     if (event.target === detailsColorInput && detailsHexInput) {
       detailsHexInput.value = detailsColorInput.value;
     }
 
+    if (event.target === detailsTextColorInput && detailsTextHexInput) {
+      detailsTextHexInput.value = detailsTextColorInput.value;
+    }
+
     if (event.target === calendarColorInput && calendarHexInput) {
       calendarHexInput.value = calendarColorInput.value;
+    }
+
+    if (event.target === calendarTextColorInput && calendarTextHexInput) {
+      calendarTextHexInput.value = calendarTextColorInput.value;
+    }
+
+    if (event.target === buttonColorInput && buttonHexInput) {
+      buttonHexInput.value = buttonColorInput.value;
     }
 
     if (event.target === tertiaryColorInput && tertiaryHexInput) {
@@ -1752,6 +1920,10 @@ function wireFormInputs() {
       secondaryColorInput.value = secondaryHexInput.value.trim();
     }
 
+    if (event.target === heroGradientHexInput && heroGradientColorInput && /^#[0-9a-f]{3,6}$/i.test(heroGradientHexInput.value.trim())) {
+      heroGradientColorInput.value = heroGradientHexInput.value.trim();
+    }
+
     if (event.target === heroTextHexInput && heroTextColorInput && /^#[0-9a-f]{3,6}$/i.test(heroTextHexInput.value.trim())) {
       heroTextColorInput.value = heroTextHexInput.value.trim();
     }
@@ -1768,12 +1940,28 @@ function wireFormInputs() {
       bodyTextColorInput.value = bodyTextHexInput.value.trim();
     }
 
+    if (event.target === bodyHexInput && bodyColorInput && /^#[0-9a-f]{3,6}$/i.test(bodyHexInput.value.trim())) {
+      bodyColorInput.value = bodyHexInput.value.trim();
+    }
+
     if (event.target === detailsHexInput && detailsColorInput && /^#[0-9a-f]{3,6}$/i.test(detailsHexInput.value.trim())) {
       detailsColorInput.value = detailsHexInput.value.trim();
     }
 
+    if (event.target === detailsTextHexInput && detailsTextColorInput && /^#[0-9a-f]{3,6}$/i.test(detailsTextHexInput.value.trim())) {
+      detailsTextColorInput.value = detailsTextHexInput.value.trim();
+    }
+
     if (event.target === calendarHexInput && calendarColorInput && /^#[0-9a-f]{3,6}$/i.test(calendarHexInput.value.trim())) {
       calendarColorInput.value = calendarHexInput.value.trim();
+    }
+
+    if (event.target === calendarTextHexInput && calendarTextColorInput && /^#[0-9a-f]{3,6}$/i.test(calendarTextHexInput.value.trim())) {
+      calendarTextColorInput.value = calendarTextHexInput.value.trim();
+    }
+
+    if (event.target === buttonHexInput && buttonColorInput && /^#[0-9a-f]{3,6}$/i.test(buttonHexInput.value.trim())) {
+      buttonColorInput.value = buttonHexInput.value.trim();
     }
 
     if (event.target === tertiaryHexInput && tertiaryColorInput && /^#[0-9a-f]{3,6}$/i.test(tertiaryHexInput.value.trim())) {

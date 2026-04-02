@@ -131,6 +131,15 @@
                     </div>
 
                     <div data-editor-group="hero">
+                      <label class="branding-label" for="branding-hero-gradient-color">Top gradient color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-hero-gradient-color" class="branding-color-input" type="color" value="#8db9ff">
+                        <input id="branding-hero-gradient-hex" class="branding-input" type="text" maxlength="7" value="#8db9ff" placeholder="#8db9ff">
+                      </div>
+                      <p id="branding-hero-gradient-color-hint" class="field-hint branding-helper">Controls the second color used in the top section gradient.</p>
+                    </div>
+
+                    <div data-editor-group="hero">
                       <label class="branding-label" for="branding-hero-text-color">Top text color</label>
                       <div class="branding-color-row">
                         <input id="branding-hero-text-color" class="branding-color-input" type="color" value="#ffffff">
@@ -168,13 +177,33 @@
                       <p class="field-hint branding-helper">Controls how the summary cards blend from white into their section color.</p>
                     </div>
 
-                    <div data-editor-group="summary details calendar">
+                    <div data-editor-group="body">
                       <label class="branding-label" for="branding-body-text-color">Body text color</label>
                       <div class="branding-color-row">
                         <input id="branding-body-text-color" class="branding-color-input" type="color" value="#0f172a">
                         <input id="branding-body-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
                       </div>
-                      <p id="branding-body-text-color-hint" class="field-hint branding-helper">Changes the main text used in the body, cards, and calendar section.</p>
+                      <p id="branding-body-text-color-hint" class="field-hint branding-helper">Changes the main body copy color.</p>
+                    </div>
+
+                    <div data-editor-group="body">
+                      <label class="branding-label" for="branding-body-color">Body section color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-body-color" class="branding-color-input" type="color" value="#ffffff">
+                        <input id="branding-body-hex" class="branding-input" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff">
+                      </div>
+                      <p id="branding-body-color-hint" class="field-hint branding-helper">Changes the background behind the main body copy.</p>
+                    </div>
+
+                    <div data-editor-group="body">
+                      <label class="branding-label" for="branding-body-gradient">Body background</label>
+                      <select id="branding-body-gradient" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="solid">Solid</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p id="branding-body-gradient-hint" class="field-hint branding-helper">Controls how the body section blends its background color.</p>
                     </div>
 
                     <div data-editor-group="details">
@@ -197,6 +226,15 @@
                       <p class="field-hint branding-helper">Controls how the additional details card blends its background.</p>
                     </div>
 
+                    <div data-editor-group="details">
+                      <label class="branding-label" for="branding-details-text-color">Details text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-details-text-color" class="branding-color-input" type="color" value="#0f172a">
+                        <input id="branding-details-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
+                      </div>
+                      <p id="branding-details-text-color-hint" class="field-hint branding-helper">Changes the text color inside the additional details card.</p>
+                    </div>
+
                     <div data-editor-group="calendar">
                       <label class="branding-label" for="branding-calendar-color">Calendar card color</label>
                       <div class="branding-color-row">
@@ -217,13 +255,42 @@
                       <p class="field-hint branding-helper">Controls how the add-to-calendar section blends its background.</p>
                     </div>
 
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-text-color">Calendar text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-calendar-text-color" class="branding-color-input" type="color" value="#0f172a">
+                        <input id="branding-calendar-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
+                      </div>
+                      <p id="branding-calendar-text-color-hint" class="field-hint branding-helper">Changes the text color in the add-to-calendar section.</p>
+                    </div>
+
                     <div data-editor-group="buttons">
-                      <label class="branding-label" for="branding-tertiary-color">Button accent color</label>
+                      <label class="branding-label" for="branding-button-color">Button color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-button-color" class="branding-color-input" type="color" value="#2563eb">
+                        <input id="branding-button-hex" class="branding-input" type="text" maxlength="7" value="#2563eb" placeholder="#2563eb">
+                      </div>
+                      <p id="branding-button-color-hint" class="field-hint branding-helper">Changes the main color used across all reminder buttons.</p>
+                    </div>
+
+                    <div data-editor-group="buttons">
+                      <label class="branding-label" for="branding-tertiary-color">Button secondary color</label>
                       <div class="branding-color-row">
                         <input id="branding-tertiary-color" class="branding-color-input" type="color" value="#1f2937">
                         <input id="branding-tertiary-hex" class="branding-input" type="text" maxlength="7" value="#1f2937" placeholder="#1f2937">
                       </div>
-                      <p id="branding-tertiary-color-hint" class="field-hint branding-helper">Changes the supporting button color used for secondary actions.</p>
+                      <p id="branding-tertiary-color-hint" class="field-hint branding-helper">Used as the second color when your buttons use a gradient.</p>
+                    </div>
+
+                    <div data-editor-group="buttons">
+                      <label class="branding-label" for="branding-button-gradient">Button gradient</label>
+                      <select id="branding-button-gradient" class="branding-select">
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="solid">Solid</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p id="branding-button-gradient-hint" class="field-hint branding-helper">Controls how the main and secondary button colors blend together.</p>
                     </div>
 
                     <div data-editor-group="buttons">
@@ -461,6 +528,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402h"></script>
+  <script type="module" src="branding.js?v=20260402i"></script>
 </body>
 </html>

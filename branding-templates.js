@@ -36,14 +36,21 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   signature: Object.freeze({
     accentColor: "#2563eb",
     headerColor: "#2563eb",
+    heroGradientColor: "#8db9ff",
     secondaryColor: "#e8f1ff",
     heroTextColor: "#ffffff",
     artShapeColor: "#c7dcff",
     panelColor: "#eef4ff",
     bodyTextColor: "#0f172a",
+    bodyColor: "#ffffff",
+    bodyGradientStyle: "solid",
     detailsColor: "#eef4ff",
+    detailsTextColor: "#0f172a",
     calendarColor: "#eef4ff",
+    calendarTextColor: "#0f172a",
+    buttonColor: "#2563eb",
     tertiaryColor: "#1f2937",
+    buttonGradientStyle: "solid",
     buttonTextColor: "#ffffff",
     footerColor: "#f8fafc",
     footerTextColor: "#64748b",
@@ -62,14 +69,21 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   spotlight: Object.freeze({
     accentColor: "#0f766e",
     headerColor: "#0f766e",
+    heroGradientColor: "#7fe7d5",
     secondaryColor: "#e6fbf4",
     heroTextColor: "#0f172a",
     artShapeColor: "#66dbc6",
     panelColor: "#ecfbf6",
     bodyTextColor: "#0f172a",
+    bodyColor: "#ffffff",
+    bodyGradientStyle: "solid",
     detailsColor: "#ecfbf6",
+    detailsTextColor: "#0f172a",
     calendarColor: "#ecfbf6",
+    calendarTextColor: "#0f172a",
+    buttonColor: "#0f766e",
     tertiaryColor: "#134e4a",
+    buttonGradientStyle: "glow",
     buttonTextColor: "#ffffff",
     footerColor: "#eff6ff",
     footerTextColor: "#475569",
@@ -88,14 +102,21 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
   executive: Object.freeze({
     accentColor: "#0f172a",
     headerColor: "#0f172a",
+    heroGradientColor: "#64748b",
     secondaryColor: "#dbe2ea",
     heroTextColor: "#ffffff",
     artShapeColor: "#94a3b8",
     panelColor: "#edf2f7",
     bodyTextColor: "#0f172a",
+    bodyColor: "#ffffff",
+    bodyGradientStyle: "solid",
     detailsColor: "#edf2f7",
+    detailsTextColor: "#0f172a",
     calendarColor: "#edf2f7",
+    calendarTextColor: "#0f172a",
+    buttonColor: "#0f172a",
     tertiaryColor: "#334155",
+    buttonGradientStyle: "split",
     buttonTextColor: "#ffffff",
     footerColor: "#0f172a",
     footerTextColor: "#cbd5e1",
@@ -146,14 +167,21 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const headerLabel = cleanText(profile?.headerLabel, 50);
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
   const headerColor = normalizeHexColor(profile?.headerColor) || templatePreset.headerColor || accentColor;
+  const heroGradientColor = normalizeHexColor(profile?.heroGradientColor) || templatePreset.heroGradientColor || normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const heroTextColor = normalizeHexColor(profile?.heroTextColor) || templatePreset.heroTextColor || getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" });
   const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
   const bodyTextColor = normalizeHexColor(profile?.bodyTextColor) || templatePreset.bodyTextColor || "#0f172a";
+  const bodyColor = normalizeHexColor(profile?.bodyColor) || templatePreset.bodyColor || "#ffffff";
+  const bodyGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.bodyGradientStyle) ? profile.bodyGradientStyle : templatePreset.bodyGradientStyle || "solid";
   const detailsColor = normalizeHexColor(profile?.detailsColor) || templatePreset.detailsColor || panelColor;
+  const detailsTextColor = normalizeHexColor(profile?.detailsTextColor) || templatePreset.detailsTextColor || bodyTextColor;
   const calendarColor = normalizeHexColor(profile?.calendarColor) || templatePreset.calendarColor || panelColor;
+  const calendarTextColor = normalizeHexColor(profile?.calendarTextColor) || templatePreset.calendarTextColor || bodyTextColor;
+  const buttonColor = normalizeHexColor(profile?.buttonColor) || templatePreset.buttonColor || accentColor;
   const tertiaryColor = normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
+  const buttonGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.buttonGradientStyle) ? profile.buttonGradientStyle : templatePreset.buttonGradientStyle || "solid";
   const buttonTextColor = normalizeHexColor(profile?.buttonTextColor) || templatePreset.buttonTextColor || "#ffffff";
   const footerColor = normalizeHexColor(profile?.footerColor) || templatePreset.footerColor || "#f8fafc";
   const footerTextColor = normalizeHexColor(profile?.footerTextColor) || templatePreset.footerTextColor || "#64748b";
@@ -182,14 +210,21 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
     accentColor,
     headerColor,
+    heroGradientColor,
     secondaryColor,
     heroTextColor,
     artShapeColor,
     panelColor,
     bodyTextColor,
+    bodyColor,
+    bodyGradientStyle,
     detailsColor,
+    detailsTextColor,
     calendarColor,
+    calendarTextColor,
+    buttonColor,
     tertiaryColor,
+    buttonGradientStyle,
     buttonTextColor,
     footerColor,
     footerTextColor,
@@ -276,6 +311,25 @@ function buildSectionBackground(sectionColor, gradientStyle = "soft", alpha = 0.
   return `linear-gradient(180deg, #ffffff, ${hexToRgba(color, alpha)})`;
 }
 
+function buildButtonBackground(primaryColor, secondaryColor, gradientStyle = "solid") {
+  const primary = primaryColor || DEFAULT_ACCENT;
+  const secondary = secondaryColor || primary;
+
+  if (gradientStyle === "split") {
+    return `linear-gradient(135deg, ${primary} 0%, ${primary} 50%, ${secondary} 50%, ${secondary} 100%)`;
+  }
+
+  if (gradientStyle === "glow") {
+    return `radial-gradient(circle at top right, ${hexToRgba(secondary, 0.38)} 0%, transparent 42%), linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+  }
+
+  if (gradientStyle === "soft") {
+    return `linear-gradient(135deg, ${primary} 0%, ${hexToRgba(secondary, 0.88)} 100%)`;
+  }
+
+  return primary;
+}
+
 function resolveArtShape(artShape, randomSeed = 0) {
   if (artShape && artShape !== "random") {
     return artShape;
@@ -290,7 +344,16 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const surfaceStyle = buildSurfaceStyle(branding.panelShape);
   const summaryCount = Math.min(parsed.summary.length, 3);
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const bodyBackground = buildSectionBackground(branding.bodyColor || "#ffffff", branding.bodyGradientStyle || "solid", 0.42);
+  const summaryTextColor = getReadableTextColor(branding.panelColor || DEFAULT_PANEL, { light: "#ffffff", dark: "#0f172a" });
+  const detailsTextColor = branding.detailsTextColor || bodyTextColor;
+  const calendarTextColor = branding.calendarTextColor || bodyTextColor;
   const buttonTextColor = branding.buttonTextColor || "#ffffff";
+  const buttonBackground = buildButtonBackground(
+    branding.buttonColor || branding.accentColor || DEFAULT_ACCENT,
+    branding.tertiaryColor || DEFAULT_TERTIARY,
+    branding.buttonGradientStyle || "solid"
+  );
   const footerTextColor = branding.footerTextColor || "#64748b";
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:${bodyTextColor};margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:${bodyTextColor};margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
@@ -298,15 +361,15 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     ? `<div data-preview-area="summary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
           <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:${buildSectionBackground(branding.panelColor, branding.summaryGradientStyle, 0.48)};border:1px solid ${hexToRgba(branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${bodyTextColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:15px;font-weight:700;color:${bodyTextColor};line-height:1.45;">${escapeHtml(item.value)}</div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${summaryTextColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:15px;font-weight:700;color:${summaryTextColor};line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
   const detailsHtml = parsed.details
     ? `<div data-preview-area="details" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${bodyTextColor};margin:0 0 8px;">Additional details</div>
-        <div style="font-size:15px;line-height:1.7;color:${bodyTextColor};">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${detailsTextColor};margin:0 0 8px;">Additional details</div>
+        <div style="font-size:15px;line-height:1.7;color:${detailsTextColor};">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
     : "";
   const bodyHtml = parsed.body.length
@@ -335,6 +398,10 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     heroLabel,
     tagline,
     bodyTextColor,
+    bodyBackground,
+    detailsTextColor,
+    calendarTextColor,
+    buttonBackground,
     buttonTextColor,
     footerTextColor,
     greeting,
@@ -609,7 +676,7 @@ function buildSignatureTemplate(content, options = {}) {
             }) : ""}
           </div>
         </div>
-        <div style="padding:28px;">
+        <div data-preview-area="body" style="padding:28px;background:${content.bodyBackground};">
           ${content.greeting}
           ${content.intro}
           ${content.summaryHtml}
@@ -669,7 +736,7 @@ function buildSpotlightTemplate(content, options = {}) {
             }) : ""}
           </div>
         </div>
-        <div style="padding:28px;">
+        <div data-preview-area="body" style="padding:28px;background:${content.bodyBackground};">
           ${content.greeting}
           ${content.intro}
           ${content.summaryHtml}
@@ -731,7 +798,7 @@ function buildExecutiveTemplate(content, options = {}) {
             }) : ""}
           </div>
         </div>
-        <div style="padding:28px;">
+        <div data-preview-area="body" style="padding:28px;background:${content.bodyBackground};">
           ${content.greeting}
           ${content.intro}
           ${content.summaryHtml}
@@ -783,6 +850,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const parsed = parseReminderMessage(message);
   const theme = getProductionTheme(branding);
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const bodyBackground = buildSectionBackground(branding.bodyColor || "#ffffff", branding.bodyGradientStyle || "solid", 0.42);
   const summaryHtml = buildProductionSummary(parsed.summary, branding);
   const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding) : "";
   const hasHeroArt = shouldRenderHeroArt(branding);
@@ -872,7 +940,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           </td>
         </tr>
         <tr>
-          <td style="padding:28px 28px 14px;">
+          <td data-preview-area="body" style="padding:28px 28px 14px;background:${bodyBackground};">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
                 <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor(bodyTextColor)}">
@@ -981,7 +1049,7 @@ function buildEmailPreheader({ parsed, branding }) {
 
 function buildHeroBackground(branding, templateStyle) {
   const accent = branding.headerColor || branding.accentColor || DEFAULT_ACCENT;
-  const secondary = branding.secondaryColor || DEFAULT_SECONDARY;
+  const secondary = branding.heroGradientColor || branding.secondaryColor || DEFAULT_SECONDARY;
   const style = branding.heroGradientStyle || "signature";
   const signatureGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.94)} 0%, ${hexToRgba(secondary, 0.78)} 20%, transparent 46%)`;
   const executiveGlow = `radial-gradient(circle at 82% 18%, ${hexToRgba(secondary, 0.7)} 0%, ${hexToRgba(secondary, 0.42)} 18%, transparent 42%)`;
@@ -1226,7 +1294,7 @@ function buildProductionSummary(summaryItems, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const summaryTextColor = getReadableTextColor(panelColor, { light: "#ffffff", dark: "#0f172a" });
   const visibleItems = summaryItems.slice(0, 3);
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
@@ -1234,8 +1302,8 @@ function buildProductionSummary(summaryItems, branding) {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background:${buildSectionBackground(panelColor, branding.summaryGradientStyle, 0.44)};table-layout:fixed;">
         <tr>
           <td height="106" valign="top" style="height:106px;padding:14px 14px 12px;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(bodyTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(bodyTextColor)}">${escapeHtml(item.value)}</div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(summaryTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(summaryTextColor)}">${escapeHtml(item.value)}</div>
           </td>
         </tr>
       </table>
@@ -1256,7 +1324,7 @@ function buildProductionSummary(summaryItems, branding) {
 function buildProductionDetails(details, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const bodyTextColor = branding.bodyTextColor || "#0f172a";
+  const detailsTextColor = branding.detailsTextColor || branding.bodyTextColor || "#0f172a";
 
   return `
     <tr>
@@ -1264,8 +1332,8 @@ function buildProductionDetails(details, branding) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="border:1px solid ${hexToRgba(detailsColor, 0.38)};${radius}background:${buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5)};">
           <tr>
             <td style="padding:16px 18px;">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(bodyTextColor)}margin:0 0 8px;">Additional details</div>
-              <div style="font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">Additional details</div>
+              <div style="font-size:15px;line-height:1.7;${paintTextColor(detailsTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
         </table>
@@ -1277,7 +1345,9 @@ function buildProductionDetails(details, branding) {
 function buildProductionButtons(branding) {
   const buttons = [];
   const radius = getSafeButtonRadius(branding.buttonStyle);
+  const buttonColor = branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
   const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
+  const buttonBackground = buildButtonBackground(buttonColor, tertiaryColor, branding.buttonGradientStyle || "solid");
   const buttonTextColor = branding.buttonTextColor || "#ffffff";
 
   if (branding.contactPhone) {
@@ -1286,9 +1356,9 @@ function buildProductionButtons(branding) {
       buttons.push({
         href: `tel:${digits}`,
         label: "Call us",
-        background: branding.accentColor,
+        background: buttonBackground,
         color: buttonTextColor,
-        border: branding.accentColor
+        border: buttonColor
       });
     }
   }
@@ -1297,9 +1367,9 @@ function buildProductionButtons(branding) {
     buttons.push({
       href: branding.websiteUrl,
       label: "Visit website",
-      background: tertiaryColor,
+      background: buttonBackground,
       color: buttonTextColor,
-      border: tertiaryColor
+      border: buttonColor
     });
   }
 
@@ -1307,9 +1377,9 @@ function buildProductionButtons(branding) {
     buttons.push({
       href: branding.rescheduleUrl,
       label: "Reschedule",
-      background: tertiaryColor,
+      background: buttonBackground,
       color: buttonTextColor,
-      border: tertiaryColor
+      border: buttonColor
     });
   }
 
@@ -1334,11 +1404,12 @@ function buildProductionCalendar(calendarLinks, branding) {
   }
 
   const radius = getSafePanelRadius(branding.panelShape);
-  const buttonRadius = getSafeButtonRadius("rounded");
+  const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const bodyTextColor = branding.bodyTextColor || "#0f172a";
-  const calendarButtonTextColor = "#ffffff";
-  const googleButtonColor = "#0f766e";
+  const calendarTextColor = branding.calendarTextColor || branding.bodyTextColor || "#0f172a";
+  const buttonColor = branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
+  const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
+  const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
 
   return `
     <tr>
@@ -1346,11 +1417,11 @@ function buildProductionCalendar(calendarLinks, branding) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="${radius}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.38)};">
           <tr>
             <td style="padding:18px;">
-              <div style="font-size:15px;font-weight:800;${paintTextColor(bodyTextColor)}margin:0 0 8px;">Add to Calendar</div>
-              <div style="font-size:13px;line-height:1.65;${paintTextColor(bodyTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
-              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:#1f2937;${paintTextColor(calendarButtonTextColor)}border:1px solid #1f2937;text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${branding.accentColor};${paintTextColor(calendarButtonTextColor)}border:1px solid ${branding.accentColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
-              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${googleButtonColor};${paintTextColor(calendarButtonTextColor)}border:1px solid ${googleButtonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
+              <div style="font-size:15px;font-weight:800;${paintTextColor(calendarTextColor)}margin:0 0 8px;">Add to Calendar</div>
+              <div style="font-size:13px;line-height:1.65;${paintTextColor(calendarTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+              <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Outlook Calendar</a>
+              <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${paintTextColor(calendarButtonTextColor)}border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;line-height:1.2;">Google Calendar</a>
             </td>
           </tr>
         </table>
@@ -1450,6 +1521,10 @@ function buildSurfaceStyle(style) {
 function buildActionButtons(branding) {
   const buttons = [];
   const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
+  const buttonColor = branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
+  const tertiaryColor = branding.tertiaryColor || DEFAULT_TERTIARY;
+  const buttonBackground = buildButtonBackground(buttonColor, tertiaryColor, branding.buttonGradientStyle || "solid");
+  const buttonTextColor = branding.buttonTextColor || "#ffffff";
 
   if (branding.contactPhone) {
     const digits = branding.contactPhone.replace(/\D/g, "");
@@ -1457,8 +1532,9 @@ function buildActionButtons(branding) {
       buttons.push({
         href: `tel:${digits}`,
         label: "Call us",
-        background: branding.accentColor,
-        color: "#ffffff",
+        background: buttonBackground,
+        color: buttonTextColor,
+        border: buttonColor,
         style: buttonShapeStyle
       });
     }
@@ -1468,9 +1544,9 @@ function buildActionButtons(branding) {
       buttons.push({
         href: branding.websiteUrl,
         label: "Visit website",
-        background: branding.tertiaryColor || "#1f2937",
-        color: branding.buttonTextColor || "#ffffff",
-        border: hexToRgba(branding.accentColor, 0.2),
+        background: buttonBackground,
+        color: buttonTextColor,
+        border: buttonColor,
         style: buttonShapeStyle
     });
   }
@@ -1479,8 +1555,9 @@ function buildActionButtons(branding) {
     buttons.push({
         href: branding.rescheduleUrl,
         label: "Reschedule",
-        background: branding.tertiaryColor || "#1f2937",
-        color: branding.buttonTextColor || "#ffffff",
+        background: buttonBackground,
+        color: buttonTextColor,
+        border: buttonColor,
         style: buttonShapeStyle
       });
     }
@@ -1508,20 +1585,21 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
     : brandingOrAccent || { accentColor: DEFAULT_ACCENT, buttonStyle: "pill" };
   const accentColor = branding.accentColor || DEFAULT_ACCENT;
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const buttonShapeStyle = buildButtonStyle("rounded");
+  const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
   const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
-  const bodyTextColor = branding.bodyTextColor || "#0f172a";
-  const calendarButtonTextColor = "#ffffff";
-  const googleButtonColor = "#0f766e";
+  const calendarTextColor = branding.calendarTextColor || branding.bodyTextColor || "#0f172a";
+  const buttonColor = branding.buttonColor || accentColor;
+  const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
+  const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
 
   return `
     <div data-preview-area="calendar" style="margin:4px 0 18px;padding:18px;${panelShapeStyle}background:${buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42)};border:1px solid ${hexToRgba(calendarColor, 0.2)};">
-      <div style="margin:0 0 10px;color:${bodyTextColor};font-size:15px;font-weight:800;">Add to Calendar</div>
-      <div style="font-size:13px;line-height:1.65;color:${bodyTextColor};margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
+      <div style="margin:0 0 10px;color:${calendarTextColor};font-size:15px;font-weight:800;">Add to Calendar</div>
+      <div style="font-size:13px;line-height:1.65;color:${calendarTextColor};margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:#1f2937;color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${accentColor};color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
-        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${googleButtonColor};color:${calendarButtonTextColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Apple Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.outlook)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Outlook Calendar</a>
+        <a href="${escapeAttribute(calendarLinks.google)}" style="display:inline-block;padding:11px 14px;${buttonShapeStyle}background:${buttonBackground};color:${calendarButtonTextColor};border:1px solid ${buttonColor};text-decoration:none;font-size:13px;font-weight:800;">Google Calendar</a>
       </div>
     </div>
   `;
