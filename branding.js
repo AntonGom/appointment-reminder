@@ -132,6 +132,7 @@ const helperTextIds = {
   shapeIntensity: "branding-shape-intensity-hint",
   shineStyle: "branding-shine-style-hint",
   motionStyle: "branding-motion-style-hint",
+  logoUrl: "branding-logo-url-hint",
   footerColor: "branding-footer-color-hint",
   footerTextColor: "branding-footer-text-color-hint"
 };
@@ -1081,6 +1082,7 @@ function updateHelperHints() {
   updateHelperHint(helperTextIds.shapeIntensity, getShapeIntensityHint());
   updateHelperHint(helperTextIds.shineStyle, getShineStyleHint());
   updateHelperHint(helperTextIds.motionStyle, getMotionStyleHint());
+  updateHelperHint(helperTextIds.logoUrl, getLogoUrlHint());
   updateHelperHint(helperTextIds.footerColor, getFooterColorHint());
   updateHelperHint(helperTextIds.footerTextColor, getFooterTextColorHint());
 }
@@ -1159,6 +1161,23 @@ function getButtonGradientHint() {
 
 function getButtonTextColorHint() {
   return "Changes the text color used on all reminder buttons.";
+}
+
+function getLogoUrlHint() {
+  const value = String(getFieldElement(fieldIds.logoUrl)?.value || "").trim();
+
+  if (!value) {
+    return "Use a direct image link like `.png`, `.jpg`, `.svg`, or `.webp`, not a webpage URL.";
+  }
+
+  const normalized = value.split("?")[0].toLowerCase();
+  const looksDirect = /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(normalized);
+
+  if (looksDirect) {
+    return "This looks like a direct image file URL.";
+  }
+
+  return "This looks like a webpage URL, not a direct image file. Open the image itself in a new tab and paste that image URL instead.";
 }
 
 function getShowHeroArtHint() {
