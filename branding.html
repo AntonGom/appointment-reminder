@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402h">
+  <link rel="stylesheet" href="branding.css?v=20260402j">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -74,19 +74,8 @@
 
                 <form id="branding-form">
                   <input id="branding-template-style" type="hidden" value="signature">
-                  <div class="branding-toggle-card field-span-2">
-                    <label class="branding-toggle-row" for="branding-enabled">
-                      <span class="branding-toggle-copy">
-                        <span class="branding-toggle-title">Use branded reminder emails</span>
-                        <span class="branding-toggle-text">Turn this off anytime to send the simpler free-user reminder layout instead.</span>
-                      </span>
-                      <span class="branding-switch">
-                        <input id="branding-enabled" type="checkbox" checked>
-                        <span class="branding-switch-ui" aria-hidden="true"></span>
-                      </span>
-                    </label>
-                    <p id="branding-enabled-note" class="field-hint branding-helper">When off, your design stays saved here, but outgoing emails use the standard reminder format.</p>
-                  </div>
+                  <input id="branding-accent-color" type="hidden" value="#2563eb">
+                  <input id="branding-accent-hex" type="hidden" value="#2563eb">
 
                   <div class="branding-field-grid branding-editor-grid">
                     <div class="field-span-2" data-editor-group="hero">
@@ -102,14 +91,6 @@
                     <div class="field-span-2" data-editor-group="hero">
                       <label class="branding-label" for="branding-header-label">Top label</label>
                       <input id="branding-header-label" class="branding-input" type="text" maxlength="50" placeholder="Appointment reminder">
-                    </div>
-
-                    <div data-editor-group="hero">
-                      <label class="branding-label" for="branding-accent-color">Brand color</label>
-                      <div class="branding-color-row">
-                        <input id="branding-accent-color" class="branding-color-input" type="color" value="#2563eb">
-                        <input id="branding-accent-hex" class="branding-input" type="text" maxlength="7" value="#2563eb" placeholder="#2563eb">
-                      </div>
                     </div>
 
                     <div data-editor-group="hero">
@@ -262,6 +243,44 @@
                         <input id="branding-calendar-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
                       </div>
                       <p id="branding-calendar-text-color-hint" class="field-hint branding-helper">Changes the text color in the add-to-calendar section.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-button-color">Calendar button color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-calendar-button-color" class="branding-color-input" type="color" value="#2563eb">
+                        <input id="branding-calendar-button-hex" class="branding-input" type="text" maxlength="7" value="#2563eb" placeholder="#2563eb">
+                      </div>
+                      <p id="branding-calendar-button-color-hint" class="field-hint branding-helper">Changes the main color used on the calendar app buttons only.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-button-secondary-color">Calendar button secondary color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-calendar-button-secondary-color" class="branding-color-input" type="color" value="#1f2937">
+                        <input id="branding-calendar-button-secondary-hex" class="branding-input" type="text" maxlength="7" value="#1f2937" placeholder="#1f2937">
+                      </div>
+                      <p id="branding-calendar-button-secondary-color-hint" class="field-hint branding-helper">Used as the second color when calendar app buttons use a gradient.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-button-gradient">Calendar button gradient</label>
+                      <select id="branding-calendar-button-gradient" class="branding-select">
+                        <option value="solid">Solid</option>
+                        <option value="soft">Soft</option>
+                        <option value="glow">Glow</option>
+                        <option value="split">Split</option>
+                      </select>
+                      <p id="branding-calendar-button-gradient-hint" class="field-hint branding-helper">Controls how the calendar app button colors blend together.</p>
+                    </div>
+
+                    <div data-editor-group="calendar">
+                      <label class="branding-label" for="branding-calendar-button-text-color">Calendar button text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-calendar-button-text-color" class="branding-color-input" type="color" value="#ffffff">
+                        <input id="branding-calendar-button-text-hex" class="branding-input" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff">
+                      </div>
+                      <p id="branding-calendar-button-text-color-hint" class="field-hint branding-helper">Changes the text color on the Apple, Outlook, and Google Calendar buttons.</p>
                     </div>
 
                     <div data-editor-group="buttons">
@@ -444,6 +463,20 @@
               </section>
 
               <section class="section-card branding-card branding-preview-card">
+                <div class="branding-toggle-card branding-preview-toggle">
+                  <label class="branding-toggle-row" for="branding-enabled">
+                    <span class="branding-toggle-copy">
+                      <span class="branding-toggle-title">Use branded reminder emails</span>
+                      <span class="branding-toggle-text">Turn this off anytime to send the simpler free-user reminder layout instead.</span>
+                    </span>
+                    <span class="branding-switch">
+                      <input id="branding-enabled" type="checkbox" form="branding-form" checked>
+                      <span class="branding-switch-ui" aria-hidden="true"></span>
+                    </span>
+                  </label>
+                  <p id="branding-enabled-note" class="field-hint branding-helper">When off, your design stays saved here, but outgoing emails use the standard reminder format.</p>
+                </div>
+
                 <div class="branding-preview-head">
                   <div>
                     <h3>Click-to-edit email studio</h3>
@@ -529,6 +562,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402n"></script>
+  <script type="module" src="branding.js?v=20260402o"></script>
 </body>
 </html>

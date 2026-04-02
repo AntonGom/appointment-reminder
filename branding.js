@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402m";
+} from "./branding-templates.js?v=20260402n";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -80,6 +80,13 @@ const fieldIds = {
   calendarGradientStyle: "branding-calendar-gradient",
   calendarTextColor: "branding-calendar-text-color",
   calendarTextHex: "branding-calendar-text-hex",
+  calendarButtonColor: "branding-calendar-button-color",
+  calendarButtonHex: "branding-calendar-button-hex",
+  calendarButtonSecondaryColor: "branding-calendar-button-secondary-color",
+  calendarButtonSecondaryHex: "branding-calendar-button-secondary-hex",
+  calendarButtonGradientStyle: "branding-calendar-button-gradient",
+  calendarButtonTextColor: "branding-calendar-button-text-color",
+  calendarButtonTextHex: "branding-calendar-button-text-hex",
   buttonColor: "branding-button-color",
   buttonHex: "branding-button-hex",
   tertiaryColor: "branding-tertiary-color",
@@ -120,6 +127,10 @@ const helperTextIds = {
   detailsTextColor: "branding-details-text-color-hint",
   calendarColor: "branding-calendar-color-hint",
   calendarTextColor: "branding-calendar-text-color-hint",
+  calendarButtonColor: "branding-calendar-button-color-hint",
+  calendarButtonSecondaryColor: "branding-calendar-button-secondary-color-hint",
+  calendarButtonGradientStyle: "branding-calendar-button-gradient-hint",
+  calendarButtonTextColor: "branding-calendar-button-text-color-hint",
   buttonColor: "branding-button-color-hint",
   tertiaryColor: "branding-tertiary-color-hint",
   buttonGradientStyle: "branding-button-gradient-hint",
@@ -227,30 +238,46 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     iframeAreas: ["calendar"],
     note: "Highlighting the text used in the add-to-calendar section."
   },
+  [fieldIds.calendarButtonColor]: {
+    iframeAreas: ["calendar"],
+    note: "Highlighting the calendar app buttons only."
+  },
+  [fieldIds.calendarButtonSecondaryColor]: {
+    iframeAreas: ["calendar"],
+    note: "Highlighting the secondary tone used in the calendar app button gradients."
+  },
+  [fieldIds.calendarButtonGradientStyle]: {
+    iframeAreas: ["calendar"],
+    note: "Highlighting how the calendar app buttons blend their colors together."
+  },
+  [fieldIds.calendarButtonTextColor]: {
+    iframeAreas: ["calendar"],
+    note: "Highlighting the text used inside the calendar app buttons."
+  },
   [fieldIds.buttonColor]: {
-    iframeAreas: ["buttons", "calendar"],
-    note: "Highlighting the main button color used across all reminder buttons."
+    iframeAreas: ["buttons"],
+    note: "Highlighting the main color used on the main reminder buttons."
   },
   [fieldIds.tertiaryColor]: {
-    iframeAreas: ["buttons", "calendar"],
-    note: "Highlighting the secondary tone used in button gradients."
+    iframeAreas: ["buttons"],
+    note: "Highlighting the secondary tone used in the main reminder button gradients."
   },
   [fieldIds.buttonGradientStyle]: {
-    iframeAreas: ["buttons", "calendar"],
-    note: "Highlighting how the reminder buttons blend their two button colors."
+    iframeAreas: ["buttons"],
+    note: "Highlighting how the main reminder buttons blend their two colors."
   },
   [fieldIds.buttonTextColor]: {
-    iframeAreas: ["buttons", "calendar"],
-    note: "Highlighting the text used inside all reminder buttons."
+    iframeAreas: ["buttons"],
+    note: "Highlighting the text used inside the main reminder buttons."
   },
   [fieldIds.logoUrl]: {
     iframeAreas: ["logo"],
     note: "Highlighting the logo area."
   },
   [fieldIds.buttonStyle]: {
-    iframeAreas: ["buttons", "calendar"],
+    iframeAreas: ["buttons"],
     selectors: ["#branding-preview-subject", ".signature-card-cta"],
-    note: "Highlighting the reminder buttons whose corners change shape."
+    note: "Highlighting the main reminder buttons whose corners change shape."
   },
   [fieldIds.panelShape]: {
     iframeAreas: ["summary", "details", "calendar"],
@@ -367,6 +394,13 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.calendarGradientStyle]: "calendar",
   [fieldIds.calendarTextColor]: "calendar",
   [fieldIds.calendarTextHex]: "calendar",
+  [fieldIds.calendarButtonColor]: "calendar",
+  [fieldIds.calendarButtonHex]: "calendar",
+  [fieldIds.calendarButtonSecondaryColor]: "calendar",
+  [fieldIds.calendarButtonSecondaryHex]: "calendar",
+  [fieldIds.calendarButtonGradientStyle]: "calendar",
+  [fieldIds.calendarButtonTextColor]: "calendar",
+  [fieldIds.calendarButtonTextHex]: "calendar",
   [fieldIds.panelShape]: "summary",
   [fieldIds.buttonStyle]: "buttons",
   [fieldIds.buttonColor]: "buttons",
@@ -405,7 +439,7 @@ const PREVIEW_AREA_TO_EDITOR_GROUP = {
 const EDITOR_GROUP_COPY = {
   hero: {
     title: "Top section controls",
-    copy: "Change the business name, hero copy, brand color, top section color, and secondary accent that appear at the top of the email."
+    copy: "Change the business name, hero copy, top section color, and supporting accent colors that appear at the top of the email."
   },
   art: {
     title: "Hero art controls",
@@ -429,7 +463,7 @@ const EDITOR_GROUP_COPY = {
   },
   calendar: {
     title: "Calendar section controls",
-    copy: "Adjust the color, gradient, and button feel of the add-to-calendar section."
+    copy: "Adjust the add-to-calendar section color, gradient, text, and the calendar app button styling."
   },
   buttons: {
     title: "Button controls",
@@ -621,7 +655,6 @@ function getDraftBranding() {
     businessName: getFieldElement(fieldIds.businessName)?.value || "",
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
-    accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
@@ -638,6 +671,10 @@ function getDraftBranding() {
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
     calendarTextColor: getFieldElement(fieldIds.calendarTextColor)?.value || getFieldElement(fieldIds.calendarTextHex)?.value || "",
+    calendarButtonColor: getFieldElement(fieldIds.calendarButtonColor)?.value || getFieldElement(fieldIds.calendarButtonHex)?.value || "",
+    calendarButtonSecondaryColor: getFieldElement(fieldIds.calendarButtonSecondaryColor)?.value || getFieldElement(fieldIds.calendarButtonSecondaryHex)?.value || "",
+    calendarButtonGradientStyle: getFieldElement(fieldIds.calendarButtonGradientStyle)?.value || "solid",
+    calendarButtonTextColor: getFieldElement(fieldIds.calendarButtonTextColor)?.value || getFieldElement(fieldIds.calendarButtonTextHex)?.value || "",
     buttonColor: getFieldElement(fieldIds.buttonColor)?.value || getFieldElement(fieldIds.buttonHex)?.value || "",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
     buttonGradientStyle: getFieldElement(fieldIds.buttonGradientStyle)?.value || "solid",
@@ -658,6 +695,7 @@ function getDraftBranding() {
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
     footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
   };
+  rawDraft.accentColor = rawDraft.headerColor || rawDraft.buttonColor || "";
 
   return normalizeBrandingProfile(rawDraft, {
     forPreview: true,
@@ -705,6 +743,13 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.calendarGradientStyle).value = normalized.calendarGradientStyle;
   getFieldElement(fieldIds.calendarTextColor).value = normalized.calendarTextColor;
   getFieldElement(fieldIds.calendarTextHex).value = normalized.calendarTextColor;
+  getFieldElement(fieldIds.calendarButtonColor).value = normalized.calendarButtonColor;
+  getFieldElement(fieldIds.calendarButtonHex).value = normalized.calendarButtonColor;
+  getFieldElement(fieldIds.calendarButtonSecondaryColor).value = normalized.calendarButtonSecondaryColor;
+  getFieldElement(fieldIds.calendarButtonSecondaryHex).value = normalized.calendarButtonSecondaryColor;
+  getFieldElement(fieldIds.calendarButtonGradientStyle).value = normalized.calendarButtonGradientStyle;
+  getFieldElement(fieldIds.calendarButtonTextColor).value = normalized.calendarButtonTextColor;
+  getFieldElement(fieldIds.calendarButtonTextHex).value = normalized.calendarButtonTextColor;
   getFieldElement(fieldIds.buttonColor).value = normalized.buttonColor;
   getFieldElement(fieldIds.buttonHex).value = normalized.buttonColor;
   getFieldElement(fieldIds.tertiaryColor).value = normalized.tertiaryColor;
@@ -786,6 +831,13 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.calendarGradientStyle).value = preset.calendarGradientStyle;
   getFieldElement(fieldIds.calendarTextColor).value = preset.calendarTextColor;
   getFieldElement(fieldIds.calendarTextHex).value = preset.calendarTextColor;
+  getFieldElement(fieldIds.calendarButtonColor).value = preset.calendarButtonColor;
+  getFieldElement(fieldIds.calendarButtonHex).value = preset.calendarButtonColor;
+  getFieldElement(fieldIds.calendarButtonSecondaryColor).value = preset.calendarButtonSecondaryColor;
+  getFieldElement(fieldIds.calendarButtonSecondaryHex).value = preset.calendarButtonSecondaryColor;
+  getFieldElement(fieldIds.calendarButtonGradientStyle).value = preset.calendarButtonGradientStyle;
+  getFieldElement(fieldIds.calendarButtonTextColor).value = preset.calendarButtonTextColor;
+  getFieldElement(fieldIds.calendarButtonTextHex).value = preset.calendarButtonTextColor;
   getFieldElement(fieldIds.buttonColor).value = preset.buttonColor;
   getFieldElement(fieldIds.buttonHex).value = preset.buttonColor;
   getFieldElement(fieldIds.tertiaryColor).value = preset.tertiaryColor;
@@ -1070,6 +1122,10 @@ function updateHelperHints() {
   updateHelperHint(helperTextIds.detailsTextColor, getDetailsTextColorHint());
   updateHelperHint(helperTextIds.calendarColor, getCalendarColorHint());
   updateHelperHint(helperTextIds.calendarTextColor, getCalendarTextColorHint());
+  updateHelperHint(helperTextIds.calendarButtonColor, getCalendarButtonColorHint());
+  updateHelperHint(helperTextIds.calendarButtonSecondaryColor, getCalendarButtonSecondaryColorHint());
+  updateHelperHint(helperTextIds.calendarButtonGradientStyle, getCalendarButtonGradientHint());
+  updateHelperHint(helperTextIds.calendarButtonTextColor, getCalendarButtonTextColorHint());
   updateHelperHint(helperTextIds.buttonColor, getButtonColorHint());
   updateHelperHint(helperTextIds.tertiaryColor, getTertiaryColorHint());
   updateHelperHint(helperTextIds.buttonGradientStyle, getButtonGradientHint());
@@ -1147,20 +1203,36 @@ function getCalendarTextColorHint() {
   return "Changes the text color inside the add-to-calendar section.";
 }
 
+function getCalendarButtonColorHint() {
+  return "Used as the main color on the Apple, Outlook, and Google Calendar buttons.";
+}
+
+function getCalendarButtonSecondaryColorHint() {
+  return "Used as the second color when the calendar buttons use a gradient.";
+}
+
+function getCalendarButtonGradientHint() {
+  return "Controls how the calendar button colors blend together.";
+}
+
+function getCalendarButtonTextColorHint() {
+  return "Changes the text color used inside the calendar app buttons.";
+}
+
 function getButtonColorHint() {
-  return "Used as the main color across all reminder buttons.";
+  return "Used as the main color on the main reminder buttons like Visit website or Reschedule.";
 }
 
 function getTertiaryColorHint() {
-  return "Used as the second color when button gradients are enabled.";
+  return "Used as the second color when the main reminder buttons use a gradient.";
 }
 
 function getButtonGradientHint() {
-  return "Controls how the main and secondary button colors blend together.";
+  return "Controls how the main reminder button colors blend together.";
 }
 
 function getButtonTextColorHint() {
-  return "Changes the text color used on all reminder buttons.";
+  return "Changes the text color used on the main reminder buttons.";
 }
 
 function getLogoUrlHint() {
@@ -1665,7 +1737,6 @@ async function saveBranding() {
     businessName: (getFieldElement(fieldIds.businessName)?.value || "").trim(),
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
-    accentColor: getFieldElement(fieldIds.accentColor)?.value || getFieldElement(fieldIds.accentHex)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
@@ -1682,6 +1753,10 @@ async function saveBranding() {
     calendarColor: getFieldElement(fieldIds.calendarColor)?.value || getFieldElement(fieldIds.calendarHex)?.value || "",
     calendarGradientStyle: getFieldElement(fieldIds.calendarGradientStyle)?.value || "soft",
     calendarTextColor: getFieldElement(fieldIds.calendarTextColor)?.value || getFieldElement(fieldIds.calendarTextHex)?.value || "",
+    calendarButtonColor: getFieldElement(fieldIds.calendarButtonColor)?.value || getFieldElement(fieldIds.calendarButtonHex)?.value || "",
+    calendarButtonSecondaryColor: getFieldElement(fieldIds.calendarButtonSecondaryColor)?.value || getFieldElement(fieldIds.calendarButtonSecondaryHex)?.value || "",
+    calendarButtonGradientStyle: getFieldElement(fieldIds.calendarButtonGradientStyle)?.value || "solid",
+    calendarButtonTextColor: getFieldElement(fieldIds.calendarButtonTextColor)?.value || getFieldElement(fieldIds.calendarButtonTextHex)?.value || "",
     buttonColor: getFieldElement(fieldIds.buttonColor)?.value || getFieldElement(fieldIds.buttonHex)?.value || "",
     tertiaryColor: getFieldElement(fieldIds.tertiaryColor)?.value || getFieldElement(fieldIds.tertiaryHex)?.value || "",
     buttonGradientStyle: getFieldElement(fieldIds.buttonGradientStyle)?.value || "solid",
@@ -1702,6 +1777,7 @@ async function saveBranding() {
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
     footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
   };
+  rawBranding.accentColor = rawBranding.headerColor || rawBranding.buttonColor || "";
 
   if (!rawBranding.businessName) {
     setStatus("Business name is required before you save branding.", "error");
@@ -1841,6 +1917,12 @@ function wireFormInputs() {
   const calendarHexInput = getFieldElement(fieldIds.calendarHex);
   const calendarTextColorInput = getFieldElement(fieldIds.calendarTextColor);
   const calendarTextHexInput = getFieldElement(fieldIds.calendarTextHex);
+  const calendarButtonColorInput = getFieldElement(fieldIds.calendarButtonColor);
+  const calendarButtonHexInput = getFieldElement(fieldIds.calendarButtonHex);
+  const calendarButtonSecondaryColorInput = getFieldElement(fieldIds.calendarButtonSecondaryColor);
+  const calendarButtonSecondaryHexInput = getFieldElement(fieldIds.calendarButtonSecondaryHex);
+  const calendarButtonTextColorInput = getFieldElement(fieldIds.calendarButtonTextColor);
+  const calendarButtonTextHexInput = getFieldElement(fieldIds.calendarButtonTextHex);
   const buttonColorInput = getFieldElement(fieldIds.buttonColor);
   const buttonHexInput = getFieldElement(fieldIds.buttonHex);
   const tertiaryColorInput = getFieldElement(fieldIds.tertiaryColor);
@@ -1853,6 +1935,7 @@ function wireFormInputs() {
   const footerTextHexInput = getFieldElement(fieldIds.footerTextHex);
   const artShapeInput = getFieldElement(fieldIds.artShape);
   const showHeroArtInput = getFieldElement(fieldIds.showHeroArt);
+  const brandingEnabledInput = getFieldElement(fieldIds.brandingEnabled);
 
   brandingForm.addEventListener("input", event => {
     if (event.target === accentColorInput && accentHexInput) {
@@ -1905,6 +1988,18 @@ function wireFormInputs() {
 
     if (event.target === calendarTextColorInput && calendarTextHexInput) {
       calendarTextHexInput.value = calendarTextColorInput.value;
+    }
+
+    if (event.target === calendarButtonColorInput && calendarButtonHexInput) {
+      calendarButtonHexInput.value = calendarButtonColorInput.value;
+    }
+
+    if (event.target === calendarButtonSecondaryColorInput && calendarButtonSecondaryHexInput) {
+      calendarButtonSecondaryHexInput.value = calendarButtonSecondaryColorInput.value;
+    }
+
+    if (event.target === calendarButtonTextColorInput && calendarButtonTextHexInput) {
+      calendarButtonTextHexInput.value = calendarButtonTextColorInput.value;
     }
 
     if (event.target === buttonColorInput && buttonHexInput) {
@@ -1979,6 +2074,18 @@ function wireFormInputs() {
       calendarTextColorInput.value = calendarTextHexInput.value.trim();
     }
 
+    if (event.target === calendarButtonHexInput && calendarButtonColorInput && /^#[0-9a-f]{3,6}$/i.test(calendarButtonHexInput.value.trim())) {
+      calendarButtonColorInput.value = calendarButtonHexInput.value.trim();
+    }
+
+    if (event.target === calendarButtonSecondaryHexInput && calendarButtonSecondaryColorInput && /^#[0-9a-f]{3,6}$/i.test(calendarButtonSecondaryHexInput.value.trim())) {
+      calendarButtonSecondaryColorInput.value = calendarButtonSecondaryHexInput.value.trim();
+    }
+
+    if (event.target === calendarButtonTextHexInput && calendarButtonTextColorInput && /^#[0-9a-f]{3,6}$/i.test(calendarButtonTextHexInput.value.trim())) {
+      calendarButtonTextColorInput.value = calendarButtonTextHexInput.value.trim();
+    }
+
     if (event.target === buttonHexInput && buttonColorInput && /^#[0-9a-f]{3,6}$/i.test(buttonHexInput.value.trim())) {
       buttonColorInput.value = buttonHexInput.value.trim();
     }
@@ -2050,6 +2157,27 @@ function wireFormInputs() {
   brandingForm.addEventListener("focusout", () => {
     clearPreviewHighlightIfIdle();
   });
+
+  if (brandingEnabledInput) {
+    brandingEnabledInput.addEventListener("change", () => {
+      openEditorGroupForField(fieldIds.brandingEnabled);
+      applyPreviewHighlight(fieldIds.brandingEnabled);
+      updateHelperHints();
+      queuePreviewRender();
+      window.setTimeout(() => {
+        applyPreviewHighlight("");
+      }, 180);
+    });
+
+    brandingEnabledInput.addEventListener("focus", () => {
+      openEditorGroupForField(fieldIds.brandingEnabled);
+      applyPreviewHighlight(fieldIds.brandingEnabled);
+    });
+
+    brandingEnabledInput.addEventListener("blur", () => {
+      clearPreviewHighlightIfIdle();
+    });
+  }
 
   document.addEventListener("pointerdown", event => {
     const target = event.target;

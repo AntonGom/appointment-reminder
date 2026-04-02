@@ -48,6 +48,10 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     detailsTextColor: "#0f172a",
     calendarColor: "#eef4ff",
     calendarTextColor: "#0f172a",
+    calendarButtonColor: "#2563eb",
+    calendarButtonSecondaryColor: "#1f2937",
+    calendarButtonGradientStyle: "solid",
+    calendarButtonTextColor: "#ffffff",
     buttonColor: "#2563eb",
     tertiaryColor: "#1f2937",
     buttonGradientStyle: "solid",
@@ -81,6 +85,10 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     detailsTextColor: "#0f172a",
     calendarColor: "#ecfbf6",
     calendarTextColor: "#0f172a",
+    calendarButtonColor: "#0f766e",
+    calendarButtonSecondaryColor: "#134e4a",
+    calendarButtonGradientStyle: "solid",
+    calendarButtonTextColor: "#ffffff",
     buttonColor: "#0f766e",
     tertiaryColor: "#134e4a",
     buttonGradientStyle: "solid",
@@ -114,6 +122,10 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     detailsTextColor: "#0f172a",
     calendarColor: "#edf2f7",
     calendarTextColor: "#0f172a",
+    calendarButtonColor: "#0f172a",
+    calendarButtonSecondaryColor: "#334155",
+    calendarButtonGradientStyle: "solid",
+    calendarButtonTextColor: "#ffffff",
     buttonColor: "#0f172a",
     tertiaryColor: "#334155",
     buttonGradientStyle: "solid",
@@ -179,6 +191,12 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const detailsTextColor = normalizeHexColor(profile?.detailsTextColor) || templatePreset.detailsTextColor || bodyTextColor;
   const calendarColor = normalizeHexColor(profile?.calendarColor) || templatePreset.calendarColor || panelColor;
   const calendarTextColor = normalizeHexColor(profile?.calendarTextColor) || templatePreset.calendarTextColor || bodyTextColor;
+  const calendarButtonColor = normalizeHexColor(profile?.calendarButtonColor) || templatePreset.calendarButtonColor || normalizeHexColor(profile?.buttonColor) || templatePreset.buttonColor || accentColor;
+  const calendarButtonSecondaryColor = normalizeHexColor(profile?.calendarButtonSecondaryColor) || templatePreset.calendarButtonSecondaryColor || normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
+  const calendarButtonGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.calendarButtonGradientStyle)
+    ? profile.calendarButtonGradientStyle
+    : templatePreset.calendarButtonGradientStyle || (SECTION_GRADIENT_STYLES.has(profile?.buttonGradientStyle) ? profile.buttonGradientStyle : templatePreset.buttonGradientStyle) || "solid";
+  const calendarButtonTextColor = normalizeHexColor(profile?.calendarButtonTextColor) || templatePreset.calendarButtonTextColor || normalizeHexColor(profile?.buttonTextColor) || templatePreset.buttonTextColor || "#ffffff";
   const buttonColor = normalizeHexColor(profile?.buttonColor) || templatePreset.buttonColor || accentColor;
   const tertiaryColor = normalizeHexColor(profile?.tertiaryColor) || templatePreset.tertiaryColor || DEFAULT_TERTIARY;
   const buttonGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.buttonGradientStyle) ? profile.buttonGradientStyle : templatePreset.buttonGradientStyle || "solid";
@@ -222,6 +240,10 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     detailsTextColor,
     calendarColor,
     calendarTextColor,
+    calendarButtonColor,
+    calendarButtonSecondaryColor,
+    calendarButtonGradientStyle,
+    calendarButtonTextColor,
     buttonColor,
     tertiaryColor,
     buttonGradientStyle,
@@ -1400,9 +1422,13 @@ function buildProductionCalendar(calendarLinks, branding) {
   const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const calendarTextColor = branding.calendarTextColor || branding.bodyTextColor || "#0f172a";
-  const buttonColor = branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
-  const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
-  const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
+  const buttonColor = branding.calendarButtonColor || branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
+  const buttonBackground = buildButtonBackground(
+    buttonColor,
+    branding.calendarButtonSecondaryColor || branding.tertiaryColor || DEFAULT_TERTIARY,
+    branding.calendarButtonGradientStyle || branding.buttonGradientStyle || "solid"
+  );
+  const calendarButtonTextColor = branding.calendarButtonTextColor || branding.buttonTextColor || "#ffffff";
   const calendarButtonTextStyle = `color:${calendarButtonTextColor} !important;-webkit-text-fill-color:${calendarButtonTextColor} !important;text-decoration:none !important;`;
 
   return `
@@ -1569,9 +1595,13 @@ function buildCalendarSection(calendarLinks, brandingOrAccent) {
   const buttonShapeStyle = buildButtonStyle(branding.buttonStyle);
   const panelShapeStyle = buildSurfaceStyle(branding.panelShape);
   const calendarTextColor = branding.calendarTextColor || branding.bodyTextColor || "#0f172a";
-  const buttonColor = branding.buttonColor || accentColor;
-  const buttonBackground = buildButtonBackground(buttonColor, branding.tertiaryColor || DEFAULT_TERTIARY, branding.buttonGradientStyle || "solid");
-  const calendarButtonTextColor = branding.buttonTextColor || "#ffffff";
+  const buttonColor = branding.calendarButtonColor || branding.buttonColor || accentColor;
+  const buttonBackground = buildButtonBackground(
+    buttonColor,
+    branding.calendarButtonSecondaryColor || branding.tertiaryColor || DEFAULT_TERTIARY,
+    branding.calendarButtonGradientStyle || branding.buttonGradientStyle || "solid"
+  );
+  const calendarButtonTextColor = branding.calendarButtonTextColor || branding.buttonTextColor || "#ffffff";
   const calendarButtonTextStyle = `color:${calendarButtonTextColor} !important;-webkit-text-fill-color:${calendarButtonTextColor} !important;text-decoration:none !important;`;
 
   return `

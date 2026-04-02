@@ -217,6 +217,11 @@ body[data-page="branding"] .section-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,248,255,0.96));
 }
 
+.branding-preview-toggle {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
 .branding-toggle-row {
   display: flex;
   align-items: center;
