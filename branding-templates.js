@@ -388,7 +388,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const heroLabel = escapeHtml(branding.headerLabel || "Appointment reminder");
   const tagline = branding.tagline ? `<div style="font-size:14px;line-height:1.65;color:${branding.heroTextColor};margin-top:8px;">${escapeHtml(branding.tagline)}</div>` : "";
   const logoMarkup = branding.logoUrl
-    ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${businessName} logo" style="width:52px;height:52px;border-radius:18px;display:block;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.35);">`
+    ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${businessName} logo" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:52px;height:52px;border-radius:18px;display:block;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.35);">`
     : `<div style="width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.24);color:${branding.heroTextColor};font-size:18px;font-weight:800;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
 
   return {
@@ -882,8 +882,8 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
     `
     : "";
   const logoMarkup = branding.logoUrl
-    ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${escapeAttribute(branding.businessName)} logo" width="54" height="54" style="display:block;width:54px;height:54px;border-radius:16px;object-fit:cover;border:1px solid ${hexToRgba("#ffffff", 0.24)};">`
-    : `<div style="width:54px;height:54px;border-radius:16px;background:${theme.markBackground};border:1px solid ${theme.markBorder};display:flex;align-items:center;justify-content:center;color:${theme.markText};font-size:20px;font-weight:800;line-height:1;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
+    ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${escapeAttribute(branding.businessName)} logo" width="54" height="54" referrerpolicy="no-referrer" crossorigin="anonymous" style="display:block;width:54px;height:54px;border-radius:16px;object-fit:cover;border:1px solid ${hexToRgba("#ffffff", 0.24)};">`
+    : `<div style="width:54px;height:54px;border-radius:16px;background:${theme.markBackground};border:1px solid ${theme.markBorder};color:${theme.markText};font-size:20px;font-weight:800;line-height:54px;text-align:center;mso-line-height-rule:exactly;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
   const topLabel = escapeHtml(branding.headerLabel || "Appointment Reminder");
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
   const tagline = branding.tagline
