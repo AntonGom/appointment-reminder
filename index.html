@@ -567,16 +567,17 @@
     }
 
     .email-draft-fields {
-      padding: 10px 16px 4px;
-      background: rgba(255, 255, 255, 0.9);
+      padding: 12px 16px 6px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.96));
+      border-bottom: 1px solid rgba(203, 213, 225, 0.56);
     }
 
     .draft-field {
       display: grid;
       grid-template-columns: 68px minmax(0, 1fr);
-      gap: 12px;
+      gap: 14px;
       align-items: center;
-      padding: 10px 0;
+      padding: 12px 0;
       border-bottom: 1px solid rgba(203, 213, 225, 0.62);
     }
 
@@ -585,10 +586,10 @@
     }
 
     .draft-field-label {
-      color: #64748b;
+      color: #334155;
       font-size: 13px;
       font-weight: 800;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
     }
 
@@ -602,7 +603,7 @@
     }
 
     .draft-field-value.muted {
-      color: #94a3b8;
+      color: #64748b;
       font-weight: 600;
     }
 
@@ -1198,15 +1199,15 @@
                 </div>
                 <div class="email-draft-fields" aria-hidden="true">
                   <div class="draft-field">
-                    <span class="draft-field-label">From</span>
+                    <span class="draft-field-label">From:</span>
                     <span id="preview-from" class="draft-field-value muted">yourbusiness@example.com</span>
                   </div>
                   <div class="draft-field">
-                    <span class="draft-field-label">To</span>
+                    <span class="draft-field-label">To:</span>
                     <span id="preview-to" class="draft-field-value muted">client@example.com</span>
                   </div>
                   <div class="draft-field">
-                    <span class="draft-field-label">Subject</span>
+                    <span class="draft-field-label">Subject:</span>
                     <span id="preview-subject" class="draft-field-value">Appointment Reminder</span>
                   </div>
                 </div>
@@ -1289,7 +1290,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260402g"></script>
+<script src="app.js?v=20260402h"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

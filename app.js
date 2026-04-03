@@ -257,6 +257,27 @@ function generatePreviewSubject() {
   return subject;
 }
 
+function generatePreviewSubject() {
+  const date = getFieldValue("date");
+  const time = getFieldValue("time");
+  const name = getFieldValue("name");
+  let subject = "Appointment Reminder";
+
+  if (date) {
+    subject += ` for ${formatDate(date)}`;
+  }
+
+  if (time) {
+    subject += ` at ${formatTime(time)}`;
+  }
+
+  if (name) {
+    subject += ` - ${name}`;
+  }
+
+  return subject;
+}
+
 function getPreviewFromValue() {
   const businessContact = getFieldValue("businessContact");
   const brandingProfile = getSavedBrandingProfile();
