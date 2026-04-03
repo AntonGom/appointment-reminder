@@ -923,16 +923,75 @@ function isUniqueClientEmail(client, clients) {
   return matches.length <= 1;
 }
 
+function recordMatchesDeletedClient(record, client, { uniqueEmail = false } = {}) {
+  if (!record || !client) {
+    return false;
+  }
+
+  const targetClientId = String(client?.id || "").trim();
+  const targetName = normalizeClientName(client?.client_name || "");
+  const targetEmail = String(client?.client_email || "").trim().toLowerCase();
+  const targetPhone = normalizePhone(client?.client_phone || "");
+
+  const recordClientId = String(record?.client_id || "").trim();
+  const recordName = normalizeClientName(record?.client_name || "");
+  const recordEmail = String(record?.client_email || record?.recipient_email || "").trim().toLowerCase();
+  const recordPhone = normalizePhone(record?.client_phone || "");
+
+  if (targetClientId && recordClientId && targetClientId === recordClientId) {
+    return true;
+  }
+
+  if (targetPhone) {
+    if (!recordPhone || recordPhone !== targetPhone) {
+      return false;
+    }
+
+    if (targetName && recordName && targetName !== recordName) {
+      return false;
+    }
+
+    if (targetEmail && recordEmail && targetEmail !== recordEmail) {
+      return false;
+    }
+
+    return true;
+  }
+
+  if (targetEmail) {
+    if (!recordEmail || recordEmail !== targetEmail) {
+      return false;
+    }
+
+    if (targetName) {
+      return !recordName || recordName === targetName;
+    }
+
+    if (!uniqueEmail) {
+      return false;
+    }
+
+    return !recordName && !recordPhone;
+  }
+
+  if (targetName) {
+    return recordName === targetName && !recordEmail && !recordPhone;
+  }
+
+  return false;
+}
+
 async function deleteClientRelatedData(client, ownerId) {
   if (!supabase || !client?.id || !ownerId) {
     return;
   }
 
   const clientId = String(client.id || "").trim();
-  const clientName = String(client.client_name || "").trim().slice(0, 30);
-  const clientEmail = String(client.client_email || "").trim().toLowerCase();
-  const clientPhone = normalizePhone(client.client_phone || "");
   const uniqueEmail = isUniqueClientEmail(client, savedClients);
+  const [appointmentsRows, historyRows] = await Promise.all([
+    loadSavedAppointmentsForClients(ownerId),
+    loadReminderHistoryForDelete(ownerId)
+  ]);
 
   const { error: directAppointmentsError } = await supabase
     .from("appointments")
@@ -944,52 +1003,18 @@ async function deleteClientRelatedData(client, ownerId) {
     throw directAppointmentsError;
   }
 
-  const orphanAppointmentQueries = [];
+  const orphanAppointmentIds = (appointmentsRows || [])
+    .filter(entry => !String(entry?.client_id || "").trim())
+    .filter(entry => recordMatchesDeletedClient(entry, client, { uniqueEmail }))
+    .map(entry => String(entry?.id || "").trim())
+    .filter(Boolean);
 
-  if (clientPhone) {
-    let phoneQuery = supabase
+  if (orphanAppointmentIds.length) {
+    const { error } = await supabase
       .from("appointments")
       .delete()
       .eq("owner_id", ownerId)
-      .is("client_id", null)
-      .eq("client_phone", clientPhone);
-
-    if (clientName) {
-      phoneQuery = phoneQuery.eq("client_name", clientName);
-    }
-
-    orphanAppointmentQueries.push(phoneQuery);
-  }
-
-  if (clientEmail) {
-    let emailQuery = supabase
-      .from("appointments")
-      .delete()
-      .eq("owner_id", ownerId)
-      .is("client_id", null)
-      .eq("client_email", clientEmail);
-
-    if (clientName) {
-      emailQuery = emailQuery.eq("client_name", clientName);
-      orphanAppointmentQueries.push(emailQuery);
-    } else if (uniqueEmail) {
-      orphanAppointmentQueries.push(emailQuery);
-    }
-  }
-
-  if (!clientEmail && !clientPhone && clientName) {
-    orphanAppointmentQueries.push(
-      supabase
-        .from("appointments")
-        .delete()
-        .eq("owner_id", ownerId)
-        .is("client_id", null)
-        .eq("client_name", clientName)
-    );
-  }
-
-  for (const query of orphanAppointmentQueries) {
-    const { error } = await query;
+      .in("id", orphanAppointmentIds);
 
     if (error && error.code !== "42P01") {
       throw error;
@@ -1006,13 +1031,18 @@ async function deleteClientRelatedData(client, ownerId) {
     throw directHistoryError;
   }
 
-  if (clientEmail && uniqueEmail) {
+  const orphanHistoryIds = (historyRows || [])
+    .filter(entry => !String(entry?.client_id || "").trim())
+    .filter(entry => recordMatchesDeletedClient(entry, client, { uniqueEmail }))
+    .map(entry => String(entry?.id || "").trim())
+    .filter(Boolean);
+
+  if (orphanHistoryIds.length) {
     const { error: orphanHistoryError } = await supabase
       .from("client_reminder_history")
       .delete()
       .eq("owner_id", ownerId)
-      .is("client_id", null)
-      .eq("recipient_email", clientEmail);
+      .in("id", orphanHistoryIds);
 
     if (orphanHistoryError && orphanHistoryError.code !== "42P01") {
       throw orphanHistoryError;
