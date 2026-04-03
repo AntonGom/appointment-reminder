@@ -61,6 +61,8 @@ let linkedPrefillClientId = "";
 let brandingTemplateModulePromise = null;
 let bronzePreviewScaleTimer = null;
 let bronzePreviewRenderToken = 0;
+let bronzePreviewManualMessage = "";
+let bronzePreviewUsesManualMessage = false;
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -266,6 +268,10 @@ function getPreviewToRow() {
   return document.getElementById("preview-to-row");
 }
 
+function getBronzePreviewEditorWrap() {
+  return document.getElementById("bronze-preview-editor-wrap");
+}
+
 function getReviewDraftCard() {
   return document.getElementById("review-draft-card");
 }
@@ -381,6 +387,18 @@ function updateDraftPreviewChrome() {
   if (previewSubject) {
     previewSubject.textContent = generatePreviewSubject();
   }
+}
+
+function getGeneratedReviewMessage() {
+  return generateMessage();
+}
+
+function getCurrentReviewMessage() {
+  if (isBronzeUser() && bronzePreviewUsesManualMessage) {
+    return bronzePreviewManualMessage;
+  }
+
+  return getGeneratedReviewMessage();
 }
 
 function buildReviewPreviewCalendarLinks(message) {
@@ -581,16 +599,25 @@ function updateReviewPreview() {
   const bronzePreviewHint = getBronzePreviewHint();
   const previewBodyShell = getPreviewBodyShell();
   const reviewDraftCard = getReviewDraftCard();
-  const message = generateMessage();
+  const bronzePreviewEditorWrap = getBronzePreviewEditorWrap();
+  const generatedMessage = getGeneratedReviewMessage();
+  const message = getCurrentReviewMessage();
   const shouldShowBronzePreview = isBronzeUser();
 
   if (preview) {
-    preview.value = message;
+    if (!bronzePreviewUsesManualMessage || !shouldShowBronzePreview) {
+      preview.value = generatedMessage;
+      bronzePreviewManualMessage = generatedMessage;
+    } else {
+      preview.value = bronzePreviewManualMessage;
+    }
   }
 
   if (!shouldShowBronzePreview) {
     if (preview) {
       preview.hidden = false;
+      preview.readOnly = true;
+      preview.classList.remove("is-bronze-editor");
     }
 
     if (bronzePreviewShell) {
@@ -605,6 +632,10 @@ function updateReviewPreview() {
       reviewDraftCard.classList.remove("is-bronze-compact");
     }
 
+    if (bronzePreviewEditorWrap) {
+      bronzePreviewEditorWrap.classList.remove("visible");
+    }
+
     if (bronzePreviewHint) {
       bronzePreviewHint.classList.remove("visible");
       bronzePreviewHint.hidden = true;
@@ -615,7 +646,9 @@ function updateReviewPreview() {
   }
 
   if (preview) {
-    preview.hidden = true;
+    preview.hidden = false;
+    preview.readOnly = false;
+    preview.classList.add("is-bronze-editor");
   }
 
   if (bronzePreviewShell) {
@@ -628,6 +661,10 @@ function updateReviewPreview() {
 
   if (reviewDraftCard) {
     reviewDraftCard.classList.add("is-bronze-compact");
+  }
+
+  if (bronzePreviewEditorWrap) {
+    bronzePreviewEditorWrap.classList.add("visible");
   }
 
   if (previewHint) {
@@ -1752,6 +1789,20 @@ FORM_FIELD_IDS.forEach(fieldId => {
     refreshFormState();
   });
 });
+
+const previewTextarea = document.getElementById("preview");
+if (previewTextarea) {
+  previewTextarea.addEventListener("input", () => {
+    if (!isBronzeUser()) {
+      return;
+    }
+
+    bronzePreviewUsesManualMessage = true;
+    bronzePreviewManualMessage = previewTextarea.value;
+    updateDraftPreviewChrome();
+    updateReviewPreview();
+  });
+}
 
 const addressInput = document.getElementById("address");
 if (addressInput) {

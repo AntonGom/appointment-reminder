@@ -524,7 +524,7 @@
     }
 
     .email-draft.is-bronze-compact {
-      max-width: 470px;
+      max-width: 400px;
       margin: 0 auto;
       border-radius: 18px;
       box-shadow: 0 14px 26px rgba(37, 99, 235, 0.08);
@@ -648,19 +648,58 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(241, 246, 255, 0.98));
     }
 
+    .bronze-preview-editor-wrap {
+      display: block;
+    }
+
+    .bronze-preview-editor-wrap.visible {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(203, 213, 225, 0.58);
+    }
+
+    .bronze-preview-editor-head {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .bronze-preview-editor-wrap.visible .bronze-preview-editor-head {
+      display: flex;
+    }
+
+    .bronze-preview-editor-label {
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .bronze-preview-editor-note {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
     .bronze-preview-shell {
       --bronze-preview-scale: 0.48;
       --bronze-preview-height: 200px;
       position: relative;
-      width: 100%;
+      width: min(100%, calc(664px * var(--bronze-preview-scale)));
+      margin: 0 auto;
       min-height: var(--bronze-preview-height);
       overflow: hidden;
     }
 
     .bronze-preview-stage {
       position: relative;
-      width: 100%;
+      width: calc(664px * var(--bronze-preview-scale));
       height: var(--bronze-preview-height);
+      margin: 0 auto;
       transform-origin: top left;
       transition: height 0.18s ease;
     }
@@ -723,6 +762,19 @@
       border: none;
       box-shadow: none;
       transform: none;
+    }
+
+    #preview.is-bronze-editor {
+      min-height: 150px;
+      max-height: 220px;
+      padding: 14px 14px 16px;
+      border-top: 1px solid rgba(203, 213, 225, 0.62);
+      background: rgba(248, 250, 252, 0.98);
+      font-size: 14px;
+      line-height: 1.62;
+      white-space: pre-wrap;
+      resize: vertical;
+      overflow-y: auto;
     }
 
     .preview-hint {
@@ -1188,13 +1240,20 @@
       }
 
       .email-draft.is-bronze-compact {
-        max-width: 320px;
+        max-width: 286px;
       }
 
       .bronze-preview-shell {
         --bronze-preview-scale: 0.27;
         --bronze-preview-height: 130px;
         min-height: var(--bronze-preview-height);
+      }
+
+      #preview.is-bronze-editor {
+        min-height: 128px;
+        max-height: 184px;
+        padding: 12px;
+        font-size: 13px;
       }
 
       .bronze-preview-tip {
@@ -1338,11 +1397,17 @@
                   </div>
                 </div>
                 <div id="preview-body-shell" class="email-draft-body">
-                  <textarea id="preview" readonly></textarea>
                   <div id="bronze-preview-shell" class="bronze-preview-shell" hidden>
                     <div id="bronze-preview-stage" class="bronze-preview-stage">
                       <iframe id="bronze-preview-frame" class="bronze-preview-frame" title="Branded email preview"></iframe>
                     </div>
+                  </div>
+                  <div id="bronze-preview-editor-wrap" class="bronze-preview-editor-wrap">
+                    <div class="bronze-preview-editor-head">
+                      <span class="bronze-preview-editor-label">Edit message text</span>
+                      <span class="bronze-preview-editor-note">Changes here update the branded preview and the sent email.</span>
+                    </div>
+                    <textarea id="preview" readonly></textarea>
                   </div>
                 </div>
               </div>
@@ -1422,7 +1487,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260403f"></script>
+<script src="app.js?v=20260403g"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
