@@ -646,25 +646,216 @@ function getReminderSourceLabel(entry) {
 
 function attachReminderHistory(clients, historyRows) {
   const historyByClientId = new Map();
+  const historyByRecipientEmail = new Map();
 
   (historyRows || []).forEach(entry => {
     const clientId = String(entry?.client_id || "").trim();
+    const recipientEmail = String(entry?.recipient_email || "").trim().toLowerCase();
 
-    if (!clientId) {
-      return;
+    if (clientId) {
+      if (!historyByClientId.has(clientId)) {
+        historyByClientId.set(clientId, []);
+      }
+
+      historyByClientId.get(clientId).push(entry);
     }
 
-    if (!historyByClientId.has(clientId)) {
-      historyByClientId.set(clientId, []);
-    }
+    if (recipientEmail) {
+      if (!historyByRecipientEmail.has(recipientEmail)) {
+        historyByRecipientEmail.set(recipientEmail, []);
+      }
 
-    historyByClientId.get(clientId).push(entry);
+      historyByRecipientEmail.get(recipientEmail).push(entry);
+    }
   });
 
   return (clients || []).map(client => ({
     ...client,
-    reminder_history: historyByClientId.get(client.id) || []
+    reminder_history: (() => {
+      const mergedEntries = new Map();
+      const directEntries = historyByClientId.get(client.id) || [];
+      const emailEntries = client?.client_email
+        ? historyByRecipientEmail.get(String(client.client_email || "").trim().toLowerCase()) || []
+        : [];
+
+      [...directEntries, ...emailEntries].forEach(entry => {
+        const key = String(entry?.id || "").trim() || [
+          String(entry?.message_id || "").trim(),
+          String(entry?.status || "").trim(),
+          String(entry?.occurred_at || entry?.sent_at || entry?.created_at || "").trim()
+        ].join("|");
+
+        if (key) {
+          mergedEntries.set(key, entry);
+        }
+      });
+
+      return Array.from(mergedEntries.values());
+    })()
   }));
+}
+
+function normalizeClientName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function buildClientLookup(clients) {
+  const lookup = {
+    ids: new Set(),
+    emails: new Set(),
+    phones: new Set(),
+    names: new Set()
+  };
+
+  (clients || []).forEach(client => {
+    const clientId = String(client?.id || "").trim();
+    const clientEmail = String(client?.client_email || "").trim().toLowerCase();
+    const clientPhone = normalizePhone(client?.client_phone || "");
+    const clientName = normalizeClientName(client?.client_name || "");
+
+    if (clientId) {
+      lookup.ids.add(clientId);
+    }
+
+    if (clientEmail) {
+      lookup.emails.add(clientEmail);
+    }
+
+    if (clientPhone) {
+      lookup.phones.add(clientPhone);
+    }
+
+    if (clientName) {
+      lookup.names.add(clientName);
+    }
+  });
+
+  return lookup;
+}
+
+function buildMissingClientFromAppointment(ownerId, appointment) {
+  const clientName = String(appointment?.client_name || "").trim().slice(0, 30);
+  const clientEmail = String(appointment?.client_email || "").trim().toLowerCase();
+  const clientPhone = normalizePhone(appointment?.client_phone || "");
+
+  if (!clientName && !clientEmail && !clientPhone) {
+    return null;
+  }
+
+  return {
+    owner_id: ownerId,
+    client_name: clientName,
+    client_email: clientEmail,
+    client_phone: clientPhone,
+    service_address: String(appointment?.service_location || "").trim().slice(0, 160),
+    notes: String(appointment?.notes || "").trim().slice(0, 1200),
+    updated_at: appointment?.updated_at || new Date().toISOString()
+  };
+}
+
+async function backfillClientsFromAppointments(ownerId, clients, appointments) {
+  if (!supabase || !ownerId || !Array.isArray(appointments) || !appointments.length) {
+    return clients || [];
+  }
+
+  const existingClients = Array.isArray(clients) ? [...clients] : [];
+  const lookup = buildClientLookup(existingClients);
+  const pendingInserts = [];
+  const pendingKeys = new Set();
+
+  appointments.forEach(appointment => {
+    const appointmentClientId = String(appointment?.client_id || "").trim();
+
+    if (appointmentClientId && lookup.ids.has(appointmentClientId)) {
+      return;
+    }
+
+    const clientPayload = buildMissingClientFromAppointment(ownerId, appointment);
+
+    if (!clientPayload) {
+      return;
+    }
+
+    if (clientPayload.client_email && lookup.emails.has(clientPayload.client_email)) {
+      return;
+    }
+
+    if (clientPayload.client_phone && lookup.phones.has(clientPayload.client_phone)) {
+      return;
+    }
+
+    if (!clientPayload.client_email && !clientPayload.client_phone) {
+      const nameKey = normalizeClientName(clientPayload.client_name);
+
+      if (nameKey && lookup.names.has(nameKey)) {
+        return;
+      }
+    }
+
+    const dedupeKey = clientPayload.client_email
+      ? `email:${clientPayload.client_email}`
+      : clientPayload.client_phone
+        ? `phone:${clientPayload.client_phone}`
+        : `name:${normalizeClientName(clientPayload.client_name)}`;
+
+    if (!dedupeKey || pendingKeys.has(dedupeKey)) {
+      return;
+    }
+
+    pendingKeys.add(dedupeKey);
+    pendingInserts.push(clientPayload);
+
+    if (clientPayload.client_email) {
+      lookup.emails.add(clientPayload.client_email);
+    }
+
+    if (clientPayload.client_phone) {
+      lookup.phones.add(clientPayload.client_phone);
+    }
+
+    if (clientPayload.client_name) {
+      lookup.names.add(normalizeClientName(clientPayload.client_name));
+    }
+  });
+
+  if (!pendingInserts.length) {
+    return existingClients;
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .insert(pendingInserts)
+    .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at");
+
+  if (error) {
+    console.warn("Unable to backfill clients from appointments.", error);
+    return existingClients;
+  }
+
+  return [...(data || []), ...existingClients];
+}
+
+async function loadSavedAppointmentsForClients(ownerId) {
+  if (!supabase || !ownerId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, client_id, client_name, client_email, client_phone, service_location, notes, updated_at")
+    .eq("owner_id", ownerId)
+    .order("updated_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    if (error.code === "42P01") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return data || [];
 }
 
 async function loadReminderHistory(ownerId) {
@@ -1149,19 +1340,21 @@ async function loadSavedClients() {
       return;
     }
 
-    const [clientsResult, historyRows] = await Promise.all([
+    const [clientsResult, historyRows, appointmentsRows] = await Promise.all([
       supabase
         .from("clients")
         .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
         .order("created_at", { ascending: false }),
-      loadReminderHistory(user.id)
+      loadReminderHistory(user.id),
+      loadSavedAppointmentsForClients(user.id)
     ]);
 
     if (clientsResult.error) {
       throw clientsResult.error;
     }
 
-    const clientsData = clientsResult.data || [];
+    let clientsData = clientsResult.data || [];
+    clientsData = await backfillClientsFromAppointments(user.id, clientsData, appointmentsRows);
 
     if (clientsData.length > CLIENTS_PER_PAGE * 2) {
       await new Promise(resolve => window.requestAnimationFrame(resolve));

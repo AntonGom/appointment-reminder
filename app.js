@@ -1535,6 +1535,14 @@ async function upsertBronzeAppointment({ clientId, channel, source }) {
     return null;
   }
 
+  if (!payload.client_id && (payload.client_email || payload.client_phone)) {
+    payload.client_id = await findExistingBronzeContactId({
+      owner_id: payload.owner_id,
+      client_email: payload.client_email,
+      client_phone: payload.client_phone
+    }) || null;
+  }
+
   try {
     const existingId = await findExistingBronzeAppointmentId(payload);
 
