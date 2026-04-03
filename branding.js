@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402q";
+} from "./branding-templates.js?v=20260402r";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -746,6 +746,23 @@ function addSocialLinkRow(url = "") {
   newestInput?.focus();
 }
 
+function triggerPreviewStudioAnimation(activeTemplateCard = null) {
+  const toggleCard = document.querySelector(".branding-toggle-card");
+  const animatedElements = [toggleCard, previewShell, activeTemplateCard].filter(Boolean);
+
+  animatedElements.forEach(element => {
+    element.classList.remove("is-switching-on");
+    void element.offsetWidth;
+    element.classList.add("is-switching-on");
+  });
+
+  window.setTimeout(() => {
+    animatedElements.forEach(element => {
+      element.classList.remove("is-switching-on");
+    });
+  }, 1250);
+}
+
 function getDraftBranding() {
   const rawDraft = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
@@ -868,7 +885,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.shapeIntensity).value = "balanced";
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
   getFieldElement(fieldIds.motionStyle).value = normalized.motionStyle;
-  getFieldElement(fieldIds.contactEmail).value = branding.contactEmail || currentUser?.email || "";
+  getFieldElement(fieldIds.contactEmail).value = branding.contactEmail || "";
   getFieldElement(fieldIds.contactPhone).value = branding.contactPhone || "";
   getFieldElement(fieldIds.websiteUrl).value = branding.websiteUrl || "";
   getFieldElement(fieldIds.rescheduleUrl).value = branding.rescheduleUrl || "";
@@ -1003,9 +1020,12 @@ function renderPreview() {
   }
 
   if (previewEmail) {
-    previewEmail.textContent = draftBranding.brandingEnabled === false
-      ? (currentUser?.email || "you@example.com")
-      : (draftBranding.contactEmail || currentUser?.email || "you@example.com");
+    const previewEmailValue = draftBranding.brandingEnabled === false
+      ? (currentUser?.email || "")
+      : (draftBranding.contactEmail || "");
+
+    previewEmail.textContent = previewEmailValue;
+    previewEmail.hidden = !previewEmailValue;
   }
 
   if (previewBusinessName) {
@@ -1996,6 +2016,9 @@ function renderTemplateCards() {
     syncTemplateCards();
     updateHelperHints();
     queuePreviewRender();
+    window.setTimeout(() => {
+      triggerPreviewStudioAnimation(button);
+    }, 40);
   });
 }
 
@@ -2283,25 +2306,8 @@ function wireFormInputs() {
 
   if (brandingEnabledInput) {
     brandingEnabledInput.addEventListener("change", () => {
-      const toggleCard = brandingEnabledInput.closest(".branding-toggle-card");
-      const animatedShell = previewShell;
-
       if (brandingEnabledInput.checked) {
-        [toggleCard, animatedShell].forEach(element => {
-          if (!element) {
-            return;
-          }
-
-          element.classList.remove("is-switching-on");
-          void element.offsetWidth;
-          element.classList.add("is-switching-on");
-        });
-
-        window.setTimeout(() => {
-          [toggleCard, animatedShell].forEach(element => {
-            element?.classList.remove("is-switching-on");
-          });
-        }, 1100);
+        triggerPreviewStudioAnimation();
       }
 
       openEditorGroupForField(fieldIds.brandingEnabled);

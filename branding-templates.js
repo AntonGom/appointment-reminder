@@ -174,7 +174,6 @@ export function buildReminderEmailSubject(brandingProfile, options = {}) {
 
 export function normalizeBrandingProfile(profile = {}, options = {}) {
   const forPreview = Boolean(options.forPreview);
-  const fallbackEmail = normalizeEmail(options.fallbackEmail || "");
   const templateStyle = BRANDING_TEMPLATE_OPTIONS.some(option => option.id === profile?.templateStyle)
     ? profile.templateStyle
     : DEFAULT_TEMPLATE;
@@ -224,7 +223,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const detailsGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.detailsGradientStyle) ? profile.detailsGradientStyle : templatePreset.detailsGradientStyle || "soft";
   const calendarGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.calendarGradientStyle) ? profile.calendarGradientStyle : templatePreset.calendarGradientStyle || "soft";
   const showHeroArt = false;
-  const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
+  const contactEmail = normalizeEmail(profile?.contactEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
   const rescheduleUrl = normalizeUrl(profile?.rescheduleUrl);
