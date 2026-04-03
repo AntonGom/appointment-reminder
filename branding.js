@@ -17,6 +17,7 @@ const brandingForm = document.getElementById("branding-form");
 const saveBrandingButton = document.getElementById("save-branding-button");
 const resetBrandingButton = document.getElementById("reset-branding-button");
 const templateGrid = document.getElementById("template-grid");
+const templateGalleryCard = templateGrid?.closest(".branding-gallery-card") || null;
 const previewFrame = document.getElementById("branding-preview-frame");
 const previewStage = document.getElementById("branding-preview-stage");
 const previewSubject = document.getElementById("branding-preview-subject");
@@ -1766,9 +1767,14 @@ function closeBrandingEditorModal() {
 
 function updateBrandingEditorAvailability() {
   const isEnabled = isBrandingEditingEnabled();
+  const shouldHideTemplatesOnMobile = !isEnabled && window.innerWidth <= 760;
 
   if (previewShell) {
     previewShell.classList.toggle("is-readonly", !isEnabled);
+  }
+
+  if (templateGalleryCard) {
+    templateGalleryCard.hidden = shouldHideTemplatesOnMobile;
   }
 
   if (templateGrid) {
@@ -2725,6 +2731,7 @@ function wireFormInputs() {
 
   window.addEventListener("resize", () => {
     schedulePreviewFrameResize();
+    updateBrandingEditorAvailability();
 
     if (window.innerWidth <= 760) {
       return;
