@@ -63,6 +63,8 @@ let bronzePreviewScaleTimer = null;
 let bronzePreviewRenderToken = 0;
 let bronzePreviewManualMessage = "";
 let bronzePreviewUsesManualMessage = false;
+let bronzePreviewResizeObserver = null;
+let bronzePreviewViewportBound = false;
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -568,11 +570,40 @@ function scheduleBronzePreviewScale() {
 }
 
 function scheduleBronzePreviewScaleBurst() {
-  [0, 90, 220, 500, 900].forEach(delay => {
+  [0, 90, 220, 500, 900, 1400, 2200].forEach(delay => {
     window.setTimeout(() => {
       syncBronzePreviewScale();
     }, delay);
   });
+}
+
+function refreshBronzePreviewObservers() {
+  if (typeof ResizeObserver === "undefined") {
+    return;
+  }
+
+  if (!bronzePreviewResizeObserver) {
+    bronzePreviewResizeObserver = new ResizeObserver(() => {
+      scheduleBronzePreviewScale();
+    });
+  }
+
+  bronzePreviewResizeObserver.disconnect();
+
+  [
+    getReviewDraftCard(),
+    getPreviewBodyShell(),
+    getBronzePreviewShell()
+  ].forEach(element => {
+    if (element) {
+      bronzePreviewResizeObserver.observe(element);
+    }
+  });
+
+  if (!bronzePreviewViewportBound && window.visualViewport) {
+    window.visualViewport.addEventListener("resize", scheduleBronzePreviewScale);
+    bronzePreviewViewportBound = true;
+  }
 }
 
 function syncBronzePreviewScale() {
@@ -697,8 +728,22 @@ async function renderBronzeReviewPreview(message) {
           }
         });
       });
+
+      if (frameDocument.fonts?.ready) {
+        frameDocument.fonts.ready.then(() => {
+          if (currentToken === bronzePreviewRenderToken) {
+            scheduleBronzePreviewScaleBurst();
+          }
+        }).catch(() => {});
+      }
     }
 
+    refreshBronzePreviewObservers();
+    frameWindow.requestAnimationFrame(() => {
+      frameWindow.requestAnimationFrame(() => {
+        syncBronzePreviewScale();
+      });
+    });
     scheduleBronzePreviewScaleBurst();
   };
   frame.srcdoc = html;
