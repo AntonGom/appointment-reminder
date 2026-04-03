@@ -1567,28 +1567,61 @@ body.branding-modal-open {
   .branding-editor-modal {
     pointer-events: auto;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 12px;
-    background: rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 10px;
+    background: rgba(15, 23, 42, 0.04);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
 
   .branding-editor-card {
     position: relative;
     top: auto;
     left: auto;
-    width: 100%;
-    max-height: 88vh;
-    border-radius: 28px 28px 20px 20px;
+    width: min(290px, calc(100vw - 20px));
+    max-height: min(62vh, 460px);
+    padding: 14px;
+    border-radius: 22px;
     border-color: rgba(191, 219, 254, 0.28);
-    box-shadow: 0 22px 40px rgba(15, 23, 42, 0.14);
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
     background:
       radial-gradient(circle at top left, rgba(255,255,255,0.74), transparent 28%),
       linear-gradient(180deg, rgba(255,255,255,0.76), rgba(244,247,252,0.66));
     backdrop-filter: blur(14px) saturate(1.15);
     -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  }
+
+  .branding-editor-head {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .branding-editor-head h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+
+  .branding-editor-copy {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .branding-editor-handle {
+    margin-bottom: 6px;
+  }
+
+  .branding-editor-handle span {
+    width: 14px;
+    height: 3px;
+  }
+
+  .branding-editor-close {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 22px;
   }
 
   .branding-toggle-row {
@@ -1597,10 +1630,53 @@ body.branding-modal-open {
 
   .branding-field-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 12px;
   }
 
   .branding-field-grid .field-span-2 {
     grid-column: auto;
+  }
+
+  .branding-label {
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .branding-input,
+  .branding-select {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 13px;
+    font-size: 14px;
+  }
+
+  .branding-color-row {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .branding-color-input {
+    min-height: 44px;
+    border-radius: 13px;
+    padding: 4px;
+  }
+
+  .branding-check {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .branding-check input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .field-hint,
+  .branding-helper {
+    font-size: 11px;
+    line-height: 1.45;
+    min-height: 0;
   }
 
   .branding-preview-head {
