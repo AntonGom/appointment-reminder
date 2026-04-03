@@ -760,7 +760,7 @@ function updateReviewPreview() {
   const bronzePreviewEditorWrap = getBronzePreviewEditorWrap();
   const generatedMessage = getGeneratedReviewMessage();
   const message = getCurrentReviewMessage();
-  const shouldShowBronzePreview = isBronzeUser();
+  const shouldShowBronzePreview = Boolean(isBronzeUser() && getSavedBrandingProfile());
 
   if (preview) {
     if (!bronzePreviewUsesManualMessage || !shouldShowBronzePreview) {
