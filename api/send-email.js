@@ -190,7 +190,12 @@ async function sendBrevoEmail({ apiKey, senderEmail, senderName, toEmail, subjec
 }
 
 function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, businessContact, serviceDate, serviceTime }) {
-  if (!serviceDate) {
+  const fallbackDetails = extractCalendarDetailsFromMessage(message);
+  const normalizedServiceDate = normalizeCalendarDate(serviceDate) || fallbackDetails.date;
+  const normalizedServiceTime = normalizeCalendarTime(serviceTime) || fallbackDetails.time;
+  const normalizedServiceAddress = String(serviceAddress || "").trim() || fallbackDetails.location;
+
+  if (!normalizedServiceDate) {
     return null;
   }
 
@@ -198,20 +203,20 @@ function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, busi
   const details = businessContact
     ? `${message}\n\nContact: ${businessContact}`
     : message;
-  const dateRange = buildCalendarDateRange(serviceDate, serviceTime);
+  const dateRange = buildCalendarDateRange(normalizedServiceDate, normalizedServiceTime);
   const appleUrl = `${baseUrl}/api/calendar-ics?${new URLSearchParams({
     title,
     description: details,
-    location: serviceAddress || "",
-    date: serviceDate,
-    time: serviceTime || ""
+    location: normalizedServiceAddress,
+    date: normalizedServiceDate,
+    time: normalizedServiceTime || ""
   }).toString()}`;
 
   const googleParams = new URLSearchParams({
     action: "TEMPLATE",
     text: title,
     details,
-    location: serviceAddress || "",
+    location: normalizedServiceAddress,
     dates: `${dateRange.googleStart}/${dateRange.googleEnd}`
   });
 
@@ -220,7 +225,7 @@ function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, busi
     rru: "addevent",
     subject: title,
     body: details,
-    location: serviceAddress || "",
+    location: normalizedServiceAddress,
     startdt: dateRange.outlookStart,
     enddt: dateRange.outlookEnd
   });
@@ -230,6 +235,98 @@ function buildCalendarLinks({ baseUrl, clientName, message, serviceAddress, busi
     google: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
     outlook: `https://outlook.office.com/calendar/0/deeplink/compose?${outlookParams.toString()}`
   };
+}
+
+function extractCalendarDetailsFromMessage(message) {
+  const lines = String(message || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n");
+  const date = normalizeCalendarDate(findMessageLineValue(lines, ["Date:"]));
+  const time = normalizeCalendarTime(findMessageLineValue(lines, ["Time:"]));
+  const location = findMessageLineValue(lines, ["Location:", "Service Location:"]);
+
+  return {
+    date,
+    time,
+    location: String(location || "").trim()
+  };
+}
+
+function findMessageLineValue(lines, prefixes) {
+  for (const rawLine of lines) {
+    const line = String(rawLine || "").trim();
+
+    for (const prefix of prefixes) {
+      if (line.toLowerCase().startsWith(prefix.toLowerCase())) {
+        return line.slice(prefix.length).trim();
+      }
+    }
+  }
+
+  return "";
+}
+
+function normalizeCalendarDate(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const slashMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (slashMatch) {
+    const [, month, day, year] = slashMatch;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(normalized);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeCalendarTime(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/^\d{2}:\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const match = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    return "";
+  }
+
+  let [, hour, minutes, meridiem] = match;
+  let numericHour = parseInt(hour, 10);
+  const upperMeridiem = meridiem.toUpperCase();
+
+  if (upperMeridiem === "PM" && numericHour !== 12) {
+    numericHour += 12;
+  }
+
+  if (upperMeridiem === "AM" && numericHour === 12) {
+    numericHour = 0;
+  }
+
+  return `${String(numericHour).padStart(2, "0")}:${minutes}`;
 }
 
 function buildCalendarDateRange(serviceDate, serviceTime) {
