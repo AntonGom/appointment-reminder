@@ -1917,6 +1917,15 @@ function parseReminderMessage(message) {
     .replace(/\r/g, "\n")
     .split("\n")
     .map(line => line.trim());
+  const lastContentIndex = (() => {
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+      if (lines[index]) {
+        return index;
+      }
+    }
+
+    return -1;
+  })();
   const greeting = lines.find(line => line) || "Hello,";
   const intro = lines.find(line => /^This is a friendly reminder/i.test(line)) || "";
   const summary = [];
@@ -1965,7 +1974,7 @@ function parseReminderMessage(message) {
       return;
     }
 
-    if (/^Thank you/i.test(line)) {
+    if (/^Thank you/i.test(line) || (index === lastContentIndex && !captureDetails)) {
       closing = line;
       return;
     }
