@@ -912,6 +912,96 @@ async function loadSavedAppointmentsForClients(ownerId) {
   return data || [];
 }
 
+async function loadReminderHistoryForDelete(ownerId) {
+  if (!supabase || !ownerId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("client_reminder_history")
+    .select("id, client_id, recipient_email")
+    .eq("owner_id", ownerId)
+    .limit(1000);
+
+  if (error) {
+    if (error.code === "42P01") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return data || [];
+}
+
+function doesRecordBelongToClient(record, client, lookup) {
+  if (!record || !client) {
+    return false;
+  }
+
+  const targetClientId = String(client?.id || "").trim();
+  const recordClientId = String(record?.client_id || "").trim();
+
+  if (targetClientId && recordClientId) {
+    return targetClientId === recordClientId;
+  }
+
+  const matchedClient = findMatchingClientRecord({
+    client_id: recordClientId,
+    client_name: record?.client_name || "",
+    client_email: record?.client_email || record?.recipient_email || "",
+    client_phone: record?.client_phone || ""
+  }, lookup);
+
+  return String(matchedClient?.id || "").trim() === targetClientId;
+}
+
+async function deleteClientRelatedData(client, ownerId) {
+  if (!supabase || !client?.id || !ownerId) {
+    return;
+  }
+
+  const lookup = buildClientLookup(savedClients);
+  const [appointmentsRows, historyRows] = await Promise.all([
+    loadSavedAppointmentsForClients(ownerId),
+    loadReminderHistoryForDelete(ownerId)
+  ]);
+
+  const appointmentIdsToDelete = (appointmentsRows || [])
+    .filter(entry => doesRecordBelongToClient(entry, client, lookup))
+    .map(entry => String(entry?.id || "").trim())
+    .filter(Boolean);
+
+  const historyIdsToDelete = (historyRows || [])
+    .filter(entry => doesRecordBelongToClient(entry, client, lookup))
+    .map(entry => String(entry?.id || "").trim())
+    .filter(Boolean);
+
+  if (appointmentIdsToDelete.length) {
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .in("id", appointmentIdsToDelete)
+      .eq("owner_id", ownerId);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  if (historyIdsToDelete.length) {
+    const { error } = await supabase
+      .from("client_reminder_history")
+      .delete()
+      .in("id", historyIdsToDelete)
+      .eq("owner_id", ownerId);
+
+    if (error && error.code !== "42P01") {
+      throw error;
+    }
+  }
+}
+
 async function loadReminderHistory(ownerId) {
   if (!supabase || !ownerId) {
     return [];
@@ -2002,17 +2092,59 @@ async function deleteClient(clientId) {
     return;
   }
 
+  const client = savedClients.find(entry => String(entry?.id || "") === String(clientId || ""));
+
+  if (!client) {
+    setStatus("Unable to find that client.", "error");
+    return;
+  }
+
   const confirmed = window.confirm("Delete this saved client?");
 
   if (!confirmed) {
     return;
   }
 
-  const { error } = await supabase.from("clients").delete().eq("id", clientId);
+  setStatus("Deleting client...", "info");
 
-  if (error) {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    setStatus("Please sign in again before deleting this client.", "error");
+    return;
+  }
+
+  try {
+    await deleteClientRelatedData(client, user.id);
+
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", clientId)
+      .eq("owner_id", user.id);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
     setStatus(error.message || "Unable to delete this client.", "error");
     return;
+  }
+
+  const storedPrefill = window.sessionStorage.getItem(REMINDER_PREFILL_KEY);
+
+  if (storedPrefill) {
+    try {
+      const parsedPrefill = JSON.parse(storedPrefill);
+
+      if (String(parsedPrefill?.id || "") === String(clientId || "")) {
+        window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+      }
+    } catch (_error) {
+      window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+    }
   }
 
   if (editingClientId === clientId) {
