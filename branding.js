@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402t";
+} from "./branding-templates.js?v=20260402u";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -2174,10 +2174,8 @@ function renderTemplateCards() {
             <span class="signature-card-copy-wrap">
               <span class="signature-card-brand">${showcase.line}</span>
               <span class="signature-card-title">${showcase.company}</span>
-              <span class="signature-card-copy">${showcase.promise}</span>
               <span class="signature-card-meta">
                 <strong>${showcase.service}</strong>
-                ${showcase.email}<br>
                 ${showcase.website}
               </span>
             </span>
@@ -2200,11 +2198,6 @@ function renderTemplateCards() {
         </span>
         <span class="template-thumb-info">
           <span class="template-thumb-line">${option.description}</span>
-          <span class="template-thumb-description">
-            ${(showcase.social || []).length
-              ? `Includes social-ready footer styling and a stronger ${showcase.line.toLowerCase()} direction.`
-              : `Built around a cleaner ${showcase.line.toLowerCase()} direction.`}
-          </span>
         </span>
       </button>
     `;
