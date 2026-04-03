@@ -272,6 +272,10 @@ function getPreviewToRow() {
   return document.getElementById("preview-to-row");
 }
 
+function getReviewDraftCard() {
+  return document.getElementById("review-draft-card");
+}
+
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
@@ -644,6 +648,7 @@ function updateReviewPreview() {
   const bronzePreviewShell = getBronzePreviewShell();
   const bronzePreviewHint = getBronzePreviewHint();
   const previewBodyShell = getPreviewBodyShell();
+  const reviewDraftCard = getReviewDraftCard();
   const message = generateMessage();
   const shouldShowBronzePreview = isBronzeUser();
 
@@ -662,6 +667,10 @@ function updateReviewPreview() {
 
     if (previewBodyShell) {
       previewBodyShell.classList.remove("is-bronze");
+    }
+
+    if (reviewDraftCard) {
+      reviewDraftCard.classList.remove("is-bronze-compact");
     }
 
     if (bronzePreviewHint) {
@@ -683,6 +692,10 @@ function updateReviewPreview() {
 
   if (previewBodyShell) {
     previewBodyShell.classList.add("is-bronze");
+  }
+
+  if (reviewDraftCard) {
+    reviewDraftCard.classList.add("is-bronze-compact");
   }
 
   if (previewHint) {

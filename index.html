@@ -523,6 +523,37 @@
       box-shadow: 0 20px 36px rgba(37, 99, 235, 0.1);
     }
 
+    .email-draft.is-bronze-compact {
+      max-width: 420px;
+      margin: 0 auto;
+      border-radius: 18px;
+      box-shadow: 0 14px 26px rgba(37, 99, 235, 0.08);
+    }
+
+    .email-draft.is-bronze-compact .email-draft-bar {
+      padding: 10px 12px;
+    }
+
+    .email-draft.is-bronze-compact .email-draft-fields {
+      padding: 8px 12px 4px;
+    }
+
+    .email-draft.is-bronze-compact .draft-field {
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    .email-draft.is-bronze-compact .draft-field-label {
+      font-size: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .email-draft.is-bronze-compact .draft-field-value {
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
     .email-draft-bar {
       display: flex;
       align-items: center;
@@ -1156,6 +1187,10 @@
         padding: 12px 10px 14px;
       }
 
+      .email-draft.is-bronze-compact {
+        max-width: 280px;
+      }
+
       .bronze-preview-shell {
         --bronze-preview-scale: 0.14;
         --bronze-preview-height: 96px;
@@ -1283,7 +1318,7 @@
         <div class="review-stack">
             <div class="review-panel">
               <label for="preview">Draft Email Preview</label>
-              <div class="email-draft">
+              <div id="review-draft-card" class="email-draft">
                 <div class="email-draft-bar">
                   <span class="email-draft-dots" aria-hidden="true">
                     <span class="email-draft-dot red"></span>
