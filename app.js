@@ -34,7 +34,7 @@ const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|a
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
-const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260402w";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 330;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 180;
@@ -401,6 +401,69 @@ function getCurrentReviewMessage() {
   return getGeneratedReviewMessage();
 }
 
+function getEditableFrameText(element) {
+  return String(element?.innerText || element?.textContent || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n")
+    .trim();
+}
+
+function buildManualReviewMessageFromFrame(frameDocument) {
+  const lines = [];
+  const greeting = getEditableFrameText(frameDocument.querySelector('[data-review-edit="greeting"]')) || "Hello,";
+  const intro = getEditableFrameText(frameDocument.querySelector('[data-review-edit="intro"]'));
+  const detailText = getEditableFrameText(frameDocument.querySelector('[data-review-edit="details"]'));
+  const bodyParagraphs = Array.from(frameDocument.querySelectorAll('[data-review-edit="body-paragraph"]'))
+    .map(getEditableFrameText)
+    .filter(Boolean);
+  const contactPrompt = getEditableFrameText(frameDocument.querySelector('[data-review-edit="contact"]'));
+  const closing = getEditableFrameText(frameDocument.querySelector('[data-review-edit="closing"]')) || "Thank you.";
+  const summaryItems = Array.from(frameDocument.querySelectorAll('[data-preview-area="summary"] td[height]')).map(cell => {
+    const parts = Array.from(cell.querySelectorAll("div")).map(getEditableFrameText).filter(Boolean);
+    return {
+      label: parts[0] || "",
+      value: parts[1] || ""
+    };
+  });
+
+  lines.push(greeting);
+
+  if (intro) {
+    lines.push("");
+    lines.push(intro);
+  }
+
+  summaryItems.forEach(item => {
+    if (item.label && item.value) {
+      lines.push(`${item.label}: ${item.value}`);
+    }
+  });
+
+  if (detailText) {
+    lines.push("");
+    lines.push("Additional Details:");
+    lines.push(detailText);
+  }
+
+  bodyParagraphs.forEach(paragraph => {
+    lines.push("");
+    lines.push(paragraph);
+  });
+
+  if (contactPrompt) {
+    lines.push("");
+    lines.push(contactPrompt);
+  }
+
+  lines.push("");
+  lines.push(closing);
+
+  return lines.join("\n");
+}
+
 function buildReviewPreviewCalendarLinks(message) {
   const serviceDate = getFieldValue("date");
 
@@ -586,6 +649,40 @@ async function renderBronzeReviewPreview(message) {
       return;
     }
 
+    const frameDocument = frame.contentDocument;
+
+    if (frameDocument) {
+      const styleTag = frameDocument.createElement("style");
+      styleTag.textContent = `
+        [data-review-edit] {
+          cursor: text;
+          transition: box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+        [data-review-edit]:hover,
+        [data-review-edit]:focus {
+          background-color: rgba(59, 130, 246, 0.08);
+          box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.24);
+          outline: none;
+        }
+      `;
+      frameDocument.head.appendChild(styleTag);
+
+      frameDocument.querySelectorAll("[data-review-edit]").forEach(element => {
+        element.setAttribute("contenteditable", "true");
+        element.setAttribute("spellcheck", "true");
+        element.addEventListener("input", () => {
+          const nextMessage = buildManualReviewMessageFromFrame(frameDocument);
+          bronzePreviewUsesManualMessage = true;
+          bronzePreviewManualMessage = nextMessage;
+
+          const preview = document.getElementById("preview");
+          if (preview) {
+            preview.value = nextMessage;
+          }
+        });
+      });
+    }
+
     scheduleBronzePreviewScaleBurst();
   };
   frame.srcdoc = html;
@@ -646,9 +743,9 @@ function updateReviewPreview() {
   }
 
   if (preview) {
-    preview.hidden = false;
-    preview.readOnly = false;
-    preview.classList.add("is-bronze-editor");
+    preview.hidden = true;
+    preview.readOnly = true;
+    preview.classList.remove("is-bronze-editor");
   }
 
   if (bronzePreviewShell) {
@@ -664,7 +761,7 @@ function updateReviewPreview() {
   }
 
   if (bronzePreviewEditorWrap) {
-    bronzePreviewEditorWrap.classList.add("visible");
+    bronzePreviewEditorWrap.classList.remove("visible");
   }
 
   if (previewHint) {

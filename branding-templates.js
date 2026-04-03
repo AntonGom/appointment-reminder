@@ -972,12 +972,12 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
   const bodyBackground = buildSectionBackground(branding.bodyColor || "#ffffff", branding.bodyGradientStyle || "solid", 0.42);
   const summaryHtml = buildProductionSummary(parsed.summary, branding);
-  const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding) : "";
+  const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding, includePreviewStyles) : "";
   const hasHeroArt = shouldRenderHeroArt(branding);
   const bodyHtml = parsed.body.length
     ? parsed.body.map(paragraph => `
         <tr>
-          <td style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
+          <td${includePreviewStyles ? ` data-review-edit="body-paragraph" data-review-index="${index}"` : ""} style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
             ${escapeHtml(paragraph)}
           </td>
         </tr>
@@ -986,7 +986,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const contactPromptHtml = parsed.contactPrompt
     ? `
       <tr>
-        <td style="padding:0 0 16px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
+        <td${includePreviewStyles ? ` data-review-edit="contact"` : ""} style="padding:0 0 16px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
           ${escapeHtml(parsed.contactPrompt)}
         </td>
       </tr>
@@ -995,7 +995,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const closingHtml = parsed.closing
     ? `
       <tr>
-        <td style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;${paintTextColor(bodyTextColor)}">
+        <td${includePreviewStyles ? ` data-review-edit="closing"` : ""} style="padding:4px 0 0;font-size:15px;font-weight:700;line-height:1.6;${paintTextColor(bodyTextColor)}">
           ${escapeHtml(parsed.closing)}
         </td>
       </tr>
@@ -1063,13 +1063,13 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
           <td data-preview-area="body" style="padding:28px 28px 14px;background:${bodyBackground};">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
-                <td style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor(bodyTextColor)}">
+                <td${includePreviewStyles ? ` data-review-edit="greeting"` : ""} style="padding:0 0 14px;font-size:18px;font-weight:800;line-height:1.4;${paintTextColor(bodyTextColor)}">
                   ${escapeHtml(parsed.greeting || "Hello,")}
                 </td>
               </tr>
               ${parsed.intro ? `
                 <tr>
-                  <td style="padding:0 0 18px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
+                  <td${includePreviewStyles ? ` data-review-edit="intro"` : ""} style="padding:0 0 18px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
                     ${escapeHtml(parsed.intro)}
                   </td>
                 </tr>
@@ -1470,7 +1470,7 @@ function buildProductionSummary(summaryItems, branding) {
   `;
 }
 
-function buildProductionDetails(details, branding) {
+function buildProductionDetails(details, branding, includePreviewStyles = false) {
   const radius = getSafePanelRadius(branding.panelShape);
   const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const detailsTextColor = branding.detailsTextColor || branding.bodyTextColor || "#0f172a";
@@ -1481,7 +1481,7 @@ function buildProductionDetails(details, branding) {
           <tr>
             <td bgcolor="${detailsColor}" style="padding:16px 18px;background-color:${detailsColor};">
               <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">Additional details</div>
-              <div style="font-size:15px;line-height:1.7;${paintTextColor(detailsTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
+              <div${includePreviewStyles ? ` data-review-edit="details"` : ""} style="font-size:15px;line-height:1.7;${paintTextColor(detailsTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
         </table>
