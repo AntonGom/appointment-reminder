@@ -36,12 +36,12 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 330;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 180;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 200;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 130;
-const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.48;
-const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.27;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 720;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 360;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 320;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 220;
+const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.72;
+const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.5;
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -599,7 +599,8 @@ function syncBronzePreviewScale() {
   }
 
   const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, html.scrollHeight, html.offsetHeight, 480);
-  const availableWidth = Math.max(shell.clientWidth, 260);
+  const previewContainer = shell.parentElement;
+  const availableWidth = Math.max(previewContainer?.clientWidth || shell.clientWidth, 260);
   const isMobileViewport = window.innerWidth <= 640;
   const maxPreviewHeight = isMobileViewport
     ? BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE
