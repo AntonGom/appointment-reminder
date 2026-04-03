@@ -232,8 +232,8 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   return {
     templateStyle,
     businessName: businessName || (forPreview ? "North Shore Wellness" : ""),
-    tagline: tagline || (forPreview ? "Friendly appointment reminders that feel polished and trustworthy." : ""),
-    headerLabel: headerLabel || (forPreview ? "Appointment reminder" : ""),
+    tagline,
+    headerLabel,
     accentColor,
     headerColor,
     heroGradientColor,
@@ -274,7 +274,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     calendarGradientStyle,
     showHeroArt,
     contactEmail,
-    contactPhone: contactPhone || (forPreview ? "(305) 555-0188" : ""),
+    contactPhone,
     websiteUrl,
     rescheduleUrl
   };
@@ -418,7 +418,16 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const calendarSection = buildCalendarSection(calendarLinks, branding);
   const footerContact = buildFooterContactLine(branding);
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
-  const heroLabel = escapeHtml(branding.headerLabel || "Appointment reminder");
+  const footerBlock = (content.brandTitle || content.footerContact || content.footerSocialLinks)
+    ? `
+        <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
+          ${content.brandTitle ? `<div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>` : ""}
+          ${content.footerContact}
+          ${content.footerSocialLinks}
+        </div>
+      `
+    : "";
+  const heroLabel = branding.headerLabel ? `<div style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${branding.heroTextColor};">${escapeHtml(branding.headerLabel)}</div>` : "";
   const tagline = branding.tagline ? `<div style="font-size:14px;line-height:1.65;color:${branding.heroTextColor};margin-top:8px;">${escapeHtml(branding.tagline)}</div>` : "";
   const logoMarkup = branding.logoUrl
     ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${businessName} logo" referrerpolicy="no-referrer" crossorigin="anonymous" style="width:52px;height:52px;border-radius:18px;display:block;object-fit:cover;background:#ffffff;border:1px solid rgba(255,255,255,0.35);">`
@@ -687,7 +696,7 @@ function buildSignatureTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:16px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  ${content.heroLabel ? `<div data-preview-area="hero-label">${content.heroLabel}</div>` : ""}
                   <div style="font-size:31px;line-height:1.02;font-weight:800;color:${content.brand.heroTextColor};margin-top:6px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -720,11 +729,7 @@ function buildSignatureTemplate(content, options = {}) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
-          ${content.footerContact}
-          ${content.footerSocialLinks}
-        </div>
+        ${footerBlock}
       </div>
     </div>
   `;
@@ -747,7 +752,7 @@ function buildSpotlightTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  ${content.heroLabel ? `<div data-preview-area="hero-label">${content.heroLabel}</div>` : ""}
                   <div style="font-size:30px;line-height:1.03;font-weight:800;color:${content.brand.heroTextColor};margin-top:5px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -783,11 +788,7 @@ function buildSpotlightTemplate(content, options = {}) {
           ${content.calendarSection}
           <div style="margin-top:18px;">${content.closing}</div>
         </div>
-        <div data-preview-area="footer" style="padding:18px 28px;background:${content.brand.footerColor};border-top:1px solid #dbeafe;color:${content.footerTextColor};font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
-          ${content.footerContact}
-          ${content.footerSocialLinks}
-        </div>
+        ${footerBlock}
       </div>
     </div>
   `;
@@ -810,7 +811,7 @@ function buildExecutiveTemplate(content, options = {}) {
               <div style="display:flex;align-items:center;gap:14px;">
                 <div data-preview-area="logo">${content.logoMarkup}</div>
                 <div>
-                  <div data-preview-area="hero-label" style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${content.brand.heroTextColor};">${content.heroLabel}</div>
+                  ${content.heroLabel ? `<div data-preview-area="hero-label">${content.heroLabel}</div>` : ""}
                   <div style="font-size:30px;line-height:1.04;font-weight:800;color:${content.brand.heroTextColor};margin-top:4px;">${content.brandTitle}</div>
                 </div>
               </div>
@@ -844,11 +845,7 @@ function buildExecutiveTemplate(content, options = {}) {
           ${content.calendarSection}
           ${content.closing}
         </div>
-        <div data-preview-area="footer" style="padding:18px 26px;background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
-          <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
-          ${content.footerContact}
-          ${content.footerSocialLinks}
-        </div>
+        ${footerBlock}
       </div>
     </div>
   `;
@@ -920,7 +917,9 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const logoMarkup = branding.logoUrl
     ? `<img src="${escapeAttribute(branding.logoUrl)}" alt="${escapeAttribute(branding.businessName)} logo" width="54" height="54" referrerpolicy="no-referrer" crossorigin="anonymous" style="display:block;width:54px;height:54px;border-radius:16px;object-fit:cover;border:1px solid ${hexToRgba("#ffffff", 0.24)};">`
     : `<div style="width:54px;height:54px;border-radius:16px;background:${theme.markBackground};border:1px solid ${theme.markBorder};color:${theme.markText};font-size:20px;font-weight:800;line-height:54px;text-align:center;mso-line-height-rule:exactly;">${escapeHtml(getInitials(branding.businessName || "AR"))}</div>`;
-  const topLabel = escapeHtml(branding.headerLabel || "Appointment Reminder");
+  const topLabel = branding.headerLabel
+    ? `<div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;${paintTextColor(theme.labelColor)}">${escapeHtml(branding.headerLabel)}</div>`
+    : "";
   const businessName = escapeHtml(branding.businessName || "Appointment Reminder");
   const tagline = branding.tagline
     ? `<div style="font-size:14px;line-height:1.6;${paintTextColor(theme.taglineColor)}margin-top:8px;">${escapeHtml(branding.tagline)}</div>`
@@ -957,9 +956,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
                         <div data-preview-area="logo">${logoMarkup}</div>
                       </td>
                       <td valign="top">
-                        <div data-preview-area="hero-label" style="font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;${paintTextColor(theme.labelColor)}">
-                          ${topLabel}
-                        </div>
+                        ${topLabel}
                         <div style="font-size:34px;line-height:1.02;font-weight:800;${paintTextColor(theme.titleColor)}margin-top:6px;">
                           ${businessName}
                         </div>
@@ -1000,15 +997,26 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
             </table>
           </td>
         </tr>
+        ${(() => {
+          const footerContact = buildProductionContactLine(branding, theme.footerColor) || buildFooterContactLine(branding);
+          const footerSocials = buildProductionFooterSocialLinks(branding, theme.footerColor);
+          const hasFooterContent = Boolean(businessName || footerContact || footerSocials);
+
+          if (!hasFooterContent) {
+            return "";
+          }
+
+          return `
         <tr>
           <td data-preview-area="footer" bgcolor="${theme.footerBgColor}" style="padding:18px 28px;border-top:1px solid #e2e8f0;background:${theme.footerBackground};">
             <div style="font-size:13px;line-height:1.7;${paintTextColor(theme.footerColor)}">
-              <strong style="${paintTextColor(theme.footerTitleColor)}">${businessName}</strong><br>
-              ${buildProductionContactLine(branding, theme.footerColor) || buildFooterContactLine(branding)}
-              ${buildProductionFooterSocialLinks(branding, theme.footerColor)}
+              ${businessName ? `<strong style="${paintTextColor(theme.footerTitleColor)}">${businessName}</strong>${footerContact || footerSocials ? "<br>" : ""}` : ""}
+              ${footerContact}
+              ${footerSocials}
             </div>
           </td>
-        </tr>
+        </tr>`;
+        })()}
       </table>
     </div>
   `;
@@ -1718,7 +1726,7 @@ function getShapeProfile(intensity) {
 
 function buildFooterContactLine(branding) {
   const parts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
-  return parts.length ? escapeHtml(parts.join(" | ")) : "Professional appointment reminders sent from this business.";
+  return parts.length ? escapeHtml(parts.join(" | ")) : "";
 }
 
 function inferSocialPlatform(url) {

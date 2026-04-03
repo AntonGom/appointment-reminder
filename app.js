@@ -313,15 +313,8 @@ function getPreviewToValue() {
 }
 
 function updateDraftPreviewChrome() {
-  const previewFrom = document.getElementById("preview-from");
   const previewTo = document.getElementById("preview-to");
   const previewSubject = document.getElementById("preview-subject");
-
-  if (previewFrom) {
-    const fromValue = getPreviewFromValue();
-    previewFrom.textContent = fromValue;
-    previewFrom.classList.toggle("muted", fromValue === "yourbusiness@example.com");
-  }
 
   if (previewTo) {
     const toValue = getPreviewToValue();

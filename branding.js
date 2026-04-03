@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402p";
+} from "./branding-templates.js?v=20260402q";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -19,7 +19,6 @@ const resetBrandingButton = document.getElementById("reset-branding-button");
 const templateGrid = document.getElementById("template-grid");
 const previewFrame = document.getElementById("branding-preview-frame");
 const previewSubject = document.getElementById("branding-preview-subject");
-const previewFrom = document.getElementById("branding-preview-from");
 const previewTo = document.getElementById("branding-preview-to");
 const previewEmail = document.getElementById("branding-preview-email");
 const previewBusinessName = document.getElementById("branding-preview-business-name");
@@ -166,7 +165,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   },
   [fieldIds.businessName]: {
     iframeAreas: ["hero", "logo", "footer"],
-    selectors: [".branding-preview-from"],
+    selectors: [],
     note: "Highlighting where your business name appears."
   },
   [fieldIds.tagline]: {
@@ -325,7 +324,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   },
   [fieldIds.contactEmail]: {
     iframeAreas: ["contact", "footer", "buttons"],
-    selectors: [".branding-preview-from"],
+    selectors: [],
     note: "Highlighting where your business email appears."
   },
   [fieldIds.contactPhone]: {
@@ -994,12 +993,6 @@ function renderPreview() {
 
   if (previewSubject) {
     previewSubject.textContent = buildReminderEmailSubject(draftBranding, { message: sampleMessage });
-  }
-
-  if (previewFrom) {
-    previewFrom.textContent = draftBranding.brandingEnabled === false
-      ? "Standard Reminder Email"
-      : (draftBranding.contactEmail || currentUser?.email || "you@example.com");
   }
 
   if (previewTo) {
