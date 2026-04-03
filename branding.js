@@ -760,7 +760,7 @@ function triggerPreviewStudioAnimation(activeTemplateCard = null) {
     animatedElements.forEach(element => {
       element.classList.remove("is-switching-on");
     });
-  }, 1250);
+  }, 1450);
 }
 
 function getDraftBranding() {
