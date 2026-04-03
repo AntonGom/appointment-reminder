@@ -1324,36 +1324,138 @@ function buildBronzeContactPayload() {
   return payload;
 }
 
+function normalizeBronzeClientName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function chooseSingleBronzeIdentityMatch(candidates, payload, options = {}) {
+  const {
+    idKey = "id",
+    nameKey = "client_name",
+    emailKey = "client_email",
+    phoneKey = "client_phone"
+  } = options;
+
+  if (!Array.isArray(candidates) || !candidates.length || !payload) {
+    return null;
+  }
+
+  const normalizedId = String(payload?.client_id || payload?.id || "").trim();
+  const normalizedName = normalizeBronzeClientName(payload?.client_name || payload?.name || "");
+  const normalizedEmail = String(payload?.client_email || payload?.email || "").trim().toLowerCase();
+  const normalizedPhone = normalizePhoneDigits(payload?.client_phone || payload?.phone || "");
+  const isCompatibleCandidate = candidate => {
+    const candidateName = normalizeBronzeClientName(candidate?.[nameKey] || "");
+    const candidateEmail = String(candidate?.[emailKey] || "").trim().toLowerCase();
+    const candidatePhone = normalizePhoneDigits(candidate?.[phoneKey] || "");
+
+    if (normalizedName && candidateName && normalizedName !== candidateName) {
+      return false;
+    }
+
+    if (normalizedEmail && candidateEmail && normalizedEmail !== candidateEmail) {
+      return false;
+    }
+
+    if (normalizedPhone && candidatePhone && normalizedPhone !== candidatePhone) {
+      return false;
+    }
+
+    return true;
+  };
+
+  if (normalizedId) {
+    const idMatch = candidates.find(candidate => String(candidate?.[idKey] || "").trim() === normalizedId);
+
+    if (idMatch) {
+      return idMatch;
+    }
+  }
+
+  let narrowed = [...candidates];
+
+  if (normalizedPhone) {
+    const phoneMatches = narrowed.filter(candidate => normalizePhoneDigits(candidate?.[phoneKey] || "") === normalizedPhone);
+
+    if (phoneMatches.length === 1) {
+      return isCompatibleCandidate(phoneMatches[0]) ? phoneMatches[0] : null;
+    }
+
+    if (phoneMatches.length > 1) {
+      narrowed = phoneMatches;
+    }
+  }
+
+  if (normalizedName) {
+    const nameMatches = narrowed.filter(candidate => normalizeBronzeClientName(candidate?.[nameKey] || "") === normalizedName);
+
+    if (nameMatches.length === 1) {
+      return isCompatibleCandidate(nameMatches[0]) ? nameMatches[0] : null;
+    }
+
+    if (nameMatches.length > 1) {
+      narrowed = nameMatches;
+    }
+  }
+
+  if (normalizedEmail) {
+    const emailMatches = narrowed.filter(candidate => String(candidate?.[emailKey] || "").trim().toLowerCase() === normalizedEmail);
+
+    if (emailMatches.length === 1) {
+      return isCompatibleCandidate(emailMatches[0]) ? emailMatches[0] : null;
+    }
+
+    if (emailMatches.length > 1) {
+      narrowed = emailMatches;
+    }
+  }
+
+  if (narrowed.length !== 1) {
+    return null;
+  }
+
+  const onlyCandidate = narrowed[0];
+  return isCompatibleCandidate(onlyCandidate) ? onlyCandidate : null;
+}
+
 async function findExistingBronzeContactId(payload) {
   if (!appSupabase || !payload?.owner_id) {
     return null;
   }
 
+  const candidatesById = new Map();
   const lookupRules = [];
-
-  if (payload.client_email) {
-    lookupRules.push({ column: "client_email", value: payload.client_email });
-  }
 
   if (payload.client_phone) {
     lookupRules.push({ column: "client_phone", value: payload.client_phone });
   }
 
+  if (payload.client_email) {
+    lookupRules.push({ column: "client_email", value: payload.client_email });
+  }
+
   for (const rule of lookupRules) {
     const { data, error } = await appSupabase
       .from("clients")
-      .select("id")
+      .select("id, client_name, client_email, client_phone")
       .eq("owner_id", payload.owner_id)
       .eq(rule.column, rule.value)
-      .limit(1)
-      .maybeSingle();
+      .limit(10);
 
-    if (!error && data?.id) {
-      return data.id;
+    if (error || !Array.isArray(data)) {
+      continue;
     }
+
+    data.forEach(candidate => {
+      const candidateId = String(candidate?.id || "").trim();
+
+      if (candidateId) {
+        candidatesById.set(candidateId, candidate);
+      }
+    });
   }
 
-  return null;
+  return chooseSingleBronzeIdentityMatch(Array.from(candidatesById.values()), payload)?.id || null;
 }
 
 async function autoSaveBronzeContact() {
@@ -1487,41 +1589,66 @@ async function findExistingBronzeAppointmentId(payload) {
     return null;
   }
 
-  const lookupRules = [];
-
   if (payload.client_id) {
-    lookupRules.push({ column: "client_id", value: payload.client_id });
-  }
-
-  if (payload.client_email) {
-    lookupRules.push({ column: "client_email", value: payload.client_email });
-  }
-
-  if (payload.client_phone) {
-    lookupRules.push({ column: "client_phone", value: payload.client_phone });
-  }
-
-  for (const rule of lookupRules) {
-    let query = appSupabase
+    let directQuery = appSupabase
       .from("appointments")
       .select("id")
       .eq("owner_id", payload.owner_id)
-      .eq(rule.column, rule.value)
+      .eq("client_id", payload.client_id)
       .eq("service_date", payload.service_date)
       .limit(1);
 
-    query = payload.service_time
-      ? query.eq("service_time", payload.service_time)
-      : query.is("service_time", null);
+    directQuery = payload.service_time
+      ? directQuery.eq("service_time", payload.service_time)
+      : directQuery.is("service_time", null);
 
-    const { data, error } = await query.maybeSingle();
+    const { data, error } = await directQuery.maybeSingle();
 
     if (!error && data?.id) {
       return data.id;
     }
   }
 
-  return null;
+  const candidatesById = new Map();
+  const lookupRules = [];
+
+  if (payload.client_phone) {
+    lookupRules.push({ column: "client_phone", value: payload.client_phone });
+  }
+
+  if (payload.client_email) {
+    lookupRules.push({ column: "client_email", value: payload.client_email });
+  }
+
+  for (const rule of lookupRules) {
+    let query = appSupabase
+      .from("appointments")
+      .select("id, client_name, client_email, client_phone")
+      .eq("owner_id", payload.owner_id)
+      .eq(rule.column, rule.value)
+      .eq("service_date", payload.service_date)
+      .limit(10);
+
+    query = payload.service_time
+      ? query.eq("service_time", payload.service_time)
+      : query.is("service_time", null);
+
+    const { data, error } = await query;
+
+    if (error || !Array.isArray(data)) {
+      continue;
+    }
+
+    data.forEach(candidate => {
+      const candidateId = String(candidate?.id || "").trim();
+
+      if (candidateId) {
+        candidatesById.set(candidateId, candidate);
+      }
+    });
+  }
+
+  return chooseSingleBronzeIdentityMatch(Array.from(candidatesById.values()), payload)?.id || null;
 }
 
 async function upsertBronzeAppointment({ clientId, channel, source }) {

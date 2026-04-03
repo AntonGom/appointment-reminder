@@ -599,6 +599,12 @@ function getReminderHistoryForAppointment(appointment) {
   const clientId = String(appointment.client_id || "").trim();
   const clientEmail = String(appointment.client_email || "").trim().toLowerCase();
   const clientPhone = normalizePhone(appointment.client_phone || "");
+  const appointmentEmailCount = clientEmail
+    ? appointments.reduce((count, entry) => {
+      return String(entry?.client_email || "").trim().toLowerCase() === clientEmail ? count + 1 : count;
+    }, 0)
+    : 0;
+  const canUseEmailFallback = clientEmail && appointmentEmailCount === 1;
 
   return reminderHistory.filter(entry => {
     const entryClientId = String(entry?.client_id || "").trim();
@@ -609,7 +615,7 @@ function getReminderHistoryForAppointment(appointment) {
       return true;
     }
 
-    if (clientEmail && entryEmail && clientEmail === entryEmail) {
+    if (canUseEmailFallback && entryEmail && clientEmail === entryEmail) {
       return true;
     }
 
