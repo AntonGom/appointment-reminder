@@ -517,6 +517,7 @@ let lastSentEmailRecord = null;
 let editorHasCustomPosition = false;
 let editorDragState = null;
 let previewHeightSyncTimer = null;
+let brandingToggleSaveToken = 0;
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 
 const TEMPLATE_SHOWCASES = {
@@ -2167,6 +2168,74 @@ async function saveBranding() {
   }
 }
 
+async function persistBrandingToggleState(enabled) {
+  if (!supabase || !currentUser) {
+    return;
+  }
+
+  const thisSaveToken = ++brandingToggleSaveToken;
+  const baseBranding = Object.keys(currentSavedBranding || {}).length
+    ? currentSavedBranding
+    : getDraftBranding();
+  const normalizedForStorage = normalizeBrandingProfile(
+    {
+      ...baseBranding,
+      brandingEnabled: enabled
+    },
+    {
+      fallbackEmail: currentUser.email || ""
+    }
+  );
+
+  try {
+    const metadata = {
+      ...(currentUser.user_metadata || {}),
+      branding_profile: normalizedForStorage
+    };
+
+    const { data, error } = await supabase.auth.updateUser({
+      data: metadata
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (thisSaveToken !== brandingToggleSaveToken) {
+      return;
+    }
+
+    currentUser = data.user || currentUser;
+    currentSavedBranding = {
+      ...currentSavedBranding,
+      ...normalizedForStorage,
+      brandingEnabled: enabled
+    };
+
+    setStatus(
+      enabled
+        ? "Branding toggle saved. Branded reminder emails are on."
+        : "Branding toggle saved. Outgoing emails will use the standard reminder layout.",
+      "info"
+    );
+  } catch (error) {
+    if (thisSaveToken !== brandingToggleSaveToken) {
+      return;
+    }
+
+    const brandingEnabledInput = getFieldElement(fieldIds.brandingEnabled);
+
+    if (brandingEnabledInput) {
+      brandingEnabledInput.checked = !enabled;
+    }
+
+    updateBrandingEditorAvailability();
+    updateHelperHints();
+    queuePreviewRender();
+    setStatus(error.message || "Unable to save the branding toggle right now.", "error");
+  }
+}
+
 function resetBranding() {
   applyBrandingToForm(currentSavedBranding);
   setStatus("Branding preview reset to your saved selections.", "info");
@@ -2539,6 +2608,8 @@ function wireFormInputs() {
 
   if (brandingEnabledInput) {
     brandingEnabledInput.addEventListener("change", () => {
+      const nextEnabled = Boolean(brandingEnabledInput.checked);
+
       if (brandingEnabledInput.checked) {
         triggerPreviewStudioAnimation();
       }
@@ -2547,6 +2618,7 @@ function wireFormInputs() {
       applyPreviewHighlight(fieldIds.brandingEnabled);
       updateHelperHints();
       queuePreviewRender();
+      void persistBrandingToggleState(nextEnabled);
       window.setTimeout(() => {
         applyPreviewHighlight("");
       }, 180);
