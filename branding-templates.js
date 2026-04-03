@@ -41,6 +41,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroTextColor: "#ffffff",
     artShapeColor: "",
     panelColor: "#eef4ff",
+    summaryTextColor: "#0f172a",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
     bodyGradientStyle: "solid",
@@ -58,6 +59,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     buttonTextColor: "#ffffff",
     footerColor: "#f8fafc",
     footerTextColor: "#64748b",
+    socialLinks: [],
     buttonStyle: "pill",
     panelShape: "rounded",
     summaryGradientStyle: "solid",
@@ -78,6 +80,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroTextColor: "#0f172a",
     artShapeColor: "",
     panelColor: "#ecfbf6",
+    summaryTextColor: "#0f172a",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
     bodyGradientStyle: "solid",
@@ -95,6 +98,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     buttonTextColor: "#ffffff",
     footerColor: "#eff6ff",
     footerTextColor: "#475569",
+    socialLinks: [],
     buttonStyle: "rounded",
     panelShape: "rounded",
     summaryGradientStyle: "solid",
@@ -115,6 +119,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroTextColor: "#ffffff",
     artShapeColor: "",
     panelColor: "#edf2f7",
+    summaryTextColor: "#0f172a",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
     bodyGradientStyle: "solid",
@@ -132,6 +137,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     buttonTextColor: "#ffffff",
     footerColor: "#0f172a",
     footerTextColor: "#cbd5e1",
+    socialLinks: [],
     buttonStyle: "crisp",
     panelShape: "crisp",
     summaryGradientStyle: "solid",
@@ -184,6 +190,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const heroTextColor = normalizeHexColor(profile?.heroTextColor) || templatePreset.heroTextColor || getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" });
   const artShapeColor = "";
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
+  const summaryTextColor = normalizeHexColor(profile?.summaryTextColor) || templatePreset.summaryTextColor || getReadableTextColor(panelColor, { light: "#ffffff", dark: "#0f172a" });
   const bodyTextColor = normalizeHexColor(profile?.bodyTextColor) || templatePreset.bodyTextColor || "#0f172a";
   const bodyColor = normalizeHexColor(profile?.bodyColor) || templatePreset.bodyColor || "#ffffff";
   const bodyGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.bodyGradientStyle) ? profile.bodyGradientStyle : templatePreset.bodyGradientStyle || "solid";
@@ -203,6 +210,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const buttonTextColor = normalizeHexColor(profile?.buttonTextColor) || templatePreset.buttonTextColor || "#ffffff";
   const footerColor = normalizeHexColor(profile?.footerColor) || templatePreset.footerColor || "#f8fafc";
   const footerTextColor = normalizeHexColor(profile?.footerTextColor) || templatePreset.footerTextColor || "#64748b";
+  const socialLinks = normalizeSocialLinks(profile?.socialLinks);
   const logoUrl = normalizeUrl(profile?.logoUrl);
   const brandingEnabled = profile?.brandingEnabled !== false;
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : templatePreset.buttonStyle || "pill";
@@ -233,6 +241,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     heroTextColor,
     artShapeColor,
     panelColor,
+    summaryTextColor,
     bodyTextColor,
     bodyColor,
     bodyGradientStyle,
@@ -250,6 +259,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     buttonTextColor,
     footerColor,
     footerTextColor,
+    socialLinks,
     logoUrl,
     brandingEnabled,
     buttonStyle,
@@ -367,7 +377,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const summaryCount = Math.min(parsed.summary.length, 3);
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
   const bodyBackground = buildSectionBackground(branding.bodyColor || "#ffffff", branding.bodyGradientStyle || "solid", 0.42);
-  const summaryTextColor = getReadableTextColor(branding.panelColor || DEFAULT_PANEL, { light: "#ffffff", dark: "#0f172a" });
+  const summaryTextColor = branding.summaryTextColor || getReadableTextColor(branding.panelColor || DEFAULT_PANEL, { light: "#ffffff", dark: "#0f172a" });
   const detailsTextColor = branding.detailsTextColor || bodyTextColor;
   const calendarTextColor = branding.calendarTextColor || bodyTextColor;
   const buttonTextColor = branding.buttonTextColor || "#ffffff";
@@ -377,6 +387,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     branding.buttonGradientStyle || "solid"
   );
   const footerTextColor = branding.footerTextColor || "#64748b";
+  const footerSocialLinks = buildFooterSocialLinks(branding);
   const greeting = parsed.greeting ? `<div style="font-size:18px;font-weight:800;color:${bodyTextColor};margin:0 0 14px;">${escapeHtml(parsed.greeting)}</div>` : "";
   const intro = parsed.intro ? `<div style="font-size:15px;line-height:1.7;color:${bodyTextColor};margin:0 0 18px;">${escapeHtml(parsed.intro)}</div>` : "";
   const summaryHtml = parsed.summary.length
@@ -426,6 +437,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     buttonBackground,
     buttonTextColor,
     footerTextColor,
+    footerSocialLinks,
     greeting,
     intro,
     summaryHtml,
@@ -711,6 +723,7 @@ function buildSignatureTemplate(content, options = {}) {
         <div data-preview-area="footer" style="padding:18px 28px;border-top:1px solid rgba(203,213,225,0.72);background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
+          ${content.footerSocialLinks}
         </div>
       </div>
     </div>
@@ -773,6 +786,7 @@ function buildSpotlightTemplate(content, options = {}) {
         <div data-preview-area="footer" style="padding:18px 28px;background:${content.brand.footerColor};border-top:1px solid #dbeafe;color:${content.footerTextColor};font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
+          ${content.footerSocialLinks}
         </div>
       </div>
     </div>
@@ -833,6 +847,7 @@ function buildExecutiveTemplate(content, options = {}) {
         <div data-preview-area="footer" style="padding:18px 26px;background:${content.brand.footerColor};color:${content.footerTextColor};font-size:13px;line-height:1.7;">
           <div style="font-weight:800;color:${content.footerTextColor};margin-bottom:4px;">${content.brandTitle}</div>
           ${content.footerContact}
+          ${content.footerSocialLinks}
         </div>
       </div>
     </div>
@@ -990,6 +1005,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
             <div style="font-size:13px;line-height:1.7;${paintTextColor(theme.footerColor)}">
               <strong style="${paintTextColor(theme.footerTitleColor)}">${businessName}</strong><br>
               ${buildProductionContactLine(branding, theme.footerColor) || buildFooterContactLine(branding)}
+              ${buildProductionFooterSocialLinks(branding, theme.footerColor)}
             </div>
           </td>
         </tr>
@@ -1332,7 +1348,7 @@ function buildProductionSummary(summaryItems, branding) {
 
   const radius = getSafePanelRadius(branding.panelShape);
   const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
-  const summaryTextColor = getReadableTextColor(panelColor, { light: "#ffffff", dark: "#0f172a" });
+  const summaryTextColor = branding.summaryTextColor || getReadableTextColor(panelColor, { light: "#ffffff", dark: "#0f172a" });
   const visibleItems = summaryItems.slice(0, 3);
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
@@ -1703,6 +1719,76 @@ function getShapeProfile(intensity) {
 function buildFooterContactLine(branding) {
   const parts = [branding.contactEmail, branding.contactPhone, formatUrlLabel(branding.websiteUrl)].filter(Boolean);
   return parts.length ? escapeHtml(parts.join(" | ")) : "Professional appointment reminders sent from this business.";
+}
+
+function inferSocialPlatform(url) {
+  const value = String(url || "").toLowerCase();
+
+  if (value.includes("instagram.")) return { label: "Instagram", short: "IG" };
+  if (value.includes("facebook.") || value.includes("fb.com")) return { label: "Facebook", short: "f" };
+  if (value.includes("linkedin.")) return { label: "LinkedIn", short: "in" };
+  if (value.includes("x.com") || value.includes("twitter.")) return { label: "X", short: "X" };
+  if (value.includes("tiktok.")) return { label: "TikTok", short: "TT" };
+  if (value.includes("youtube.") || value.includes("youtu.be")) return { label: "YouTube", short: "YT" };
+  if (value.includes("threads.")) return { label: "Threads", short: "@" };
+  if (value.includes("pinterest.")) return { label: "Pinterest", short: "P" };
+
+  return { label: formatUrlLabel(url) || "Website", short: "@" };
+}
+
+function normalizeSocialLinks(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(item => normalizeUrl(item))
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function buildFooterSocialLinks(branding) {
+  if (!branding.socialLinks?.length) {
+    return "";
+  }
+
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+      ${branding.socialLinks.map(url => {
+        const platform = inferSocialPlatform(url);
+
+        return `
+          <a href="${escapeAttribute(url)}" style="display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;background:${hexToRgba(branding.footerTextColor || "#64748b", 0.1)};border:1px solid ${hexToRgba(branding.footerTextColor || "#64748b", 0.16)};color:${branding.footerTextColor || "#64748b"};text-decoration:none;font-size:12px;font-weight:800;line-height:1.2;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;background:${hexToRgba(branding.footerTextColor || "#64748b", 0.14)};color:${branding.footerTextColor || "#64748b"};font-size:10px;font-weight:900;text-transform:uppercase;">${escapeHtml(platform.short)}</span>
+            <span>${escapeHtml(platform.label)}</span>
+          </a>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function buildProductionFooterSocialLinks(branding, textColor) {
+  if (!branding.socialLinks?.length) {
+    return "";
+  }
+
+  const color = textColor || branding.footerTextColor || "#64748b";
+
+  return `
+    <div style="margin-top:12px;">
+      ${branding.socialLinks.map(url => {
+        const platform = inferSocialPlatform(url);
+
+        return `
+          <a href="${escapeAttribute(url)}" style="display:inline-block;margin:0 8px 8px 0;padding:8px 12px;border-radius:999px;background:${hexToRgba(color, 0.1)};border:1px solid ${hexToRgba(color, 0.18)};color:${color} !important;-webkit-text-fill-color:${color} !important;text-decoration:none !important;font-size:12px;font-weight:800;line-height:1.2;">
+            <span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:999px;background:${hexToRgba(color, 0.14)};color:${color} !important;-webkit-text-fill-color:${color} !important;font-size:10px;font-weight:900;text-transform:uppercase;vertical-align:middle;">${escapeHtml(platform.short)}</span>
+            <span style="display:inline-block;margin-left:8px;vertical-align:middle;">${escapeHtml(platform.label)}</span>
+          </a>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
 function buildProductionContactLine(branding, color) {

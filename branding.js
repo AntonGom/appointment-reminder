@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402o";
+} from "./branding-templates.js?v=20260402p";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -33,6 +33,8 @@ const editorTitle = document.getElementById("branding-editor-title");
 const editorCopy = document.getElementById("branding-editor-copy");
 const brandingEnabledNote = document.getElementById("branding-enabled-note");
 const signOutButton = document.getElementById("branding-sign-out");
+const addSocialLinkButton = document.getElementById("branding-add-social-link");
+const socialLinksContainer = document.getElementById("branding-social-links");
 const qaToolsShell = document.getElementById("branding-qa-tools");
 const qaLoadLastEmailButton = document.getElementById("qa-load-last-email-button");
 const qaOpenRawEmailButton = document.getElementById("qa-open-raw-email-button");
@@ -67,6 +69,8 @@ const fieldIds = {
   panelColor: "branding-panel-color",
   panelHex: "branding-panel-hex",
   summaryGradientStyle: "branding-summary-gradient",
+  summaryTextColor: "branding-summary-text-color",
+  summaryTextHex: "branding-summary-text-hex",
   bodyTextColor: "branding-body-text-color",
   bodyTextHex: "branding-body-text-hex",
   bodyColor: "branding-body-color",
@@ -112,7 +116,8 @@ const fieldIds = {
   footerColor: "branding-footer-color",
   footerHex: "branding-footer-hex",
   footerTextColor: "branding-footer-text-color",
-  footerTextHex: "branding-footer-text-hex"
+  footerTextHex: "branding-footer-text-hex",
+  socialLinks: "branding-social-links"
 };
 
 const helperTextIds = {
@@ -122,6 +127,7 @@ const helperTextIds = {
   heroTextColor: "branding-hero-text-color-hint",
   artShapeColor: "branding-art-shape-color-hint",
   panelColor: "branding-panel-color-hint",
+  summaryTextColor: "branding-summary-text-color-hint",
   bodyTextColor: "branding-body-text-color-hint",
   bodyColor: "branding-body-color-hint",
   bodyGradientStyle: "branding-body-gradient-hint",
@@ -199,6 +205,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.panelColor]: {
     iframeAreas: ["summary"],
     note: "Highlighting the summary cards that use your summary section color."
+  },
+  [fieldIds.summaryTextColor]: {
+    iframeAreas: ["summary"],
+    note: "Highlighting the text used inside the date, time, and location cards."
   },
   [fieldIds.summaryGradientStyle]: {
     iframeAreas: ["summary"],
@@ -337,6 +347,10 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.footerTextColor]: {
     iframeAreas: ["footer"],
     note: "Highlighting the footer text color."
+  },
+  [fieldIds.socialLinks]: {
+    iframeAreas: ["footer"],
+    note: "Highlighting the footer social icons that appear when you add social links."
   }
 };
 
@@ -381,6 +395,8 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.panelColor]: "summary",
   [fieldIds.panelHex]: "summary",
   [fieldIds.summaryGradientStyle]: "summary",
+  [fieldIds.summaryTextColor]: "summary",
+  [fieldIds.summaryTextHex]: "summary",
   [fieldIds.bodyTextColor]: "body",
   [fieldIds.bodyTextHex]: "body",
   [fieldIds.bodyColor]: "body",
@@ -418,6 +434,7 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.footerHex]: "footer",
   [fieldIds.footerTextColor]: "footer",
   [fieldIds.footerTextHex]: "footer",
+  [fieldIds.socialLinks]: "footer",
   [fieldIds.logoUrl]: "contact",
   [fieldIds.contactEmail]: "contact",
   [fieldIds.contactPhone]: "contact"
@@ -457,7 +474,7 @@ const EDITOR_GROUP_COPY = {
   },
   summary: {
     title: "Summary card controls",
-    copy: "Adjust the color, gradient, and shape of the date, time, and location cards."
+    copy: "Adjust the color, gradient, text color, and shape of the date, time, and location cards."
   },
   details: {
     title: "Details card controls",
@@ -473,7 +490,7 @@ const EDITOR_GROUP_COPY = {
   },
   footer: {
     title: "Footer controls",
-    copy: "Adjust the footer background tint and text color shown at the bottom of the email."
+    copy: "Adjust the footer background, text color, and social icons shown at the bottom of the email."
   },
   contact: {
     title: "Logo and contact controls",
@@ -647,6 +664,87 @@ function buildSampleMessage(profile) {
   ].join("\n");
 }
 
+function inferSocialPlatformLabel(url) {
+  const value = String(url || "").toLowerCase();
+
+  if (value.includes("instagram.")) {
+    return "Instagram";
+  }
+  if (value.includes("facebook.") || value.includes("fb.com")) {
+    return "Facebook";
+  }
+  if (value.includes("linkedin.")) {
+    return "LinkedIn";
+  }
+  if (value.includes("x.com") || value.includes("twitter.")) {
+    return "X";
+  }
+  if (value.includes("tiktok.")) {
+    return "TikTok";
+  }
+  if (value.includes("youtube.") || value.includes("youtu.be")) {
+    return "YouTube";
+  }
+  if (value.includes("threads.")) {
+    return "Threads";
+  }
+  if (value.includes("pinterest.")) {
+    return "Pinterest";
+  }
+
+  return "Link";
+}
+
+function getSocialPlaceholder(index = 0) {
+  const placeholders = [
+    "https://instagram.com/yourbusiness",
+    "https://facebook.com/yourbusiness",
+    "https://linkedin.com/company/yourbusiness"
+  ];
+
+  return placeholders[index % placeholders.length];
+}
+
+function readSocialLinksFromForm() {
+  if (!socialLinksContainer) {
+    return [];
+  }
+
+  return Array.from(socialLinksContainer.querySelectorAll(".branding-social-link-input"))
+    .map(input => String(input.value || "").trim())
+    .filter(Boolean);
+}
+
+function renderSocialLinksEditor(links = []) {
+  if (!socialLinksContainer) {
+    return;
+  }
+
+  const normalizedLinks = Array.isArray(links) ? links.filter(Boolean) : [];
+
+  socialLinksContainer.innerHTML = normalizedLinks.length
+    ? normalizedLinks.map((link, index) => `
+        <div class="branding-social-row" data-social-index="${index}">
+          <div class="branding-social-chip" aria-hidden="true">${escapeHtml(inferSocialPlatformLabel(link))}</div>
+          <input class="branding-input branding-social-link-input" type="url" inputmode="url" value="${escapeHtml(link)}" placeholder="${getSocialPlaceholder(index)}">
+          <button class="secondary-button branding-social-remove" type="button" data-remove-social="${index}">Remove</button>
+        </div>
+      `).join("")
+    : `
+      <div class="branding-social-empty">
+        Add social links here and the footer will turn them into platform icons automatically.
+      </div>
+    `;
+}
+
+function addSocialLinkRow(url = "") {
+  const nextLinks = [...readSocialLinksFromForm(), url].slice(0, 6);
+  renderSocialLinksEditor(nextLinks);
+  queuePreviewRender();
+  const newestInput = socialLinksContainer?.querySelector(".branding-social-row:last-child .branding-social-link-input");
+  newestInput?.focus();
+}
+
 function getDraftBranding() {
   const rawDraft = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
@@ -661,6 +759,7 @@ function getDraftBranding() {
     artShapeColor: "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
+    summaryTextColor: getFieldElement(fieldIds.summaryTextColor)?.value || getFieldElement(fieldIds.summaryTextHex)?.value || "",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
     bodyColor: getFieldElement(fieldIds.bodyColor)?.value || getFieldElement(fieldIds.bodyHex)?.value || "",
     bodyGradientStyle: getFieldElement(fieldIds.bodyGradientStyle)?.value || "solid",
@@ -692,7 +791,8 @@ function getDraftBranding() {
     websiteUrl: getFieldElement(fieldIds.websiteUrl)?.value || "",
     rescheduleUrl: getFieldElement(fieldIds.rescheduleUrl)?.value || "",
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
-    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
+    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || "",
+    socialLinks: readSocialLinksFromForm()
   };
   rawDraft.accentColor = rawDraft.headerColor || rawDraft.buttonColor || "";
 
@@ -727,6 +827,8 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.panelColor).value = normalized.panelColor;
   getFieldElement(fieldIds.panelHex).value = normalized.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = normalized.summaryGradientStyle;
+  getFieldElement(fieldIds.summaryTextColor).value = normalized.summaryTextColor;
+  getFieldElement(fieldIds.summaryTextHex).value = normalized.summaryTextColor;
   getFieldElement(fieldIds.bodyTextColor).value = normalized.bodyTextColor;
   getFieldElement(fieldIds.bodyTextHex).value = normalized.bodyTextColor;
   getFieldElement(fieldIds.bodyColor).value = normalized.bodyColor;
@@ -773,6 +875,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.footerHex).value = normalized.footerColor;
   getFieldElement(fieldIds.footerTextColor).value = normalized.footerTextColor;
   getFieldElement(fieldIds.footerTextHex).value = normalized.footerTextColor;
+  renderSocialLinksEditor(Array.isArray(branding.socialLinks) ? branding.socialLinks : []);
   updateHelperHints();
   syncTemplateCards();
   renderPreview();
@@ -815,6 +918,8 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.panelColor).value = preset.panelColor;
   getFieldElement(fieldIds.panelHex).value = preset.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = preset.summaryGradientStyle;
+  getFieldElement(fieldIds.summaryTextColor).value = preset.summaryTextColor;
+  getFieldElement(fieldIds.summaryTextHex).value = preset.summaryTextColor;
   getFieldElement(fieldIds.bodyTextColor).value = preset.bodyTextColor;
   getFieldElement(fieldIds.bodyTextHex).value = preset.bodyTextColor;
   getFieldElement(fieldIds.bodyColor).value = preset.bodyColor;
@@ -1125,6 +1230,7 @@ function updateHelperHints() {
   updateHelperHint(helperTextIds.heroTextColor, getHeroTextColorHint());
   updateHelperHint(helperTextIds.artShapeColor, getArtShapeColorHint());
   updateHelperHint(helperTextIds.panelColor, getPanelColorHint());
+  updateHelperHint(helperTextIds.summaryTextColor, getSummaryTextColorHint());
   updateHelperHint(helperTextIds.bodyTextColor, getBodyTextColorHint());
   updateHelperHint(helperTextIds.bodyColor, getBodyColorHint());
   updateHelperHint(helperTextIds.bodyGradientStyle, getBodyGradientHint());
@@ -1179,6 +1285,10 @@ function getArtShapeColorHint() {
 
 function getPanelColorHint() {
   return "Used behind the date, time, and location summary cards.";
+}
+
+function getSummaryTextColorHint() {
+  return "Changes the text color inside the date, time, and location summary cards.";
 }
 
 function getBodyTextColorHint() {
@@ -1751,6 +1861,7 @@ async function saveBranding() {
     artShapeColor: "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
+    summaryTextColor: getFieldElement(fieldIds.summaryTextColor)?.value || getFieldElement(fieldIds.summaryTextHex)?.value || "",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
     bodyColor: getFieldElement(fieldIds.bodyColor)?.value || getFieldElement(fieldIds.bodyHex)?.value || "",
     bodyGradientStyle: getFieldElement(fieldIds.bodyGradientStyle)?.value || "solid",
@@ -1782,7 +1893,8 @@ async function saveBranding() {
     websiteUrl: (getFieldElement(fieldIds.websiteUrl)?.value || "").trim(),
     rescheduleUrl: (getFieldElement(fieldIds.rescheduleUrl)?.value || "").trim(),
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
-    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || ""
+    footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || "",
+    socialLinks: readSocialLinksFromForm()
   };
   rawBranding.accentColor = rawBranding.headerColor || rawBranding.buttonColor || "";
 
@@ -1911,6 +2023,8 @@ function wireFormInputs() {
   const artShapeHexInput = getFieldElement(fieldIds.artShapeHex);
   const panelColorInput = getFieldElement(fieldIds.panelColor);
   const panelHexInput = getFieldElement(fieldIds.panelHex);
+  const summaryTextColorInput = getFieldElement(fieldIds.summaryTextColor);
+  const summaryTextHexInput = getFieldElement(fieldIds.summaryTextHex);
   const bodyTextColorInput = getFieldElement(fieldIds.bodyTextColor);
   const bodyTextHexInput = getFieldElement(fieldIds.bodyTextHex);
   const bodyColorInput = getFieldElement(fieldIds.bodyColor);
@@ -1970,6 +2084,10 @@ function wireFormInputs() {
 
     if (event.target === panelColorInput && panelHexInput) {
       panelHexInput.value = panelColorInput.value;
+    }
+
+    if (event.target === summaryTextColorInput && summaryTextHexInput) {
+      summaryTextHexInput.value = summaryTextColorInput.value;
     }
 
     if (event.target === bodyTextColorInput && bodyTextHexInput) {
@@ -2054,6 +2172,10 @@ function wireFormInputs() {
 
     if (event.target === panelHexInput && panelColorInput && /^#[0-9a-f]{3,6}$/i.test(panelHexInput.value.trim())) {
       panelColorInput.value = panelHexInput.value.trim();
+    }
+
+    if (event.target === summaryTextHexInput && summaryTextColorInput && /^#[0-9a-f]{3,6}$/i.test(summaryTextHexInput.value.trim())) {
+      summaryTextColorInput.value = summaryTextHexInput.value.trim();
     }
 
     if (event.target === bodyTextHexInput && bodyTextColorInput && /^#[0-9a-f]{3,6}$/i.test(bodyTextHexInput.value.trim())) {
@@ -2166,6 +2288,17 @@ function wireFormInputs() {
 
   if (brandingEnabledInput) {
     brandingEnabledInput.addEventListener("change", () => {
+      const toggleCard = brandingEnabledInput.closest(".branding-toggle-card");
+
+      if (brandingEnabledInput.checked && toggleCard) {
+        toggleCard.classList.remove("is-switching-on");
+        void toggleCard.offsetWidth;
+        toggleCard.classList.add("is-switching-on");
+        window.setTimeout(() => {
+          toggleCard.classList.remove("is-switching-on");
+        }, 1100);
+      }
+
       openEditorGroupForField(fieldIds.brandingEnabled);
       applyPreviewHighlight(fieldIds.brandingEnabled);
       updateHelperHints();
@@ -2295,6 +2428,54 @@ function wireFormInputs() {
 
   if (resetBrandingButton) {
     resetBrandingButton.addEventListener("click", resetBranding);
+  }
+
+  if (addSocialLinkButton) {
+    addSocialLinkButton.addEventListener("click", () => {
+      openEditorGroupForField(fieldIds.socialLinks);
+      applyPreviewHighlight(fieldIds.socialLinks);
+      addSocialLinkRow("");
+    });
+  }
+
+  if (socialLinksContainer) {
+    socialLinksContainer.addEventListener("input", event => {
+      const input = event.target.closest(".branding-social-link-input");
+
+      if (!input) {
+        return;
+      }
+
+      const chip = input.closest(".branding-social-row")?.querySelector(".branding-social-chip");
+
+      if (chip) {
+        chip.textContent = inferSocialPlatformLabel(input.value);
+      }
+
+      openEditorGroupForField(fieldIds.socialLinks);
+      applyPreviewHighlight(fieldIds.socialLinks);
+      queuePreviewRender();
+    });
+
+    socialLinksContainer.addEventListener("click", event => {
+      const removeButton = event.target.closest("[data-remove-social]");
+
+      if (!removeButton) {
+        return;
+      }
+
+      const index = Number.parseInt(removeButton.dataset.removeSocial || "-1", 10);
+      const nextLinks = readSocialLinksFromForm().filter((_, itemIndex) => itemIndex !== index);
+      renderSocialLinksEditor(nextLinks);
+      openEditorGroupForField(fieldIds.socialLinks);
+      applyPreviewHighlight(fieldIds.socialLinks);
+      queuePreviewRender();
+    });
+
+    socialLinksContainer.addEventListener("focusin", () => {
+      openEditorGroupForField(fieldIds.socialLinks);
+      applyPreviewHighlight(fieldIds.socialLinks);
+    });
   }
 
   if (signOutButton) {

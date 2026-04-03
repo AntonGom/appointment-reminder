@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402l">
+  <link rel="stylesheet" href="branding.css?v=20260402m">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -154,6 +154,15 @@
                         <option value="split">Split</option>
                       </select>
                       <p class="field-hint branding-helper">Controls how the summary cards blend from white into their section color.</p>
+                    </div>
+
+                    <div data-editor-group="summary">
+                      <label class="branding-label" for="branding-summary-text-color">Summary text color</label>
+                      <div class="branding-color-row">
+                        <input id="branding-summary-text-color" class="branding-color-input" type="color" value="#0f172a">
+                        <input id="branding-summary-text-hex" class="branding-input" type="text" maxlength="7" value="#0f172a" placeholder="#0f172a">
+                      </div>
+                      <p id="branding-summary-text-color-hint" class="field-hint branding-helper">Changes the text color inside the date, time, and location cards.</p>
                     </div>
 
                     <div data-editor-group="body">
@@ -398,6 +407,17 @@
                       </div>
                       <p id="branding-footer-text-color-hint" class="field-hint branding-helper">Changes the text color used in the footer area.</p>
                     </div>
+
+                    <div class="field-span-2" data-editor-group="footer">
+                      <div class="branding-social-head">
+                        <div>
+                          <label class="branding-label" for="branding-social-links">Social media links</label>
+                          <p class="field-hint branding-helper branding-social-copy">Add social links and the footer will show the matching platform icon automatically.</p>
+                        </div>
+                        <button id="branding-add-social-link" class="secondary-button branding-social-add" type="button">Add Social Icon</button>
+                      </div>
+                      <div id="branding-social-links" class="branding-social-links" aria-live="polite"></div>
+                    </div>
                   </div>
 
                 </form>
@@ -517,6 +537,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402q"></script>
+  <script type="module" src="branding.js?v=20260402r"></script>
 </body>
 </html>
