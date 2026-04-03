@@ -34,6 +34,14 @@ const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|a
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260402w";
+const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
+const BRONZE_REVIEW_EDITABLE_AREAS = Object.freeze({
+  summary: "date",
+  details: "notes",
+  body: "notes",
+  calendar: "date"
+});
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -50,6 +58,9 @@ let currentSignedInUser = null;
 let currentUserTier = "free";
 let currentAuthUserId = "";
 let linkedPrefillClientId = "";
+let brandingTemplateModulePromise = null;
+let bronzePreviewScaleTimer = null;
+let bronzePreviewRenderToken = 0;
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -163,6 +174,8 @@ function renderBronzeFeatures() {
   if (isBronze) {
     syncBronzeReminderPreferencesFromUser();
   }
+
+  updateReviewPreview();
 }
 
 async function initAccountTierState() {
@@ -219,6 +232,38 @@ async function initAccountTierState() {
     currentUserTier = "free";
     renderBronzeFeatures();
   }
+}
+
+async function getBrandingTemplateModule() {
+  if (!brandingTemplateModulePromise) {
+    brandingTemplateModulePromise = import(BRANDING_TEMPLATE_MODULE_PATH);
+  }
+
+  return brandingTemplateModulePromise;
+}
+
+function getBronzePreviewFrame() {
+  return document.getElementById("bronze-preview-frame");
+}
+
+function getBronzePreviewShell() {
+  return document.getElementById("bronze-preview-shell");
+}
+
+function getBronzePreviewStage() {
+  return document.getElementById("bronze-preview-stage");
+}
+
+function getBronzePreviewHint() {
+  return document.getElementById("bronze-preview-hint");
+}
+
+function getPreviewBodyShell() {
+  return document.getElementById("preview-body-shell");
+}
+
+function getPreviewToRow() {
+  return document.getElementById("preview-to-row");
 }
 
 function formatTime(time) {
@@ -315,16 +360,311 @@ function getPreviewToValue() {
 function updateDraftPreviewChrome() {
   const previewTo = document.getElementById("preview-to");
   const previewSubject = document.getElementById("preview-subject");
+  const previewToRow = getPreviewToRow();
+  const usingBronzePreview = isBronzeUser();
 
   if (previewTo) {
     const toValue = getPreviewToValue();
     previewTo.textContent = toValue;
     previewTo.classList.toggle("muted", toValue === "client@example.com");
+    previewTo.classList.toggle("is-clickable", usingBronzePreview);
+  }
+
+  if (previewToRow) {
+    previewToRow.classList.toggle("is-clickable", usingBronzePreview);
   }
 
   if (previewSubject) {
     previewSubject.textContent = generatePreviewSubject();
   }
+}
+
+function focusReviewField(fieldId) {
+  const field = document.getElementById(fieldId);
+
+  if (!field) {
+    return;
+  }
+
+  const targetStepIndex = wizardSteps.findIndex(step => step.querySelector(`#${fieldId}`));
+
+  if (targetStepIndex >= 0 && targetStepIndex !== currentStepIndex) {
+    setStep(targetStepIndex, targetStepIndex < currentStepIndex ? "backward" : "forward");
+  }
+
+  window.setTimeout(() => {
+    field.focus({ preventScroll: false });
+
+    if (typeof field.select === "function" && (field.tagName === "TEXTAREA" || field.type === "text" || field.type === "email" || field.type === "tel")) {
+      field.select();
+    }
+  }, 60);
+}
+
+function buildReviewPreviewCalendarLinks(message) {
+  const serviceDate = getFieldValue("date");
+
+  if (!serviceDate) {
+    return null;
+  }
+
+  const serviceTime = getFieldValue("time");
+  const serviceAddress = getFieldValue("address");
+  const businessContact = getFieldValue("businessContact");
+  const clientName = getFieldValue("name");
+  const title = clientName ? `Appointment with ${clientName}` : "Appointment Reminder";
+  const details = businessContact
+    ? `${message}\n\nContact: ${businessContact}`
+    : message;
+  const dateRange = buildReviewPreviewCalendarDateRange(serviceDate, serviceTime);
+  const appleUrl = `${window.location.origin}/api/calendar-ics?${new URLSearchParams({
+    title,
+    description: details,
+    location: serviceAddress || "",
+    date: serviceDate,
+    time: serviceTime || ""
+  }).toString()}`;
+  const googleParams = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    details,
+    location: serviceAddress || "",
+    dates: `${dateRange.googleStart}/${dateRange.googleEnd}`
+  });
+  const outlookParams = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: title,
+    body: details,
+    location: serviceAddress || "",
+    startdt: dateRange.outlookStart,
+    enddt: dateRange.outlookEnd
+  });
+
+  return {
+    apple: appleUrl,
+    google: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+    outlook: `https://outlook.office.com/calendar/0/deeplink/compose?${outlookParams.toString()}`
+  };
+}
+
+function buildReviewPreviewCalendarDateRange(serviceDate, serviceTime) {
+  if (!serviceTime) {
+    const nextDate = addReviewPreviewDays(serviceDate, 1);
+    return {
+      googleStart: formatReviewPreviewCalendarDate(serviceDate),
+      googleEnd: formatReviewPreviewCalendarDate(nextDate),
+      outlookStart: serviceDate,
+      outlookEnd: nextDate
+    };
+  }
+
+  const endTime = addReviewPreviewHour(serviceTime);
+
+  return {
+    googleStart: formatReviewPreviewCalendarDateTime(serviceDate, serviceTime),
+    googleEnd: formatReviewPreviewCalendarDateTime(serviceDate, endTime),
+    outlookStart: `${serviceDate}T${serviceTime}:00`,
+    outlookEnd: `${serviceDate}T${endTime}:00`
+  };
+}
+
+function addReviewPreviewHour(time) {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  const totalMinutes = (((hours || 0) * 60) + (minutes || 0) + 60) % (24 * 60);
+  const nextHours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const nextMinutes = String(totalMinutes % 60).padStart(2, "0");
+  return `${nextHours}:${nextMinutes}`;
+}
+
+function addReviewPreviewDays(dateString, daysToAdd) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + daysToAdd);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatReviewPreviewCalendarDate(dateString) {
+  return String(dateString || "").replace(/-/g, "");
+}
+
+function formatReviewPreviewCalendarDateTime(dateString, timeString) {
+  return `${formatReviewPreviewCalendarDate(dateString)}T${String(timeString || "").replace(":", "")}00`;
+}
+
+function scheduleBronzePreviewScale() {
+  if (bronzePreviewScaleTimer) {
+    window.clearTimeout(bronzePreviewScaleTimer);
+  }
+
+  bronzePreviewScaleTimer = window.setTimeout(() => {
+    syncBronzePreviewScale();
+  }, 50);
+}
+
+function syncBronzePreviewScale() {
+  const shell = getBronzePreviewShell();
+  const stage = getBronzePreviewStage();
+  const frame = getBronzePreviewFrame();
+
+  if (!shell || shell.hidden || !stage || !frame) {
+    return;
+  }
+
+  const frameDocument = frame.contentDocument;
+  const frameWindow = frame.contentWindow;
+
+  if (!frameDocument || !frameWindow) {
+    return;
+  }
+
+  const body = frameDocument.body;
+  const html = frameDocument.documentElement;
+
+  if (!body || !html) {
+    return;
+  }
+
+  const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, html.scrollHeight, html.offsetHeight, 480);
+  const availableWidth = Math.max(shell.clientWidth, 260);
+  const scale = Math.min(availableWidth / BRONZE_REVIEW_PREVIEW_WIDTH, 1);
+
+  frame.style.width = `${BRONZE_REVIEW_PREVIEW_WIDTH}px`;
+  frame.style.height = `${contentHeight}px`;
+  frame.style.transform = `scale(${scale})`;
+  stage.style.height = `${Math.ceil(contentHeight * scale)}px`;
+}
+
+function bindBronzePreviewInteractions() {
+  const frame = getBronzePreviewFrame();
+  const frameDocument = frame?.contentDocument;
+
+  if (!frame || !frameDocument) {
+    return;
+  }
+
+  frameDocument.querySelectorAll("[data-preview-area]").forEach(element => {
+    const area = element.getAttribute("data-preview-area") || "";
+    const targetFieldId = BRONZE_REVIEW_EDITABLE_AREAS[area];
+
+    element.classList.remove("preview-hover", "preview-focus");
+
+    if (!targetFieldId) {
+      return;
+    }
+
+    element.addEventListener("mouseenter", () => {
+      element.classList.add("preview-hover");
+    });
+
+    element.addEventListener("mouseleave", () => {
+      element.classList.remove("preview-hover");
+    });
+
+    element.addEventListener("click", event => {
+      event.preventDefault();
+      element.classList.remove("preview-hover");
+      element.classList.add("preview-focus");
+      focusReviewField(targetFieldId);
+
+      window.setTimeout(() => {
+        element.classList.remove("preview-focus");
+      }, 900);
+    });
+  });
+}
+
+async function renderBronzeReviewPreview(message) {
+  const frame = getBronzePreviewFrame();
+
+  if (!frame) {
+    return;
+  }
+
+  const currentToken = ++bronzePreviewRenderToken;
+  const module = await getBrandingTemplateModule();
+
+  if (currentToken !== bronzePreviewRenderToken) {
+    return;
+  }
+
+  const html = module.buildReminderEmailHtml({
+    message,
+    calendarLinks: buildReviewPreviewCalendarLinks(message),
+    brandingProfile: getSavedBrandingProfile(),
+    previewMode: true
+  });
+
+  frame.onload = () => {
+    if (currentToken !== bronzePreviewRenderToken) {
+      return;
+    }
+
+    bindBronzePreviewInteractions();
+    scheduleBronzePreviewScale();
+  };
+  frame.srcdoc = html;
+}
+
+function updateReviewPreview() {
+  const preview = document.getElementById("preview");
+  const previewHint = document.getElementById("preview-hint");
+  const bronzePreviewShell = getBronzePreviewShell();
+  const bronzePreviewHint = getBronzePreviewHint();
+  const previewBodyShell = getPreviewBodyShell();
+  const message = generateMessage();
+  const shouldShowBronzePreview = isBronzeUser();
+
+  if (preview) {
+    preview.value = message;
+  }
+
+  if (!shouldShowBronzePreview) {
+    if (preview) {
+      preview.hidden = false;
+    }
+
+    if (bronzePreviewShell) {
+      bronzePreviewShell.hidden = true;
+    }
+
+    if (previewBodyShell) {
+      previewBodyShell.classList.remove("is-bronze");
+    }
+
+    if (bronzePreviewHint) {
+      bronzePreviewHint.classList.remove("visible");
+      bronzePreviewHint.hidden = true;
+    }
+
+    updatePreviewLayout();
+    return;
+  }
+
+  if (preview) {
+    preview.hidden = true;
+  }
+
+  if (bronzePreviewShell) {
+    bronzePreviewShell.hidden = false;
+  }
+
+  if (previewBodyShell) {
+    previewBodyShell.classList.add("is-bronze");
+  }
+
+  if (previewHint) {
+    previewHint.classList.remove("visible");
+  }
+
+  if (bronzePreviewHint) {
+    bronzePreviewHint.hidden = false;
+    bronzePreviewHint.classList.add("visible");
+  }
+
+  renderBronzeReviewPreview(message);
 }
 
 function getFieldValue(id) {
@@ -442,10 +782,10 @@ function refreshFormState() {
   const preview = document.getElementById("preview");
 
   if (preview) {
-    preview.value = generateMessage();
     updateDraftPreviewChrome();
-    updatePreviewLayout();
   }
+
+  updateReviewPreview();
 
   syncFieldValidationErrors();
   renderStepNavigation();
@@ -1487,6 +1827,8 @@ document.addEventListener("keydown", event => {
     closeEmailModal();
   }
 });
+
+window.addEventListener("resize", scheduleBronzePreviewScale);
 
 window.addEventListener("beforeunload", event => {
   if (suppressBeforeUnload || !hasUnsavedFormData()) {
