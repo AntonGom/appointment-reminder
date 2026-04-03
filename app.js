@@ -36,6 +36,8 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260402w";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 360;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 300;
 const BRONZE_REVIEW_EDITABLE_AREAS = Object.freeze({
   summary: "date",
   details: "notes",
@@ -529,12 +531,19 @@ function syncBronzePreviewScale() {
 
   const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, html.scrollHeight, html.offsetHeight, 480);
   const availableWidth = Math.max(shell.clientWidth, 260);
-  const scale = Math.min(availableWidth / BRONZE_REVIEW_PREVIEW_WIDTH, 1);
+  const maxPreviewHeight = window.innerWidth <= 640
+    ? BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE
+    : BRONZE_REVIEW_PREVIEW_MAX_HEIGHT;
+  const widthScale = Math.min(availableWidth / BRONZE_REVIEW_PREVIEW_WIDTH, 1);
+  const heightScale = Math.min(maxPreviewHeight / contentHeight, 1);
+  const scale = Math.min(widthScale, heightScale, 1);
+  const scaledHeight = Math.max(Math.ceil(contentHeight * scale), 220);
 
   frame.style.width = `${BRONZE_REVIEW_PREVIEW_WIDTH}px`;
   frame.style.height = `${contentHeight}px`;
   frame.style.transform = `scale(${scale})`;
-  stage.style.height = `${Math.ceil(contentHeight * scale)}px`;
+  stage.style.height = `${scaledHeight}px`;
+  shell.style.minHeight = `${scaledHeight}px`;
 }
 
 function bindBronzePreviewInteractions() {
