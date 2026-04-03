@@ -36,18 +36,12 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260402w";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 180;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 110;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 130;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 96;
-const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.22;
-const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.14;
-const BRONZE_REVIEW_EDITABLE_AREAS = Object.freeze({
-  summary: "date",
-  details: "notes",
-  body: "notes",
-  calendar: "date"
-});
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 330;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 180;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 200;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 130;
+const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.44;
+const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.24;
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -389,28 +383,6 @@ function updateDraftPreviewChrome() {
   }
 }
 
-function focusReviewField(fieldId) {
-  const field = document.getElementById(fieldId);
-
-  if (!field) {
-    return;
-  }
-
-  const targetStepIndex = wizardSteps.findIndex(step => step.querySelector(`#${fieldId}`));
-
-  if (targetStepIndex >= 0 && targetStepIndex !== currentStepIndex) {
-    setStep(targetStepIndex, targetStepIndex < currentStepIndex ? "backward" : "forward");
-  }
-
-  window.setTimeout(() => {
-    field.focus({ preventScroll: false });
-
-    if (typeof field.select === "function" && (field.tagName === "TEXTAREA" || field.type === "text" || field.type === "email" || field.type === "tel")) {
-      field.select();
-    }
-  }, 60);
-}
-
 function buildReviewPreviewCalendarLinks(message) {
   const serviceDate = getFieldValue("date");
 
@@ -570,45 +542,6 @@ function syncBronzePreviewScale() {
   shell.style.setProperty("--bronze-preview-height", `${scaledHeight}px`);
 }
 
-function bindBronzePreviewInteractions() {
-  const frame = getBronzePreviewFrame();
-  const frameDocument = frame?.contentDocument;
-
-  if (!frame || !frameDocument) {
-    return;
-  }
-
-  frameDocument.querySelectorAll("[data-preview-area]").forEach(element => {
-    const area = element.getAttribute("data-preview-area") || "";
-    const targetFieldId = BRONZE_REVIEW_EDITABLE_AREAS[area];
-
-    element.classList.remove("preview-hover", "preview-focus");
-
-    if (!targetFieldId) {
-      return;
-    }
-
-    element.addEventListener("mouseenter", () => {
-      element.classList.add("preview-hover");
-    });
-
-    element.addEventListener("mouseleave", () => {
-      element.classList.remove("preview-hover");
-    });
-
-    element.addEventListener("click", event => {
-      event.preventDefault();
-      element.classList.remove("preview-hover");
-      element.classList.add("preview-focus");
-      focusReviewField(targetFieldId);
-
-      window.setTimeout(() => {
-        element.classList.remove("preview-focus");
-      }, 900);
-    });
-  });
-}
-
 async function renderBronzeReviewPreview(message) {
   const frame = getBronzePreviewFrame();
 
@@ -635,7 +568,6 @@ async function renderBronzeReviewPreview(message) {
       return;
     }
 
-    bindBronzePreviewInteractions();
     scheduleBronzePreviewScaleBurst();
   };
   frame.srcdoc = html;
