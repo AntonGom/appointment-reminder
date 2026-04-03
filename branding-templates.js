@@ -39,7 +39,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroGradientColor: "#8db9ff",
     secondaryColor: "#e8f1ff",
     heroTextColor: "#ffffff",
-    artShapeColor: "#c7dcff",
+    artShapeColor: "",
     panelColor: "#eef4ff",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
@@ -63,8 +63,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     summaryGradientStyle: "solid",
     detailsGradientStyle: "solid",
     calendarGradientStyle: "solid",
-    showHeroArt: true,
-    artShape: "classic",
+    showHeroArt: false,
+    artShape: "none",
     shapeIntensity: "balanced",
     shineStyle: "on",
     motionStyle: "showcase",
@@ -76,7 +76,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroGradientColor: "#7fe7d5",
     secondaryColor: "#e6fbf4",
     heroTextColor: "#0f172a",
-    artShapeColor: "#66dbc6",
+    artShapeColor: "",
     panelColor: "#ecfbf6",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
@@ -100,8 +100,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     summaryGradientStyle: "solid",
     detailsGradientStyle: "solid",
     calendarGradientStyle: "solid",
-    showHeroArt: true,
-    artShape: "ribbon",
+    showHeroArt: false,
+    artShape: "none",
     shapeIntensity: "soft",
     shineStyle: "on",
     motionStyle: "float",
@@ -113,7 +113,7 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     heroGradientColor: "#64748b",
     secondaryColor: "#dbe2ea",
     heroTextColor: "#ffffff",
-    artShapeColor: "#94a3b8",
+    artShapeColor: "",
     panelColor: "#edf2f7",
     bodyTextColor: "#0f172a",
     bodyColor: "#ffffff",
@@ -137,8 +137,8 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     summaryGradientStyle: "solid",
     detailsGradientStyle: "solid",
     calendarGradientStyle: "solid",
-    showHeroArt: true,
-    artShape: "frame",
+    showHeroArt: false,
+    artShape: "none",
     shapeIntensity: "bold",
     shineStyle: "off",
     motionStyle: "still",
@@ -182,7 +182,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const heroGradientColor = normalizeHexColor(profile?.heroGradientColor) || templatePreset.heroGradientColor || normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const secondaryColor = normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
   const heroTextColor = normalizeHexColor(profile?.heroTextColor) || templatePreset.heroTextColor || getReadableTextColor(headerColor, { light: "#ffffff", dark: "#0f172a" });
-  const artShapeColor = normalizeHexColor(profile?.artShapeColor) || templatePreset.artShapeColor || accentColor;
+  const artShapeColor = "";
   const panelColor = normalizeHexColor(profile?.panelColor) || templatePreset.panelColor || secondaryColor || DEFAULT_PANEL;
   const bodyTextColor = normalizeHexColor(profile?.bodyTextColor) || templatePreset.bodyTextColor || "#0f172a";
   const bodyColor = normalizeHexColor(profile?.bodyColor) || templatePreset.bodyColor || "#ffffff";
@@ -207,15 +207,15 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const brandingEnabled = profile?.brandingEnabled !== false;
   const buttonStyle = BUTTON_STYLES.has(profile?.buttonStyle) ? profile.buttonStyle : templatePreset.buttonStyle || "pill";
   const panelShape = PANEL_STYLES.has(profile?.panelShape) ? profile.panelShape : templatePreset.panelShape || "rounded";
-  const artShape = ART_SHAPES.has(profile?.artShape) ? profile.artShape : templatePreset.artShape || "classic";
-  const shapeIntensity = SHAPE_INTENSITIES.has(profile?.shapeIntensity) ? profile.shapeIntensity : templatePreset.shapeIntensity || "balanced";
+  const artShape = "none";
+  const shapeIntensity = "balanced";
   const shineStyle = SHINE_STYLES.has(profile?.shineStyle) ? profile.shineStyle : templatePreset.shineStyle || "on";
   const motionStyle = MOTION_STYLES.has(profile?.motionStyle) ? profile.motionStyle : templatePreset.motionStyle || "showcase";
   const heroGradientStyle = HERO_GRADIENT_STYLES.has(profile?.heroGradientStyle) ? profile.heroGradientStyle : templatePreset.heroGradientStyle || "signature";
   const summaryGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.summaryGradientStyle) ? profile.summaryGradientStyle : templatePreset.summaryGradientStyle || "soft";
   const detailsGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.detailsGradientStyle) ? profile.detailsGradientStyle : templatePreset.detailsGradientStyle || "soft";
   const calendarGradientStyle = SECTION_GRADIENT_STYLES.has(profile?.calendarGradientStyle) ? profile.calendarGradientStyle : templatePreset.calendarGradientStyle || "soft";
-  const showHeroArt = profile?.showHeroArt !== false && templatePreset.showHeroArt !== false;
+  const showHeroArt = false;
   const contactEmail = normalizeEmail(profile?.contactEmail) || (forPreview ? fallbackEmail || "hello@yourbusiness.com" : fallbackEmail);
   const contactPhone = cleanText(profile?.contactPhone, 40);
   const websiteUrl = normalizeUrl(profile?.websiteUrl);
@@ -274,7 +274,7 @@ export function buildReminderEmailHtml({ message, calendarLinks = null, branding
   const normalizedBranding = normalizeBrandingProfile(brandingProfile, { forPreview: previewMode });
   const branding = {
     ...normalizedBranding,
-    resolvedArtShape: resolveArtShape(normalizedBranding.artShape, randomSeed)
+    resolvedArtShape: "none"
   };
 
   if (!previewMode && (!hasSavedBrandingProfile(brandingProfile) || brandingProfile?.brandingEnabled === false)) {
@@ -488,8 +488,7 @@ function buildHeroArtBlock(branding, options = {}) {
 }
 
 function shouldRenderHeroArt(branding) {
-  const artShape = branding?.resolvedArtShape || branding?.artShape || "classic";
-  return branding?.showHeroArt !== false && artShape !== "none";
+  return false;
 }
 
 function buildHeroArtShape({ artShape, branding, shapeProfile, accentColor, shardColor, shardSecondary, lineColor }) {
@@ -1156,6 +1155,10 @@ function buildPanelBackground(panelColor, alpha = 0.34) {
 }
 
 function buildProductionHeroArt(branding, theme) {
+  return "";
+}
+
+function legacyBuildProductionHeroArt(branding, theme) {
   const artShape = branding.resolvedArtShape || branding.artShape || "classic";
   const artColor = branding.artShapeColor || branding.accentColor || DEFAULT_ACCENT;
   const secondary = branding.secondaryColor || DEFAULT_SECONDARY;

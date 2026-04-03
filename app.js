@@ -196,6 +196,7 @@ async function initAccountTierState() {
     currentSignedInUser = session?.user || null;
     currentAuthUserId = session?.user?.id || "";
     renderBronzeFeatures();
+    updateDraftPreviewChrome();
 
     appSupabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {
@@ -211,6 +212,7 @@ async function initAccountTierState() {
       currentAuthUserId = nextUserId;
       currentSignedInUser = nextSession?.user || null;
       renderBronzeFeatures();
+      updateDraftPreviewChrome();
     });
   } catch (error) {
     currentSignedInUser = null;
@@ -232,6 +234,83 @@ function formatDate(dateString) {
   if (!dateString) return "";
   const [year, month, day] = dateString.split("-");
   return month && day && year ? month + "/" + day + "/" + year : dateString;
+}
+
+function generatePreviewSubject() {
+  const date = getFieldValue("date");
+  const time = getFieldValue("time");
+  const name = getFieldValue("name");
+  let subject = "Appointment Reminder";
+
+  if (date) {
+    subject += ` for ${formatDate(date)}`;
+  }
+
+  if (time) {
+    subject += ` at ${formatTime(time)}`;
+  }
+
+  if (name) {
+    subject += ` • ${name}`;
+  }
+
+  return subject;
+}
+
+function getPreviewFromValue() {
+  const businessContact = getFieldValue("businessContact");
+  const brandingProfile = getSavedBrandingProfile();
+
+  if (EMAIL_PATTERN.test(businessContact)) {
+    return businessContact;
+  }
+
+  if (brandingProfile?.contactEmail) {
+    return brandingProfile.contactEmail;
+  }
+
+  if (currentSignedInUser?.email) {
+    return currentSignedInUser.email;
+  }
+
+  return "yourbusiness@example.com";
+}
+
+function getPreviewToValue() {
+  const email = getEmail();
+  const name = getFieldValue("name");
+
+  if (email) {
+    return email;
+  }
+
+  if (name) {
+    return `${name} <client@example.com>`;
+  }
+
+  return "client@example.com";
+}
+
+function updateDraftPreviewChrome() {
+  const previewFrom = document.getElementById("preview-from");
+  const previewTo = document.getElementById("preview-to");
+  const previewSubject = document.getElementById("preview-subject");
+
+  if (previewFrom) {
+    const fromValue = getPreviewFromValue();
+    previewFrom.textContent = fromValue;
+    previewFrom.classList.toggle("muted", fromValue === "yourbusiness@example.com");
+  }
+
+  if (previewTo) {
+    const toValue = getPreviewToValue();
+    previewTo.textContent = toValue;
+    previewTo.classList.toggle("muted", toValue === "client@example.com");
+  }
+
+  if (previewSubject) {
+    previewSubject.textContent = generatePreviewSubject();
+  }
 }
 
 function getFieldValue(id) {
@@ -350,6 +429,7 @@ function refreshFormState() {
 
   if (preview) {
     preview.value = generateMessage();
+    updateDraftPreviewChrome();
     updatePreviewLayout();
   }
 

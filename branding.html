@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402j">
+  <link rel="stylesheet" href="branding.css?v=20260402k">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -76,6 +76,13 @@
                   <input id="branding-template-style" type="hidden" value="signature">
                   <input id="branding-accent-color" type="hidden" value="#2563eb">
                   <input id="branding-accent-hex" type="hidden" value="#2563eb">
+                  <input id="branding-art-shape-color" type="hidden" value="#2563eb">
+                  <input id="branding-art-shape-hex" type="hidden" value="#2563eb">
+                  <input id="branding-show-hero-art" type="checkbox" hidden>
+                  <input id="branding-art-shape" type="hidden" value="none">
+                  <input id="branding-shape-intensity" type="hidden" value="balanced">
+                  <input id="branding-shine-style" type="hidden" value="on">
+                  <input id="branding-motion-style" type="hidden" value="showcase">
 
                   <div class="branding-field-grid branding-editor-grid">
                     <div class="field-span-2" data-editor-group="hero">
@@ -127,15 +134,6 @@
                         <input id="branding-hero-text-hex" class="branding-input" type="text" maxlength="7" value="#ffffff" placeholder="#ffffff">
                       </div>
                       <p id="branding-hero-text-color-hint" class="field-hint branding-helper">Changes the business name, tagline, and contact text inside the top section.</p>
-                    </div>
-
-                    <div data-editor-group="art">
-                      <label class="branding-label" for="branding-art-shape-color">Art shape color</label>
-                      <div class="branding-color-row">
-                        <input id="branding-art-shape-color" class="branding-color-input" type="color" value="#2563eb">
-                        <input id="branding-art-shape-hex" class="branding-input" type="text" maxlength="7" value="#2563eb" placeholder="#2563eb">
-                      </div>
-                      <p id="branding-art-shape-color-hint" class="field-hint branding-helper">Changes the geometric art itself without recoloring the whole header.</p>
                     </div>
 
                     <div data-editor-group="summary">
@@ -363,62 +361,6 @@
                       <p id="branding-hero-gradient-hint" class="field-hint branding-helper">Controls how the top company section blends your main and secondary colors.</p>
                     </div>
 
-                    <div class="field-span-2 branding-inline-toggle" data-editor-group="hero">
-                      <label class="branding-check" for="branding-show-hero-art">
-                        <input id="branding-show-hero-art" type="checkbox" checked>
-                        <span>Include art shapes in top section</span>
-                      </label>
-                      <p id="branding-show-hero-art-hint" class="field-hint branding-helper">Turn this off for a cleaner top section with no hero artwork.</p>
-                    </div>
-
-                    <div data-editor-group="art">
-                      <label class="branding-label" for="branding-art-shape">Art shape</label>
-                      <select id="branding-art-shape" class="branding-select">
-                        <option value="none">No shape</option>
-                        <option value="classic" selected>Classic</option>
-                        <option value="orbit">Orbit</option>
-                        <option value="stacked">Stacked</option>
-                        <option value="ribbon">Ribbon</option>
-                        <option value="prism">Prism</option>
-                        <option value="frame">Frame</option>
-                        <option value="halo">Halo</option>
-                        <option value="cascade">Cascade</option>
-                        <option value="split">Split</option>
-                        <option value="random">Random live</option>
-                      </select>
-                      <p id="branding-art-shape-hint" class="field-hint branding-helper">Choose the geometric art style shown on the right.</p>
-                    </div>
-
-                    <div data-editor-group="art">
-                      <label class="branding-label" for="branding-shape-intensity">Shape intensity</label>
-                      <select id="branding-shape-intensity" class="branding-select">
-                        <option value="soft">Soft</option>
-                        <option value="balanced" selected>Balanced</option>
-                        <option value="bold">Bold</option>
-                      </select>
-                      <p id="branding-shape-intensity-hint" class="field-hint branding-helper">Controls how strong the geometric art feels on the right side.</p>
-                    </div>
-
-                    <div data-editor-group="art">
-                      <label class="branding-label" for="branding-shine-style">Glass shine</label>
-                      <select id="branding-shine-style" class="branding-select">
-                        <option value="on" selected>On</option>
-                        <option value="off">Off</option>
-                      </select>
-                      <p id="branding-shine-style-hint" class="field-hint branding-helper">Adds or removes the glossy sweep on the preview cards.</p>
-                    </div>
-
-                    <div data-editor-group="art">
-                      <label class="branding-label" for="branding-motion-style">Motion style</label>
-                      <select id="branding-motion-style" class="branding-select">
-                        <option value="showcase" selected>Showcase</option>
-                        <option value="float">Float</option>
-                        <option value="pulse">Pulse</option>
-                        <option value="still">Still</option>
-                      </select>
-                      <p id="branding-motion-style-hint" class="field-hint branding-helper">Changes how the preview art animates while you design it.</p>
-                    </div>
-
                     <div data-editor-group="contact">
                       <label class="branding-label" for="branding-contact-email">Business email</label>
                       <input id="branding-contact-email" class="branding-input" type="email" inputmode="email" placeholder="hello@yourbusiness.com">
@@ -562,6 +504,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402o"></script>
+  <script type="module" src="branding.js?v=20260402p"></script>
 </body>
 </html>

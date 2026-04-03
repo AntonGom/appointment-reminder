@@ -430,7 +430,7 @@ body[data-page="branding"] .section-card {
   color: var(--branding-ink);
   text-align: left;
   display: grid;
-  grid-template-columns: 58px minmax(0, 1.1fr) 190px;
+  grid-template-columns: 58px minmax(0, 1.1fr) 150px;
   gap: 18px;
   align-items: center;
   overflow: hidden;
@@ -511,7 +511,7 @@ body[data-page="branding"] .section-card {
 
 .signature-card-rail,
 .signature-card-copy-wrap,
-.signature-card-art {
+.signature-card-side {
   position: relative;
   z-index: 1;
 }
@@ -597,6 +597,84 @@ body[data-page="branding"] .section-card {
   color: var(--branding-muted);
   font-size: 14px;
   line-height: 1.55;
+}
+
+.signature-card-side {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 14px;
+}
+
+.signature-card-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  padding: 12px 16px;
+  border-radius: var(--branding-live-button-radius);
+  background: linear-gradient(135deg, #2b63f6, #1d4ed8);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+}
+
+.signature-card-side-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 118px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.56), transparent 24%),
+    linear-gradient(180deg, rgba(37,99,235,0.18), rgba(15,23,42,0.1));
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+}
+
+.signature-card-side-panels {
+  display: grid;
+  gap: 8px;
+  width: 124px;
+}
+
+.signature-card-side-panels span {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.signature-card-side-panels span:nth-child(1) {
+  width: 100%;
+}
+
+.signature-card-side-panels span:nth-child(2) {
+  width: 86%;
+}
+
+.signature-card-side-panels span:nth-child(3) {
+  width: 68%;
+}
+
+.signature-card.is-studio .signature-card-side-mark {
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.62), transparent 24%),
+    linear-gradient(180deg, rgba(15,118,110,0.14), rgba(16,185,129,0.12));
+}
+
+.signature-card.is-executive .signature-card-side-mark {
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.12), transparent 24%),
+    linear-gradient(180deg, rgba(37,99,235,0.24), rgba(15,23,42,0.52));
+  border-color: rgba(255,255,255,0.24);
+  color: #f8fafc;
 }
 
 .signature-card-meta {
@@ -825,14 +903,14 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18), 0 0 0 1px rgba(239, 68, 68, 0.96), 0 24px 46px rgba(15, 23, 42, 0.12);
 }
 
-.signature-card-art.preview-highlighted,
+.signature-card-side.preview-highlighted,
 .signature-card-cta.preview-highlighted,
 .preview-subject.preview-highlighted,
 .branding-preview-from.preview-highlighted {
   border-radius: 20px;
 }
 
-.signature-card-art.preview-highlighted,
+.signature-card-side.preview-highlighted,
 .signature-card-cta.preview-highlighted,
 .preview-subject.preview-highlighted,
 .branding-preview-from.preview-highlighted,
@@ -1237,9 +1315,10 @@ body.branding-modal-open {
     padding: 22px;
   }
 
-  .signature-card-art {
+  .signature-card-side {
     grid-column: 2;
-    min-height: 134px;
+    justify-items: start;
+    width: 100%;
     margin-top: 8px;
   }
 

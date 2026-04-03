@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402n";
+} from "./branding-templates.js?v=20260402o";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -646,9 +646,6 @@ function buildSampleMessage(profile) {
 }
 
 function getDraftBranding() {
-  const showHeroArt = Boolean(getFieldElement(fieldIds.showHeroArt)?.checked);
-  const selectedArtShape = getFieldElement(fieldIds.artShape)?.value || "classic";
-  const effectiveArtShape = showHeroArt && selectedArtShape === "none" ? "classic" : selectedArtShape;
   const rawDraft = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
@@ -659,7 +656,7 @@ function getDraftBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
     heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
-    artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
+    artShapeColor: "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
@@ -683,9 +680,9 @@ function getDraftBranding() {
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
-    showHeroArt,
-    artShape: effectiveArtShape,
-    shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
+    showHeroArt: false,
+    artShape: "none",
+    shapeIntensity: "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
     contactEmail: getFieldElement(fieldIds.contactEmail)?.value || "",
@@ -723,8 +720,8 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.heroGradientHex).value = normalized.heroGradientColor;
   getFieldElement(fieldIds.heroTextColor).value = normalized.heroTextColor;
   getFieldElement(fieldIds.heroTextHex).value = normalized.heroTextColor;
-  getFieldElement(fieldIds.artShapeColor).value = normalized.artShapeColor;
-  getFieldElement(fieldIds.artShapeHex).value = normalized.artShapeColor;
+  getFieldElement(fieldIds.artShapeColor).value = "";
+  getFieldElement(fieldIds.artShapeHex).value = "";
   getFieldElement(fieldIds.panelColor).value = normalized.panelColor;
   getFieldElement(fieldIds.panelHex).value = normalized.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = normalized.summaryGradientStyle;
@@ -761,9 +758,9 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.buttonStyle).value = normalized.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = normalized.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = normalized.heroGradientStyle;
-  getFieldElement(fieldIds.showHeroArt).checked = normalized.showHeroArt !== false && normalized.artShape !== "none";
-  getFieldElement(fieldIds.artShape).value = normalized.artShape;
-  getFieldElement(fieldIds.shapeIntensity).value = normalized.shapeIntensity;
+  getFieldElement(fieldIds.showHeroArt).checked = false;
+  getFieldElement(fieldIds.artShape).value = "none";
+  getFieldElement(fieldIds.shapeIntensity).value = "balanced";
   getFieldElement(fieldIds.shineStyle).value = normalized.shineStyle;
   getFieldElement(fieldIds.motionStyle).value = normalized.motionStyle;
   getFieldElement(fieldIds.contactEmail).value = branding.contactEmail || currentUser?.email || "";
@@ -811,8 +808,8 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.heroGradientHex).value = preset.heroGradientColor;
   getFieldElement(fieldIds.heroTextColor).value = preset.heroTextColor;
   getFieldElement(fieldIds.heroTextHex).value = preset.heroTextColor;
-  getFieldElement(fieldIds.artShapeColor).value = preset.artShapeColor;
-  getFieldElement(fieldIds.artShapeHex).value = preset.artShapeColor;
+  getFieldElement(fieldIds.artShapeColor).value = "";
+  getFieldElement(fieldIds.artShapeHex).value = "";
   getFieldElement(fieldIds.panelColor).value = preset.panelColor;
   getFieldElement(fieldIds.panelHex).value = preset.panelColor;
   getFieldElement(fieldIds.summaryGradientStyle).value = preset.summaryGradientStyle;
@@ -848,9 +845,9 @@ function applyTemplatePreset(templateId) {
   getFieldElement(fieldIds.buttonStyle).value = preset.buttonStyle;
   getFieldElement(fieldIds.panelShape).value = preset.panelShape;
   getFieldElement(fieldIds.heroGradientStyle).value = preset.heroGradientStyle;
-  getFieldElement(fieldIds.showHeroArt).checked = preset.showHeroArt !== false;
-  getFieldElement(fieldIds.artShape).value = preset.artShape;
-  getFieldElement(fieldIds.shapeIntensity).value = preset.shapeIntensity;
+  getFieldElement(fieldIds.showHeroArt).checked = false;
+  getFieldElement(fieldIds.artShape).value = "none";
+  getFieldElement(fieldIds.shapeIntensity).value = "balanced";
   getFieldElement(fieldIds.shineStyle).value = preset.shineStyle;
   getFieldElement(fieldIds.motionStyle).value = preset.motionStyle;
   getFieldElement(fieldIds.footerColor).value = preset.footerColor;
@@ -862,7 +859,7 @@ function applyTemplatePreset(templateId) {
 function renderPreview() {
   const draftBranding = getDraftBranding();
   const sampleMessage = buildSampleMessage(draftBranding);
-  const randomSeed = draftBranding.artShape === "random" ? previewRandomNonce : 0;
+  const randomSeed = 0;
   const previewKey = JSON.stringify({ ...draftBranding, __randomSeed: randomSeed, __sampleMessage: sampleMessage });
 
   if (previewKey === lastPreviewKey) {
@@ -1156,7 +1153,7 @@ function getHeaderColorHint() {
 }
 
 function getSecondaryColorHint() {
-  return "Used as the support accent inside the top section and hero art.";
+  return "Used as the support accent inside the top section and supporting surfaces.";
 }
 
 function getHeroTextColorHint() {
@@ -1728,9 +1725,6 @@ async function saveBranding() {
     return;
   }
 
-  const showHeroArt = Boolean(getFieldElement(fieldIds.showHeroArt)?.checked);
-  const selectedArtShape = getFieldElement(fieldIds.artShape)?.value || "classic";
-  const effectiveArtShape = showHeroArt && selectedArtShape === "none" ? "classic" : selectedArtShape;
   const rawBranding = {
     templateStyle: getFieldElement(fieldIds.templateStyle)?.value || "signature",
     brandingEnabled: Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked),
@@ -1741,7 +1735,7 @@ async function saveBranding() {
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
     heroTextColor: getFieldElement(fieldIds.heroTextColor)?.value || getFieldElement(fieldIds.heroTextHex)?.value || "",
-    artShapeColor: getFieldElement(fieldIds.artShapeColor)?.value || getFieldElement(fieldIds.artShapeHex)?.value || "",
+    artShapeColor: "",
     panelColor: getFieldElement(fieldIds.panelColor)?.value || getFieldElement(fieldIds.panelHex)?.value || "",
     summaryGradientStyle: getFieldElement(fieldIds.summaryGradientStyle)?.value || "soft",
     bodyTextColor: getFieldElement(fieldIds.bodyTextColor)?.value || getFieldElement(fieldIds.bodyTextHex)?.value || "",
@@ -1765,9 +1759,9 @@ async function saveBranding() {
     buttonStyle: getFieldElement(fieldIds.buttonStyle)?.value || "pill",
     panelShape: getFieldElement(fieldIds.panelShape)?.value || "rounded",
     heroGradientStyle: getFieldElement(fieldIds.heroGradientStyle)?.value || "signature",
-    showHeroArt,
-    artShape: effectiveArtShape,
-    shapeIntensity: getFieldElement(fieldIds.shapeIntensity)?.value || "balanced",
+    showHeroArt: false,
+    artShape: "none",
+    shapeIntensity: "balanced",
     shineStyle: getFieldElement(fieldIds.shineStyle)?.value || "on",
     motionStyle: getFieldElement(fieldIds.motionStyle)?.value || "showcase",
     contactEmail: (getFieldElement(fieldIds.contactEmail)?.value || "").trim(),
@@ -1854,16 +1848,15 @@ function renderTemplateCards() {
             ${showcase.website}
           </span>
         </span>
-        <span class="signature-card-art" aria-hidden="true">
-          <span class="signature-card-aura"></span>
-          <span class="signature-card-shard one"></span>
-          <span class="signature-card-shard two"></span>
-          <span class="signature-card-shard three"></span>
-          <span class="signature-card-mark">
-            <span class="signature-card-mark-fill">${showcase.mark}</span>
+          <span class="signature-card-side" aria-hidden="true">
+            <span class="signature-card-preview-badge">Preview</span>
+            <span class="signature-card-side-mark">${showcase.mark}</span>
+            <span class="signature-card-side-panels">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
           </span>
-          <span class="signature-card-cta">Preview</span>
-        </span>
       </button>
     `;
   }).join("");

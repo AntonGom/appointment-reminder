@@ -514,13 +514,122 @@
       flex: 0 0 auto;
     }
 
-    #preview {
-      min-height: 220px;
-      max-height: 360px;
+    .email-draft {
+      overflow: hidden;
+      border-radius: 22px;
       border: 2px solid var(--preview-border);
-      background: var(--preview-bg);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 255, 0.98));
+      box-shadow: 0 20px 36px rgba(37, 99, 235, 0.1);
+    }
+
+    .email-draft-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(138, 180, 255, 0.35);
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(233, 240, 252, 0.98));
+    }
+
+    .email-draft-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .email-draft-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #cbd5e1;
+    }
+
+    .email-draft-dot.red {
+      background: #f87171;
+    }
+
+    .email-draft-dot.yellow {
+      background: #fbbf24;
+    }
+
+    .email-draft-dot.green {
+      background: #4ade80;
+    }
+
+    .email-draft-title {
+      color: #475569;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .email-draft-fields {
+      padding: 10px 16px 4px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .draft-field {
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(203, 213, 225, 0.62);
+    }
+
+    .draft-field:last-child {
+      border-bottom: none;
+    }
+
+    .draft-field-label {
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .draft-field-value {
+      min-width: 0;
+      color: var(--text-main);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .draft-field-value.muted {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .email-draft-body {
+      background: #ffffff;
+    }
+
+    #preview {
+      min-height: 240px;
+      max-height: 360px;
+      padding: 22px 20px 24px;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 16px;
+      line-height: 1.72;
       white-space: pre-line;
       overflow-y: auto;
+      resize: none;
+      box-shadow: none;
+    }
+
+    #preview:focus {
+      border: none;
+      box-shadow: none;
+      transform: none;
     }
 
     .preview-hint {
@@ -1076,11 +1185,37 @@
     <div class="wizard-step" data-title="Review and Send" data-nav="Review" data-field="consent" data-copy="Check the message, confirm consent, and choose how you want to send it." data-optional="false">
       <div class="question-wrap review-wrap">
         <div class="review-stack">
-          <div class="review-panel">
-            <label for="preview">Message Preview</label>
-            <textarea id="preview" readonly></textarea>
-            <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
-          </div>
+            <div class="review-panel">
+              <label for="preview">Draft Email Preview</label>
+              <div class="email-draft">
+                <div class="email-draft-bar">
+                  <span class="email-draft-dots" aria-hidden="true">
+                    <span class="email-draft-dot red"></span>
+                    <span class="email-draft-dot yellow"></span>
+                    <span class="email-draft-dot green"></span>
+                  </span>
+                  <span class="email-draft-title">New Message</span>
+                </div>
+                <div class="email-draft-fields" aria-hidden="true">
+                  <div class="draft-field">
+                    <span class="draft-field-label">From</span>
+                    <span id="preview-from" class="draft-field-value muted">yourbusiness@example.com</span>
+                  </div>
+                  <div class="draft-field">
+                    <span class="draft-field-label">To</span>
+                    <span id="preview-to" class="draft-field-value muted">client@example.com</span>
+                  </div>
+                  <div class="draft-field">
+                    <span class="draft-field-label">Subject</span>
+                    <span id="preview-subject" class="draft-field-value">Appointment Reminder</span>
+                  </div>
+                </div>
+                <div class="email-draft-body">
+                  <textarea id="preview" readonly></textarea>
+                </div>
+              </div>
+              <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
+            </div>
 
           <div class="consent-box">
             <label>
@@ -1154,7 +1289,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260402f"></script>
+<script src="app.js?v=20260402g"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
