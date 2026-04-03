@@ -995,6 +995,7 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
 
 .branding-preview-shell {
   position: relative;
+  isolation: isolate;
   border-radius: 34px;
   overflow: hidden;
   border: 1px solid var(--branding-shell-border);
@@ -1007,13 +1008,16 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
 .branding-preview-shell::after {
   content: "";
   position: absolute;
-  inset: -20% auto auto -30%;
-  width: 34%;
-  height: 160%;
-  background: linear-gradient(120deg, rgba(255,255,255,0), rgba(255,255,255,0.4), rgba(255,255,255,0));
+  inset: -24% auto auto -36%;
+  width: 38%;
+  height: 175%;
+  background:
+    linear-gradient(118deg, rgba(255,255,255,0), rgba(255,255,255,0.82), rgba(255,255,255,0.18), rgba(255,255,255,0)),
+    linear-gradient(118deg, rgba(255,255,255,0), color-mix(in srgb, var(--branding-live-accent) 18%, rgba(255,255,255,0.72)), rgba(255,255,255,0));
   transform: skewX(-20deg);
   pointer-events: none;
-  opacity: 0.42;
+  mix-blend-mode: screen;
+  opacity: 0.52;
   animation: previewShine 11s ease-in-out infinite;
   z-index: 3;
 }
@@ -1024,8 +1028,10 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(circle at 22% 16%, color-mix(in srgb, var(--branding-live-accent) 24%, transparent), transparent 24%),
-    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.32), transparent 18%),
+    radial-gradient(circle at 18% 14%, color-mix(in srgb, var(--branding-live-accent) 28%, transparent), transparent 22%),
+    radial-gradient(circle at 82% 12%, rgba(255, 255, 255, 0.42), transparent 18%),
+    radial-gradient(circle at 74% 28%, rgba(255, 255, 255, 0.2), transparent 8%),
+    radial-gradient(circle at 22% 68%, color-mix(in srgb, var(--branding-live-accent) 16%, transparent), transparent 10%),
     linear-gradient(135deg, color-mix(in srgb, var(--branding-live-accent) 10%, transparent), transparent 48%);
   opacity: 0;
   pointer-events: none;
@@ -1033,16 +1039,24 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
 }
 
 .branding-preview-shell.is-switching-on {
-  animation: brandingPreviewGlow 1s ease;
+  animation: brandingPreviewGlow 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .branding-preview-shell.is-switching-on::after {
-  animation: brandingToggleSwish 0.95s ease;
-  opacity: 0.78;
+  animation: brandingPreviewSweep 1.1s cubic-bezier(0.2, 0.82, 0.2, 1);
+  opacity: 0.92;
 }
 
 .branding-preview-shell.is-switching-on::before {
-  animation: brandingPreviewAura 1s ease;
+  animation: brandingPreviewAura 1.1s ease;
+}
+
+.branding-preview-shell.is-switching-on .branding-preview-chrome {
+  animation: brandingPreviewGlare 1.1s ease;
+}
+
+.branding-preview-shell.is-switching-on .branding-preview-frame {
+  animation: brandingPreviewLift 1.1s ease;
 }
 
 body[data-branding-shine="off"] .signature-card::after,
@@ -1345,12 +1359,21 @@ body.branding-modal-open {
     transform: translateY(0);
   }
 
-  34% {
+  26% {
     box-shadow:
-      0 0 0 10px color-mix(in srgb, var(--branding-live-accent) 14%, transparent),
+      0 0 0 10px color-mix(in srgb, var(--branding-live-accent) 12%, transparent),
+      0 0 34px color-mix(in srgb, var(--branding-live-accent) 14%, transparent),
       0 30px 56px color-mix(in srgb, var(--branding-live-accent) 18%, transparent);
-    border-color: color-mix(in srgb, var(--branding-live-accent) 34%, white);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--branding-live-accent) 36%, white);
+    transform: translateY(-2px) scale(1.002);
+  }
+
+  54% {
+    box-shadow:
+      0 0 0 6px color-mix(in srgb, var(--branding-live-accent) 8%, transparent),
+      0 0 24px color-mix(in srgb, var(--branding-live-accent) 10%, transparent),
+      0 26px 52px color-mix(in srgb, var(--branding-live-accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--branding-live-accent) 22%, white);
   }
 
   100% {
@@ -1363,14 +1386,70 @@ body.branding-modal-open {
 @keyframes brandingPreviewAura {
   0% {
     opacity: 0;
+    transform: scale(0.98);
   }
 
-  22% {
-    opacity: 0.95;
+  20% {
+    opacity: 0.92;
+    transform: scale(1.01);
+  }
+
+  42% {
+    opacity: 0.7;
+    transform: scale(1.015);
   }
 
   100% {
     opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes brandingPreviewSweep {
+  0% {
+    transform: translateX(0) skewX(-20deg);
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 0.95;
+  }
+
+  36% {
+    opacity: 0.82;
+  }
+
+  100% {
+    transform: translateX(455%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes brandingPreviewGlare {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+
+  24% {
+    filter: brightness(1.06) saturate(1.06);
+  }
+
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes brandingPreviewLift {
+  0% {
+    transform: translateY(0);
+  }
+
+  22% {
+    transform: translateY(-2px);
+  }
+
+  100% {
+    transform: translateY(0);
   }
 }
 
@@ -1431,7 +1510,10 @@ body.branding-modal-open {
   .signature-card-aura,
   .signature-card-shard,
   .signature-card-mark,
-  .branding-preview-shell::after {
+  .branding-preview-shell::after,
+  .branding-preview-shell::before,
+  .branding-preview-shell.is-switching-on .branding-preview-chrome,
+  .branding-preview-shell.is-switching-on .branding-preview-frame {
     animation: none !important;
   }
 }
