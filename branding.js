@@ -719,7 +719,9 @@ function renderSocialLinksEditor(links = []) {
     return;
   }
 
-  const normalizedLinks = Array.isArray(links) ? links.filter(Boolean) : [];
+  const normalizedLinks = Array.isArray(links)
+    ? links.slice(0, 6).map(link => String(link ?? ""))
+    : [];
 
   socialLinksContainer.innerHTML = normalizedLinks.length
     ? normalizedLinks.map((link, index) => `
