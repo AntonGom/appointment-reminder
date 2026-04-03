@@ -511,6 +511,7 @@ let previewRandomNonce = 0;
 let lastSentEmailRecord = null;
 let editorHasCustomPosition = false;
 let editorDragState = null;
+let previewHeightSyncTimer = null;
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 
 const TEMPLATE_SHOWCASES = {
@@ -1078,6 +1079,7 @@ function renderPreview() {
 
   if (previewFrame) {
     previewFrame.srcdoc = previewHtml;
+    schedulePreviewFrameResize();
   }
 
   applyLiveBrandingState(draftBranding);
@@ -1113,6 +1115,46 @@ function renderPreview() {
   }
 
   applyPreviewHighlight(currentPreviewFocusField);
+}
+
+function syncPreviewFrameHeight() {
+  if (!previewFrame) {
+    return;
+  }
+
+  const frameDocument = previewFrame.contentDocument;
+  const frameWindow = previewFrame.contentWindow;
+
+  if (!frameDocument || !frameWindow) {
+    return;
+  }
+
+  const body = frameDocument.body;
+  const html = frameDocument.documentElement;
+
+  if (!body || !html) {
+    return;
+  }
+
+  const nextHeight = Math.max(
+    body.scrollHeight,
+    body.offsetHeight,
+    html.scrollHeight,
+    html.offsetHeight,
+    640
+  );
+
+  previewFrame.style.height = `${nextHeight}px`;
+}
+
+function schedulePreviewFrameResize() {
+  if (previewHeightSyncTimer) {
+    window.clearTimeout(previewHeightSyncTimer);
+  }
+
+  previewHeightSyncTimer = window.setTimeout(() => {
+    syncPreviewFrameHeight();
+  }, 50);
 }
 
 function setQaEmailStatus(message, type = "info") {
@@ -1928,6 +1970,8 @@ function wirePreviewFrameInteractions() {
       clearIframePreviewHover();
     }
   });
+
+  syncPreviewFrameHeight();
 }
 
 function getLiveButtonRadius(style) {
@@ -2501,6 +2545,15 @@ function wireFormInputs() {
       applyPreviewHighlight("");
     }
   });
+
+  if (previewFrame) {
+    previewFrame.addEventListener("load", () => {
+      schedulePreviewFrameResize();
+      window.setTimeout(() => {
+        syncPreviewFrameHeight();
+      }, 180);
+    });
+  }
 
   if (editorCloseButton) {
     editorCloseButton.addEventListener("click", () => {

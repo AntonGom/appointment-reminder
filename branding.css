@@ -1180,7 +1180,8 @@ body[data-branding-motion="float"] .signature-card-aura {
 .branding-preview-frame {
   display: block;
   width: 100%;
-  min-height: 860px;
+  min-height: 0;
+  height: 640px;
   border: 0;
   background: #eef4ff;
   position: relative;
@@ -1663,7 +1664,8 @@ body.branding-modal-open {
   }
 
   .branding-preview-frame {
-    min-height: 720px;
+    min-height: 0;
+    height: 640px;
   }
 
   .qa-email-frame,
