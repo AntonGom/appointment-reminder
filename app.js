@@ -510,6 +510,14 @@ function scheduleBronzePreviewScale() {
   }, 50);
 }
 
+function scheduleBronzePreviewScaleBurst() {
+  [0, 90, 220, 500, 900].forEach(delay => {
+    window.setTimeout(() => {
+      syncBronzePreviewScale();
+    }, delay);
+  });
+}
+
 function syncBronzePreviewScale() {
   const shell = getBronzePreviewShell();
   const stage = getBronzePreviewStage();
@@ -554,6 +562,8 @@ function syncBronzePreviewScale() {
   frame.style.transform = `scale(${scale})`;
   stage.style.height = `${scaledHeight}px`;
   shell.style.height = `${scaledHeight}px`;
+  shell.style.setProperty("--bronze-preview-scale", String(scale));
+  shell.style.setProperty("--bronze-preview-height", `${scaledHeight}px`);
 }
 
 function bindBronzePreviewInteractions() {
@@ -622,19 +632,10 @@ async function renderBronzeReviewPreview(message) {
     }
 
     bindBronzePreviewInteractions();
-    scheduleBronzePreviewScale();
-    window.setTimeout(() => {
-      if (currentToken === bronzePreviewRenderToken) {
-        syncBronzePreviewScale();
-      }
-    }, 180);
-    window.setTimeout(() => {
-      if (currentToken === bronzePreviewRenderToken) {
-        syncBronzePreviewScale();
-      }
-    }, 700);
+    scheduleBronzePreviewScaleBurst();
   };
   frame.srcdoc = html;
+  scheduleBronzePreviewScaleBurst();
 }
 
 function updateReviewPreview() {

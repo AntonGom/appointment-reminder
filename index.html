@@ -618,15 +618,18 @@
     }
 
     .bronze-preview-shell {
+      --bronze-preview-scale: 0.22;
+      --bronze-preview-height: 130px;
       position: relative;
       width: 100%;
-      min-height: 170px;
+      min-height: var(--bronze-preview-height);
       overflow: hidden;
     }
 
     .bronze-preview-stage {
       position: relative;
       width: 100%;
+      height: var(--bronze-preview-height);
       transform-origin: top left;
       transition: height 0.18s ease;
     }
@@ -634,8 +637,10 @@
     .bronze-preview-frame {
       display: block;
       width: 664px;
+      height: 1100px;
       border: none;
       background: transparent;
+      transform: scale(var(--bronze-preview-scale));
       transform-origin: top left;
     }
 
@@ -1152,7 +1157,9 @@
       }
 
       .bronze-preview-shell {
-        min-height: 120px;
+        --bronze-preview-scale: 0.14;
+        --bronze-preview-height: 96px;
+        min-height: var(--bronze-preview-height);
       }
 
       .bronze-preview-tip {
@@ -1380,7 +1387,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260403c"></script>
+<script src="app.js?v=20260403d"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
