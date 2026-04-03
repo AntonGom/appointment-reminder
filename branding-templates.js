@@ -1444,14 +1444,13 @@ function buildProductionSummary(summaryItems, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const panelColor = branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const summaryTextColor = branding.summaryTextColor || getReadableTextColor(panelColor, { light: "#ffffff", dark: "#0f172a" });
-  const summaryBackground = buildSectionBackground(panelColor, branding.summaryGradientStyle, 0.44);
   const visibleItems = summaryItems.slice(0, 3);
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
     <td valign="top" width="${columnWidth}" style="width:${columnWidth};padding:0 ${index === visibleItems.length - 1 ? 0 : 8}px 0 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${panelColor}" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background-color:${panelColor};background:${summaryBackground};table-layout:fixed;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${panelColor}" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background-color:${panelColor};table-layout:fixed;">
         <tr>
-          <td height="106" valign="top" bgcolor="${panelColor}" style="height:106px;padding:14px 14px 12px;background-color:${panelColor};background:${summaryBackground};">
+          <td height="106" valign="top" bgcolor="${panelColor}" style="height:106px;padding:14px 14px 12px;background-color:${panelColor};">
             <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(summaryTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
             <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(summaryTextColor)}">${escapeHtml(item.value)}</div>
           </td>
@@ -1475,14 +1474,12 @@ function buildProductionDetails(details, branding) {
   const radius = getSafePanelRadius(branding.panelShape);
   const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const detailsTextColor = branding.detailsTextColor || branding.bodyTextColor || "#0f172a";
-  const detailsBackground = buildSectionBackground(detailsColor, branding.detailsGradientStyle, 0.5);
-
   return `
     <tr>
       <td data-preview-area="details" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${detailsColor}" style="border:none;${radius}background-color:${detailsColor};background:${detailsBackground};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${detailsColor}" style="border:none;${radius}background-color:${detailsColor};">
           <tr>
-            <td bgcolor="${detailsColor}" style="padding:16px 18px;background-color:${detailsColor};background:${detailsBackground};">
+            <td bgcolor="${detailsColor}" style="padding:16px 18px;background-color:${detailsColor};">
               <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">Additional details</div>
               <div style="font-size:15px;line-height:1.7;${paintTextColor(detailsTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
@@ -1546,7 +1543,6 @@ function buildProductionCalendar(calendarLinks, branding) {
   const buttonRadius = getSafeButtonRadius(branding.buttonStyle);
   const calendarColor = branding.calendarColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const calendarTextColor = branding.calendarTextColor || branding.bodyTextColor || "#0f172a";
-  const calendarBackground = buildSectionBackground(calendarColor, branding.calendarGradientStyle, 0.42);
   const buttonColor = branding.calendarButtonColor || branding.buttonColor || branding.accentColor || DEFAULT_ACCENT;
   const buttonBackground = buildButtonBackground(
     buttonColor,
@@ -1559,9 +1555,9 @@ function buildProductionCalendar(calendarLinks, branding) {
   return `
     <tr>
       <td data-preview-area="calendar" style="padding:0 0 18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${calendarColor}" style="${radius}background-color:${calendarColor};background:${calendarBackground};border:1px solid ${hexToRgba(calendarColor, 0.38)};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${calendarColor}" style="${radius}background-color:${calendarColor};border:1px solid ${hexToRgba(calendarColor, 0.38)};">
           <tr>
-            <td bgcolor="${calendarColor}" style="padding:18px;background-color:${calendarColor};background:${calendarBackground};">
+            <td bgcolor="${calendarColor}" style="padding:18px;background-color:${calendarColor};">
               <div style="font-size:15px;font-weight:800;${paintTextColor(calendarTextColor)}margin:0 0 8px;">Add to Calendar</div>
               <div style="font-size:13px;line-height:1.65;${paintTextColor(calendarTextColor)}margin:0 0 12px;">Save this appointment to the calendar you already use.</div>
               <a href="${escapeAttribute(calendarLinks.apple)}" style="display:inline-block;margin:0 10px 10px 0;padding:11px 14px;${buttonRadius}background:${buttonBackground};${calendarButtonTextStyle}border:1px solid ${buttonColor};font-size:13px;font-weight:800;line-height:1.2;">Apple Calendar</a>
