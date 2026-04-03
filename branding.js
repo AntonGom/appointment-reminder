@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402s";
+} from "./branding-templates.js?v=20260402t";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -521,7 +521,9 @@ const TEMPLATE_SHOWCASES = {
     service: "Appointments + reminders",
     email: "hello@northshorewellness.com",
     website: "northshorewellness.com",
-    mark: "NS"
+    mark: "NS",
+    social: ["IG", "FB"],
+    themeClass: "is-cobalt"
   },
   spotlight: {
     company: "Harbor Legal Group",
@@ -530,7 +532,9 @@ const TEMPLATE_SHOWCASES = {
     service: "Consults + follow-up",
     email: "desk@harborlegal.com",
     website: "harborlegal.com",
-    mark: "HL"
+    mark: "HL",
+    social: ["LI"],
+    themeClass: "is-verdant"
   },
   executive: {
     company: "Aureline Concierge",
@@ -539,7 +543,9 @@ const TEMPLATE_SHOWCASES = {
     service: "Bookings + confirmations",
     email: "team@aureline.co",
     website: "aureline.co",
-    mark: "AU"
+    mark: "AU",
+    social: ["LI", "X"],
+    themeClass: "is-slate"
   },
   ember: {
     company: "Rose Atelier",
@@ -548,7 +554,9 @@ const TEMPLATE_SHOWCASES = {
     service: "Appointments + prep notes",
     email: "bookings@roseatelier.co",
     website: "roseatelier.co",
-    mark: "RA"
+    mark: "RA",
+    social: ["IG", "TT"],
+    themeClass: "is-ember"
   },
   ivory: {
     company: "Ivory House Studio",
@@ -557,7 +565,9 @@ const TEMPLATE_SHOWCASES = {
     service: "Consults + calendar links",
     email: "desk@ivoryhouse.studio",
     website: "ivoryhouse.studio",
-    mark: "IH"
+    mark: "IH",
+    social: ["LI", "WEB"],
+    themeClass: "is-ivory"
   }
 };
 
@@ -2096,17 +2106,17 @@ function renderTemplateCards() {
     const showcase = TEMPLATE_SHOWCASES[option.id] || TEMPLATE_SHOWCASES.signature;
     const preset = TEMPLATE_STYLE_PRESETS[option.id] || TEMPLATE_STYLE_PRESETS.signature;
     const heroBackground = buildTemplateThumbHeroBackground(preset);
-    const summaryBackground = buildTemplateThumbSectionBackground(preset.panelColor, preset.summaryGradientStyle);
-    const detailsBackground = buildTemplateThumbSectionBackground(preset.detailsColor, preset.detailsGradientStyle);
-    const calendarBackground = buildTemplateThumbSectionBackground(preset.calendarColor, preset.calendarGradientStyle);
     const buttonBackground = buildTemplateThumbButtonBackground(
       preset.calendarButtonColor || preset.buttonColor,
       preset.calendarButtonSecondaryColor || preset.tertiaryColor,
       preset.calendarButtonGradientStyle || "solid"
     );
+    const socialPills = (showcase.social || []).map(label => `
+      <span class="signature-card-social-pill">${label}</span>
+    `).join("");
 
     return `
-      <button class="signature-card" type="button" data-template="${option.id}" aria-pressed="false">
+      <button class="signature-card ${showcase.themeClass}" type="button" data-template="${option.id}" aria-pressed="false">
         <span class="template-thumb-window" aria-hidden="true">
           <span class="template-thumb-browser">
             <span class="template-thumb-dots">
@@ -2114,43 +2124,43 @@ function renderTemplateCards() {
               <span></span>
               <span></span>
             </span>
-            <span class="signature-card-cta">Preview</span>
+            <span class="signature-card-badge">${option.label}</span>
           </span>
-          <span class="template-thumb-canvas">
-            <span class="signature-card-art" style="background:${heroBackground};color:${preset.heroTextColor};">
-              <span class="template-thumb-mark">${showcase.mark}</span>
-              <span class="template-thumb-hero-copy">
-                <span class="template-thumb-topline">${showcase.service}</span>
-                <span class="template-thumb-title">${showcase.company}</span>
-                <span class="template-thumb-contact">${showcase.email}</span>
+          <span class="signature-card-canvas" style="background:${heroBackground};color:${preset.heroTextColor};">
+            <span class="signature-card-copy-wrap">
+              <span class="signature-card-brand">${showcase.line}</span>
+              <span class="signature-card-title">${showcase.company}</span>
+              <span class="signature-card-copy">${showcase.promise}</span>
+              <span class="signature-card-meta">
+                <strong>${showcase.service}</strong>
+                ${showcase.email}<br>
+                ${showcase.website}
               </span>
             </span>
-            <span class="template-thumb-body">
-              <span class="template-thumb-summary-row">
-                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Date</span>
-                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Time</span>
-                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Where</span>
-              </span>
-              <span class="template-thumb-detail-card" style="background:${detailsBackground};color:${preset.detailsTextColor};">
-                ${showcase.promise}
-              </span>
-              <span class="template-thumb-calendar-card" style="background:${calendarBackground};color:${preset.calendarTextColor};">
-                <span class="template-thumb-calendar-label">Calendar buttons</span>
-                <span class="template-thumb-calendar-buttons">
-                  <span class="template-thumb-calendar-btn" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Apple</span>
-                  <span class="template-thumb-calendar-btn" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Google</span>
-                </span>
+            <span class="signature-card-side">
+              <span class="signature-card-preview-badge" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Preview</span>
+              <span class="signature-card-side-mark">${showcase.mark}</span>
+              <span class="signature-card-side-panels">
+                <span></span>
+                <span></span>
+                <span></span>
               </span>
             </span>
-            <span class="template-thumb-footer" style="background:${preset.footerColor};color:${preset.footerTextColor};">
-              ${showcase.website}
+          </span>
+          <span class="signature-card-footer">
+            <span class="signature-card-socials">
+              ${socialPills}
             </span>
+            <span class="signature-card-cta" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Use look</span>
           </span>
         </span>
         <span class="template-thumb-info">
-          <span class="signature-card-badge">${option.label}</span>
-          <span class="template-thumb-line">${showcase.line}</span>
-          <span class="template-thumb-description">${option.description}</span>
+          <span class="template-thumb-line">${option.description}</span>
+          <span class="template-thumb-description">
+            ${(showcase.social || []).length
+              ? `Includes social-ready footer styling and a stronger ${showcase.line.toLowerCase()} direction.`
+              : `Built around a cleaner ${showcase.line.toLowerCase()} direction.`}
+          </span>
         </span>
       </button>
     `;
