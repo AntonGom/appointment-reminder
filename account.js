@@ -690,7 +690,11 @@ function attachReminderHistory(clients, historyRows) {
       const mergedEntries = new Map();
       const directEntries = historyByClientId.get(client.id) || [];
       const clientEmail = String(client?.client_email || "").trim().toLowerCase();
-      const canUseEmailFallback = clientEmail && (clientsByEmail.get(clientEmail)?.length || 0) === 1;
+      const clientPhone = normalizePhone(client?.client_phone || "");
+      const clientName = normalizeClientName(client?.client_name || "");
+      const canUseEmailFallback = clientEmail
+        && (clientsByEmail.get(clientEmail)?.length || 0) === 1
+        && Boolean(clientPhone || clientName);
       const emailEntries = canUseEmailFallback
         ? historyByRecipientEmail.get(clientEmail) || []
         : [];
@@ -828,11 +832,12 @@ function findMatchingClientRecord(target, lookup) {
 }
 
 function buildMissingClientFromAppointment(ownerId, appointment) {
+  const appointmentClientId = String(appointment?.client_id || "").trim();
   const clientName = String(appointment?.client_name || "").trim().slice(0, 30);
   const clientEmail = String(appointment?.client_email || "").trim().toLowerCase();
   const clientPhone = normalizePhone(appointment?.client_phone || "");
 
-  if (!clientName && !clientEmail && !clientPhone) {
+  if (!clientName && !clientPhone && !appointmentClientId) {
     return null;
   }
 
@@ -1003,76 +1008,7 @@ function recordMatchesDeletedClient(record, client, { uniqueEmail = false } = {}
   return false;
 }
 
-function getDuplicateClientIdsForDelete(client, clients) {
-  if (!client) {
-    return [];
-  }
-
-  const targetId = String(client?.id || "").trim();
-  const targetName = normalizeClientName(client?.client_name || "");
-  const targetEmail = String(client?.client_email || "").trim().toLowerCase();
-  const targetPhone = normalizePhone(client?.client_phone || "");
-
-  return (clients || [])
-    .filter(entry => {
-      const entryId = String(entry?.id || "").trim();
-      const entryName = normalizeClientName(entry?.client_name || "");
-      const entryEmail = String(entry?.client_email || "").trim().toLowerCase();
-      const entryPhone = normalizePhone(entry?.client_phone || "");
-
-      if (entryId && targetId && entryId === targetId) {
-        return true;
-      }
-
-      if (targetPhone) {
-        return entryPhone === targetPhone
-          && (!targetName || !entryName || entryName === targetName)
-          && (!targetEmail || !entryEmail || entryEmail === targetEmail);
-      }
-
-      if (targetEmail) {
-        return entryEmail === targetEmail
-          && (!targetName || !entryName || entryName === targetName)
-          && !entryPhone;
-      }
-
-      if (targetName) {
-        return entryName === targetName && !entryEmail && !entryPhone;
-      }
-
-      return false;
-    })
-    .map(entry => String(entry?.id || "").trim())
-    .filter(Boolean);
-}
-
-function isExactDuplicateEmailOnlyCluster(client, clients, duplicateClientIds) {
-  const targetEmail = String(client?.client_email || "").trim().toLowerCase();
-  const targetName = normalizeClientName(client?.client_name || "");
-
-  if (!targetEmail || !Array.isArray(duplicateClientIds) || duplicateClientIds.length < 2) {
-    return false;
-  }
-
-  const duplicateIdSet = new Set(duplicateClientIds.map(value => String(value || "").trim()).filter(Boolean));
-  const duplicateClients = (clients || []).filter(entry => duplicateIdSet.has(String(entry?.id || "").trim()));
-
-  if (!duplicateClients.length) {
-    return false;
-  }
-
-  return duplicateClients.every(entry => {
-    const entryEmail = String(entry?.client_email || "").trim().toLowerCase();
-    const entryName = normalizeClientName(entry?.client_name || "");
-    const entryPhone = normalizePhone(entry?.client_phone || "");
-
-    return entryEmail === targetEmail
-      && !entryPhone
-      && (!targetName || !entryName || entryName === targetName);
-  });
-}
-
-async function deleteClientRelatedData(client, ownerId, duplicateClientIds = []) {
+async function deleteClientRelatedData(client, ownerId) {
   if (!supabase || !client?.id || !ownerId) {
     return;
   }
@@ -1080,29 +1016,19 @@ async function deleteClientRelatedData(client, ownerId, duplicateClientIds = [])
   const clientId = String(client.id || "").trim();
   const clientEmail = String(client.client_email || "").trim().toLowerCase();
   const clientPhone = normalizePhone(client.client_phone || "");
-  const deleteClientIds = Array.isArray(duplicateClientIds) && duplicateClientIds.length
-    ? duplicateClientIds.map(value => String(value || "").trim()).filter(Boolean)
-    : [clientId];
+  const clientName = normalizeClientName(client.client_name || "");
   const uniqueEmail = isUniqueClientEmail(client, savedClients);
-  const emailDeleteSafe = Boolean(clientEmail) && (
-    uniqueEmail
-    || isExactDuplicateEmailOnlyCluster(client, savedClients, deleteClientIds)
-  );
+  const emailDeleteSafe = Boolean(clientEmail) && uniqueEmail && Boolean(clientPhone || clientName);
   const [appointmentsRows, historyRows] = await Promise.all([
     loadSavedAppointmentsForClients(ownerId),
     loadReminderHistoryForDelete(ownerId)
   ]);
 
-  let directAppointmentsQuery = supabase
+  const { error: directAppointmentsError } = await supabase
     .from("appointments")
     .delete()
-    .eq("owner_id", ownerId);
-
-  directAppointmentsQuery = deleteClientIds.length > 1
-    ? directAppointmentsQuery.in("client_id", deleteClientIds)
-    : directAppointmentsQuery.eq("client_id", clientId);
-
-  const { error: directAppointmentsError } = await directAppointmentsQuery;
+    .eq("owner_id", ownerId)
+    .eq("client_id", clientId);
 
   if (directAppointmentsError && directAppointmentsError.code !== "42P01") {
     throw directAppointmentsError;
@@ -1150,16 +1076,11 @@ async function deleteClientRelatedData(client, ownerId, duplicateClientIds = [])
     }
   }
 
-  let directHistoryQuery = supabase
+  const { error: directHistoryError } = await supabase
     .from("client_reminder_history")
     .delete()
-    .eq("owner_id", ownerId);
-
-  directHistoryQuery = deleteClientIds.length > 1
-    ? directHistoryQuery.in("client_id", deleteClientIds)
-    : directHistoryQuery.eq("client_id", clientId);
-
-  const { error: directHistoryError } = await directHistoryQuery;
+    .eq("owner_id", ownerId)
+    .eq("client_id", clientId);
 
   if (directHistoryError && directHistoryError.code !== "42P01") {
     throw directHistoryError;
@@ -2311,19 +2232,13 @@ async function deleteClient(clientId) {
   }
 
   try {
-    const duplicateClientIds = getDuplicateClientIdsForDelete(client, savedClients);
-    await deleteClientRelatedData(client, user.id, duplicateClientIds);
+    await deleteClientRelatedData(client, user.id);
 
-    let deleteQuery = supabase
+    const { error } = await supabase
       .from("clients")
       .delete()
+      .eq("id", clientId)
       .eq("owner_id", user.id);
-
-    deleteQuery = duplicateClientIds.length
-      ? deleteQuery.in("id", duplicateClientIds)
-      : deleteQuery.eq("id", clientId);
-
-    const { error } = await deleteQuery;
 
     if (error) {
       throw error;
@@ -2351,8 +2266,7 @@ async function deleteClient(clientId) {
     resetClientForm();
   }
 
-  const deletedClientIds = new Set(getDuplicateClientIdsForDelete(client, savedClients));
-  savedClients = savedClients.filter(entry => !deletedClientIds.has(String(entry?.id || "")));
+  savedClients = savedClients.filter(entry => String(entry?.id || "") !== String(clientId || ""));
   renderSavedClients();
   setStatus("Client deleted.", "success");
   await loadSavedClients();
