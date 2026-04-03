@@ -18,6 +18,7 @@ const saveBrandingButton = document.getElementById("save-branding-button");
 const resetBrandingButton = document.getElementById("reset-branding-button");
 const templateGrid = document.getElementById("template-grid");
 const previewFrame = document.getElementById("branding-preview-frame");
+const previewStage = document.getElementById("branding-preview-stage");
 const previewSubject = document.getElementById("branding-preview-subject");
 const previewTo = document.getElementById("branding-preview-to");
 const previewEmail = document.getElementById("branding-preview-email");
@@ -46,6 +47,10 @@ const qaLastEmailMessageId = document.getElementById("qa-last-email-message-id")
 const qaLastEmailViewer = document.getElementById("qa-last-email-viewer");
 const qaLastEmailFrame = document.getElementById("qa-last-email-frame");
 const qaLastEmailHtml = document.getElementById("qa-last-email-html");
+const BRANDING_PREVIEW_WIDTH = 664;
+const BRANDING_PREVIEW_MAX_HEIGHT_MOBILE = 340;
+const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
+const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
 
 const fieldIds = {
   templateStyle: "branding-template-style",
@@ -1118,7 +1123,7 @@ function renderPreview() {
 }
 
 function syncPreviewFrameHeight() {
-  if (!previewFrame) {
+  if (!previewFrame || !previewStage) {
     return;
   }
 
@@ -1144,7 +1149,33 @@ function syncPreviewFrameHeight() {
     640
   );
 
+  const isMobileViewport = window.innerWidth <= 760;
+
+  if (isMobileViewport) {
+    const availableWidth = Math.max(previewShell?.clientWidth || previewStage.clientWidth || 260, 260);
+    const widthScale = Math.min(availableWidth / BRANDING_PREVIEW_WIDTH, 1);
+    const heightScale = Math.min(BRANDING_PREVIEW_MAX_HEIGHT_MOBILE / nextHeight, 1);
+    const scale = Math.min(widthScale, heightScale, BRANDING_PREVIEW_MAX_SCALE_MOBILE, 1);
+    const scaledWidth = Math.ceil(BRANDING_PREVIEW_WIDTH * scale);
+    const scaledHeight = Math.max(Math.ceil(nextHeight * scale), BRANDING_PREVIEW_MIN_HEIGHT_MOBILE);
+
+    previewStage.style.width = `${scaledWidth}px`;
+    previewStage.style.height = `${scaledHeight}px`;
+    previewStage.style.margin = "0 auto";
+    previewFrame.style.width = `${BRANDING_PREVIEW_WIDTH}px`;
+    previewFrame.style.height = `${nextHeight}px`;
+    previewFrame.style.transform = `scale(${scale})`;
+    previewFrame.style.transformOrigin = "top left";
+    return;
+  }
+
+  previewStage.style.width = "100%";
+  previewStage.style.height = `${nextHeight}px`;
+  previewStage.style.margin = "0";
+  previewFrame.style.width = "100%";
   previewFrame.style.height = `${nextHeight}px`;
+  previewFrame.style.transform = "none";
+  previewFrame.style.transformOrigin = "top left";
 }
 
 function schedulePreviewFrameResize() {
@@ -2621,6 +2652,8 @@ function wireFormInputs() {
   });
 
   window.addEventListener("resize", () => {
+    schedulePreviewFrameResize();
+
     if (window.innerWidth <= 760) {
       return;
     }
