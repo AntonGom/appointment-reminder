@@ -1,18 +1,28 @@
 export const BRANDING_TEMPLATE_OPTIONS = [
   {
     id: "signature",
-    label: "Glass Ribbon",
-    description: "Bright, sculpted, and polished with a premium glass finish."
+    label: "Cobalt Ledger",
+    description: "Cool cobalt, crisp white space, and clean polished panels."
   },
   {
     id: "spotlight",
-    label: "Studio Arc",
-    description: "Editorial, airy, and modern with a softer luxury feel."
+    label: "Verdant Studio",
+    description: "Fresh teal, airy surfaces, and a softer editorial finish."
   },
   {
     id: "executive",
-    label: "Executive Slate",
-    description: "Darker, sharper, and more formal for executive-facing brands."
+    label: "Slate Reserve",
+    description: "Dark formal contrast for a sharper executive-facing brand."
+  },
+  {
+    id: "ember",
+    label: "Rose Ember",
+    description: "Warm coral and blush tones with a luxe boutique feel."
+  },
+  {
+    id: "ivory",
+    label: "Ivory Luxe",
+    description: "Champagne neutrals with a refined premium hospitality tone."
   }
 ];
 
@@ -148,6 +158,84 @@ export const TEMPLATE_STYLE_PRESETS = Object.freeze({
     shapeIntensity: "bold",
     shineStyle: "off",
     motionStyle: "still",
+    heroGradientStyle: "solid"
+  }),
+  ember: Object.freeze({
+    accentColor: "#d9485f",
+    headerColor: "#d9485f",
+    heroGradientColor: "#f8b3be",
+    secondaryColor: "#fff1f4",
+    heroTextColor: "#ffffff",
+    artShapeColor: "",
+    panelColor: "#fff4f6",
+    summaryTextColor: "#4a1520",
+    bodyTextColor: "#3f0f1b",
+    bodyColor: "#ffffff",
+    bodyGradientStyle: "solid",
+    detailsColor: "#fff4f6",
+    detailsTextColor: "#3f0f1b",
+    calendarColor: "#fff2f3",
+    calendarTextColor: "#3f0f1b",
+    calendarButtonColor: "#d9485f",
+    calendarButtonSecondaryColor: "#8f2340",
+    calendarButtonGradientStyle: "solid",
+    calendarButtonTextColor: "#ffffff",
+    buttonColor: "#d9485f",
+    tertiaryColor: "#8f2340",
+    buttonGradientStyle: "solid",
+    buttonTextColor: "#ffffff",
+    footerColor: "#fff0f2",
+    footerTextColor: "#8a2940",
+    socialLinks: [],
+    buttonStyle: "rounded",
+    panelShape: "rounded",
+    summaryGradientStyle: "solid",
+    detailsGradientStyle: "solid",
+    calendarGradientStyle: "solid",
+    showHeroArt: false,
+    artShape: "none",
+    shapeIntensity: "balanced",
+    shineStyle: "on",
+    motionStyle: "showcase",
+    heroGradientStyle: "solid"
+  }),
+  ivory: Object.freeze({
+    accentColor: "#8d6b34",
+    headerColor: "#f0e1c5",
+    heroGradientColor: "#d1b887",
+    secondaryColor: "#fff7ea",
+    heroTextColor: "#2d2113",
+    artShapeColor: "",
+    panelColor: "#f7efdf",
+    summaryTextColor: "#382713",
+    bodyTextColor: "#2d2113",
+    bodyColor: "#fffdfa",
+    bodyGradientStyle: "solid",
+    detailsColor: "#f7efdf",
+    detailsTextColor: "#2d2113",
+    calendarColor: "#f8f1e3",
+    calendarTextColor: "#2d2113",
+    calendarButtonColor: "#8d6b34",
+    calendarButtonSecondaryColor: "#5f4721",
+    calendarButtonGradientStyle: "solid",
+    calendarButtonTextColor: "#ffffff",
+    buttonColor: "#8d6b34",
+    tertiaryColor: "#5f4721",
+    buttonGradientStyle: "solid",
+    buttonTextColor: "#ffffff",
+    footerColor: "#2a2218",
+    footerTextColor: "#f7efdf",
+    socialLinks: [],
+    buttonStyle: "crisp",
+    panelShape: "rounded",
+    summaryGradientStyle: "solid",
+    detailsGradientStyle: "solid",
+    calendarGradientStyle: "solid",
+    showHeroArt: false,
+    artShape: "none",
+    shapeIntensity: "soft",
+    shineStyle: "on",
+    motionStyle: "float",
     heroGradientStyle: "solid"
   })
 });

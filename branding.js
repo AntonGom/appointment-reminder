@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402r";
+} from "./branding-templates.js?v=20260402s";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -516,35 +516,95 @@ const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const TEMPLATE_SHOWCASES = {
   signature: {
     company: "North Shore Wellness",
-    line: "Boutique wellness studio",
-    promise: "Clear reminders that still feel polished, modern, and premium.",
-    service: "Appointments + rescheduling",
+    line: "Cool premium clarity",
+    promise: "Bright reminders with a polished modern tone clients can read quickly.",
+    service: "Appointments + reminders",
     email: "hello@northshorewellness.com",
     website: "northshorewellness.com",
-    mark: "NS",
-    themeClass: "is-glass"
+    mark: "NS"
   },
   spotlight: {
     company: "Harbor Legal Group",
-    line: "Private client coordination",
-    promise: "A lighter editorial layout for businesses that want a calm upscale feel.",
+    line: "Calm editorial luxury",
+    promise: "An airy layout for brands that want a softer upscale client experience.",
     service: "Consults + follow-up",
     email: "desk@harborlegal.com",
     website: "harborlegal.com",
-    mark: "HL",
-    themeClass: "is-studio"
+    mark: "HL"
   },
   executive: {
     company: "Aureline Concierge",
-    line: "Executive service desk",
+    line: "Formal dark reserve",
     promise: "Dark, sharper, and built for a more formal premium brand.",
     service: "Bookings + confirmations",
     email: "team@aureline.co",
     website: "aureline.co",
-    mark: "AU",
-    themeClass: "is-executive"
+    mark: "AU"
+  },
+  ember: {
+    company: "Rose Atelier",
+    line: "Warm boutique energy",
+    promise: "Coral and blush styling for service brands that want more warmth.",
+    service: "Appointments + prep notes",
+    email: "bookings@roseatelier.co",
+    website: "roseatelier.co",
+    mark: "RA"
+  },
+  ivory: {
+    company: "Ivory House Studio",
+    line: "Refined hospitality polish",
+    promise: "Soft neutrals and high contrast detail for a more luxurious feel.",
+    service: "Consults + calendar links",
+    email: "desk@ivoryhouse.studio",
+    website: "ivoryhouse.studio",
+    mark: "IH"
   }
 };
+
+function buildTemplateThumbHeroBackground(preset) {
+  const primary = preset.headerColor || preset.accentColor || "#2563eb";
+  const secondary = preset.heroGradientColor || preset.secondaryColor || primary;
+  const style = preset.heroGradientStyle || "solid";
+
+  if (style === "split") {
+    return `linear-gradient(118deg, ${primary} 0%, ${primary} 48%, ${secondary} 48%, ${secondary} 100%)`;
+  }
+
+  if (style === "spotlight" || style === "signature") {
+    return `linear-gradient(135deg, ${primary} 0%, ${primary} 58%, ${secondary} 100%)`;
+  }
+
+  return primary;
+}
+
+function buildTemplateThumbSectionBackground(color, gradientStyle) {
+  const sectionColor = color || "#eef4ff";
+
+  if (gradientStyle === "split") {
+    return `linear-gradient(135deg, #ffffff 0%, #ffffff 52%, ${sectionColor} 100%)`;
+  }
+
+  if (gradientStyle === "glow" || gradientStyle === "soft") {
+    return `linear-gradient(180deg, #ffffff 0%, ${sectionColor} 100%)`;
+  }
+
+  return sectionColor;
+}
+
+function buildTemplateThumbButtonBackground(primaryColor, secondaryColor, gradientStyle) {
+  const primary = primaryColor || "#2563eb";
+  const secondary = secondaryColor || primary;
+
+  if (gradientStyle === "split") {
+    return `linear-gradient(135deg, ${primary} 0%, ${primary} 50%, ${secondary} 50%, ${secondary} 100%)`;
+  }
+
+  if (gradientStyle === "glow" || gradientStyle === "soft") {
+    return `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+  }
+
+  return primary;
+}
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -1968,35 +2028,64 @@ function renderTemplateCards() {
 
   templateGrid.innerHTML = BRANDING_TEMPLATE_OPTIONS.map(option => {
     const showcase = TEMPLATE_SHOWCASES[option.id] || TEMPLATE_SHOWCASES.signature;
+    const preset = TEMPLATE_STYLE_PRESETS[option.id] || TEMPLATE_STYLE_PRESETS.signature;
+    const heroBackground = buildTemplateThumbHeroBackground(preset);
+    const summaryBackground = buildTemplateThumbSectionBackground(preset.panelColor, preset.summaryGradientStyle);
+    const detailsBackground = buildTemplateThumbSectionBackground(preset.detailsColor, preset.detailsGradientStyle);
+    const calendarBackground = buildTemplateThumbSectionBackground(preset.calendarColor, preset.calendarGradientStyle);
+    const buttonBackground = buildTemplateThumbButtonBackground(
+      preset.calendarButtonColor || preset.buttonColor,
+      preset.calendarButtonSecondaryColor || preset.tertiaryColor,
+      preset.calendarButtonGradientStyle || "solid"
+    );
 
     return `
-      <button class="signature-card ${showcase.themeClass}" type="button" data-template="${option.id}" aria-pressed="false">
-        <span class="signature-card-rail" aria-hidden="true">
-          <span class="signature-card-icon">www</span>
-          <span class="signature-card-icon">@</span>
-          <span class="signature-card-icon">in</span>
-          <span class="signature-card-icon">tel</span>
-        </span>
-        <span class="signature-card-copy-wrap">
-          <span class="signature-card-badge">${option.label}</span>
-          <span class="signature-card-brand">${showcase.line}</span>
-          <span class="signature-card-title">${showcase.company}</span>
-          <span class="signature-card-copy">${showcase.promise}</span>
-          <span class="signature-card-meta">
-            <strong>${showcase.service}</strong>
-            ${showcase.email}<br>
-            ${showcase.website}
-          </span>
-        </span>
-          <span class="signature-card-side" aria-hidden="true">
-            <span class="signature-card-preview-badge">Preview</span>
-            <span class="signature-card-side-mark">${showcase.mark}</span>
-            <span class="signature-card-side-panels">
+      <button class="signature-card" type="button" data-template="${option.id}" aria-pressed="false">
+        <span class="template-thumb-window" aria-hidden="true">
+          <span class="template-thumb-browser">
+            <span class="template-thumb-dots">
               <span></span>
               <span></span>
               <span></span>
             </span>
+            <span class="signature-card-cta">Preview</span>
           </span>
+          <span class="template-thumb-canvas">
+            <span class="signature-card-art" style="background:${heroBackground};color:${preset.heroTextColor};">
+              <span class="template-thumb-mark">${showcase.mark}</span>
+              <span class="template-thumb-hero-copy">
+                <span class="template-thumb-topline">${showcase.service}</span>
+                <span class="template-thumb-title">${showcase.company}</span>
+                <span class="template-thumb-contact">${showcase.email}</span>
+              </span>
+            </span>
+            <span class="template-thumb-body">
+              <span class="template-thumb-summary-row">
+                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Date</span>
+                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Time</span>
+                <span class="template-thumb-summary-card" style="background:${summaryBackground};color:${preset.summaryTextColor};">Where</span>
+              </span>
+              <span class="template-thumb-detail-card" style="background:${detailsBackground};color:${preset.detailsTextColor};">
+                ${showcase.promise}
+              </span>
+              <span class="template-thumb-calendar-card" style="background:${calendarBackground};color:${preset.calendarTextColor};">
+                <span class="template-thumb-calendar-label">Calendar buttons</span>
+                <span class="template-thumb-calendar-buttons">
+                  <span class="template-thumb-calendar-btn" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Apple</span>
+                  <span class="template-thumb-calendar-btn" style="background:${buttonBackground};color:${preset.calendarButtonTextColor};">Google</span>
+                </span>
+              </span>
+            </span>
+            <span class="template-thumb-footer" style="background:${preset.footerColor};color:${preset.footerTextColor};">
+              ${showcase.website}
+            </span>
+          </span>
+        </span>
+        <span class="template-thumb-info">
+          <span class="signature-card-badge">${option.label}</span>
+          <span class="template-thumb-line">${showcase.line}</span>
+          <span class="template-thumb-description">${option.description}</span>
+        </span>
       </button>
     `;
   }).join("");
