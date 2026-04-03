@@ -956,6 +956,7 @@ function applyBrandingToForm(branding) {
   renderSocialLinksEditor(Array.isArray(branding.socialLinks) ? branding.socialLinks : []);
   updateHelperHints();
   syncTemplateCards();
+  updateBrandingEditorAvailability();
   renderPreview();
 }
 
@@ -966,10 +967,11 @@ function syncTemplateCards() {
     const isActive = card.dataset.template === activeTemplate;
     card.classList.toggle("is-active", isActive);
     card.setAttribute("aria-pressed", String(isActive));
+    card.classList.toggle("is-disabled", !isBrandingEditingEnabled());
     const cta = card.querySelector(".signature-card-cta");
 
     if (cta) {
-      cta.textContent = isActive ? "Selected" : "Preview";
+      cta.textContent = !isBrandingEditingEnabled() ? "Off" : (isActive ? "Selected" : "Preview");
     }
   });
 }
@@ -1647,7 +1649,15 @@ function ensureDefaultEditorPosition() {
   setEditorPosition(defaultLeft, 104);
 }
 
+function isBrandingEditingEnabled() {
+  return Boolean(getFieldElement(fieldIds.brandingEnabled)?.checked);
+}
+
 function openBrandingEditorModal(groupId = currentEditorGroup || "hero") {
+  if (groupId !== "hero" && !isBrandingEditingEnabled()) {
+    return;
+  }
+
   setActiveEditorGroup(groupId);
 
   if (editorModal) {
@@ -1668,6 +1678,43 @@ function closeBrandingEditorModal() {
   document.body.classList.remove("branding-modal-open");
   applyPreviewHighlight("");
   clearIframePreviewHover();
+}
+
+function updateBrandingEditorAvailability() {
+  const isEnabled = isBrandingEditingEnabled();
+
+  if (previewShell) {
+    previewShell.classList.toggle("is-readonly", !isEnabled);
+  }
+
+  if (templateGrid) {
+    templateGrid.classList.toggle("is-readonly", !isEnabled);
+    templateGrid.querySelectorAll("[data-template]").forEach(button => {
+      button.disabled = !isEnabled;
+      button.classList.toggle("is-disabled", !isEnabled);
+      button.setAttribute("aria-disabled", String(!isEnabled));
+      button.tabIndex = isEnabled ? 0 : -1;
+    });
+  }
+
+  if (brandingForm) {
+    brandingForm.querySelectorAll("input, select, textarea, button").forEach(element => {
+      if (element.id === fieldIds.brandingEnabled) {
+        element.disabled = false;
+        return;
+      }
+
+      if (element.type === "hidden" || element.type === "submit") {
+        return;
+      }
+
+      element.disabled = !isEnabled;
+    });
+  }
+
+  if (!isEnabled) {
+    closeBrandingEditorModal();
+  }
 }
 
 function setActiveEditorGroup(groupId = "hero") {
@@ -1785,6 +1832,10 @@ function applyIframePreviewHighlights(areas) {
 }
 
 function focusFieldFromPreviewArea(area) {
+  if (!isBrandingEditingEnabled()) {
+    return;
+  }
+
   const targetFieldId = PREVIEW_AREA_TO_FIELD_ID[area];
   const groupId = PREVIEW_AREA_TO_EDITOR_GROUP[area];
 
@@ -1828,6 +1879,10 @@ function wirePreviewFrameInteractions() {
     element.dataset.previewInteractiveBound = "true";
 
     element.addEventListener("mouseenter", () => {
+      if (!isBrandingEditingEnabled()) {
+        return;
+      }
+
       clearIframePreviewHover();
       element.classList.add("preview-hover");
     });
@@ -1837,6 +1892,12 @@ function wirePreviewFrameInteractions() {
     });
 
     element.addEventListener("click", event => {
+      if (!isBrandingEditingEnabled()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       clearIframePreviewHover();
@@ -1845,6 +1906,11 @@ function wirePreviewFrameInteractions() {
   });
 
   frameDocument.addEventListener("click", event => {
+    if (!isBrandingEditingEnabled()) {
+      clearIframePreviewHover();
+      return;
+    }
+
     const interactiveArea = event.target?.closest?.("[data-preview-area]");
 
     if (!interactiveArea) {
@@ -2399,7 +2465,7 @@ function wireFormInputs() {
         triggerPreviewStudioAnimation();
       }
 
-      openEditorGroupForField(fieldIds.brandingEnabled);
+      updateBrandingEditorAvailability();
       applyPreviewHighlight(fieldIds.brandingEnabled);
       updateHelperHints();
       queuePreviewRender();
@@ -2409,7 +2475,6 @@ function wireFormInputs() {
     });
 
     brandingEnabledInput.addEventListener("focus", () => {
-      openEditorGroupForField(fieldIds.brandingEnabled);
       applyPreviewHighlight(fieldIds.brandingEnabled);
     });
 

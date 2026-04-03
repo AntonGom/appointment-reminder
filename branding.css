@@ -1762,6 +1762,21 @@ body.branding-modal-open {
   box-shadow: 0 22px 38px rgba(15, 23, 42, 0.12);
 }
 
+.signature-gallery.is-readonly {
+  opacity: 0.74;
+}
+
+.signature-card.is-disabled {
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+}
+
+.signature-card.is-disabled:hover {
+  transform: none;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+}
+
 .signature-card.is-switching-on::after {
   animation: brandingToggleSwish 0.88s ease;
 }
@@ -1986,6 +2001,14 @@ body.branding-modal-open {
   color: var(--branding-muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.branding-preview-shell.is-readonly {
+  opacity: 0.82;
+}
+
+.branding-preview-shell.is-readonly .branding-preview-frame {
+  pointer-events: none;
 }
 
 .signature-card-art.preview-highlighted,
