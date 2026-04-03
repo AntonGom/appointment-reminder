@@ -912,48 +912,15 @@ async function loadSavedAppointmentsForClients(ownerId) {
   return data || [];
 }
 
-async function loadReminderHistoryForDelete(ownerId) {
-  if (!supabase || !ownerId) {
-    return [];
-  }
+function isUniqueClientEmail(client, clients) {
+  const clientEmail = String(client?.client_email || "").trim().toLowerCase();
 
-  const { data, error } = await supabase
-    .from("client_reminder_history")
-    .select("id, client_id, recipient_email")
-    .eq("owner_id", ownerId)
-    .limit(1000);
-
-  if (error) {
-    if (error.code === "42P01") {
-      return [];
-    }
-
-    throw error;
-  }
-
-  return data || [];
-}
-
-function doesRecordBelongToClient(record, client, lookup) {
-  if (!record || !client) {
+  if (!clientEmail) {
     return false;
   }
 
-  const targetClientId = String(client?.id || "").trim();
-  const recordClientId = String(record?.client_id || "").trim();
-
-  if (targetClientId && recordClientId) {
-    return targetClientId === recordClientId;
-  }
-
-  const matchedClient = findMatchingClientRecord({
-    client_id: recordClientId,
-    client_name: record?.client_name || "",
-    client_email: record?.client_email || record?.recipient_email || "",
-    client_phone: record?.client_phone || ""
-  }, lookup);
-
-  return String(matchedClient?.id || "").trim() === targetClientId;
+  const matches = (clients || []).filter(entry => String(entry?.client_email || "").trim().toLowerCase() === clientEmail);
+  return matches.length <= 1;
 }
 
 async function deleteClientRelatedData(client, ownerId) {
@@ -961,43 +928,94 @@ async function deleteClientRelatedData(client, ownerId) {
     return;
   }
 
-  const lookup = buildClientLookup(savedClients);
-  const [appointmentsRows, historyRows] = await Promise.all([
-    loadSavedAppointmentsForClients(ownerId),
-    loadReminderHistoryForDelete(ownerId)
-  ]);
+  const clientId = String(client.id || "").trim();
+  const clientName = String(client.client_name || "").trim().slice(0, 30);
+  const clientEmail = String(client.client_email || "").trim().toLowerCase();
+  const clientPhone = normalizePhone(client.client_phone || "");
+  const uniqueEmail = isUniqueClientEmail(client, savedClients);
 
-  const appointmentIdsToDelete = (appointmentsRows || [])
-    .filter(entry => doesRecordBelongToClient(entry, client, lookup))
-    .map(entry => String(entry?.id || "").trim())
-    .filter(Boolean);
+  const { error: directAppointmentsError } = await supabase
+    .from("appointments")
+    .delete()
+    .eq("owner_id", ownerId)
+    .eq("client_id", clientId);
 
-  const historyIdsToDelete = (historyRows || [])
-    .filter(entry => doesRecordBelongToClient(entry, client, lookup))
-    .map(entry => String(entry?.id || "").trim())
-    .filter(Boolean);
+  if (directAppointmentsError && directAppointmentsError.code !== "42P01") {
+    throw directAppointmentsError;
+  }
 
-  if (appointmentIdsToDelete.length) {
-    const { error } = await supabase
+  const orphanAppointmentQueries = [];
+
+  if (clientPhone) {
+    let phoneQuery = supabase
       .from("appointments")
       .delete()
-      .in("id", appointmentIdsToDelete)
-      .eq("owner_id", ownerId);
+      .eq("owner_id", ownerId)
+      .is("client_id", null)
+      .eq("client_phone", clientPhone);
 
-    if (error) {
+    if (clientName) {
+      phoneQuery = phoneQuery.eq("client_name", clientName);
+    }
+
+    orphanAppointmentQueries.push(phoneQuery);
+  }
+
+  if (clientEmail) {
+    let emailQuery = supabase
+      .from("appointments")
+      .delete()
+      .eq("owner_id", ownerId)
+      .is("client_id", null)
+      .eq("client_email", clientEmail);
+
+    if (clientName) {
+      emailQuery = emailQuery.eq("client_name", clientName);
+      orphanAppointmentQueries.push(emailQuery);
+    } else if (uniqueEmail) {
+      orphanAppointmentQueries.push(emailQuery);
+    }
+  }
+
+  if (!clientEmail && !clientPhone && clientName) {
+    orphanAppointmentQueries.push(
+      supabase
+        .from("appointments")
+        .delete()
+        .eq("owner_id", ownerId)
+        .is("client_id", null)
+        .eq("client_name", clientName)
+    );
+  }
+
+  for (const query of orphanAppointmentQueries) {
+    const { error } = await query;
+
+    if (error && error.code !== "42P01") {
       throw error;
     }
   }
 
-  if (historyIdsToDelete.length) {
-    const { error } = await supabase
+  const { error: directHistoryError } = await supabase
+    .from("client_reminder_history")
+    .delete()
+    .eq("owner_id", ownerId)
+    .eq("client_id", clientId);
+
+  if (directHistoryError && directHistoryError.code !== "42P01") {
+    throw directHistoryError;
+  }
+
+  if (clientEmail && uniqueEmail) {
+    const { error: orphanHistoryError } = await supabase
       .from("client_reminder_history")
       .delete()
-      .in("id", historyIdsToDelete)
-      .eq("owner_id", ownerId);
+      .eq("owner_id", ownerId)
+      .is("client_id", null)
+      .eq("recipient_email", clientEmail);
 
-    if (error && error.code !== "42P01") {
-      throw error;
+    if (orphanHistoryError && orphanHistoryError.code !== "42P01") {
+      throw orphanHistoryError;
     }
   }
 }
