@@ -654,6 +654,14 @@ async function renderBronzeReviewPreview(message) {
     if (frameDocument) {
       const styleTag = frameDocument.createElement("style");
       styleTag.textContent = `
+        html, body {
+          background: transparent !important;
+        }
+        body > div:last-of-type {
+          padding: 0 !important;
+          min-width: 640px !important;
+          background: transparent !important;
+        }
         [data-review-edit] {
           cursor: text;
           transition: box-shadow 0.18s ease, background-color 0.18s ease;
@@ -666,6 +674,13 @@ async function renderBronzeReviewPreview(message) {
         }
       `;
       frameDocument.head.appendChild(styleTag);
+
+      const contentRoot = frameDocument.body?.lastElementChild;
+      if (contentRoot instanceof frameDocument.defaultView.HTMLElement) {
+        contentRoot.style.padding = "0";
+        contentRoot.style.minWidth = "640px";
+        contentRoot.style.background = "transparent";
+      }
 
       frameDocument.querySelectorAll("[data-review-edit]").forEach(element => {
         element.setAttribute("contenteditable", "true");
