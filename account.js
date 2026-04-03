@@ -912,6 +912,28 @@ async function loadSavedAppointmentsForClients(ownerId) {
   return data || [];
 }
 
+async function loadReminderHistoryForDelete(ownerId) {
+  if (!supabase || !ownerId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("client_reminder_history")
+    .select("id, client_id, recipient_email")
+    .eq("owner_id", ownerId)
+    .limit(1000);
+
+  if (error) {
+    if (error.code === "42P01") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return data || [];
+}
+
 function isUniqueClientEmail(client, clients) {
   const clientEmail = String(client?.client_email || "").trim().toLowerCase();
 
@@ -987,6 +1009,8 @@ async function deleteClientRelatedData(client, ownerId) {
   }
 
   const clientId = String(client.id || "").trim();
+  const clientEmail = String(client.client_email || "").trim().toLowerCase();
+  const clientPhone = normalizePhone(client.client_phone || "");
   const uniqueEmail = isUniqueClientEmail(client, savedClients);
   const [appointmentsRows, historyRows] = await Promise.all([
     loadSavedAppointmentsForClients(ownerId),
@@ -1021,6 +1045,30 @@ async function deleteClientRelatedData(client, ownerId) {
     }
   }
 
+  if (clientEmail && uniqueEmail) {
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("owner_id", ownerId)
+      .eq("client_email", clientEmail);
+
+    if (error && error.code !== "42P01") {
+      throw error;
+    }
+  }
+
+  if (clientPhone) {
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("owner_id", ownerId)
+      .eq("client_phone", clientPhone);
+
+    if (error && error.code !== "42P01") {
+      throw error;
+    }
+  }
+
   const { error: directHistoryError } = await supabase
     .from("client_reminder_history")
     .delete()
@@ -1046,6 +1094,18 @@ async function deleteClientRelatedData(client, ownerId) {
 
     if (orphanHistoryError && orphanHistoryError.code !== "42P01") {
       throw orphanHistoryError;
+    }
+  }
+
+  if (clientEmail && uniqueEmail) {
+    const { error } = await supabase
+      .from("client_reminder_history")
+      .delete()
+      .eq("owner_id", ownerId)
+      .eq("recipient_email", clientEmail);
+
+    if (error && error.code !== "42P01") {
+      throw error;
     }
   }
 }
@@ -2199,6 +2259,8 @@ async function deleteClient(clientId) {
     resetClientForm();
   }
 
+  savedClients = savedClients.filter(entry => String(entry?.id || "") !== String(clientId || ""));
+  renderSavedClients();
   setStatus("Client deleted.", "success");
   await loadSavedClients();
 }
