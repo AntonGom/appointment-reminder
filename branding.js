@@ -2282,13 +2282,23 @@ function wireFormInputs() {
   if (brandingEnabledInput) {
     brandingEnabledInput.addEventListener("change", () => {
       const toggleCard = brandingEnabledInput.closest(".branding-toggle-card");
+      const animatedShell = previewShell;
 
-      if (brandingEnabledInput.checked && toggleCard) {
-        toggleCard.classList.remove("is-switching-on");
-        void toggleCard.offsetWidth;
-        toggleCard.classList.add("is-switching-on");
+      if (brandingEnabledInput.checked) {
+        [toggleCard, animatedShell].forEach(element => {
+          if (!element) {
+            return;
+          }
+
+          element.classList.remove("is-switching-on");
+          void element.offsetWidth;
+          element.classList.add("is-switching-on");
+        });
+
         window.setTimeout(() => {
-          toggleCard.classList.remove("is-switching-on");
+          [toggleCard, animatedShell].forEach(element => {
+            element?.classList.remove("is-switching-on");
+          });
         }, 1100);
       }
 
