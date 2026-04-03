@@ -524,7 +524,7 @@
     }
 
     .email-draft.is-bronze-compact {
-      max-width: min(100%, 560px);
+      max-width: 100%;
       margin: 0 auto;
       overflow: visible;
       border: none;
@@ -535,6 +535,10 @@
 
     .email-draft.is-bronze-compact .email-draft-bar,
     .email-draft.is-bronze-compact .email-draft-fields {
+      display: none;
+    }
+
+    .email-draft.is-bronze-compact .bronze-preview-editor-wrap {
       display: none;
     }
 
@@ -655,10 +659,11 @@
     }
 
     .bronze-preview-shell {
-      --bronze-preview-scale: 0.7;
-      --bronze-preview-height: 420px;
+      --bronze-preview-scale: 0.84;
+      --bronze-preview-height: 560px;
       position: relative;
-      width: min(100%, calc(664px * var(--bronze-preview-scale)));
+      width: 100%;
+      max-width: 100%;
       margin: 0 auto;
       min-height: var(--bronze-preview-height);
       overflow: hidden;
@@ -1204,13 +1209,9 @@
         line-height: 1.3;
       }
 
-      .email-draft.is-bronze-compact {
-        max-width: min(100%, 340px);
-      }
-
       .bronze-preview-shell {
-        --bronze-preview-scale: 0.46;
-        --bronze-preview-height: 250px;
+        --bronze-preview-scale: 0.58;
+        --bronze-preview-height: 340px;
         min-height: var(--bronze-preview-height);
       }
 
@@ -1452,7 +1453,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260403k"></script>
+<script src="app.js?v=20260403l"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
