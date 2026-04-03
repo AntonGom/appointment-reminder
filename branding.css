@@ -859,23 +859,8 @@ body[data-page="branding"] .section-card {
 .branding-preview-head {
   display: flex;
   align-items: start;
-  justify-content: space-between;
   gap: 14px;
   margin-bottom: 18px;
-}
-
-.preview-subject {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 14px;
-  border-radius: var(--branding-live-button-radius);
-  background: rgba(219, 234, 254, 0.92);
-  border: 1px solid color-mix(in srgb, var(--branding-live-accent) 20%, white 80%);
-  color: var(--branding-live-accent);
-  font-size: 13px;
-  font-weight: 800;
-  text-align: center;
 }
 
 body[data-branding-button-style="bubbly"] .preview-subject,
@@ -905,14 +890,14 @@ body[data-branding-button-style="parallelogram"] .signature-card-cta {
 
 .signature-card-side.preview-highlighted,
 .signature-card-cta.preview-highlighted,
-.preview-subject.preview-highlighted,
+.branding-preview-draft-fields.preview-highlighted,
 .branding-preview-from.preview-highlighted {
   border-radius: 20px;
 }
 
 .signature-card-side.preview-highlighted,
 .signature-card-cta.preview-highlighted,
-.preview-subject.preview-highlighted,
+.branding-preview-draft-fields.preview-highlighted,
 .branding-preview-from.preview-highlighted,
 .branding-preview-shell.preview-highlighted {
   outline: 3px solid rgba(239, 68, 68, 0.9);
@@ -966,9 +951,9 @@ body[data-branding-motion="float"] .signature-card-aura {
 }
 
 .branding-preview-chrome {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
   padding: 16px 18px;
   background:
@@ -1005,6 +990,42 @@ body[data-branding-motion="float"] .signature-card-aura {
   display: block;
   color: var(--branding-ink);
   font-size: 14px;
+}
+
+.branding-preview-draft-fields {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.branding-preview-draft-field {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.branding-preview-draft-label {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.branding-preview-draft-value {
+  min-width: 0;
+  color: var(--branding-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.branding-preview-draft-value.muted {
+  color: var(--branding-muted);
+  font-weight: 600;
 }
 
 .branding-preview-frame {
@@ -1270,6 +1291,14 @@ body.branding-modal-open {
 
   .branding-preview-head {
     flex-direction: column;
+  }
+
+  .branding-preview-chrome {
+    grid-template-columns: 1fr;
+  }
+
+  .branding-preview-from {
+    text-align: left;
   }
 
   .branding-qa-head,

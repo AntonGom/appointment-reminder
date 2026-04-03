@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260331c">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260402k">
+  <link rel="stylesheet" href="branding.css?v=20260402l">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -425,7 +425,6 @@
                     <p>This preview updates as you design and uses the same renderer as your actual automated reminder emails.</p>
                     <p id="branding-preview-focus-note" class="field-hint branding-focus-note">Hover and click any editable part of the preview to open a small section editor.</p>
                   </div>
-                  <div id="branding-preview-subject" class="preview-subject">Appointment Reminder</div>
                 </div>
 
                 <div id="branding-preview-shell" class="branding-preview-shell">
@@ -435,8 +434,22 @@
                       <span class="branding-preview-dot"></span>
                       <span class="branding-preview-dot"></span>
                     </div>
+                    <div class="branding-preview-draft-fields" aria-hidden="true">
+                      <div class="branding-preview-draft-field">
+                        <span class="branding-preview-draft-label">From:</span>
+                        <span id="branding-preview-from" class="branding-preview-draft-value">Your business name</span>
+                      </div>
+                      <div class="branding-preview-draft-field">
+                        <span class="branding-preview-draft-label">To:</span>
+                        <span id="branding-preview-to" class="branding-preview-draft-value muted">client@example.com</span>
+                      </div>
+                      <div class="branding-preview-draft-field">
+                        <span class="branding-preview-draft-label">Subject:</span>
+                        <span id="branding-preview-subject" class="branding-preview-draft-value">Appointment Reminder</span>
+                      </div>
+                    </div>
                     <div class="branding-preview-from">
-                      <strong id="branding-preview-from">Your business name</strong>
+                      <strong id="branding-preview-business-name">Your business name</strong>
                       <span id="branding-preview-email">you@example.com</span>
                     </div>
                   </div>
@@ -504,6 +517,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260402p"></script>
+  <script type="module" src="branding.js?v=20260402q"></script>
 </body>
 </html>

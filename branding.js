@@ -20,7 +20,9 @@ const templateGrid = document.getElementById("template-grid");
 const previewFrame = document.getElementById("branding-preview-frame");
 const previewSubject = document.getElementById("branding-preview-subject");
 const previewFrom = document.getElementById("branding-preview-from");
+const previewTo = document.getElementById("branding-preview-to");
 const previewEmail = document.getElementById("branding-preview-email");
+const previewBusinessName = document.getElementById("branding-preview-business-name");
 const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
 const editorModal = document.getElementById("branding-editor-modal");
@@ -892,13 +894,24 @@ function renderPreview() {
   if (previewFrom) {
     previewFrom.textContent = draftBranding.brandingEnabled === false
       ? "Standard Reminder Email"
-      : draftBranding.businessName || "Your business name";
+      : (draftBranding.contactEmail || currentUser?.email || "you@example.com");
+  }
+
+  if (previewTo) {
+    previewTo.textContent = "client@example.com";
+    previewTo.classList.toggle("muted", true);
   }
 
   if (previewEmail) {
     previewEmail.textContent = draftBranding.brandingEnabled === false
       ? (currentUser?.email || "you@example.com")
       : (draftBranding.contactEmail || currentUser?.email || "you@example.com");
+  }
+
+  if (previewBusinessName) {
+    previewBusinessName.textContent = draftBranding.brandingEnabled === false
+      ? "Standard Reminder Email"
+      : (draftBranding.businessName || "Your business name");
   }
 
   if (brandingEnabledNote) {
