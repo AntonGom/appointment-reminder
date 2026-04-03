@@ -36,10 +36,12 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260402w";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 280;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 165;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 170;
-const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 120;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 180;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 110;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 130;
+const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 96;
+const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.22;
+const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.14;
 const BRONZE_REVIEW_EDITABLE_AREAS = Object.freeze({
   summary: "date",
   details: "notes",
@@ -542,14 +544,16 @@ function syncBronzePreviewScale() {
     : BRONZE_REVIEW_PREVIEW_MIN_HEIGHT;
   const widthScale = Math.min(availableWidth / BRONZE_REVIEW_PREVIEW_WIDTH, 1);
   const heightScale = Math.min(maxPreviewHeight / contentHeight, 1);
-  const scale = Math.min(widthScale, heightScale, 1);
+  const scale = isMobileViewport
+    ? Math.min(widthScale, heightScale, BRONZE_REVIEW_MAX_SCALE_MOBILE, 1)
+    : Math.min(widthScale, heightScale, BRONZE_REVIEW_MAX_SCALE_DESKTOP, 1);
   const scaledHeight = Math.max(Math.ceil(contentHeight * scale), minPreviewHeight);
 
   frame.style.width = `${BRONZE_REVIEW_PREVIEW_WIDTH}px`;
   frame.style.height = `${contentHeight}px`;
   frame.style.transform = `scale(${scale})`;
   stage.style.height = `${scaledHeight}px`;
-  shell.style.minHeight = `${scaledHeight}px`;
+  shell.style.height = `${scaledHeight}px`;
 }
 
 function bindBronzePreviewInteractions() {
@@ -619,6 +623,16 @@ async function renderBronzeReviewPreview(message) {
 
     bindBronzePreviewInteractions();
     scheduleBronzePreviewScale();
+    window.setTimeout(() => {
+      if (currentToken === bronzePreviewRenderToken) {
+        syncBronzePreviewScale();
+      }
+    }, 180);
+    window.setTimeout(() => {
+      if (currentToken === bronzePreviewRenderToken) {
+        syncBronzePreviewScale();
+      }
+    }, 700);
   };
   frame.srcdoc = html;
 }
