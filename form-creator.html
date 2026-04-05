@@ -6,6 +6,7 @@
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
   <link rel="stylesheet" href="account-sections.css?v=20260331b">
+  <link rel="stylesheet" href="form-creator.css?v=20260405a">
 </head>
 <body data-page="form-creator">
   <div class="page">
@@ -13,10 +14,10 @@
       <div class="hero-content">
         <div class="eyebrow">
           Form Creator
-          <span id="price-pill" class="price-pill">Optional Bronze</span>
+          <span id="price-pill" class="price-pill">Signed in tool</span>
         </div>
         <h1>Form Creator</h1>
-        <p class="lead">This page will be used later to build reusable reminder forms for each business.</p>
+        <p class="lead">Build your own custom reminder questions, reorder them with drag and drop, and control how the Send Reminder page feels for your business.</p>
       </div>
     </section>
 
@@ -36,44 +37,99 @@
         </nav>
 
         <div class="content-stack">
-            <div id="signed-out-shell" class="section-card">
-              <h2 class="section-title">Sign in to use future tools</h2>
-              <p class="signed-out-copy">Sign in first if you want account tools. This page is still being built.</p>
-              <div class="button-row" style="margin-top:16px;">
-                <a class="primary-link" href="signin.html">Go to Sign In</a>
+          <div id="signed-out-shell" class="section-card">
+            <h2 class="section-title">Sign in to build your custom reminder form</h2>
+            <p class="signed-out-copy">Form Creator saves to your account so the Send Reminder page can use your custom questions later.</p>
+            <div class="button-row" style="margin-top:16px;">
+              <a class="primary-link" href="signin.html">Go to Sign In</a>
+            </div>
+          </div>
+
+          <div id="signed-in-shell" hidden>
+            <div class="section-card form-creator-toolbar">
+              <div>
+                <h2 class="section-title">Live form studio</h2>
+                <p class="card-copy">Add custom questions, drag them into order, and save the exact questionnaire you want to use in Send Reminder.</p>
+              </div>
+              <div class="form-creator-toolbar-actions">
+                <button id="save-form-button" class="primary-button" type="button">Save Form</button>
+                <button id="reset-form-button" class="secondary-button" type="button">Reset to Saved</button>
               </div>
             </div>
 
-            <div id="signed-in-shell" hidden>
-              <div class="section-card">
-                <h2 class="section-title">Coming soon</h2>
-                <p class="card-copy">Form Creator is not ready yet. When it is ready, this page will let you build a reusable reminder form for your business.</p>
-              </div>
+            <div class="form-studio-shell">
+              <aside class="form-field-rail section-card">
+                <div class="form-field-rail-head">
+                  <h3>Custom questions</h3>
+                  <p>Drag to reorder your added questions.</p>
+                </div>
+                <div id="field-rail-list" class="form-field-rail-list"></div>
+              </aside>
 
-              <div class="summary-grid">
-                <div class="summary-card">
-                  <div class="summary-label">Signed in as</div>
-                  <div class="summary-value" data-account-email>Signed in</div>
-                  <p class="summary-copy">This is the account that will own your future saved forms.</p>
+              <section class="section-card form-preview-card">
+                <button id="page-settings-button" class="floating-tool floating-tool-page" type="button" aria-label="Edit page settings">Page</button>
+
+                <div id="form-preview-shell" class="fc-preview-shell">
+                  <div class="fc-preview-container">
+                    <div class="fc-preview-wizard">
+                      <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
+
+                      <div class="wizard-head">
+                        <div class="step-meta">
+                          <span id="preview-step-count" class="step-count">Step 1 of 10</span>
+                          <span id="preview-step-pill" class="step-pill">Optional</span>
+                        </div>
+                        <h2 id="preview-step-title">Client Phone Number</h2>
+                        <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
+
+                        <div class="progress-wrap">
+                          <p class="progress-status visible">This is your live Send Reminder form.</p>
+                          <div class="progress-track">
+                            <div id="preview-progress-fill" class="progress-fill"></div>
+                          </div>
+                          <div id="preview-stepper" class="stepper" aria-label="Preview form steps"></div>
+                        </div>
+                      </div>
+
+                      <div id="preview-step-host"></div>
+
+                      <div class="wizard-controls form-preview-controls">
+                        <button id="preview-back-button" class="secondary-button" type="button">Back</button>
+                        <button id="preview-skip-button" class="secondary-button" type="button">Skip</button>
+                        <button id="preview-next-button" class="primary-button" type="button">Next</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="summary-card">
-                  <div class="summary-label">Plan</div>
-                  <div class="summary-value" data-account-plan>FREE</div>
-                  <p class="summary-copy" data-plan-copy>Free works the same as using the reminder tool signed out.</p>
+
+                <div class="floating-tool-dock" aria-label="Add question tools">
+                  <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
+                  <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
+                  <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
+                  <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
+                  <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
+                  <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
                 </div>
-                <div class="summary-card">
-                  <div class="summary-label">Saved contacts</div>
-                  <div class="summary-value" data-contacts-count>0</div>
-                  <p class="summary-copy">Your saved contacts will still be ready once Form Creator is added.</p>
-                </div>
-              </div>
+              </section>
             </div>
+          </div>
         </div>
       </div>
     </section>
   </div>
 
+  <div id="form-editor-popover" class="form-editor-popover" hidden>
+    <div class="form-editor-head">
+      <div>
+        <strong id="form-editor-title">Question settings</strong>
+        <p id="form-editor-copy">Change the selected question.</p>
+      </div>
+      <button id="form-editor-close" class="icon-button" type="button" aria-label="Close editor">X</button>
+    </div>
+    <div id="form-editor-body" class="form-editor-body"></div>
+  </div>
+
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="account-sections.js?v=20260401a"></script>
+  <script type="module" src="form-creator.js?v=20260405a"></script>
 </body>
 </html>

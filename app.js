@@ -27,7 +27,7 @@ const FIELD_LIMITS = {
 };
 
 const PHONE_DIGIT_LIMIT = 10;
-const FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
+const BASE_FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
@@ -35,6 +35,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405a";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -59,12 +60,18 @@ let currentUserTier = "free";
 let currentAuthUserId = "";
 let linkedPrefillClientId = "";
 let brandingTemplateModulePromise = null;
+let customFormModulePromise = null;
 let bronzePreviewScaleTimer = null;
 let bronzePreviewRenderToken = 0;
 let bronzePreviewManualMessage = "";
 let bronzePreviewUsesManualMessage = false;
 let bronzePreviewResizeObserver = null;
 let bronzePreviewViewportBound = false;
+let activeCustomFormProfile = null;
+let activeCustomFormFields = [];
+let customFormFieldLookup = new Map();
+let wizardControlsInitialized = false;
+let requiredFieldAttemptIds = new Set();
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -214,6 +221,7 @@ async function initAccountTierState() {
     currentAuthUserId = session?.user?.id || "";
     renderBronzeFeatures();
     updateDraftPreviewChrome();
+    await syncCustomFormFromUser(currentSignedInUser);
 
     appSupabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {
@@ -230,11 +238,13 @@ async function initAccountTierState() {
       currentSignedInUser = nextSession?.user || null;
       renderBronzeFeatures();
       updateDraftPreviewChrome();
+      syncCustomFormFromUser(currentSignedInUser);
     });
   } catch (error) {
     currentSignedInUser = null;
     currentUserTier = "free";
     renderBronzeFeatures();
+    syncCustomFormFromUser(null);
   }
 }
 
@@ -244,6 +254,52 @@ async function getBrandingTemplateModule() {
   }
 
   return brandingTemplateModulePromise;
+}
+
+async function getCustomFormModule() {
+  if (!customFormModulePromise) {
+    customFormModulePromise = import(CUSTOM_FORM_MODULE_PATH);
+  }
+
+  return customFormModulePromise;
+}
+
+function getAllFormFieldIds() {
+  return [...BASE_FORM_FIELD_IDS, ...activeCustomFormFields.map(field => field.id)];
+}
+
+function getCustomFieldConfig(fieldId) {
+  return customFormFieldLookup.get(fieldId) || null;
+}
+
+function isPhoneLikeField(fieldId) {
+  if (fieldId === "phone") {
+    return true;
+  }
+
+  return getCustomFieldConfig(fieldId)?.type === "phone";
+}
+
+function formatCustomFieldDisplayValue(field, value) {
+  const safeValue = String(value || "").trim();
+
+  if (!safeValue) {
+    return "";
+  }
+
+  if (field?.type === "date") {
+    return formatDate(safeValue);
+  }
+
+  if (field?.type === "time") {
+    return formatTime(safeValue);
+  }
+
+  if (field?.type === "phone") {
+    return formatPhoneNumber(safeValue);
+  }
+
+  return safeValue;
 }
 
 function getBronzePreviewFrame() {
@@ -903,6 +959,136 @@ function applySavedClientPrefill() {
   }
 }
 
+function applyCustomFormPresentation(profile) {
+  const sectionTitle = document.querySelector(".section-title");
+  const normalizedTitle = String(profile?.formTitle || "").trim();
+
+  if (sectionTitle) {
+    sectionTitle.textContent = normalizedTitle || "Appointment Reminder";
+    sectionTitle.classList.toggle("visible", Boolean(normalizedTitle));
+  }
+
+  document.documentElement.style.setProperty("--bg-top", profile?.backgroundTop || "#10141c");
+  document.documentElement.style.setProperty("--bg-bottom", profile?.backgroundBottom || "#1a2230");
+  document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
+}
+
+function buildCustomWizardStepMarkup(field) {
+  const type = String(field?.type || "text").trim();
+  const label = String(field?.label || "Custom Question").trim();
+  const navLabel = String(field?.navLabel || label || "Custom").trim();
+  const helpText = String(field?.helpText || "").trim();
+  const placeholder = String(field?.placeholder || "").trim();
+  const optionalBadge = field?.required
+    ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
+    : `<span class="label-badge">Optional</span>`;
+  const inputMarkup = type === "textarea"
+    ? `<textarea id="${field.id}" placeholder="${placeholder.replace(/"/g, "&quot;")}"></textarea>`
+    : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${placeholder.replace(/"/g, "&quot;")}">`;
+
+  return `
+    <div class="wizard-step custom-wizard-step" data-title="${label.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${helpText.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
+      <div class="question-wrap">
+        <label for="${field.id}">${label} ${optionalBadge}</label>
+        ${inputMarkup}
+        <div id="${field.id}-error" class="field-error"></div>
+        ${helpText ? `<p class="field-note visible">${helpText}</p>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderCustomWizardSteps() {
+  document.querySelectorAll(".custom-wizard-step").forEach(step => step.remove());
+
+  const reviewStep = document.querySelector('.wizard-step[data-field="consent"]');
+
+  if (!reviewStep || !activeCustomFormFields.length) {
+    return;
+  }
+
+  activeCustomFormFields.forEach(field => {
+    reviewStep.insertAdjacentHTML("beforebegin", buildCustomWizardStepMarkup(field));
+  });
+}
+
+function bindCustomFieldInputListeners() {
+  activeCustomFormFields.forEach(field => {
+    const element = document.getElementById(field.id);
+
+    if (!element || element.dataset.formCreatorBound === "true") {
+      return;
+    }
+
+    element.dataset.formCreatorBound = "true";
+    element.addEventListener("input", () => {
+      if (field.type === "phone") {
+        element.value = formatPhoneNumber(element.value);
+      }
+
+      refreshFormState();
+    });
+  });
+}
+
+async function syncCustomFormFromUser(user = currentSignedInUser) {
+  const profile = user?.user_metadata?.custom_form_profile;
+
+  if (!profile) {
+    activeCustomFormProfile = null;
+    activeCustomFormFields = [];
+    customFormFieldLookup = new Map();
+    renderCustomWizardSteps();
+    applyCustomFormPresentation(null);
+    currentStepIndex = 0;
+    requiredFieldAttemptIds.clear();
+    initWizard();
+    refreshFormState();
+    return;
+  }
+
+  try {
+    const module = await getCustomFormModule();
+    activeCustomFormProfile = module.normalizeCustomFormProfile(profile);
+    activeCustomFormFields = Array.isArray(activeCustomFormProfile.fields) ? activeCustomFormProfile.fields : [];
+    customFormFieldLookup = new Map(activeCustomFormFields.map(field => [field.id, field]));
+    renderCustomWizardSteps();
+    bindCustomFieldInputListeners();
+    applyCustomFormPresentation(activeCustomFormProfile);
+    currentStepIndex = 0;
+    requiredFieldAttemptIds.clear();
+    initWizard();
+    refreshFormState();
+  } catch (error) {
+    console.warn("Unable to load custom form profile.", error);
+  }
+}
+
+function buildCustomFieldMessageLines() {
+  const lines = [];
+
+  activeCustomFormFields.forEach(field => {
+    const rawValue = getFieldValue(field.id);
+    const formattedValue = formatCustomFieldDisplayValue(field, rawValue);
+
+    if (!formattedValue) {
+      return;
+    }
+
+    lines.push("");
+
+    if (field.type === "textarea") {
+      lines.push(`${field.label}:`);
+      lines.push(formattedValue);
+      return;
+    }
+
+    lines.push(`${field.label}: ${formattedValue}`);
+  });
+
+  return lines;
+}
+
 function generateMessage() {
   const name = getFieldValue("name");
   const address = getFieldValue("address");
@@ -921,6 +1107,7 @@ function generateMessage() {
   if (date) lines.push("Date: " + formatDate(date));
   if (time) lines.push("Time: " + formatTime(time));
   if (address) lines.push("Location: " + address);
+  lines.push(...buildCustomFieldMessageLines());
 
   if (notes) {
     lines.push("");
@@ -1110,9 +1297,32 @@ function hasWebLink(value) {
 
 function getFieldValidationMessage(fieldId) {
   const value = getFieldValue(fieldId);
+  const customField = getCustomFieldConfig(fieldId);
 
   if (fieldId === "copyEmail") {
     return getCopyEmailValidationMessage();
+  }
+
+  if (customField) {
+    if (!value) {
+      return customField.required && requiredFieldAttemptIds.has(fieldId)
+        ? `${customField.label} is required.`
+        : "";
+    }
+
+    if (customField.type === "email" && !EMAIL_PATTERN.test(value)) {
+      return "Enter a valid email address.";
+    }
+
+    if (customField.type === "phone" && normalizePhoneDigits(value).length < 7) {
+      return "Enter a valid phone number.";
+    }
+
+    if ((customField.type === "text" || customField.type === "textarea" || customField.type === "phone") && hasDisallowedLink(value, false)) {
+      return "Links are not allowed here.";
+    }
+
+    return "";
   }
 
   if (!value) {
@@ -1143,7 +1353,7 @@ function getFieldValidationMessage(fieldId) {
 }
 
 function syncFieldValidationErrors() {
-  const fieldIds = ["phone", "email", "name", "address", "businessContact", "notes", "copyEmail"];
+  const fieldIds = [...getAllFormFieldIds(), "copyEmail"];
 
   fieldIds.forEach(fieldId => {
     const errorElement = document.getElementById(`${fieldId}-error`);
@@ -1709,7 +1919,7 @@ function hasUnsavedFormData() {
     return false;
   }
 
-  if (FORM_FIELD_IDS.some(fieldId => getFieldValue(fieldId).length > 0)) {
+  if (getAllFormFieldIds().some(fieldId => getFieldValue(fieldId).length > 0)) {
     return true;
   }
 
@@ -1758,6 +1968,22 @@ function validateMessageSafety(options = {}) {
     return false;
   }
 
+  const missingRequiredCustomField = activeCustomFormFields.find(field => field.required && !getFieldValue(field.id));
+
+  if (missingRequiredCustomField) {
+    requiredFieldAttemptIds.add(missingRequiredCustomField.id);
+    syncFieldValidationErrors();
+    renderStepNavigation();
+    const missingStepIndex = wizardSteps.findIndex(step => step.dataset.field === missingRequiredCustomField.id);
+
+    if (missingStepIndex >= 0) {
+      setStep(missingStepIndex, missingStepIndex > currentStepIndex ? "forward" : "backward");
+    }
+
+    alert(`${missingRequiredCustomField.label} is required.`);
+    return false;
+  }
+
   const restrictedFields = [
     { label: "Client Name", value: name, maxLength: FIELD_LIMITS.name.maxLength },
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
@@ -1766,6 +1992,20 @@ function validateMessageSafety(options = {}) {
     { label: "Additional Details", value: notes },
     { label: "Message Preview", value: message }
   ];
+
+  activeCustomFormFields.forEach(field => {
+    const value = getFieldValue(field.id);
+
+    if (!value) {
+      return;
+    }
+
+    restrictedFields.push({
+      label: field.label,
+      value,
+      allowEmail: field.type === "email"
+    });
+  });
 
   for (const field of restrictedFields) {
     if (field.maxLength && field.value.length > field.maxLength) {
@@ -1833,8 +2073,8 @@ function hasValueForField(fieldId) {
     return false;
   }
 
-  if (fieldId === "phone") {
-    return getPhoneDigits().length > 0;
+  if (isPhoneLikeField(fieldId)) {
+    return normalizePhoneDigits(getFieldValue(fieldId)).length > 0;
   }
 
   if (fieldId === "consent") {
@@ -2017,12 +2257,35 @@ function setStep(index, direction) {
 }
 
 function moveToNextStep() {
+  const currentStep = wizardSteps[currentStepIndex];
+  const currentFieldId = currentStep?.dataset?.field || "";
+  const currentCustomField = getCustomFieldConfig(currentFieldId);
+
+  if (currentCustomField?.required && !getFieldValue(currentFieldId)) {
+    requiredFieldAttemptIds.add(currentFieldId);
+    syncFieldValidationErrors();
+    renderStepNavigation();
+    focusStepField(currentStep);
+    return;
+  }
+
+  const validationMessage = getFieldValidationMessage(currentFieldId);
+
+  if (currentFieldId && validationMessage) {
+    requiredFieldAttemptIds.add(currentFieldId);
+    syncFieldValidationErrors();
+    renderStepNavigation();
+    focusStepField(currentStep);
+    return;
+  }
+
   setStep(currentStepIndex + 1, "forward");
 }
 
 function initWizard() {
   wizardSteps = Array.from(document.querySelectorAll(".wizard-step"));
   visitedSteps = wizardSteps.map((_, index) => index === 0);
+  currentStepIndex = Math.min(currentStepIndex, Math.max(wizardSteps.length - 1, 0));
 
   if (!wizardSteps.length) {
     return;
@@ -2032,16 +2295,25 @@ function initWizard() {
   const skipButton = document.getElementById("skip-button");
   const nextButton = document.getElementById("next-button");
 
-  backButton.addEventListener("click", () => setStep(currentStepIndex - 1, "backward"));
-  skipButton.addEventListener("click", moveToNextStep);
-  nextButton.addEventListener("click", moveToNextStep);
+  if (!wizardControlsInitialized) {
+    backButton.addEventListener("click", () => setStep(currentStepIndex - 1, "backward"));
+    skipButton.addEventListener("click", moveToNextStep);
+    nextButton.addEventListener("click", moveToNextStep);
+    wizardControlsInitialized = true;
+  }
 
   wizardSteps.forEach((step, index) => {
     step.querySelectorAll("input").forEach(input => {
-      if (input.type === "date" || input.type === "time" || input.type === "checkbox") {
+      if (input.dataset.wizardEnterBound === "true") {
         return;
       }
 
+      if (input.type === "date" || input.type === "time" || input.type === "checkbox") {
+        input.dataset.wizardEnterBound = "true";
+        return;
+      }
+
+      input.dataset.wizardEnterBound = "true";
       input.addEventListener("keydown", event => {
         if (event.key === "Enter" && index === currentStepIndex) {
           event.preventDefault();
@@ -2058,30 +2330,35 @@ function initWizard() {
   updateWizardUI();
 }
 
-FORM_FIELD_IDS.forEach(fieldId => {
-  const element = document.getElementById(fieldId);
+function bindBaseFieldListeners() {
+  BASE_FORM_FIELD_IDS.forEach(fieldId => {
+    const element = document.getElementById(fieldId);
 
-  if (!element) {
-    return;
-  }
-
-  element.addEventListener("input", () => {
-    if (fieldId === "phone") {
-      syncPhoneFieldFormatting();
+    if (!element || element.dataset.baseFieldBound === "true") {
+      return;
     }
 
-    if (fieldId === "address") {
-      lastAddressLookup = "";
-      setAddressMapPreview({
-        visible: false,
-        src: "",
-        note: ""
-      });
-    }
+    element.dataset.baseFieldBound = "true";
+    element.addEventListener("input", () => {
+      if (fieldId === "phone") {
+        syncPhoneFieldFormatting();
+      }
 
-    refreshFormState();
+      if (fieldId === "address") {
+        lastAddressLookup = "";
+        setAddressMapPreview({
+          visible: false,
+          src: "",
+          note: ""
+        });
+      }
+
+      refreshFormState();
+    });
   });
-});
+}
+
+bindBaseFieldListeners();
 
 const previewTextarea = document.getElementById("preview");
 if (previewTextarea) {
