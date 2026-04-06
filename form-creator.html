@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260406c">
+  <link rel="stylesheet" href="form-creator.css?v=20260406d">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -48,20 +48,19 @@
           </label>
         </div>
 
-        <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
-
         <section class="floating-panel-section" aria-label="Add question tools">
           <div class="floating-panel-section-head">
             <span class="floating-panel-kicker">Add Questions</span>
             <p class="floating-panel-copy">Drop in the kinds of questions your business needs.</p>
           </div>
           <div class="floating-tool-dock">
-            <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-            <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-            <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-            <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-            <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-            <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Aa</span><span class="floating-tool-label">Short Text</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Tx</span><span class="floating-tool-label">Long Text</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="email" title="Add email question"><span class="floating-tool-icon">@</span><span class="floating-tool-label">Email</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="phone" title="Add phone question"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="date" title="Add date question"><span class="floating-tool-icon">D</span><span class="floating-tool-label">Date</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="time" title="Add time question"><span class="floating-tool-icon">T</span><span class="floating-tool-label">Time</span></button>
+            <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
           </div>
         </section>
 
@@ -121,13 +120,15 @@
             <span class="floating-panel-kicker">Add To This Page</span>
             <p class="floating-panel-copy">These buttons add new fields to the page you are currently editing.</p>
           </div>
+          <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
           <div class="floating-tool-dock" aria-label="Add question tools to current page">
-            <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-            <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-            <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-            <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-            <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-            <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Aa</span><span class="floating-tool-label">Short Text</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Tx</span><span class="floating-tool-label">Long Text</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="email" title="Add email question"><span class="floating-tool-icon">@</span><span class="floating-tool-label">Email</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="phone" title="Add phone question"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="date" title="Add date question"><span class="floating-tool-icon">D</span><span class="floating-tool-label">Date</span></button>
+            <button class="floating-tool" type="button" draggable="true" data-add-type="time" title="Add time question"><span class="floating-tool-icon">T</span><span class="floating-tool-label">Time</span></button>
+            <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
           </div>
         </section>
 
@@ -155,6 +156,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260406c"></script>
+  <script type="module" src="form-creator.js?v=20260406d"></script>
 </body>
 </html>

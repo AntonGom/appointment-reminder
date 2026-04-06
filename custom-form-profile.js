@@ -216,6 +216,17 @@ function getRandomSuffix() {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export function createCustomPage() {
+  return {
+    id: `page_${getRandomSuffix()}`,
+    title: "Custom Page",
+    navLabel: "Custom",
+    copy: "Add the question or details you want on this page.",
+    required: false,
+    ...normalizeTypography()
+  };
+}
+
 export function getCustomFieldTypeMeta(type) {
   return CUSTOM_FIELD_TYPES.find(option => option.id === type) || CUSTOM_FIELD_TYPES[0];
 }
@@ -235,6 +246,21 @@ export function createCustomField(type = "text") {
     helpText: meta.helpText,
     required: false,
     ...normalizeTypography()
+  };
+}
+
+function normalizeCustomPage(rawPage, index) {
+  const fallback = createCustomPage();
+  const title = safeString(rawPage?.title).slice(0, 60) || `Custom Page ${index + 1}`;
+  const navLabel = safeString(rawPage?.navLabel).slice(0, 12) || title.slice(0, 12) || "Custom";
+
+  return {
+    id: safeString(rawPage?.id) || `page_${index}_${getRandomSuffix()}`,
+    title,
+    navLabel,
+    copy: safeString(rawPage?.copy).slice(0, 180),
+    required: rawPage?.required === true,
+    ...normalizeTypography(rawPage || fallback)
   };
 }
 
@@ -282,11 +308,26 @@ export function normalizeCustomFormProfile(rawProfile) {
   const normalizedFields = Array.isArray(profile.fields)
     ? profile.fields.map((field, index) => normalizeCustomField(field, index))
     : [];
+  const normalizedCustomPages = Array.isArray(profile.customPages)
+    ? profile.customPages.map((page, index) => normalizeCustomPage(page, index))
+    : [];
   const rawStepOverrides = profile.stepOverrides && typeof profile.stepOverrides === "object"
     ? profile.stepOverrides
     : {};
   const stepOverrides = Object.fromEntries(
     BASE_REMINDER_STEPS.map(step => [step.id, normalizeStepOverride(rawStepOverrides[step.id], step)])
+  );
+  const stepOrder = Array.isArray(profile.stepOrder)
+    ? [...new Set(profile.stepOrder.map(value => safeString(value)).filter(Boolean))]
+    : [];
+  const rawPageFieldOrder = profile.pageFieldOrder && typeof profile.pageFieldOrder === "object"
+    ? profile.pageFieldOrder
+    : {};
+  const pageFieldOrder = Object.fromEntries(
+    Object.entries(rawPageFieldOrder).map(([pageId, ids]) => [
+      safeString(pageId),
+      Array.isArray(ids) ? [...new Set(ids.map(value => safeString(value)).filter(Boolean))] : []
+    ]).filter(([pageId]) => Boolean(pageId))
   );
 
   return {
@@ -306,8 +347,40 @@ export function normalizeCustomFormProfile(rawProfile) {
     formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
     formTitleBold: profile.formTitleBold !== false,
     stepOverrides,
+    customPages: normalizedCustomPages,
+    stepOrder,
+    pageFieldOrder,
     fields: normalizedFields
   };
+}
+
+function applySavedStepOrder(profile, steps) {
+  const orderedIds = Array.isArray(profile?.stepOrder) ? profile.stepOrder : [];
+
+  if (!orderedIds.length) {
+    return steps;
+  }
+
+  const stepMap = new Map(steps.map(step => [step.id, step]));
+  const ordered = [];
+
+  orderedIds.forEach(id => {
+    const step = stepMap.get(id);
+
+    if (step) {
+      ordered.push(step);
+      stepMap.delete(id);
+    }
+  });
+
+  steps.forEach(step => {
+    if (stepMap.has(step.id)) {
+      ordered.push(step);
+      stepMap.delete(step.id);
+    }
+  });
+
+  return ordered;
 }
 
 export function buildPreviewStepList(profile) {
@@ -320,14 +393,21 @@ export function buildPreviewStepList(profile) {
 
     return counts;
   }, {});
-
-  return [
-    ...BASE_REMINDER_STEPS.map(step => ({
+  const builtInSteps = BASE_REMINDER_STEPS.map(step => ({
       ...step,
       ...normalized.stepOverrides[step.id],
       baseFieldHidden: normalized.stepOverrides[step.id]?.hidden === true
-    })).filter(step => !step.baseFieldHidden || inlinePageCounts[step.id] > 0),
-    ...topLevelCustomFields.map(field => ({
+    })).filter(step => !step.baseFieldHidden || inlinePageCounts[step.id] > 0);
+  const customPages = normalized.customPages.map(page => ({
+    ...page,
+    builtIn: false,
+    type: "page",
+    label: page.title,
+    placeholder: "",
+    helpText: "",
+    icon: "#"
+  }));
+  const legacyFieldPages = topLevelCustomFields.map(field => ({
       id: field.id,
       title: field.title || field.label,
       navLabel: field.navLabel || field.label,
@@ -347,7 +427,15 @@ export function buildPreviewStepList(profile) {
       labelBold: field.labelBold,
       helpFontSize: field.helpFontSize,
       helpBold: field.helpBold
-    })),
+    }));
+  const orderedSteps = applySavedStepOrder(normalized, [
+    ...builtInSteps,
+    ...customPages,
+    ...legacyFieldPages
+  ]);
+
+  return [
+    ...orderedSteps,
     {
       id: "review",
       title: "Review and Send",
@@ -371,5 +459,31 @@ export function getBackgroundPresetMatch(profile) {
 
 export function getInlineFieldsForPage(profile, pageId) {
   const normalized = normalizeCustomFormProfile(profile);
-  return normalized.fields.filter(field => field.pageId === pageId);
+  const fields = normalized.fields.filter(field => field.pageId === pageId);
+  const orderedIds = Array.isArray(normalized.pageFieldOrder?.[pageId]) ? normalized.pageFieldOrder[pageId] : [];
+
+  if (!orderedIds.length) {
+    return fields;
+  }
+
+  const fieldMap = new Map(fields.map(field => [field.id, field]));
+  const orderedFields = [];
+
+  orderedIds.forEach(id => {
+    const field = fieldMap.get(id);
+
+    if (field) {
+      orderedFields.push(field);
+      fieldMap.delete(id);
+    }
+  });
+
+  fields.forEach(field => {
+    if (fieldMap.has(field.id)) {
+      orderedFields.push(field);
+      fieldMap.delete(field.id);
+    }
+  });
+
+  return orderedFields;
 }

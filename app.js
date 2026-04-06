@@ -35,7 +35,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406b";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406d";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -1159,6 +1159,113 @@ function getInlineCustomFieldsForPage(pageId) {
   return activeCustomFormFields.filter(field => field.pageId === pageId);
 }
 
+function getActiveCustomPages() {
+  return Array.isArray(activeCustomFormProfile?.customPages) ? activeCustomFormProfile.customPages : [];
+}
+
+function getOrderedActiveSteps() {
+  const profile = activeCustomFormProfile || {};
+  const inlinePageCounts = activeCustomFormFields.reduce((counts, field) => {
+    if (field.pageId) {
+      counts[field.pageId] = (counts[field.pageId] || 0) + 1;
+    }
+
+    return counts;
+  }, {});
+  const builtInSteps = BASE_FORM_FIELD_IDS.map(fieldId => {
+    const defaults = BUILT_IN_FORM_STEP_DEFAULTS[fieldId];
+    const override = profile.stepOverrides?.[fieldId] || {};
+    const baseFieldVisible = override.hidden !== true;
+
+    if (!baseFieldVisible && !inlinePageCounts[fieldId]) {
+      return null;
+    }
+
+    return {
+      id: fieldId,
+      type: getBuiltInFieldType(fieldId),
+      builtIn: true,
+      title: override.title || defaults.title,
+      navLabel: override.navLabel || defaults.navLabel,
+      copy: override.copy || defaults.copy,
+      label: override.label || defaults.label,
+      helpText: override.helpText || defaults.helpText,
+      placeholder: override.placeholder || defaults.placeholder,
+      required: override.required === true,
+      baseFieldHidden: override.hidden === true,
+      titleFontSize: override.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
+      titleBold: override.titleBold !== false,
+      copyFontSize: override.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
+      copyBold: Boolean(override.copyBold),
+      labelFontSize: override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
+      labelBold: override.labelBold !== false,
+      helpFontSize: override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE,
+      helpBold: Boolean(override.helpBold),
+      navLabelColor: override.navLabelColor || ""
+    };
+  }).filter(Boolean);
+  const customPages = getActiveCustomPages().map(page => ({
+    ...page,
+    type: "page",
+    builtIn: false
+  }));
+  const legacyFieldPages = activeCustomFormFields.filter(field => !field.pageId).map(field => ({
+    ...field,
+    builtIn: false
+  }));
+  const stepMap = new Map([...builtInSteps, ...customPages, ...legacyFieldPages].map(step => [step.id, step]));
+  const ordered = [];
+
+  (Array.isArray(profile.stepOrder) ? profile.stepOrder : []).forEach(id => {
+    const step = stepMap.get(id);
+
+    if (step) {
+      ordered.push(step);
+      stepMap.delete(id);
+    }
+  });
+
+  [...builtInSteps, ...customPages, ...legacyFieldPages].forEach(step => {
+    if (stepMap.has(step.id)) {
+      ordered.push(step);
+      stepMap.delete(step.id);
+    }
+  });
+
+  return ordered;
+}
+
+function getOrderedFieldsForPage(pageId, baseField = null) {
+  const inlineFields = getInlineCustomFieldsForPage(pageId);
+  const combined = [...(baseField ? [baseField] : []), ...inlineFields];
+  const orderedIds = Array.isArray(activeCustomFormProfile?.pageFieldOrder?.[pageId]) ? activeCustomFormProfile.pageFieldOrder[pageId] : [];
+
+  if (!orderedIds.length) {
+    return combined;
+  }
+
+  const fieldMap = new Map(combined.map(field => [field.id, field]));
+  const ordered = [];
+
+  orderedIds.forEach(id => {
+    const field = fieldMap.get(id);
+
+    if (field) {
+      ordered.push(field);
+      fieldMap.delete(id);
+    }
+  });
+
+  combined.forEach(field => {
+    if (fieldMap.has(field.id)) {
+      ordered.push(field);
+      fieldMap.delete(field.id);
+    }
+  });
+
+  return ordered;
+}
+
 function buildWizardFieldControlMarkup(field, options = {}) {
   const type = String(field?.type || "text").trim();
   const label = String(field?.label || field?.title || "Custom Question").trim();
@@ -1224,29 +1331,29 @@ function applyBuiltInStepOverrides() {
     const questionWrap = stepElement.querySelector(".question-wrap");
 
     if (questionWrap) {
+      const baseField = baseFieldVisible
+        ? {
+            id: fieldId,
+            type: getBuiltInFieldType(fieldId),
+            label: override.label || defaults.label,
+            placeholder: override.placeholder || defaults.placeholder,
+            helpText: override.helpText || defaults.helpText,
+            required: override.required === true,
+            labelFontSize: override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
+            labelBold: override.labelBold,
+            helpFontSize: override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE,
+            helpBold: override.helpBold
+          }
+        : null;
+      const orderedFields = getOrderedFieldsForPage(fieldId, baseField);
       const fieldMarkup = [];
 
-      if (baseFieldVisible) {
-        fieldMarkup.push(buildWizardFieldControlMarkup({
-          id: fieldId,
-          type: getBuiltInFieldType(fieldId),
-          label: override.label || defaults.label,
-          placeholder: override.placeholder || defaults.placeholder,
-          helpText: override.helpText || defaults.helpText,
-          required: override.required === true,
-          labelFontSize: override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
-          labelBold: override.labelBold,
-          helpFontSize: override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE,
-          helpBold: override.helpBold
-        }, {
-          isBuiltIn: true,
-          includeMapPreview: fieldId === "address"
-        }));
-      }
-
-      inlineFields.forEach((field, index) => {
+      orderedFields.forEach((field, index) => {
+        const isBaseField = field.id === fieldId;
         fieldMarkup.push(buildWizardFieldControlMarkup(field, {
-          isFirst: !baseFieldVisible && index === 0
+          isBuiltIn: isBaseField,
+          isFirst: index === 0,
+          includeMapPreview: isBaseField && fieldId === "address"
         }));
       });
 
@@ -1255,23 +1362,32 @@ function applyBuiltInStepOverrides() {
   });
 }
 
-function buildCustomWizardStepMarkup(field) {
-  const title = String(field?.title || field?.label || "Custom Question").trim();
-  const label = String(field?.label || "Custom Question").trim();
-  const navLabel = String(field?.navLabel || label || "Custom").trim();
-  const stepCopy = String(field?.copy || field?.helpText || "").trim();
-  const inlineFields = getInlineCustomFieldsForPage(field.id);
-  const pageRequired = field?.required || inlineFields.some(entry => entry.required);
+function buildCustomWizardStepMarkup(step) {
+  const title = String(step?.title || step?.label || "Custom Question").trim();
+  const label = String(step?.label || "Custom Question").trim();
+  const navLabel = String(step?.navLabel || label || "Custom").trim();
+  const stepCopy = String(step?.copy || step?.helpText || "").trim();
+  const includeBaseField = step?.type !== "page";
+  const baseField = includeBaseField
+    ? {
+        ...step,
+        title,
+        label
+      }
+    : null;
+  const orderedFields = getOrderedFieldsForPage(step.id, baseField);
+  const pageRequired = Boolean(step?.required) || orderedFields.some(entry => entry.required);
+  const fieldMarkup = orderedFields.length
+    ? orderedFields.map((field, index) => buildWizardFieldControlMarkup(field, {
+        isBuiltIn: includeBaseField && field.id === step.id,
+        isFirst: index === 0
+      })).join("")
+    : `<div class="field-note visible">This custom page is empty right now.</div>`;
 
   return `
-    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-nav-color="${(field.navLabelColor || "").replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${pageRequired ? "false" : "true"}">
+    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-nav-color="${(step.navLabelColor || "").replace(/"/g, "&quot;")}" data-field="${step.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${pageRequired ? "false" : "true"}">
       <div class="question-wrap">
-        ${buildWizardFieldControlMarkup({
-          ...field,
-          title,
-          label
-        }, { isBuiltIn: true })}
-        ${inlineFields.map(entry => buildWizardFieldControlMarkup(entry)).join("")}
+        ${fieldMarkup}
       </div>
     </div>
   `;
@@ -1281,15 +1397,25 @@ function renderCustomWizardSteps() {
   document.querySelectorAll(".custom-wizard-step").forEach(step => step.remove());
 
   const reviewStep = document.querySelector('.wizard-step[data-field="consent"]');
-  const topLevelFields = activeCustomFormFields.filter(field => !field.pageId);
+  const orderedSteps = getOrderedActiveSteps().filter(step => step.id !== "review");
 
-  if (!reviewStep || !topLevelFields.length) {
+  if (!reviewStep) {
     applyBuiltInStepOverrides();
     return;
   }
 
-  topLevelFields.forEach(field => {
-    reviewStep.insertAdjacentHTML("beforebegin", buildCustomWizardStepMarkup(field));
+  orderedSteps.forEach(step => {
+    if (step.builtIn) {
+      const builtInStep = document.querySelector(`.wizard-step[data-field="${step.id}"]`);
+
+      if (builtInStep) {
+        reviewStep.parentNode?.insertBefore(builtInStep, reviewStep);
+      }
+
+      return;
+    }
+
+    reviewStep.insertAdjacentHTML("beforebegin", buildCustomWizardStepMarkup(step));
   });
 
   applyBuiltInStepOverrides();
@@ -1364,24 +1490,40 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
 
 function buildCustomFieldMessageLines() {
   const lines = [];
+  const seenFieldIds = new Set();
 
-  activeCustomFormFields.forEach(field => {
-    const rawValue = getFieldValue(field.id);
-    const formattedValue = formatCustomFieldDisplayValue(field, rawValue);
+  getOrderedActiveSteps().forEach(step => {
+    const includeBaseField = step.type !== "page" && !BASE_FORM_FIELD_IDS.includes(step.id);
+    const orderedFields = getOrderedFieldsForPage(step.id, includeBaseField ? step : null);
 
-    if (!formattedValue) {
-      return;
-    }
+    orderedFields.forEach(field => {
+      if (BASE_FORM_FIELD_IDS.includes(field.id)) {
+        return;
+      }
 
-    lines.push("");
+      if (seenFieldIds.has(field.id)) {
+        return;
+      }
 
-    if (field.type === "textarea") {
-      lines.push(`${field.label}:`);
-      lines.push(formattedValue);
-      return;
-    }
+      seenFieldIds.add(field.id);
 
-    lines.push(`${field.label}: ${formattedValue}`);
+      const rawValue = getFieldValue(field.id);
+      const formattedValue = formatCustomFieldDisplayValue(field, rawValue);
+
+      if (!formattedValue) {
+        return;
+      }
+
+      lines.push("");
+
+      if (field.type === "textarea") {
+        lines.push(`${field.label}:`);
+        lines.push(formattedValue);
+        return;
+      }
+
+      lines.push(`${field.label}: ${formattedValue}`);
+    });
   });
 
   return lines;

@@ -20,11 +20,12 @@ import {
   DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
   normalizeCustomFormProfile,
   createCustomField,
+  createCustomPage,
   buildPreviewStepList,
   getInlineFieldsForPage,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260406b";
+} from "./custom-form-profile.js?v=20260406d";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -66,6 +67,7 @@ let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
 let dragFieldId = "";
 let editorDragState = null;
 let editorHasCustomPosition = false;
+let dragPayload = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -586,6 +588,10 @@ function getCustomFields() {
   return Array.isArray(currentFormProfile.fields) ? currentFormProfile.fields : [];
 }
 
+function getCustomPages() {
+  return Array.isArray(currentFormProfile.customPages) ? currentFormProfile.customPages : [];
+}
+
 function getPreviewSteps() {
   return buildPreviewStepList(currentFormProfile);
 }
@@ -606,6 +612,7 @@ function getEditableStep(stepId) {
 
   return getPreviewSteps().find(step => step.id === stepId)
     || getCustomFields().find(field => field.id === stepId)
+    || getCustomPages().find(page => page.id === stepId)
     || null;
 }
 
@@ -622,7 +629,8 @@ function getCurrentPageFields() {
 
   const baseFieldHidden = Boolean(page.baseFieldHidden);
   const isBuiltInPage = BASE_REMINDER_STEPS.some(step => step.id === page.id);
-  const baseField = !baseFieldHidden
+  const isLegacyFieldPage = !isBuiltInPage && getCustomFields().some(field => !field.pageId && field.id === page.id);
+  const baseField = (!baseFieldHidden && (isBuiltInPage || isLegacyFieldPage))
     ? {
         ...page,
         builtIn: isBuiltInPage,
@@ -635,19 +643,52 @@ function getCurrentPageFields() {
     ...field,
     isBaseField: false
   }));
+  const allFields = [baseField, ...inlineFields].filter(Boolean);
+  const orderedIds = Array.isArray(currentFormProfile.pageFieldOrder?.[page.id]) ? currentFormProfile.pageFieldOrder[page.id] : [];
 
-  return [baseField, ...inlineFields].filter(Boolean);
+  if (!orderedIds.length) {
+    return allFields;
+  }
+
+  const fieldMap = new Map(allFields.map(field => [field.id, field]));
+  const orderedFields = [];
+
+  orderedIds.forEach(id => {
+    const field = fieldMap.get(id);
+
+    if (field) {
+      orderedFields.push(field);
+      fieldMap.delete(id);
+    }
+  });
+
+  allFields.forEach(field => {
+    if (fieldMap.has(field.id)) {
+      orderedFields.push(field);
+      fieldMap.delete(field.id);
+    }
+  });
+
+  return orderedFields;
 }
 
 function isCustomStep(stepId) {
-  return getCustomFields().some(field => field.id === stepId);
+  return getCustomFields().some(field => field.id === stepId) || getCustomPages().some(page => page.id === stepId);
 }
 
 function patchStepConfig(stepId, updates) {
-  if (isCustomStep(stepId)) {
+  if (getCustomFields().some(field => field.id === stepId)) {
     currentFormProfile = {
       ...currentFormProfile,
       fields: getCustomFields().map(entry => entry.id === stepId ? { ...entry, ...updates } : entry)
+    };
+    return;
+  }
+
+  if (getCustomPages().some(page => page.id === stepId)) {
+    currentFormProfile = {
+      ...currentFormProfile,
+      customPages: getCustomPages().map(entry => entry.id === stepId ? { ...entry, ...updates } : entry)
     };
     return;
   }
@@ -662,6 +703,147 @@ function patchStepConfig(stepId, updates) {
       }
     }
   };
+}
+
+function ensureStepOrderIds(stepIds) {
+  const filteredIds = stepIds.filter(id => id && id !== "review");
+  currentFormProfile = {
+    ...currentFormProfile,
+    stepOrder: [...new Set(filteredIds)]
+  };
+}
+
+function getCurrentStepOrder() {
+  return getPreviewSteps().filter(step => step.id !== "review").map(step => step.id);
+}
+
+function setFieldOrderForPage(pageId, orderedIds) {
+  if (!pageId) {
+    return;
+  }
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    pageFieldOrder: {
+      ...(currentFormProfile.pageFieldOrder || {}),
+      [pageId]: [...new Set(orderedIds.filter(Boolean))]
+    }
+  };
+}
+
+function insertFieldIntoCurrentPage(type, insertIndex = null) {
+  const nextField = createCustomField(type);
+  const currentPageId = getCurrentPageId();
+
+  if (!currentPageId || currentPageId === "review") {
+    setStatus("Pick a question page first, then add fields to that page.", "error");
+    return;
+  }
+
+  const currentFields = getCurrentPageFields();
+  const normalizedIndex = typeof insertIndex === "number"
+    ? Math.max(0, Math.min(insertIndex, currentFields.length))
+    : currentFields.length;
+  const nextOrder = [...currentFields.map(field => field.id)];
+  nextOrder.splice(normalizedIndex, 0, nextField.id);
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    fields: [...getCustomFields(), { ...nextField, pageId: currentPageId }]
+  };
+  setFieldOrderForPage(currentPageId, nextOrder);
+  renderBuilder();
+  openFieldEditor(nextField.id);
+}
+
+function addBlankPage(insertIndex = null) {
+  const nextPage = createCustomPage();
+  const currentOrder = getCurrentStepOrder();
+  const normalizedIndex = typeof insertIndex === "number"
+    ? Math.max(0, Math.min(insertIndex, currentOrder.length))
+    : currentOrder.length;
+  const nextOrder = [...currentOrder];
+  nextOrder.splice(normalizedIndex, 0, nextPage.id);
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    customPages: [...getCustomPages(), nextPage]
+  };
+  ensureStepOrderIds(nextOrder);
+  selectedPreviewStepId = nextPage.id;
+  renderBuilder();
+  openSelectedStepTextEditor("step-title");
+  setStatus("Blank page added. Click inside the page to start building it.", "info");
+}
+
+function clearDragIndicators() {
+  document.querySelectorAll(".preview-field-dropzone.is-over, .preview-step-dropzone.is-over").forEach(zone => {
+    zone.classList.remove("is-over");
+  });
+}
+
+function startDrag(payload, event, draggedElement = null) {
+  dragPayload = payload;
+
+  if (payload?.kind === "existing-field") {
+    dragFieldId = payload.fieldId || "";
+  }
+
+  if (draggedElement) {
+    draggedElement.classList.add("is-dragging");
+  }
+
+  event.dataTransfer?.setData("text/plain", JSON.stringify(payload));
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+  }
+}
+
+function finishDrag(draggedElement = null) {
+  dragPayload = null;
+  dragFieldId = "";
+  clearDragIndicators();
+
+  if (draggedElement) {
+    draggedElement.classList.remove("is-dragging");
+  }
+}
+
+function reorderCurrentPageField(fieldId, insertIndex) {
+  const currentPageId = getCurrentPageId();
+
+  if (!currentPageId || currentPageId === "review") {
+    return;
+  }
+
+  const pageFields = getCurrentPageFields();
+  const orderedIds = pageFields.map(field => field.id);
+  const fromIndex = orderedIds.indexOf(fieldId);
+
+  if (fromIndex < 0) {
+    return;
+  }
+
+  const [movedId] = orderedIds.splice(fromIndex, 1);
+  const normalizedIndex = Math.max(0, Math.min(insertIndex, orderedIds.length));
+  orderedIds.splice(normalizedIndex, 0, movedId);
+  setFieldOrderForPage(currentPageId, orderedIds);
+  renderBuilder();
+}
+
+function reorderStep(stepId, insertIndex) {
+  const currentOrder = getCurrentStepOrder();
+  const fromIndex = currentOrder.indexOf(stepId);
+
+  if (fromIndex < 0) {
+    return;
+  }
+
+  const [movedId] = currentOrder.splice(fromIndex, 1);
+  const normalizedIndex = Math.max(0, Math.min(insertIndex, currentOrder.length));
+  currentOrder.splice(normalizedIndex, 0, movedId);
+  ensureStepOrderIds(currentOrder);
+  renderBuilder();
 }
 
 function buildFormSurfaceBackground(profile = currentFormProfile) {
@@ -753,10 +935,12 @@ function buildPreviewFieldControlMarkup(field, options = {}) {
     : `<input class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" ${fieldType === "email" ? 'type="email"' : ""} ${fieldType === "date" ? 'type="date"' : ""} ${fieldType === "time" ? 'type="time"' : ""} ${fieldType === "phone" ? 'inputmode="tel"' : ""} placeholder="${fieldType === "date" || fieldType === "time" ? "" : placeholder}">`;
 
   return `
-    <div class="preview-field-group ${options.isPrimary ? "is-primary" : ""}" data-preview-field-group="${escapeHtml(field.id)}">
+    <div class="preview-field-sortable ${field.isBaseField ? "is-base-field" : ""}" data-sortable-field-id="${escapeHtml(field.id)}" draggable="true">
+      <div class="preview-field-group ${options.isPrimary ? "is-primary" : ""}" data-preview-field-group="${escapeHtml(field.id)}">
       <label data-edit-target="field-label" data-edit-field-id="${escapeHtml(field.id)}" style="${getTypographyInline(field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE, field.labelBold !== false)}">${escapeHtml(fieldLabel)} ${badge}</label>
       ${inputMarkup}
       ${field.helpText ? `<p class="preview-field-help" data-edit-target="field-help" data-edit-field-id="${escapeHtml(field.id)}" style="${getTypographyInline(field.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE, Boolean(field.helpBold))}">${escapeHtml(field.helpText)}</p>` : ""}
+      </div>
     </div>
   `;
 }
@@ -781,10 +965,15 @@ function buildPreviewFieldMarkup(step) {
     ? currentPageFields
     : (step.baseFieldHidden ? [] : [{ ...step, isBaseField: true }]);
   const fieldMarkup = visibleFields.length
-    ? visibleFields.map((field, index) => buildPreviewFieldControlMarkup(field, {
-        isPrimary: index === 0
-      })).join("")
-    : `<div class="preview-field-empty">This page has no fields right now. Add one from the right-side tool rail.</div>`;
+    ? visibleFields.map((field, index) => `
+        <div class="preview-field-dropzone" data-drop-field-index="${index}" data-drop-page-id="${escapeHtml(step.id)}">Drop here</div>
+        ${buildPreviewFieldControlMarkup(field, { isPrimary: index === 0 })}
+      `).join("") + `<div class="preview-field-dropzone" data-drop-field-index="${visibleFields.length}" data-drop-page-id="${escapeHtml(step.id)}">Drop here</div>`
+    : `
+      <div class="preview-field-dropzone is-empty-state" data-drop-field-index="0" data-drop-page-id="${escapeHtml(step.id)}">
+        Drop a question here or use the add tools.
+      </div>
+    `;
 
   return `
     <div class="question-wrap is-selected" data-preview-step-id="${escapeHtml(step.id)}">
@@ -839,11 +1028,12 @@ function renderPreview() {
 
   if (previewStepper) {
     previewStepper.innerHTML = steps.map((step, index) => `
-      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}">
+      <div class="preview-step-dropzone" data-drop-step-index="${index}"></div>
+      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${step.id === "review" ? "false" : "true"}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
         <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
       </button>
-    `).join("");
+    `).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${steps.filter(step => step.id !== "review").length}"></div>`;
   }
 
   if (previewStepHost) {
@@ -903,18 +1093,12 @@ function renderFieldRail() {
 
   fieldRailList.innerHTML = fields.map(field => {
     const meta = getCustomFieldTypeMeta(field.type);
-    const isBuiltInBase = Boolean(field.isBaseField && field.builtIn);
-    const isTopLevelCustomPage = Boolean(field.isBaseField && !field.builtIn);
-    const fieldMeta = isBuiltInBase
-      ? `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`
-      : isTopLevelCustomPage
-        ? `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`
-        : `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
+    const fieldMeta = `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
     return `
       <button
         class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
         type="button"
-        ${field.isBaseField ? "" : 'draggable="true"'}
+        draggable="true"
         data-field-id="${escapeHtml(field.id)}"
       >
         <span class="field-rail-icon">${escapeHtml(meta.icon)}</span>
@@ -929,19 +1113,15 @@ function renderFieldRail() {
 
   fieldRailList.querySelectorAll("[data-field-id]").forEach(card => {
     const fieldId = card.dataset.fieldId || "";
-    const field = fields.find(entry => entry.id === fieldId);
 
     card.addEventListener("click", () => {
       closeEditor();
       openFieldEditor(fieldId);
     });
 
-    if (field?.isBaseField) {
-      return;
-    }
-
     card.addEventListener("dragstart", event => {
       dragFieldId = fieldId;
+      dragPayload = { kind: "existing-field", fieldId };
       card.classList.add("is-dragging");
       event.dataTransfer?.setData("text/plain", fieldId);
       event.dataTransfer.effectAllowed = "move";
@@ -949,6 +1129,7 @@ function renderFieldRail() {
 
     card.addEventListener("dragend", () => {
       dragFieldId = "";
+      dragPayload = null;
       card.classList.remove("is-dragging");
     });
 
@@ -966,8 +1147,7 @@ function renderFieldRail() {
       }
 
       const pageId = currentPage.id;
-      const allFields = [...getCustomFields()];
-      const pageFields = allFields.filter(entry => entry.pageId === pageId);
+      const pageFields = getCurrentPageFields();
       const fromIndex = pageFields.findIndex(entry => entry.id === dragFieldId);
       const toIndex = pageFields.findIndex(entry => entry.id === targetId);
 
@@ -975,27 +1155,10 @@ function renderFieldRail() {
         return;
       }
 
-      const [movedField] = pageFields.splice(fromIndex, 1);
-      pageFields.splice(toIndex, 0, movedField);
-      const rebuiltFields = [];
-      let inserted = false;
-
-      allFields.forEach(entry => {
-        if (entry.pageId !== pageId) {
-          rebuiltFields.push(entry);
-          return;
-        }
-
-        if (!inserted) {
-          rebuiltFields.push(...pageFields);
-          inserted = true;
-        }
-      });
-
-      currentFormProfile = {
-        ...currentFormProfile,
-        fields: rebuiltFields
-      };
+      const reorderedIds = pageFields.map(entry => entry.id);
+      const [movedId] = reorderedIds.splice(fromIndex, 1);
+      reorderedIds.splice(toIndex, 0, movedId);
+      setFieldOrderForPage(pageId, reorderedIds);
       renderBuilder();
     });
   });
@@ -1726,21 +1889,7 @@ function openPageEditor() {
 }
 
 function addCustomField(type) {
-  const nextField = createCustomField(type);
-  const currentPageId = getCurrentPageId();
-
-  if (!currentPageId || currentPageId === "review") {
-    setStatus("Pick a question page first, then add fields to that page.", "error");
-    return;
-  }
-
-  currentFormProfile = {
-    ...currentFormProfile,
-    fields: [...getCustomFields(), { ...nextField, pageId: currentPageId }]
-  };
-
-  renderBuilder();
-  openFieldEditor(nextField.id);
+  insertFieldIntoCurrentPage(type);
 }
 
 async function saveFormProfile(options = {}) {
@@ -1911,6 +2060,27 @@ previewNextButton?.addEventListener("click", () => {
 
 document.querySelectorAll("[data-add-type]").forEach(button => {
   button.addEventListener("click", () => addCustomField(button.dataset.addType || "text"));
+  button.addEventListener("dragstart", event => {
+    startDrag({
+      kind: "field-template",
+      fieldType: button.dataset.addType || "text"
+    }, event, button);
+  });
+  button.addEventListener("dragend", () => {
+    finishDrag(button);
+  });
+});
+
+document.querySelectorAll("[data-add-page]").forEach(button => {
+  button.addEventListener("click", () => addBlankPage());
+  button.addEventListener("dragstart", event => {
+    startDrag({
+      kind: "page-template"
+    }, event, button);
+  });
+  button.addEventListener("dragend", () => {
+    finishDrag(button);
+  });
 });
 
 previewStepper?.addEventListener("click", event => {
@@ -1931,6 +2101,74 @@ previewStepper?.addEventListener("click", event => {
   selectedPreviewStepId = nextId;
   closeEditor();
   renderBuilder();
+});
+
+previewStepper?.addEventListener("dragstart", event => {
+  const button = event.target.closest("[data-preview-step]");
+
+  if (!button || button.dataset.previewStep === "review") {
+    return;
+  }
+
+  startDrag({
+    kind: "step",
+    stepId: button.dataset.previewStep || ""
+  }, event, button);
+});
+
+previewStepper?.addEventListener("dragend", event => {
+  const button = event.target.closest("[data-preview-step]");
+  finishDrag(button || null);
+});
+
+previewStepper?.addEventListener("dragover", event => {
+  const dropzone = event.target.closest("[data-drop-step-index]");
+
+  if (!dropzone || !dragPayload || (dragPayload.kind !== "step" && dragPayload.kind !== "page-template")) {
+    return;
+  }
+
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+});
+
+previewStepper?.addEventListener("dragenter", event => {
+  const dropzone = event.target.closest("[data-drop-step-index]");
+
+  if (!dropzone || !dragPayload || (dragPayload.kind !== "step" && dragPayload.kind !== "page-template")) {
+    return;
+  }
+
+  clearDragIndicators();
+  dropzone.classList.add("is-over");
+});
+
+previewStepper?.addEventListener("dragleave", event => {
+  const dropzone = event.target.closest("[data-drop-step-index]");
+
+  if (!dropzone || !dropzone.contains(event.relatedTarget)) {
+    dropzone?.classList.remove("is-over");
+  }
+});
+
+previewStepper?.addEventListener("drop", event => {
+  const dropzone = event.target.closest("[data-drop-step-index]");
+
+  if (!dropzone || !dragPayload) {
+    return;
+  }
+
+  const insertIndex = Number(dropzone.dataset.dropStepIndex || "0");
+
+  event.preventDefault();
+
+  if (dragPayload.kind === "step" && dragPayload.stepId) {
+    reorderStep(dragPayload.stepId, insertIndex);
+  } else if (dragPayload.kind === "page-template") {
+    addBlankPage(insertIndex);
+  }
+
+  finishDrag();
 });
 
 previewStepHost?.addEventListener("click", event => {
@@ -1959,6 +2197,73 @@ previewStepHost?.addEventListener("click", event => {
   if (selectedPreviewStepId && selectedPreviewStepId !== "review") {
     openFieldEditor(selectedPreviewStepId);
   }
+});
+
+previewStepHost?.addEventListener("dragstart", event => {
+  const fieldCard = event.target.closest("[data-sortable-field-id]");
+
+  if (!fieldCard) {
+    return;
+  }
+
+  startDrag({
+    kind: "existing-field",
+    fieldId: fieldCard.dataset.sortableFieldId || ""
+  }, event, fieldCard);
+});
+
+previewStepHost?.addEventListener("dragend", event => {
+  const fieldCard = event.target.closest("[data-sortable-field-id]");
+  finishDrag(fieldCard || null);
+});
+
+previewStepHost?.addEventListener("dragover", event => {
+  const dropzone = event.target.closest("[data-drop-field-index]");
+
+  if (!dropzone || !dragPayload || (dragPayload.kind !== "existing-field" && dragPayload.kind !== "field-template")) {
+    return;
+  }
+
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+});
+
+previewStepHost?.addEventListener("dragenter", event => {
+  const dropzone = event.target.closest("[data-drop-field-index]");
+
+  if (!dropzone || !dragPayload || (dragPayload.kind !== "existing-field" && dragPayload.kind !== "field-template")) {
+    return;
+  }
+
+  clearDragIndicators();
+  dropzone.classList.add("is-over");
+});
+
+previewStepHost?.addEventListener("dragleave", event => {
+  const dropzone = event.target.closest("[data-drop-field-index]");
+
+  if (!dropzone || !dropzone.contains(event.relatedTarget)) {
+    dropzone?.classList.remove("is-over");
+  }
+});
+
+previewStepHost?.addEventListener("drop", event => {
+  const dropzone = event.target.closest("[data-drop-field-index]");
+
+  if (!dropzone || !dragPayload) {
+    return;
+  }
+
+  const insertIndex = Number(dropzone.dataset.dropFieldIndex || "0");
+  event.preventDefault();
+
+  if (dragPayload.kind === "existing-field" && dragPayload.fieldId) {
+    reorderCurrentPageField(dragPayload.fieldId, insertIndex);
+  } else if (dragPayload.kind === "field-template" && dragPayload.fieldType) {
+    insertFieldIntoCurrentPage(dragPayload.fieldType, insertIndex);
+  }
+
+  finishDrag();
 });
 
 previewShell?.addEventListener("click", event => {
