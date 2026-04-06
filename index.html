@@ -66,66 +66,6 @@
       pointer-events: none;
     }
 
-    .container::after {
-      content: "";
-      position: absolute;
-      inset: 12px;
-      border-radius: 22px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.18s ease;
-    }
-
-    .container[data-form-style="frosted"] {
-      background: color-mix(in srgb, var(--card-background, var(--card)) 82%, rgba(255, 255, 255, 0.72));
-      border-color: rgba(255, 255, 255, 0.34);
-      box-shadow: 0 30px 72px rgba(15, 23, 42, 0.2);
-      backdrop-filter: blur(20px) saturate(135%);
-    }
-
-    .container[data-form-style="frosted"]::before {
-      background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.06) 62%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
-    }
-
-    .container[data-form-style="blur"] {
-      background: color-mix(in srgb, var(--card-background, var(--card)) 72%, rgba(255, 255, 255, 0.78));
-      border-color: rgba(255, 255, 255, 0.42);
-      box-shadow: 0 34px 78px rgba(15, 23, 42, 0.18);
-      backdrop-filter: blur(28px) saturate(150%);
-    }
-
-    .container[data-form-style="blur"]::before {
-      background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.56), transparent 42%),
-        linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04));
-    }
-
-    .container[data-form-style="liquid-glass"] {
-      background: color-mix(in srgb, var(--card-background, var(--card)) 78%, rgba(255, 255, 255, 0.82));
-      border-color: rgba(255, 255, 255, 0.48);
-      box-shadow:
-        0 36px 90px rgba(15, 23, 42, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6);
-      backdrop-filter: blur(26px) saturate(165%);
-    }
-
-    .container[data-form-style="liquid-glass"]::before {
-      background:
-        linear-gradient(132deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 28%, transparent 52%),
-        radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.46), transparent 26%),
-        radial-gradient(circle at 84% 24%, rgba(255, 255, 255, 0.24), transparent 24%);
-    }
-
-    .container[data-form-style="liquid-glass"]::after {
-      opacity: 1;
-      background:
-        linear-gradient(112deg, transparent 0 24%, rgba(255, 255, 255, 0.18) 36%, transparent 48% 100%),
-        radial-gradient(circle at 22% 12%, rgba(255, 255, 255, 0.18), transparent 28%);
-      mix-blend-mode: screen;
-    }
-
     .wizard-shell {
       position: relative;
       z-index: 1;
@@ -1524,7 +1464,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260406c"></script>
+<script src="app.js?v=20260406b"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
