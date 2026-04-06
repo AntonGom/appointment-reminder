@@ -14,12 +14,16 @@ import {
   DEFAULT_STEP_COPY_FONT_SIZE,
   DEFAULT_FIELD_LABEL_FONT_SIZE,
   DEFAULT_FIELD_HELP_FONT_SIZE,
+  DEFAULT_STEP_NAV_BACKGROUND,
+  DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
+  DEFAULT_STEP_NAV_TEXT_COLOR,
+  DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
   normalizeCustomFormProfile,
   createCustomField,
   buildPreviewStepList,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260405d";
+} from "./custom-form-profile.js?v=20260405e";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -233,6 +237,18 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
 }
 
+function applyStepNavigationStyles() {
+  if (!previewStepper) {
+    return;
+  }
+
+  previewStepper.style.setProperty("--fc-step-nav-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+  previewStepper.style.setProperty("--fc-step-nav-active-bg", currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
+  previewStepper.style.setProperty("--fc-step-nav-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
+  previewStepper.style.setProperty("--fc-step-nav-active-text", currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
+  previewStepper.classList.add("is-group-editable");
+}
+
 function buildPreviewFieldMarkup(step) {
   const isRequired = step.required === true;
   const badge = isRequired
@@ -312,11 +328,7 @@ function renderPreview() {
     previewStepper.innerHTML = steps.map((step, index) => `
       <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
-        <span
-          class="preview-stepper-label"
-          ${step.id !== "review" ? `data-edit-target="step-nav-label" data-step-id="${escapeHtml(step.id)}"` : ""}
-          style="${step.navLabelColor ? `color:${escapeHtml(step.navLabelColor)};` : ""}"
-        >${escapeHtml(step.navLabel)}</span>
+        <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
       </button>
     `).join("");
   }
@@ -339,6 +351,7 @@ function renderPreview() {
   }
 
   applyBackgroundToPreview();
+  applyStepNavigationStyles();
 }
 
 function renderFieldRail() {
@@ -531,25 +544,19 @@ function openFieldEditor(fieldId) {
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
-    <div class="form-editor-grid">
+    ${isCustomField ? `
       <label>
-        Step label
-        <input id="editor-field-nav" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+        Field type
+        <select id="editor-field-type">
+          ${CUSTOM_FIELD_TYPES.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === step.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
       </label>
-      ${isCustomField ? `
-        <label>
-          Field type
-          <select id="editor-field-type">
-            ${CUSTOM_FIELD_TYPES.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === step.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-          </select>
-        </label>
-      ` : `
-        <label>
-          Field type
-          <input type="text" value="${escapeHtml(step.type === "textarea" ? "Long Answer" : step.type === "phone" ? "Phone" : step.type === "date" ? "Date" : step.type === "time" ? "Time" : step.type === "email" ? "Email" : "Short Answer")}" disabled>
-        </label>
-      `}
-    </div>
+    ` : `
+      <label>
+        Field type
+        <input type="text" value="${escapeHtml(step.type === "textarea" ? "Long Answer" : step.type === "phone" ? "Phone" : step.type === "date" ? "Date" : step.type === "time" ? "Time" : step.type === "email" ? "Email" : "Short Answer")}" disabled>
+      </label>
+    `}
     <label>
       Placeholder
       <input id="editor-field-placeholder" type="text" value="${escapeHtml(step.placeholder || "")}" maxlength="120">
@@ -562,7 +569,6 @@ function openFieldEditor(fieldId) {
   `;
 
   const labelInput = document.getElementById("editor-field-label");
-  const navInput = document.getElementById("editor-field-nav");
   const typeSelect = document.getElementById("editor-field-type");
   const placeholderInput = document.getElementById("editor-field-placeholder");
   const helpInput = document.getElementById("editor-field-help");
@@ -600,10 +606,6 @@ function openFieldEditor(fieldId) {
 
   labelInput?.addEventListener("input", event => {
     patchField({ label: event.target.value.slice(0, 60) });
-  });
-
-  navInput?.addEventListener("input", event => {
-    patchField({ navLabel: safeShortLabel(event.target.value) });
   });
 
   typeSelect?.addEventListener("change", event => {
@@ -655,39 +657,112 @@ function openPageTitleEditor() {
   });
 }
 
-function openStepLabelEditor(stepId = selectedPreviewStepId) {
-  const step = getEditableStep(stepId);
+function openStepNavigationEditor() {
+  if (!editorPopover || !editorBody) {
+    return;
+  }
 
-  if (!step || step.id === "review" || !editorPopover || !editorBody) {
+  const editableSteps = getPreviewSteps().filter(step => step.id !== "review");
+
+  if (!editableSteps.length) {
     return;
   }
 
   editorPopover.hidden = false;
-  editorTitle.textContent = "Step label";
-  editorCopy.textContent = "Edit the step chip text and color shown in the step navigation.";
+  editorTitle.textContent = "Step labels";
+  editorCopy.textContent = "Edit every step chip here and set the shared colors for the whole step row.";
   editorBody.innerHTML = `
-    <label>
-      Step label
-      <input id="editor-step-nav-text" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
-    </label>
-    <label>
-      Step label color
-      <input id="editor-step-nav-color" type="color" value="${escapeHtml(step.navLabelColor || "#111827")}">
-    </label>
+    <div class="form-editor-grid">
+      <label>
+        Default box color
+        <input id="editor-step-nav-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)}">
+      </label>
+      <label>
+        Default text color
+        <input id="editor-step-nav-text-color" type="color" value="${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)}">
+      </label>
+      <label>
+        Active box color
+        <input id="editor-step-nav-active-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND)}">
+      </label>
+      <label>
+        Active text color
+        <input id="editor-step-nav-active-text" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR)}">
+      </label>
+    </div>
+    <div class="step-nav-editor-list">
+      ${editableSteps.map(step => `
+        <label class="step-nav-editor-item">
+          <span
+            class="step-nav-editor-chip"
+            style="--chip-bg:${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)};--chip-text:${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)};"
+          >${escapeHtml(step.navLabel || step.title || step.label || "Step")}</span>
+          <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+        </label>
+      `).join("")}
+    </div>
   `;
 
-  document.getElementById("editor-step-nav-text")?.addEventListener("input", event => {
-    patchStepConfig(step.id, {
-      navLabel: safeShortLabel(event.target.value)
+  const syncStepNavEditorChips = () => {
+    editorBody.querySelectorAll(".step-nav-editor-chip").forEach(chip => {
+      chip.style.setProperty("--chip-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+      chip.style.setProperty("--chip-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
     });
+  };
+
+  syncStepNavEditorChips();
+
+  document.getElementById("editor-step-nav-bg")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavBackgroundColor: event.target.value
+    };
+    syncStepNavEditorChips();
     renderBuilder();
   });
 
-  document.getElementById("editor-step-nav-color")?.addEventListener("input", event => {
-    patchStepConfig(step.id, {
-      navLabelColor: event.target.value
-    });
+  document.getElementById("editor-step-nav-text-color")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavTextColor: event.target.value
+    };
+    syncStepNavEditorChips();
     renderBuilder();
+  });
+
+  document.getElementById("editor-step-nav-active-bg")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavActiveBackgroundColor: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-step-nav-active-text")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavActiveTextColor: event.target.value
+    };
+    renderBuilder();
+  });
+
+  editorBody.querySelectorAll("[data-step-nav-text-input]").forEach(input => {
+    input.addEventListener("input", event => {
+      const stepId = event.target.dataset.stepId || "";
+
+      if (!stepId) {
+        return;
+      }
+
+      patchStepConfig(stepId, {
+        navLabel: safeShortLabel(event.target.value)
+      });
+      const previewChip = event.target.closest(".step-nav-editor-item")?.querySelector(".step-nav-editor-chip");
+      if (previewChip) {
+        previewChip.textContent = safeShortLabel(event.target.value);
+      }
+      renderBuilder();
+    });
   });
 }
 
@@ -699,7 +774,7 @@ function openSelectedStepTextEditor(target) {
   }
 
   if (target === "step-nav-label") {
-    openStepLabelEditor(step.id);
+    openStepNavigationEditor();
     return;
   }
 
@@ -1164,14 +1239,7 @@ previewStepper?.addEventListener("click", event => {
   const labelTarget = event.target.closest('[data-edit-target="step-nav-label"]');
 
   if (labelTarget) {
-    const nextId = labelTarget.dataset.stepId || "";
-    if (!nextId) {
-      return;
-    }
-
-    selectedPreviewStepId = nextId;
-    renderBuilder();
-    openStepLabelEditor(nextId);
+    openStepNavigationEditor();
     return;
   }
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260405h">
+  <link rel="stylesheet" href="form-creator.css?v=20260405i">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -50,7 +50,6 @@
               <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
 
               <div class="progress-wrap">
-                <p class="progress-status visible">This is your live Send Reminder form.</p>
                 <div class="progress-track">
                   <div id="preview-progress-fill" class="progress-fill"></div>
                 </div>
@@ -79,11 +78,18 @@
         <span id="price-pill" class="price-pill">Signed in tool</span>
       </div>
 
-      <label class="toggle-row form-enabled-toggle">
-        <span>Use This As My Form</span>
-        <input id="form-enabled-toggle" type="checkbox" checked>
-      </label>
-      <p class="toggle-help-copy">Turn this off if you want Send Reminder to keep using the default built-in form.</p>
+      <div class="form-enabled-card">
+        <label class="form-enabled-row" for="form-enabled-toggle">
+          <span class="form-enabled-copy">
+            <span class="form-enabled-title">Use This As My Form</span>
+            <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
+          </span>
+          <span class="form-enabled-switch">
+            <input id="form-enabled-toggle" type="checkbox" checked>
+            <span class="form-enabled-switch-ui" aria-hidden="true"></span>
+          </span>
+        </label>
+      </div>
 
       <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
 
@@ -110,6 +116,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260405h"></script>
+  <script type="module" src="form-creator.js?v=20260405i"></script>
 </body>
 </html>

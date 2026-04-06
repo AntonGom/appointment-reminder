@@ -35,7 +35,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405d";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405e";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -45,6 +45,10 @@ const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 const DEFAULT_STEP_COPY_FONT_SIZE = 15;
 const DEFAULT_FIELD_LABEL_FONT_SIZE = 16;
 const DEFAULT_FIELD_HELP_FONT_SIZE = 13;
+const DEFAULT_STEP_NAV_BACKGROUND = "#f8fafc";
+const DEFAULT_STEP_NAV_ACTIVE_BACKGROUND = "#dbeafe";
+const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
+const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -1116,9 +1120,14 @@ function getStepNavigationAppearance(stepElement) {
   const customField = getCustomFieldConfig(fieldId);
   const builtInOverride = activeCustomFormProfile?.stepOverrides?.[fieldId] || null;
   const source = customField || builtInOverride || {};
+  const profile = activeCustomFormProfile || {};
 
   return {
-    navLabelColor: typeof source.navLabelColor === "string" ? source.navLabelColor.trim() : ""
+    navLabelColor: typeof source.navLabelColor === "string" ? source.navLabelColor.trim() : "",
+    stepNavBackgroundColor: typeof profile.stepNavBackgroundColor === "string" ? profile.stepNavBackgroundColor.trim() : "",
+    stepNavTextColor: typeof profile.stepNavTextColor === "string" ? profile.stepNavTextColor.trim() : "",
+    stepNavActiveBackgroundColor: typeof profile.stepNavActiveBackgroundColor === "string" ? profile.stepNavActiveBackgroundColor.trim() : "",
+    stepNavActiveTextColor: typeof profile.stepNavActiveTextColor === "string" ? profile.stepNavActiveTextColor.trim() : ""
   };
 }
 
@@ -2356,10 +2365,10 @@ function renderStepNavigation() {
       <span class="stepper-label">${label}</span>
     `;
 
-    const labelElement = button.querySelector(".stepper-label");
-    if (labelElement && navAppearance.navLabelColor) {
-      labelElement.style.color = navAppearance.navLabelColor;
-    }
+    button.style.setProperty("--step-nav-bg", navAppearance.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+    button.style.setProperty("--step-nav-text", navAppearance.stepNavTextColor || navAppearance.navLabelColor || DEFAULT_STEP_NAV_TEXT_COLOR);
+    button.style.setProperty("--step-nav-active-bg", navAppearance.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
+    button.style.setProperty("--step-nav-active-text", navAppearance.stepNavActiveTextColor || navAppearance.stepNavTextColor || navAppearance.navLabelColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
 
     if (index === currentStepIndex) {
       button.classList.add("active");

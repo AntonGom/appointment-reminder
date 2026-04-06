@@ -10,6 +10,10 @@ export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 export const DEFAULT_STEP_COPY_FONT_SIZE = 15;
 export const DEFAULT_FIELD_LABEL_FONT_SIZE = 16;
 export const DEFAULT_FIELD_HELP_FONT_SIZE = 13;
+export const DEFAULT_STEP_NAV_BACKGROUND = "#f8fafc";
+export const DEFAULT_STEP_NAV_ACTIVE_BACKGROUND = "#dbeafe";
+export const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
+export const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
 
 export const BASE_REMINDER_STEPS = [
   {
@@ -291,6 +295,10 @@ export function normalizeCustomFormProfile(rawProfile) {
     formSurfaceAccentColor: safeString(profile.formSurfaceAccentColor) || DEFAULT_FORM_SURFACE_ACCENT_COLOR,
     formSurfaceGradient: safeString(profile.formSurfaceGradient) || DEFAULT_FORM_SURFACE_GRADIENT,
     formTextColor: safeString(profile.formTextColor) || DEFAULT_FORM_TEXT_COLOR,
+    stepNavBackgroundColor: safeString(profile.stepNavBackgroundColor) || DEFAULT_STEP_NAV_BACKGROUND,
+    stepNavActiveBackgroundColor: safeString(profile.stepNavActiveBackgroundColor) || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
+    stepNavTextColor: safeString(profile.stepNavTextColor) || DEFAULT_STEP_NAV_TEXT_COLOR,
+    stepNavActiveTextColor: safeString(profile.stepNavActiveTextColor) || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
     formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
     formTitleBold: profile.formTitleBold !== false,
     stepOverrides,
