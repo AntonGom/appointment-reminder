@@ -3,7 +3,12 @@ import {
   BASE_REMINDER_STEPS,
   CUSTOM_FIELD_TYPES,
   FORM_BACKGROUND_PRESETS,
+  FORM_SURFACE_GRADIENT_OPTIONS,
   DEFAULT_FORM_TITLE,
+  DEFAULT_FORM_SURFACE_COLOR,
+  DEFAULT_FORM_SURFACE_ACCENT_COLOR,
+  DEFAULT_FORM_SURFACE_GRADIENT,
+  DEFAULT_FORM_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
   DEFAULT_STEP_TITLE_FONT_SIZE,
   DEFAULT_STEP_COPY_FONT_SIZE,
@@ -14,7 +19,7 @@ import {
   buildPreviewStepList,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260405b";
+} from "./custom-form-profile.js?v=20260405c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -131,6 +136,14 @@ function getSelectedPreviewStep() {
   return steps.find(step => step.id === selectedPreviewStepId) || steps[0] || null;
 }
 
+function getEditableStep(stepId) {
+  if (!stepId) {
+    return null;
+  }
+
+  return getPreviewSteps().find(step => step.id === stepId) || null;
+}
+
 function isCustomStep(stepId) {
   return getCustomFields().some(field => field.id === stepId);
 }
@@ -154,6 +167,24 @@ function patchStepConfig(stepId, updates) {
       }
     }
   };
+}
+
+function buildFormSurfaceBackground(profile = currentFormProfile) {
+  const base = profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR;
+  const accent = profile?.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR;
+  const gradient = profile?.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT;
+
+  switch (gradient) {
+    case "soft-blend":
+      return `linear-gradient(180deg, ${accent} 0%, ${base} 100%)`;
+    case "top-glow":
+      return `radial-gradient(circle at top center, ${accent} 0%, ${base} 68%)`;
+    case "diagonal":
+      return `linear-gradient(135deg, ${accent} 0%, ${base} 62%)`;
+    case "solid":
+    default:
+      return base;
+  }
 }
 
 function getTypographyInline(fontSize, isBold) {
@@ -196,6 +227,9 @@ function applyBackgroundToPreview() {
 
   previewShell.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop);
   previewShell.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom);
+  previewShell.style.setProperty("--fc-form-surface-background", buildFormSurfaceBackground(currentFormProfile));
+  previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
 }
 
 function buildPreviewFieldMarkup(step) {
@@ -223,7 +257,7 @@ function buildPreviewFieldMarkup(step) {
     : `<input ${step.type === "email" ? 'type="email"' : ""} ${step.type === "date" ? 'type="date"' : ""} ${step.type === "time" ? 'type="time"' : ""} ${step.type === "phone" ? 'inputmode="tel"' : ""} placeholder="${escapeHtml(step.placeholder || "")}">`;
 
   return `
-    <div class="question-wrap ${step.builtIn ? "" : "is-selected"}" data-preview-step-id="${escapeHtml(step.id)}">
+    <div class="question-wrap is-selected" data-preview-step-id="${escapeHtml(step.id)}">
       <label data-edit-target="field-label" style="${getTypographyInline(step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE, step.labelBold !== false)}">${escapeHtml(step.label)} ${badge}</label>
       ${inputMarkup}
       ${step.helpText ? `<p class="preview-field-help" data-edit-target="field-help" style="${getTypographyInline(step.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE, Boolean(step.helpBold))}">${escapeHtml(step.helpText)}</p>` : ""}
@@ -472,47 +506,67 @@ function openTypographyEditor(config) {
 }
 
 function openFieldEditor(fieldId) {
-  const field = getCustomFields().find(entry => entry.id === fieldId);
+  const step = getEditableStep(fieldId);
+  const customField = getCustomFields().find(entry => entry.id === fieldId) || null;
+  const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
+  const isCustomField = Boolean(customField);
 
-  if (!field || !editorPopover || !editorBody) {
+  if ((!isBuiltInStep && !isCustomField) || !step || !editorPopover || !editorBody) {
     return;
   }
 
   editorPopover.hidden = false;
   editorTitle.textContent = "Question settings";
-  editorCopy.textContent = "Rename this question, mark it required, and control how it appears in Send Reminder.";
+  editorCopy.textContent = "Rename this question, adjust the step label, and control how it appears in Send Reminder.";
   editorBody.innerHTML = `
     <label>
+      Question heading
+      <input id="editor-field-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
+    </label>
+    <label>
+      Step copy
+      <textarea id="editor-field-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
+    </label>
+    <label>
       Question title
-      <input id="editor-field-label" type="text" value="${escapeHtml(field.label)}" maxlength="60">
+      <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
     <div class="form-editor-grid">
       <label>
         Step label
-        <input id="editor-field-nav" type="text" value="${escapeHtml(field.navLabel)}" maxlength="12">
+        <input id="editor-field-nav" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
       </label>
-      <label>
-        Field type
-        <select id="editor-field-type">
-          ${CUSTOM_FIELD_TYPES.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === field.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
-        </select>
-      </label>
+      ${isCustomField ? `
+        <label>
+          Field type
+          <select id="editor-field-type">
+            ${CUSTOM_FIELD_TYPES.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === step.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          </select>
+        </label>
+      ` : `
+        <label>
+          Field type
+          <input type="text" value="${escapeHtml(step.type === "textarea" ? "Long Answer" : step.type === "phone" ? "Phone" : step.type === "date" ? "Date" : step.type === "time" ? "Time" : step.type === "email" ? "Email" : "Short Answer")}" disabled>
+        </label>
+      `}
     </div>
     <label>
       Placeholder
-      <input id="editor-field-placeholder" type="text" value="${escapeHtml(field.placeholder || "")}" maxlength="120">
+      <input id="editor-field-placeholder" type="text" value="${escapeHtml(step.placeholder || "")}" maxlength="120">
     </label>
     <label>
       Helper copy
-      <textarea id="editor-field-help" maxlength="160">${escapeHtml(field.helpText || "")}</textarea>
+      <textarea id="editor-field-help" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
     </label>
     <label class="toggle-row">
       <span>Required field</span>
-      <input id="editor-field-required" type="checkbox" ${field.required ? "checked" : ""}>
+      <input id="editor-field-required" type="checkbox" ${step.required ? "checked" : ""}>
     </label>
-    <button id="editor-delete-field" class="delete-field-button" type="button">Delete this question</button>
+    ${isCustomField ? `<button id="editor-delete-field" class="delete-field-button" type="button">Delete this question</button>` : ""}
   `;
 
+  const titleInput = document.getElementById("editor-field-title");
+  const copyInput = document.getElementById("editor-field-copy");
   const labelInput = document.getElementById("editor-field-label");
   const navInput = document.getElementById("editor-field-nav");
   const typeSelect = document.getElementById("editor-field-type");
@@ -522,19 +576,17 @@ function openFieldEditor(fieldId) {
   const deleteButton = document.getElementById("editor-delete-field");
 
   const patchField = updates => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      fields: getCustomFields().map(entry => {
-        if (entry.id !== fieldId) {
-          return entry;
-        }
+    patchStepConfig(fieldId, updates);
 
-        const nextField = {
-          ...entry,
-          ...updates
-        };
+    if (isCustomField && updates.type) {
+      currentFormProfile = {
+        ...currentFormProfile,
+        fields: getCustomFields().map(entry => {
+          if (entry.id !== fieldId) {
+            return entry;
+          }
 
-        if (updates.type) {
+          const nextField = { ...entry };
           const nextMeta = getCustomFieldTypeMeta(updates.type);
 
           nextField.navLabel = safeShortLabel(nextField.navLabel || nextMeta.shortLabel);
@@ -544,14 +596,22 @@ function openFieldEditor(fieldId) {
           } else if (!nextField.placeholder) {
             nextField.placeholder = nextMeta.placeholder;
           }
-        }
 
-        return nextField;
-      })
-    };
+          return nextField;
+        })
+      };
+    }
 
     renderBuilder();
   };
+
+  titleInput?.addEventListener("input", event => {
+    patchField({ title: event.target.value.slice(0, 60) });
+  });
+
+  copyInput?.addEventListener("input", event => {
+    patchField({ copy: event.target.value.slice(0, 180) });
+  });
 
   labelInput?.addEventListener("input", event => {
     patchField({ label: event.target.value.slice(0, 60) });
@@ -703,6 +763,70 @@ function openSelectedStepTextEditor(target) {
       }
     });
   }
+}
+
+function openFormShellEditor() {
+  if (!editorPopover || !editorBody) {
+    return;
+  }
+
+  editorPopover.hidden = false;
+  editorTitle.textContent = "Form box style";
+  editorCopy.textContent = "Change the full form card color, gradient, and overall text color for Send Reminder.";
+  editorBody.innerHTML = `
+    <div class="form-editor-grid">
+      <label>
+        Form color
+        <input id="editor-surface-base" type="color" value="${escapeHtml(currentFormProfile.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR)}">
+      </label>
+      <label>
+        Gradient color
+        <input id="editor-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
+      </label>
+    </div>
+    <label>
+      Gradient style
+      <select id="editor-surface-gradient">
+        ${FORM_SURFACE_GRADIENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+      </select>
+    </label>
+    <label>
+      Text color
+      <input id="editor-surface-text" type="color" value="${escapeHtml(currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR)}">
+    </label>
+  `;
+
+  document.getElementById("editor-surface-base")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceColor: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-accent")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceAccentColor: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-gradient")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceGradient: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-text")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formTextColor: event.target.value
+    };
+    renderBuilder();
+  });
 }
 
 function openPageEditor() {
@@ -912,7 +1036,12 @@ previewBackButton?.addEventListener("click", () => {
 
   if (index > 0) {
     selectedPreviewStepId = steps[index - 1].id;
-    renderPreview();
+    renderBuilder();
+    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
+      openFieldEditor(selectedPreviewStepId);
+    } else if (selectedPreviewStepId === "review") {
+      closeEditor();
+    }
   }
 });
 previewSkipButton?.addEventListener("click", () => {
@@ -921,7 +1050,12 @@ previewSkipButton?.addEventListener("click", () => {
 
   if (index >= 0 && index < steps.length - 1) {
     selectedPreviewStepId = steps[index + 1].id;
-    renderPreview();
+    renderBuilder();
+    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
+      openFieldEditor(selectedPreviewStepId);
+    } else if (selectedPreviewStepId === "review") {
+      closeEditor();
+    }
   }
 });
 previewNextButton?.addEventListener("click", () => {
@@ -930,7 +1064,12 @@ previewNextButton?.addEventListener("click", () => {
 
   if (index >= 0 && index < steps.length - 1) {
     selectedPreviewStepId = steps[index + 1].id;
-    renderPreview();
+    renderBuilder();
+    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
+      openFieldEditor(selectedPreviewStepId);
+    } else if (selectedPreviewStepId === "review") {
+      closeEditor();
+    }
   }
 });
 
@@ -947,14 +1086,13 @@ previewStepper?.addEventListener("click", event => {
 
   const nextId = button.dataset.previewStep || "";
   selectedPreviewStepId = nextId;
+  renderBuilder();
 
-  if (getCustomFields().some(field => field.id === nextId)) {
+  if (nextId && nextId !== "review") {
     openFieldEditor(nextId);
   } else {
     closeEditor();
   }
-
-  renderPreview();
 });
 
 previewStepHost?.addEventListener("click", event => {
@@ -965,9 +1103,17 @@ previewStepHost?.addEventListener("click", event => {
     return;
   }
 
-  if (getCustomFields().some(field => field.id === selectedPreviewStepId)) {
+  if (selectedPreviewStepId && selectedPreviewStepId !== "review") {
     openFieldEditor(selectedPreviewStepId);
   }
+});
+
+previewShell?.addEventListener("click", event => {
+  if (event.target.closest("#form-preview-title, #preview-step-title, #preview-step-copy, #preview-stepper, #preview-step-host, .wizard-controls, [data-edit-target], input, textarea, button, label")) {
+    return;
+  }
+
+  openFormShellEditor();
 });
 
 previewTitle?.addEventListener("click", openPageTitleEditor);

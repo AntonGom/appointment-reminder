@@ -1,6 +1,10 @@
 export const DEFAULT_FORM_TITLE = "Appointment Reminder";
 export const DEFAULT_BACKGROUND_TOP = "#10141c";
 export const DEFAULT_BACKGROUND_BOTTOM = "#1a2230";
+export const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
+export const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
+export const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
+export const DEFAULT_FORM_TEXT_COLOR = "#111827";
 export const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 export const DEFAULT_STEP_COPY_FONT_SIZE = 15;
@@ -165,6 +169,13 @@ export const FORM_BACKGROUND_PRESETS = [
   { id: "plum", label: "Plum", top: "#1b1530", bottom: "#7c3aed" }
 ];
 
+export const FORM_SURFACE_GRADIENT_OPTIONS = [
+  { id: "solid", label: "Solid" },
+  { id: "soft-blend", label: "Soft Blend" },
+  { id: "top-glow", label: "Top Glow" },
+  { id: "diagonal", label: "Diagonal Sweep" }
+];
+
 function safeString(value) {
   return String(value || "").trim();
 }
@@ -273,6 +284,10 @@ export function normalizeCustomFormProfile(rawProfile) {
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
+    formSurfaceColor: safeString(profile.formSurfaceColor) || DEFAULT_FORM_SURFACE_COLOR,
+    formSurfaceAccentColor: safeString(profile.formSurfaceAccentColor) || DEFAULT_FORM_SURFACE_ACCENT_COLOR,
+    formSurfaceGradient: safeString(profile.formSurfaceGradient) || DEFAULT_FORM_SURFACE_GRADIENT,
+    formTextColor: safeString(profile.formTextColor) || DEFAULT_FORM_TEXT_COLOR,
     formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
     formTitleBold: profile.formTitleBold !== false,
     stepOverrides,

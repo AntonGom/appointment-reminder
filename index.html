@@ -11,6 +11,7 @@
       --bg-top: #10141c;
       --bg-bottom: #1a2230;
       --card: rgba(246, 248, 252, 0.96);
+      --card-background: var(--card);
       --card-border: rgba(95, 118, 148, 0.22);
       --text-main: #111827;
       --text-soft: #5b6472;
@@ -45,7 +46,8 @@
     .container {
       position: relative;
       overflow: hidden;
-      background: var(--card);
+      background: var(--card-background, var(--card));
+      color: var(--text-main);
       width: 100%;
       max-width: 560px;
       padding: 28px;
@@ -60,7 +62,7 @@
       position: absolute;
       inset: 0 0 auto 0;
       height: 128px;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0));
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
 
@@ -1457,7 +1459,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260405b"></script>
+<script src="app.js?v=20260405c"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

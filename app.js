@@ -35,7 +35,11 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405b";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405c";
+const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
+const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
+const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
+const DEFAULT_FORM_TEXT_COLOR = "#111827";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 const DEFAULT_STEP_COPY_FONT_SIZE = 15;
@@ -1051,6 +1055,7 @@ function applySavedClientPrefill() {
 }
 
 function applyCustomFormPresentation(profile) {
+  const container = document.querySelector(".container");
   const sectionTitle = document.querySelector(".section-title");
   const normalizedTitle = String(profile?.formTitle || "").trim();
 
@@ -1063,7 +1068,33 @@ function applyCustomFormPresentation(profile) {
 
   document.documentElement.style.setProperty("--bg-top", profile?.backgroundTop || "#10141c");
   document.documentElement.style.setProperty("--bg-bottom", profile?.backgroundBottom || "#1a2230");
+
+  if (container) {
+    container.style.setProperty("--card", profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR);
+    container.style.setProperty("--card-background", buildCustomFormSurfaceBackground(profile));
+    container.style.setProperty("--text-main", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+    container.style.setProperty("--text-soft", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  }
+
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
+}
+
+function buildCustomFormSurfaceBackground(profile) {
+  const base = String(profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR).trim() || DEFAULT_FORM_SURFACE_COLOR;
+  const accent = String(profile?.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR).trim() || DEFAULT_FORM_SURFACE_ACCENT_COLOR;
+  const gradient = String(profile?.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT).trim() || DEFAULT_FORM_SURFACE_GRADIENT;
+
+  switch (gradient) {
+    case "soft-blend":
+      return `linear-gradient(180deg, ${accent} 0%, ${base} 100%)`;
+    case "top-glow":
+      return `radial-gradient(circle at top center, ${accent} 0%, ${base} 68%)`;
+    case "diagonal":
+      return `linear-gradient(135deg, ${accent} 0%, ${base} 62%)`;
+    case "solid":
+    default:
+      return base;
+  }
 }
 
 function getActiveStepTypography(stepElement) {
