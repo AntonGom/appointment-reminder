@@ -4,12 +4,17 @@ import {
   CUSTOM_FIELD_TYPES,
   FORM_BACKGROUND_PRESETS,
   DEFAULT_FORM_TITLE,
+  DEFAULT_FORM_TITLE_FONT_SIZE,
+  DEFAULT_STEP_TITLE_FONT_SIZE,
+  DEFAULT_STEP_COPY_FONT_SIZE,
+  DEFAULT_FIELD_LABEL_FONT_SIZE,
+  DEFAULT_FIELD_HELP_FONT_SIZE,
   normalizeCustomFormProfile,
   createCustomField,
   buildPreviewStepList,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260405a";
+} from "./custom-form-profile.js?v=20260405b";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -126,6 +131,42 @@ function getSelectedPreviewStep() {
   return steps.find(step => step.id === selectedPreviewStepId) || steps[0] || null;
 }
 
+function isCustomStep(stepId) {
+  return getCustomFields().some(field => field.id === stepId);
+}
+
+function patchStepConfig(stepId, updates) {
+  if (isCustomStep(stepId)) {
+    currentFormProfile = {
+      ...currentFormProfile,
+      fields: getCustomFields().map(entry => entry.id === stepId ? { ...entry, ...updates } : entry)
+    };
+    return;
+  }
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    stepOverrides: {
+      ...(currentFormProfile.stepOverrides || {}),
+      [stepId]: {
+        ...(currentFormProfile.stepOverrides?.[stepId] || {}),
+        ...updates
+      }
+    }
+  };
+}
+
+function getTypographyInline(fontSize, isBold) {
+  const styles = [];
+
+  if (fontSize) {
+    styles.push(`font-size:${fontSize}px`);
+  }
+
+  styles.push(`font-weight:${isBold ? 800 : 500}`);
+  return styles.join(";");
+}
+
 function setSignedInView(user) {
   const isSignedIn = Boolean(user);
 
@@ -181,9 +222,9 @@ function buildPreviewFieldMarkup(step) {
 
   return `
     <div class="question-wrap ${step.builtIn ? "" : "is-selected"}" data-preview-step-id="${escapeHtml(step.id)}">
-      <label>${escapeHtml(step.label)} ${badge}</label>
+      <label data-edit-target="field-label" style="${getTypographyInline(step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE, step.labelBold !== false)}">${escapeHtml(step.label)} ${badge}</label>
       ${inputMarkup}
-      ${step.helpText ? `<p class="preview-field-help">${escapeHtml(step.helpText)}</p>` : ""}
+      ${step.helpText ? `<p class="preview-field-help" data-edit-target="field-help" style="${getTypographyInline(step.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE, Boolean(step.helpBold))}">${escapeHtml(step.helpText)}</p>` : ""}
     </div>
   `;
 }
@@ -201,6 +242,8 @@ function renderPreview() {
 
   if (previewTitle) {
     previewTitle.textContent = currentFormProfile.formTitle || DEFAULT_FORM_TITLE;
+    previewTitle.style.fontSize = `${currentFormProfile.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE}px`;
+    previewTitle.style.fontWeight = currentFormProfile.formTitleBold === false ? "500" : "800";
   }
 
   if (previewStepCount) {
@@ -214,10 +257,14 @@ function renderPreview() {
 
   if (previewStepTitle) {
     previewStepTitle.textContent = selectedStep.title;
+    previewStepTitle.style.fontSize = `${selectedStep.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE}px`;
+    previewStepTitle.style.fontWeight = selectedStep.titleBold === false ? "500" : "800";
   }
 
   if (previewStepCopy) {
     previewStepCopy.textContent = selectedStep.copy || "Custom question";
+    previewStepCopy.style.fontSize = `${selectedStep.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE}px`;
+    previewStepCopy.style.fontWeight = selectedStep.copyBold ? "800" : "500";
   }
 
   if (previewProgressFill) {
@@ -359,6 +406,69 @@ function closeEditor() {
   editorBody.innerHTML = "";
 }
 
+function openTypographyEditor(config) {
+  if (!editorPopover || !editorBody) {
+    return;
+  }
+
+  editorPopover.hidden = false;
+  editorTitle.textContent = config.title;
+  editorCopy.textContent = config.copy;
+  editorBody.innerHTML = `
+    <label>
+      Text
+      <textarea id="editor-typography-text" maxlength="${config.maxLength || 180}">${escapeHtml(config.text || "")}</textarea>
+    </label>
+    <div class="form-editor-grid">
+      <label>
+        Font size
+        <input id="editor-typography-size" type="range" min="${config.minSize || 10}" max="${config.maxSize || 60}" value="${config.fontSize}">
+      </label>
+      <label>
+        Size value
+        <input id="editor-typography-size-number" type="number" min="${config.minSize || 10}" max="${config.maxSize || 60}" value="${config.fontSize}">
+      </label>
+    </div>
+    <label class="toggle-row">
+      <span>Bold text</span>
+      <input id="editor-typography-bold" type="checkbox" ${config.bold ? "checked" : ""}>
+    </label>
+  `;
+
+  const textInput = document.getElementById("editor-typography-text");
+  const sizeInput = document.getElementById("editor-typography-size");
+  const sizeNumberInput = document.getElementById("editor-typography-size-number");
+  const boldInput = document.getElementById("editor-typography-bold");
+
+  const apply = patch => {
+    config.apply(patch);
+    renderBuilder();
+  };
+
+  textInput?.addEventListener("input", event => {
+    apply({ text: event.target.value.slice(0, config.maxLength || 180) });
+  });
+
+  const syncSize = nextValue => {
+    const numericValue = Math.min(config.maxSize || 60, Math.max(config.minSize || 10, Number(nextValue) || config.fontSize));
+    if (sizeInput) sizeInput.value = String(numericValue);
+    if (sizeNumberInput) sizeNumberInput.value = String(numericValue);
+    apply({ fontSize: numericValue });
+  };
+
+  sizeInput?.addEventListener("input", event => {
+    syncSize(event.target.value);
+  });
+
+  sizeNumberInput?.addEventListener("input", event => {
+    syncSize(event.target.value);
+  });
+
+  boldInput?.addEventListener("change", event => {
+    apply({ bold: Boolean(event.target.checked) });
+  });
+}
+
 function openFieldEditor(fieldId) {
   const field = getCustomFields().find(entry => entry.id === fieldId);
 
@@ -479,6 +589,118 @@ function openFieldEditor(fieldId) {
 function safeShortLabel(value) {
   const trimmed = String(value || "").trim();
   return trimmed.slice(0, 12) || "Custom";
+}
+
+function openPageTitleEditor() {
+  openTypographyEditor({
+    title: "Page title",
+    copy: "Edit the page title text and how strongly it appears above the form.",
+    text: currentFormProfile.formTitle || DEFAULT_FORM_TITLE,
+    fontSize: currentFormProfile.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE,
+    bold: currentFormProfile.formTitleBold !== false,
+    minSize: 10,
+    maxSize: 28,
+    maxLength: 60,
+    apply({ text, fontSize, bold }) {
+      currentFormProfile = {
+        ...currentFormProfile,
+        formTitle: typeof text === "string" ? (text || DEFAULT_FORM_TITLE) : currentFormProfile.formTitle,
+        formTitleFontSize: fontSize ?? currentFormProfile.formTitleFontSize,
+        formTitleBold: bold ?? currentFormProfile.formTitleBold
+      };
+    }
+  });
+}
+
+function openSelectedStepTextEditor(target) {
+  const step = getSelectedPreviewStep();
+
+  if (!step) {
+    return;
+  }
+
+  if (target === "step-title") {
+    openTypographyEditor({
+      title: "Step title",
+      copy: "Edit the large question title for this step.",
+      text: step.title,
+      fontSize: step.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
+      bold: step.titleBold !== false,
+      minSize: 20,
+      maxSize: 60,
+      maxLength: 60,
+      apply({ text, fontSize, bold }) {
+        patchStepConfig(step.id, {
+          title: typeof text === "string" ? text : step.title,
+          titleFontSize: fontSize ?? step.titleFontSize,
+          titleBold: bold ?? step.titleBold
+        });
+      }
+    });
+    return;
+  }
+
+  if (target === "step-copy") {
+    openTypographyEditor({
+      title: "Step copy",
+      copy: "Edit the supporting sentence below the question title.",
+      text: step.copy || "",
+      fontSize: step.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
+      bold: Boolean(step.copyBold),
+      minSize: 12,
+      maxSize: 26,
+      maxLength: 180,
+      apply({ text, fontSize, bold }) {
+        patchStepConfig(step.id, {
+          copy: typeof text === "string" ? text : step.copy,
+          copyFontSize: fontSize ?? step.copyFontSize,
+          copyBold: bold ?? step.copyBold
+        });
+      }
+    });
+    return;
+  }
+
+  if (target === "field-label") {
+    openTypographyEditor({
+      title: "Field label",
+      copy: "Edit the question label shown above the input.",
+      text: step.label,
+      fontSize: step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
+      bold: step.labelBold !== false,
+      minSize: 13,
+      maxSize: 28,
+      maxLength: 60,
+      apply({ text, fontSize, bold }) {
+        patchStepConfig(step.id, {
+          label: typeof text === "string" ? text : step.label,
+          labelFontSize: fontSize ?? step.labelFontSize,
+          labelBold: bold ?? step.labelBold
+        });
+      }
+    });
+    return;
+  }
+
+  if (target === "field-help") {
+    openTypographyEditor({
+      title: "Helper copy",
+      copy: "Edit the smaller helper note under this input.",
+      text: step.helpText || "",
+      fontSize: step.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE,
+      bold: Boolean(step.helpBold),
+      minSize: 11,
+      maxSize: 24,
+      maxLength: 180,
+      apply({ text, fontSize, bold }) {
+        patchStepConfig(step.id, {
+          helpText: typeof text === "string" ? text : step.helpText,
+          helpFontSize: fontSize ?? step.helpFontSize,
+          helpBold: bold ?? step.helpBold
+        });
+      }
+    });
+  }
 }
 
 function openPageEditor() {
@@ -645,7 +867,9 @@ async function init() {
     return;
   }
 
-  if (!appConfig.accountsEnabled || !appConfig.supabaseUrl || !appConfig.supabasePublishableKey) {
+  const publicKey = appConfig.supabasePublishableKey || appConfig.supabaseAnonKey || "";
+
+  if (!appConfig.accountsEnabled || !appConfig.supabaseUrl || !publicKey) {
     if (authSetupNotice) {
       authSetupNotice.hidden = false;
     }
@@ -653,7 +877,7 @@ async function init() {
     return;
   }
 
-  supabase = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, {
+  supabase = createClient(appConfig.supabaseUrl, publicKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -731,11 +955,22 @@ previewStepper?.addEventListener("click", event => {
   renderPreview();
 });
 
-previewStepHost?.addEventListener("click", () => {
+previewStepHost?.addEventListener("click", event => {
+  const editTarget = event.target.closest("[data-edit-target]")?.dataset.editTarget || "";
+
+  if (editTarget) {
+    openSelectedStepTextEditor(editTarget);
+    return;
+  }
+
   if (getCustomFields().some(field => field.id === selectedPreviewStepId)) {
     openFieldEditor(selectedPreviewStepId);
   }
 });
+
+previewTitle?.addEventListener("click", openPageTitleEditor);
+previewStepTitle?.addEventListener("click", () => openSelectedStepTextEditor("step-title"));
+previewStepCopy?.addEventListener("click", () => openSelectedStepTextEditor("step-copy"));
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {

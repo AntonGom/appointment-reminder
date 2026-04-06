@@ -35,7 +35,12 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405a";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405b";
+const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
+const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
+const DEFAULT_STEP_COPY_FONT_SIZE = 15;
+const DEFAULT_FIELD_LABEL_FONT_SIZE = 16;
+const DEFAULT_FIELD_HELP_FONT_SIZE = 13;
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -72,6 +77,90 @@ let activeCustomFormFields = [];
 let customFormFieldLookup = new Map();
 let wizardControlsInitialized = false;
 let requiredFieldAttemptIds = new Set();
+
+const BUILT_IN_FORM_STEP_DEFAULTS = {
+  phone: {
+    title: "Client Phone Number",
+    navLabel: "Phone",
+    copy: "Add a phone number if you may want to text this client later.",
+    label: "Client Phone Number",
+    helpText: "You can skip this and use email instead.",
+    placeholder: "Enter client's phone number",
+    required: false
+  },
+  email: {
+    title: "Client Email",
+    navLabel: "Email",
+    copy: "Add an email address if you may want to email this client later.",
+    label: "Client Email",
+    helpText: "You can skip this and use a phone number instead.",
+    placeholder: "Enter client's email",
+    required: false
+  },
+  name: {
+    title: "Client Name",
+    navLabel: "Name",
+    copy: "Add the client's name if you want the reminder to feel more personal.",
+    label: "Client Name",
+    helpText: "",
+    placeholder: "Enter client's name",
+    required: false
+  },
+  date: {
+    title: "Date of Service",
+    navLabel: "Date",
+    copy: "Add the appointment date if you want it included in the reminder.",
+    label: "Date of Service",
+    helpText: "",
+    placeholder: "",
+    required: false
+  },
+  time: {
+    title: "Time of Service",
+    navLabel: "Time",
+    copy: "Add the appointment time if you want it included in the reminder.",
+    label: "Time of Service",
+    helpText: "",
+    placeholder: "",
+    required: false
+  },
+  address: {
+    title: "Service Location",
+    navLabel: "Location",
+    copy: "Add the service location if you want it included in the reminder.",
+    label: "Service Location",
+    helpText: "",
+    placeholder: "Enter service location",
+    required: false
+  },
+  businessContact: {
+    title: "Bussiness Contact Infoformation",
+    navLabel: "Contact",
+    copy: "This is the contact information your client will see in the reminder.",
+    label: "Bussiness Contact Infoformation",
+    helpText: "Use the phone number or email the client should use if they need to reschedule or reach you.",
+    placeholder: "Business phone or email",
+    required: false
+  },
+  notes: {
+    title: "Additional Details",
+    navLabel: "Details",
+    copy: "Add any extra details you want the client to see.",
+    label: "Additional Details",
+    helpText: "",
+    placeholder: "Parking instructions, gate code, or anything else the client should know",
+    required: false
+  }
+};
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function getSavedBrandingProfile() {
   const profile = currentSignedInUser?.user_metadata?.branding_profile;
@@ -199,13 +288,15 @@ async function initAccountTierState() {
 
     appPublicConfig = await response.json();
 
-    if (!appPublicConfig.accountsEnabled || !appPublicConfig.supabaseUrl || !appPublicConfig.supabasePublishableKey) {
+    const publicKey = appPublicConfig.supabasePublishableKey || appPublicConfig.supabaseAnonKey || "";
+
+    if (!appPublicConfig.accountsEnabled || !appPublicConfig.supabaseUrl || !publicKey) {
       renderBronzeFeatures();
       return;
     }
 
     const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    appSupabase = createClient(appPublicConfig.supabaseUrl, appPublicConfig.supabasePublishableKey, {
+    appSupabase = createClient(appPublicConfig.supabaseUrl, publicKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
@@ -966,6 +1057,8 @@ function applyCustomFormPresentation(profile) {
   if (sectionTitle) {
     sectionTitle.textContent = normalizedTitle || "Appointment Reminder";
     sectionTitle.classList.toggle("visible", Boolean(normalizedTitle));
+    sectionTitle.style.fontSize = `${profile?.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE}px`;
+    sectionTitle.style.fontWeight = profile?.formTitleBold === false ? "500" : "800";
   }
 
   document.documentElement.style.setProperty("--bg-top", profile?.backgroundTop || "#10141c");
@@ -973,10 +1066,79 @@ function applyCustomFormPresentation(profile) {
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
 }
 
+function getActiveStepTypography(stepElement) {
+  const fieldId = stepElement?.dataset?.field || "";
+  const customField = getCustomFieldConfig(fieldId);
+  const builtInOverride = activeCustomFormProfile?.stepOverrides?.[fieldId] || null;
+  const source = customField || builtInOverride || {};
+
+  return {
+    titleFontSize: Number(source.titleFontSize) || DEFAULT_STEP_TITLE_FONT_SIZE,
+    titleBold: source.titleBold !== false,
+    copyFontSize: Number(source.copyFontSize) || DEFAULT_STEP_COPY_FONT_SIZE,
+    copyBold: Boolean(source.copyBold)
+  };
+}
+
+function applyBuiltInStepOverrides() {
+  Object.entries(BUILT_IN_FORM_STEP_DEFAULTS).forEach(([fieldId, defaults]) => {
+    const stepElement = document.querySelector(`.wizard-step[data-field="${fieldId}"]`);
+
+    if (!stepElement) {
+      return;
+    }
+
+    const override = activeCustomFormProfile?.stepOverrides?.[fieldId] || {};
+    const labelText = override.label || defaults.label;
+    const helpText = override.helpText || defaults.helpText;
+    const required = override.required === true;
+    const badgeMarkup = required
+      ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
+      : `<span class="label-badge">Optional</span>`;
+
+    stepElement.dataset.title = override.title || defaults.title;
+    stepElement.dataset.nav = override.navLabel || defaults.navLabel;
+    stepElement.dataset.copy = override.copy || defaults.copy;
+    stepElement.dataset.optional = required ? "false" : "true";
+
+    const labelElement = stepElement.querySelector("label");
+    if (labelElement) {
+      labelElement.innerHTML = `${escapeHtml(labelText)} ${badgeMarkup}`;
+      labelElement.style.fontSize = `${override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px`;
+      labelElement.style.fontWeight = override.labelBold === false ? "500" : "800";
+    }
+
+    const inputElement = stepElement.querySelector("input, textarea");
+    if (inputElement && typeof defaults.placeholder === "string") {
+      inputElement.placeholder = override.placeholder || defaults.placeholder;
+    }
+
+    let helpElement = stepElement.querySelector(".field-note");
+
+    if (!helpElement && helpText) {
+      helpElement = document.createElement("p");
+      helpElement.className = "field-note";
+      const errorElement = stepElement.querySelector(".field-error");
+      if (errorElement?.parentNode) {
+        errorElement.parentNode.insertBefore(helpElement, errorElement.nextSibling);
+      }
+    }
+
+    if (helpElement) {
+      helpElement.textContent = helpText;
+      helpElement.classList.toggle("visible", Boolean(helpText));
+      helpElement.style.fontSize = `${override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE}px`;
+      helpElement.style.fontWeight = override.helpBold ? "800" : "500";
+    }
+  });
+}
+
 function buildCustomWizardStepMarkup(field) {
   const type = String(field?.type || "text").trim();
+  const title = String(field?.title || field?.label || "Custom Question").trim();
   const label = String(field?.label || "Custom Question").trim();
   const navLabel = String(field?.navLabel || label || "Custom").trim();
+  const stepCopy = String(field?.copy || field?.helpText || "").trim();
   const helpText = String(field?.helpText || "").trim();
   const placeholder = String(field?.placeholder || "").trim();
   const optionalBadge = field?.required
@@ -987,12 +1149,12 @@ function buildCustomWizardStepMarkup(field) {
     : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${placeholder.replace(/"/g, "&quot;")}">`;
 
   return `
-    <div class="wizard-step custom-wizard-step" data-title="${label.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${helpText.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
+    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
       <div class="question-wrap">
-        <label for="${field.id}">${label} ${optionalBadge}</label>
+        <label for="${field.id}" style="font-size:${field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px;font-weight:${field.labelBold === false ? 500 : 800};">${label} ${optionalBadge}</label>
         ${inputMarkup}
         <div id="${field.id}-error" class="field-error"></div>
-        ${helpText ? `<p class="field-note visible">${helpText}</p>` : ""}
+        ${helpText ? `<p class="field-note visible" style="font-size:${field.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE}px;font-weight:${field.helpBold ? 800 : 500};">${helpText}</p>` : ""}
       </div>
     </div>
   `;
@@ -1004,12 +1166,15 @@ function renderCustomWizardSteps() {
   const reviewStep = document.querySelector('.wizard-step[data-field="consent"]');
 
   if (!reviewStep || !activeCustomFormFields.length) {
+    applyBuiltInStepOverrides();
     return;
   }
 
   activeCustomFormFields.forEach(field => {
     reviewStep.insertAdjacentHTML("beforebegin", buildCustomWizardStepMarkup(field));
   });
+
+  applyBuiltInStepOverrides();
 }
 
 function bindCustomFieldInputListeners() {
@@ -2187,6 +2352,11 @@ function updateWizardUI() {
   stepCount.textContent = `Step ${currentStepIndex + 1} of ${totalSteps}`;
   stepTitle.textContent = currentStep.dataset.title || "";
   stepCopy.textContent = currentStep.dataset.copy || "";
+  const stepTypography = getActiveStepTypography(currentStep);
+  stepTitle.style.fontSize = `${stepTypography.titleFontSize}px`;
+  stepTitle.style.fontWeight = stepTypography.titleBold ? "800" : "500";
+  stepCopy.style.fontSize = `${stepTypography.copyFontSize}px`;
+  stepCopy.style.fontWeight = stepTypography.copyBold ? "800" : "500";
   progressStatus.textContent = getProgressStatus(currentStepIndex, totalSteps);
   progressFill.style.width = `${((currentStepIndex + 1) / totalSteps) * 100}%`;
 

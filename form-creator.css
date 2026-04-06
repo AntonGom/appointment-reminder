@@ -167,6 +167,20 @@ body[data-page="form-creator"] {
   display: block;
 }
 
+#form-preview-title,
+#preview-step-title,
+#preview-step-copy,
+[data-edit-target] {
+  cursor: pointer;
+}
+
+#form-preview-title:hover,
+#preview-step-title:hover,
+#preview-step-copy:hover,
+[data-edit-target]:hover {
+  opacity: 0.88;
+}
+
 .wizard-head {
   margin-bottom: 24px;
   text-align: center;

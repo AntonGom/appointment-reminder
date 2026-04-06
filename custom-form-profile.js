@@ -1,6 +1,11 @@
 export const DEFAULT_FORM_TITLE = "Appointment Reminder";
 export const DEFAULT_BACKGROUND_TOP = "#10141c";
 export const DEFAULT_BACKGROUND_BOTTOM = "#1a2230";
+export const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
+export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
+export const DEFAULT_STEP_COPY_FONT_SIZE = 15;
+export const DEFAULT_FIELD_LABEL_FONT_SIZE = 16;
+export const DEFAULT_FIELD_HELP_FONT_SIZE = 13;
 
 export const BASE_REMINDER_STEPS = [
   {
@@ -164,6 +169,29 @@ function safeString(value) {
   return String(value || "").trim();
 }
 
+function clampNumber(value, fallback, min, max) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function normalizeTypography(rawTypography = {}) {
+  return {
+    titleFontSize: clampNumber(rawTypography.titleFontSize, DEFAULT_STEP_TITLE_FONT_SIZE, 20, 60),
+    titleBold: rawTypography.titleBold !== false,
+    copyFontSize: clampNumber(rawTypography.copyFontSize, DEFAULT_STEP_COPY_FONT_SIZE, 12, 26),
+    copyBold: Boolean(rawTypography.copyBold),
+    labelFontSize: clampNumber(rawTypography.labelFontSize, DEFAULT_FIELD_LABEL_FONT_SIZE, 13, 28),
+    labelBold: rawTypography.labelBold !== false,
+    helpFontSize: clampNumber(rawTypography.helpFontSize, DEFAULT_FIELD_HELP_FONT_SIZE, 11, 24),
+    helpBold: Boolean(rawTypography.helpBold)
+  };
+}
+
 function getRandomSuffix() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID().replace(/-/g, "").slice(0, 10);
@@ -181,11 +209,14 @@ export function createCustomField(type = "text") {
   return {
     id: `custom_${getRandomSuffix()}`,
     type: meta.id,
+    title: meta.label,
+    copy: meta.helpText,
     label: meta.label,
     navLabel: meta.shortLabel,
     placeholder: meta.placeholder,
     helpText: meta.helpText,
-    required: false
+    required: false,
+    ...normalizeTypography()
   };
 }
 
@@ -201,12 +232,28 @@ function normalizeCustomField(rawField, index) {
   return {
     id: safeString(rawField?.id) || `custom_${index}_${getRandomSuffix()}`,
     type: meta.id,
+    title: (safeString(rawField?.title) || label).slice(0, 60),
+    copy: safeString(rawField?.copy).slice(0, 180),
     label: label.slice(0, 60),
     navLabel: navLabel.slice(0, 12),
     placeholder: placeholder.slice(0, 120),
     helpText: safeString(rawField?.helpText).slice(0, 160),
     required: Boolean(rawField?.required),
-    icon: meta.icon
+    icon: meta.icon,
+    ...normalizeTypography(rawField)
+  };
+}
+
+function normalizeStepOverride(rawOverride = {}, fallbackStep = {}) {
+  return {
+    title: safeString(rawOverride.title).slice(0, 60) || fallbackStep.title || "",
+    navLabel: safeString(rawOverride.navLabel).slice(0, 12) || fallbackStep.navLabel || "",
+    copy: safeString(rawOverride.copy).slice(0, 180) || fallbackStep.copy || "",
+    label: safeString(rawOverride.label).slice(0, 60) || fallbackStep.label || "",
+    helpText: safeString(rawOverride.helpText).slice(0, 180) || fallbackStep.helpText || "",
+    placeholder: safeString(rawOverride.placeholder).slice(0, 120) || fallbackStep.placeholder || "",
+    required: rawOverride.required === true,
+    ...normalizeTypography(rawOverride)
   };
 }
 
@@ -215,11 +262,20 @@ export function normalizeCustomFormProfile(rawProfile) {
   const normalizedFields = Array.isArray(profile.fields)
     ? profile.fields.map((field, index) => normalizeCustomField(field, index))
     : [];
+  const rawStepOverrides = profile.stepOverrides && typeof profile.stepOverrides === "object"
+    ? profile.stepOverrides
+    : {};
+  const stepOverrides = Object.fromEntries(
+    BASE_REMINDER_STEPS.map(step => [step.id, normalizeStepOverride(rawStepOverrides[step.id], step)])
+  );
 
   return {
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
+    formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
+    formTitleBold: profile.formTitleBold !== false,
+    stepOverrides,
     fields: normalizedFields
   };
 }
@@ -228,19 +284,30 @@ export function buildPreviewStepList(profile) {
   const normalized = normalizeCustomFormProfile(profile);
 
   return [
-    ...BASE_REMINDER_STEPS,
+    ...BASE_REMINDER_STEPS.map(step => ({
+      ...step,
+      ...normalized.stepOverrides[step.id]
+    })),
     ...normalized.fields.map(field => ({
       id: field.id,
-      title: field.label,
+      title: field.title || field.label,
       navLabel: field.navLabel || field.label,
-      copy: field.helpText || "Custom question added from Form Creator.",
+      copy: field.copy || field.helpText || "Custom question added from Form Creator.",
       label: field.label,
       placeholder: field.placeholder,
       type: field.type,
       required: field.required,
       helpText: field.helpText,
       builtIn: false,
-      icon: getCustomFieldTypeMeta(field.type).icon
+      icon: getCustomFieldTypeMeta(field.type).icon,
+      titleFontSize: field.titleFontSize,
+      titleBold: field.titleBold,
+      copyFontSize: field.copyFontSize,
+      copyBold: field.copyBold,
+      labelFontSize: field.labelFontSize,
+      labelBold: field.labelBold,
+      helpFontSize: field.helpFontSize,
+      helpBold: field.helpBold
     })),
     {
       id: "review",
