@@ -520,14 +520,6 @@ function openFieldEditor(fieldId) {
   editorCopy.textContent = "Rename this question and control how it appears in Send Reminder.";
   editorBody.innerHTML = `
     <label>
-      Question heading
-      <input id="editor-field-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
-    </label>
-    <label>
-      Step copy
-      <textarea id="editor-field-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
-    </label>
-    <label>
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
@@ -561,8 +553,6 @@ function openFieldEditor(fieldId) {
     ${isCustomField ? `<button id="editor-delete-field" class="delete-field-button" type="button">Delete this question</button>` : ""}
   `;
 
-  const titleInput = document.getElementById("editor-field-title");
-  const copyInput = document.getElementById("editor-field-copy");
   const labelInput = document.getElementById("editor-field-label");
   const navInput = document.getElementById("editor-field-nav");
   const typeSelect = document.getElementById("editor-field-type");
@@ -599,14 +589,6 @@ function openFieldEditor(fieldId) {
 
     renderBuilder();
   };
-
-  titleInput?.addEventListener("input", event => {
-    patchField({ title: event.target.value.slice(0, 60) });
-  });
-
-  copyInput?.addEventListener("input", event => {
-    patchField({ copy: event.target.value.slice(0, 180) });
-  });
 
   labelInput?.addEventListener("input", event => {
     patchField({ label: event.target.value.slice(0, 60) });
