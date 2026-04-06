@@ -35,10 +35,11 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406b";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406c";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
+const DEFAULT_FORM_SURFACE_STYLE = "classic";
 const DEFAULT_FORM_TEXT_COLOR = "#111827";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
@@ -1078,6 +1079,7 @@ function applyCustomFormPresentation(profile) {
     container.style.setProperty("--card-background", buildCustomFormSurfaceBackground(profile));
     container.style.setProperty("--text-main", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
     container.style.setProperty("--text-soft", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+    container.dataset.formStyle = profile?.formSurfaceStyle || DEFAULT_FORM_SURFACE_STYLE;
   }
 
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";

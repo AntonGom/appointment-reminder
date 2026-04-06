@@ -8,6 +8,7 @@ import {
   DEFAULT_FORM_SURFACE_COLOR,
   DEFAULT_FORM_SURFACE_ACCENT_COLOR,
   DEFAULT_FORM_SURFACE_GRADIENT,
+  DEFAULT_FORM_SURFACE_STYLE,
   DEFAULT_FORM_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
   DEFAULT_STEP_TITLE_FONT_SIZE,
@@ -24,7 +25,7 @@ import {
   getInlineFieldsForPage,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260406b";
+} from "./custom-form-profile.js?v=20260406c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -63,6 +64,29 @@ let savedFormProfile = normalizeCustomFormProfile({});
 let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
 let dragFieldId = "";
 
+const FORM_SURFACE_STYLE_OPTIONS = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Clean solid card with the current polished reminder look."
+  },
+  {
+    id: "frosted",
+    label: "Frosted",
+    description: "Soft translucent surface with a cooler premium haze."
+  },
+  {
+    id: "blur",
+    label: "Blur",
+    description: "Heavier glass blur with more transparency and softer edges."
+  },
+  {
+    id: "liquid-glass",
+    label: "Liquid Glass",
+    description: "Glossy glass layering inspired by liquid glass UI treatments."
+  }
+];
+
 function buildTemplateField(config) {
   const base = createCustomField(config.type || "text");
 
@@ -99,6 +123,7 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f7f3eb",
       formSurfaceAccentColor: "#e6c891",
       formSurfaceGradient: "soft-blend",
+      formSurfaceStyle: "classic",
       formTextColor: "#1f2937",
       stepNavBackgroundColor: "#ede3d2",
       stepNavTextColor: "#4b3c2a",
@@ -181,6 +206,7 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f4fbff",
       formSurfaceAccentColor: "#d7f2ff",
       formSurfaceGradient: "top-glow",
+      formSurfaceStyle: "frosted",
       formTextColor: "#12303a",
       stepNavBackgroundColor: "#dff5fb",
       stepNavTextColor: "#115e73",
@@ -280,6 +306,7 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#faf7ff",
       formSurfaceAccentColor: "#ede9fe",
       formSurfaceGradient: "soft-blend",
+      formSurfaceStyle: "blur",
       formTextColor: "#221b34",
       stepNavBackgroundColor: "#efe7ff",
       stepNavTextColor: "#5b21b6",
@@ -356,6 +383,7 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f8fbff",
       formSurfaceAccentColor: "#dbeafe",
       formSurfaceGradient: "diagonal",
+      formSurfaceStyle: "frosted",
       formTextColor: "#102a43",
       stepNavBackgroundColor: "#e0f2fe",
       stepNavTextColor: "#0c4a6e",
@@ -436,6 +464,7 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#fffaf0",
       formSurfaceAccentColor: "#fde68a",
       formSurfaceGradient: "soft-blend",
+      formSurfaceStyle: "liquid-glass",
       formTextColor: "#1f2937",
       stepNavBackgroundColor: "#fef3c7",
       stepNavTextColor: "#92400e",
@@ -717,6 +746,7 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-form-surface-background", buildFormSurfaceBackground(currentFormProfile));
   previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  previewShell.dataset.formStyle = currentFormProfile.formSurfaceStyle || DEFAULT_FORM_SURFACE_STYLE;
 }
 
 function applyStepNavigationStyles() {
@@ -1536,6 +1566,13 @@ function openFormShellEditor() {
   editorTitle.textContent = "Form box style";
   editorCopy.textContent = "Change the full form card color, gradient, and overall text color for Send Reminder.";
   editorBody.innerHTML = `
+    <label>
+      Form type
+      <select id="editor-surface-style">
+        ${FORM_SURFACE_STYLE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceStyle || DEFAULT_FORM_SURFACE_STYLE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+      </select>
+    </label>
+    <p class="editor-inline-note">${escapeHtml(FORM_SURFACE_STYLE_OPTIONS.find(option => option.id === (currentFormProfile.formSurfaceStyle || DEFAULT_FORM_SURFACE_STYLE))?.description || "")}</p>
     <div class="form-editor-grid">
       <label>
         Form color
@@ -1579,6 +1616,15 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceGradient: event.target.value
     };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-style")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceStyle: event.target.value
+    };
+    openFormShellEditor();
     renderBuilder();
   });
 

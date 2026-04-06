@@ -4,6 +4,7 @@ export const DEFAULT_BACKGROUND_BOTTOM = "#1a2230";
 export const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 export const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 export const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
+export const DEFAULT_FORM_SURFACE_STYLE = "classic";
 export const DEFAULT_FORM_TEXT_COLOR = "#111827";
 export const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
@@ -298,6 +299,7 @@ export function normalizeCustomFormProfile(rawProfile) {
     formSurfaceColor: safeString(profile.formSurfaceColor) || DEFAULT_FORM_SURFACE_COLOR,
     formSurfaceAccentColor: safeString(profile.formSurfaceAccentColor) || DEFAULT_FORM_SURFACE_ACCENT_COLOR,
     formSurfaceGradient: safeString(profile.formSurfaceGradient) || DEFAULT_FORM_SURFACE_GRADIENT,
+    formSurfaceStyle: safeString(profile.formSurfaceStyle) || DEFAULT_FORM_SURFACE_STYLE,
     formTextColor: safeString(profile.formTextColor) || DEFAULT_FORM_TEXT_COLOR,
     stepNavBackgroundColor: safeString(profile.stepNavBackgroundColor) || DEFAULT_STEP_NAV_BACKGROUND,
     stepNavActiveBackgroundColor: safeString(profile.stepNavActiveBackgroundColor) || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
