@@ -159,6 +159,7 @@ body[data-page="form-creator"] {
   border: 1px solid var(--fc-card-border);
   box-shadow: 0 26px 60px rgba(15, 23, 42, 0.22);
   backdrop-filter: blur(12px);
+  cursor: pointer;
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
 
@@ -171,6 +172,22 @@ body[data-page="form-creator"] {
   pointer-events: none;
 }
 
+.fc-preview-shell::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 22px;
+  border: 3px solid transparent;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  background: rgba(255, 255, 255, 0);
+  pointer-events: none;
+  z-index: 2;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
 .fc-preview-container,
 .fc-preview-wizard {
   position: relative;
@@ -179,6 +196,12 @@ body[data-page="form-creator"] {
 
 .fc-preview-shell:hover {
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.24);
+}
+
+.fc-preview-shell:hover::after {
+  border-color: rgba(239, 68, 68, 0.88);
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
 }
 
 .section-title.visible {
