@@ -789,6 +789,10 @@ function startDrag(payload, event, draggedElement = null) {
     dragFieldId = payload.fieldId || "";
   }
 
+  if (previewStepper) {
+    previewStepper.classList.toggle("is-dragging-steps", payload?.kind === "step" || payload?.kind === "page-template");
+  }
+
   if (draggedElement) {
     draggedElement.classList.add("is-dragging");
   }
@@ -803,6 +807,8 @@ function finishDrag(draggedElement = null) {
   dragPayload = null;
   dragFieldId = "";
   clearDragIndicators();
+
+  previewStepper?.classList.remove("is-dragging-steps");
 
   if (draggedElement) {
     draggedElement.classList.remove("is-dragging");
