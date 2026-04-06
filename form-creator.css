@@ -212,6 +212,12 @@ body[data-page="form-creator"] {
   color: var(--fc-form-text-soft, var(--fc-text-soft));
 }
 
+#form-preview-title {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+}
+
 #form-preview-title,
 #preview-step-title,
 #preview-step-copy,
@@ -307,12 +313,9 @@ body[data-page="form-creator"] {
 }
 
 .stepper {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(76px, 92px);
-  justify-content: start;
+  display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 6px;
   margin-top: 16px;
   padding: 4px 2px 8px;
   overflow-x: auto;
@@ -320,7 +323,8 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper-button {
-  width: 100%;
+  flex: 0 0 78px;
+  width: 78px;
   min-height: 68px;
   padding: 9px 8px;
   border: 1px solid color-mix(in srgb, var(--fc-step-nav-bg) 70%, rgba(148, 163, 184, 0.52));
@@ -403,15 +407,19 @@ body[data-page="form-creator"] {
 }
 
 .preview-step-dropzone {
-  width: 18px;
+  flex: 0 0 0;
+  width: 0;
   min-height: 68px;
   border-radius: 999px;
   border: 2px dashed transparent;
   opacity: 0;
+  overflow: hidden;
   transition: opacity 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
 .stepper.is-dragging-steps .preview-step-dropzone {
+  flex-basis: 18px;
+  width: 18px;
   opacity: 0.62;
   border-color: rgba(37, 99, 235, 0.3);
   background: rgba(219, 234, 254, 0.38);
