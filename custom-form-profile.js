@@ -224,6 +224,7 @@ export function createCustomField(type = "text") {
   const meta = getCustomFieldTypeMeta(type);
   return {
     id: `custom_${getRandomSuffix()}`,
+    pageId: "",
     type: meta.id,
     title: meta.label,
     copy: meta.helpText,
@@ -248,6 +249,7 @@ function normalizeCustomField(rawField, index) {
 
   return {
     id: safeString(rawField?.id) || `custom_${index}_${getRandomSuffix()}`,
+    pageId: safeString(rawField?.pageId).slice(0, 60),
     type: meta.id,
     title: (safeString(rawField?.title) || label).slice(0, 60),
     copy: safeString(rawField?.copy).slice(0, 180),
@@ -270,6 +272,7 @@ function normalizeStepOverride(rawOverride = {}, fallbackStep = {}) {
     helpText: safeString(rawOverride.helpText).slice(0, 180) || fallbackStep.helpText || "",
     placeholder: safeString(rawOverride.placeholder).slice(0, 120) || fallbackStep.placeholder || "",
     required: rawOverride.required === true,
+    hidden: rawOverride.hidden === true,
     ...normalizeTypography(rawOverride)
   };
 }
@@ -309,13 +312,22 @@ export function normalizeCustomFormProfile(rawProfile) {
 
 export function buildPreviewStepList(profile) {
   const normalized = normalizeCustomFormProfile(profile);
+  const topLevelCustomFields = normalized.fields.filter(field => !field.pageId);
+  const inlinePageCounts = normalized.fields.reduce((counts, field) => {
+    if (field.pageId) {
+      counts[field.pageId] = (counts[field.pageId] || 0) + 1;
+    }
+
+    return counts;
+  }, {});
 
   return [
     ...BASE_REMINDER_STEPS.map(step => ({
       ...step,
-      ...normalized.stepOverrides[step.id]
-    })),
-    ...normalized.fields.map(field => ({
+      ...normalized.stepOverrides[step.id],
+      baseFieldHidden: normalized.stepOverrides[step.id]?.hidden === true
+    })).filter(step => !step.baseFieldHidden || inlinePageCounts[step.id] > 0),
+    ...topLevelCustomFields.map(field => ({
       id: field.id,
       title: field.title || field.label,
       navLabel: field.navLabel || field.label,
@@ -355,4 +367,9 @@ export function getBackgroundPresetMatch(profile) {
     preset.top.toLowerCase() === normalized.backgroundTop.toLowerCase()
       && preset.bottom.toLowerCase() === normalized.backgroundBottom.toLowerCase()
   )) || null;
+}
+
+export function getInlineFieldsForPage(profile, pageId) {
+  const normalized = normalizeCustomFormProfile(profile);
+  return normalized.fields.filter(field => field.pageId === pageId);
 }

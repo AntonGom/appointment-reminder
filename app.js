@@ -35,7 +35,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406a";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406b";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -1131,6 +1131,70 @@ function getStepNavigationAppearance(stepElement) {
   };
 }
 
+function getBuiltInFieldType(fieldId) {
+  if (fieldId === "phone") {
+    return "phone";
+  }
+
+  if (fieldId === "email") {
+    return "email";
+  }
+
+  if (fieldId === "date") {
+    return "date";
+  }
+
+  if (fieldId === "time") {
+    return "time";
+  }
+
+  if (fieldId === "notes") {
+    return "textarea";
+  }
+
+  return "text";
+}
+
+function getInlineCustomFieldsForPage(pageId) {
+  return activeCustomFormFields.filter(field => field.pageId === pageId);
+}
+
+function buildWizardFieldControlMarkup(field, options = {}) {
+  const type = String(field?.type || "text").trim();
+  const label = String(field?.label || field?.title || "Custom Question").trim();
+  const helpText = String(field?.helpText || "").trim();
+  const placeholder = String(field?.placeholder || "").trim();
+  const isRequired = field?.required === true;
+  const optionalBadge = isRequired
+    ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
+    : `<span class="label-badge">Optional</span>`;
+  const groupClassName = options.isBuiltIn
+    ? "wizard-field-group is-built-in"
+    : "wizard-field-group";
+  const groupStyle = options.isBuiltIn || options.isFirst ? "" : ' style="margin-top:18px;"';
+  const inputMarkup = type === "textarea"
+    ? `<textarea id="${field.id}" placeholder="${placeholder.replace(/"/g, "&quot;")}"></textarea>`
+    : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${(type === "date" || type === "time" ? "" : placeholder).replace(/"/g, "&quot;")}">`;
+  const mapMarkup = options.includeMapPreview
+    ? `
+      <div id="map-preview" class="map-preview" aria-live="polite">
+        <iframe id="map-preview-frame" class="map-preview-frame" title="Location map preview" loading="lazy"></iframe>
+        <p id="map-preview-note" class="map-preview-note"></p>
+      </div>
+    `
+    : "";
+
+  return `
+    <div class="${groupClassName}" data-inline-field="${field.id}"${groupStyle}>
+      <label for="${field.id}" style="font-size:${field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px;font-weight:${field.labelBold === false ? 500 : 800};">${escapeHtml(label)} ${optionalBadge}</label>
+      ${inputMarkup}
+      <div id="${field.id}-error" class="field-error"></div>
+      ${mapMarkup}
+      ${helpText ? `<p class="field-note visible" style="font-size:${field.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE}px;font-weight:${field.helpBold ? 800 : 500};">${escapeHtml(helpText)}</p>` : ""}
+    </div>
+  `;
+}
+
 function applyBuiltInStepOverrides() {
   Object.entries(BUILT_IN_FORM_STEP_DEFAULTS).forEach(([fieldId, defaults]) => {
     const stepElement = document.querySelector(`.wizard-step[data-field="${fieldId}"]`);
@@ -1140,12 +1204,16 @@ function applyBuiltInStepOverrides() {
     }
 
     const override = activeCustomFormProfile?.stepOverrides?.[fieldId] || {};
-    const labelText = override.label || defaults.label;
-    const helpText = override.helpText || defaults.helpText;
-    const required = override.required === true;
-    const badgeMarkup = required
-      ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
-      : `<span class="label-badge">Optional</span>`;
+    const inlineFields = getInlineCustomFieldsForPage(fieldId);
+    const baseFieldVisible = override.hidden !== true;
+    const shouldShowStep = baseFieldVisible || inlineFields.length > 0;
+    const required = (baseFieldVisible && override.required === true) || inlineFields.some(field => field.required);
+
+    stepElement.hidden = !shouldShowStep;
+
+    if (!shouldShowStep) {
+      return;
+    }
 
     stepElement.dataset.title = override.title || defaults.title;
     stepElement.dataset.nav = override.navLabel || defaults.navLabel;
@@ -1153,60 +1221,57 @@ function applyBuiltInStepOverrides() {
     stepElement.dataset.copy = override.copy || defaults.copy;
     stepElement.dataset.optional = required ? "false" : "true";
 
-    const labelElement = stepElement.querySelector("label");
-    if (labelElement) {
-      labelElement.innerHTML = `${escapeHtml(labelText)} ${badgeMarkup}`;
-      labelElement.style.fontSize = `${override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px`;
-      labelElement.style.fontWeight = override.labelBold === false ? "500" : "800";
-    }
+    const questionWrap = stepElement.querySelector(".question-wrap");
 
-    const inputElement = stepElement.querySelector("input, textarea");
-    if (inputElement && typeof defaults.placeholder === "string") {
-      inputElement.placeholder = override.placeholder || defaults.placeholder;
-    }
+    if (questionWrap) {
+      const fieldMarkup = [];
 
-    let helpElement = stepElement.querySelector(".field-note");
-
-    if (!helpElement && helpText) {
-      helpElement = document.createElement("p");
-      helpElement.className = "field-note";
-      const errorElement = stepElement.querySelector(".field-error");
-      if (errorElement?.parentNode) {
-        errorElement.parentNode.insertBefore(helpElement, errorElement.nextSibling);
+      if (baseFieldVisible) {
+        fieldMarkup.push(buildWizardFieldControlMarkup({
+          id: fieldId,
+          type: getBuiltInFieldType(fieldId),
+          label: override.label || defaults.label,
+          placeholder: override.placeholder || defaults.placeholder,
+          helpText: override.helpText || defaults.helpText,
+          required: override.required === true,
+          labelFontSize: override.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
+          labelBold: override.labelBold,
+          helpFontSize: override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE,
+          helpBold: override.helpBold
+        }, {
+          isBuiltIn: true,
+          includeMapPreview: fieldId === "address"
+        }));
       }
-    }
 
-    if (helpElement) {
-      helpElement.textContent = helpText;
-      helpElement.classList.toggle("visible", Boolean(helpText));
-      helpElement.style.fontSize = `${override.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE}px`;
-      helpElement.style.fontWeight = override.helpBold ? "800" : "500";
+      inlineFields.forEach((field, index) => {
+        fieldMarkup.push(buildWizardFieldControlMarkup(field, {
+          isFirst: !baseFieldVisible && index === 0
+        }));
+      });
+
+      questionWrap.innerHTML = fieldMarkup.join("");
     }
   });
 }
 
 function buildCustomWizardStepMarkup(field) {
-  const type = String(field?.type || "text").trim();
   const title = String(field?.title || field?.label || "Custom Question").trim();
   const label = String(field?.label || "Custom Question").trim();
   const navLabel = String(field?.navLabel || label || "Custom").trim();
   const stepCopy = String(field?.copy || field?.helpText || "").trim();
-  const helpText = String(field?.helpText || "").trim();
-  const placeholder = String(field?.placeholder || "").trim();
-  const optionalBadge = field?.required
-    ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
-    : `<span class="label-badge">Optional</span>`;
-  const inputMarkup = type === "textarea"
-    ? `<textarea id="${field.id}" placeholder="${placeholder.replace(/"/g, "&quot;")}"></textarea>`
-    : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${placeholder.replace(/"/g, "&quot;")}">`;
+  const inlineFields = getInlineCustomFieldsForPage(field.id);
+  const pageRequired = field?.required || inlineFields.some(entry => entry.required);
 
   return `
-    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-nav-color="${(field.navLabelColor || "").replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
+    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-nav-color="${(field.navLabelColor || "").replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${pageRequired ? "false" : "true"}">
       <div class="question-wrap">
-        <label for="${field.id}" style="font-size:${field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px;font-weight:${field.labelBold === false ? 500 : 800};">${label} ${optionalBadge}</label>
-        ${inputMarkup}
-        <div id="${field.id}-error" class="field-error"></div>
-        ${helpText ? `<p class="field-note visible" style="font-size:${field.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE}px;font-weight:${field.helpBold ? 800 : 500};">${helpText}</p>` : ""}
+        ${buildWizardFieldControlMarkup({
+          ...field,
+          title,
+          label
+        }, { isBuiltIn: true })}
+        ${inlineFields.map(entry => buildWizardFieldControlMarkup(entry)).join("")}
       </div>
     </div>
   `;
@@ -1216,13 +1281,14 @@ function renderCustomWizardSteps() {
   document.querySelectorAll(".custom-wizard-step").forEach(step => step.remove());
 
   const reviewStep = document.querySelector('.wizard-step[data-field="consent"]');
+  const topLevelFields = activeCustomFormFields.filter(field => !field.pageId);
 
-  if (!reviewStep || !activeCustomFormFields.length) {
+  if (!reviewStep || !topLevelFields.length) {
     applyBuiltInStepOverrides();
     return;
   }
 
-  activeCustomFormFields.forEach(field => {
+  topLevelFields.forEach(field => {
     reviewStep.insertAdjacentHTML("beforebegin", buildCustomWizardStepMarkup(field));
   });
 
@@ -2526,7 +2592,7 @@ function moveToNextStep() {
 }
 
 function initWizard() {
-  wizardSteps = Array.from(document.querySelectorAll(".wizard-step"));
+  wizardSteps = Array.from(document.querySelectorAll(".wizard-step")).filter(step => !step.hidden);
   visitedSteps = wizardSteps.map((_, index) => index === 0);
   currentStepIndex = Math.min(currentStepIndex, Math.max(wizardSteps.length - 1, 0));
 

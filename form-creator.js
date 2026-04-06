@@ -21,9 +21,10 @@ import {
   normalizeCustomFormProfile,
   createCustomField,
   buildPreviewStepList,
+  getInlineFieldsForPage,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260406a";
+} from "./custom-form-profile.js?v=20260406b";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -581,6 +582,10 @@ function getPreviewSteps() {
   return buildPreviewStepList(currentFormProfile);
 }
 
+function getTopLevelCustomFields() {
+  return getCustomFields().filter(field => !field.pageId);
+}
+
 function getSelectedPreviewStep() {
   const steps = getPreviewSteps();
   return steps.find(step => step.id === selectedPreviewStepId) || steps[0] || null;
@@ -591,7 +596,39 @@ function getEditableStep(stepId) {
     return null;
   }
 
-  return getPreviewSteps().find(step => step.id === stepId) || null;
+  return getPreviewSteps().find(step => step.id === stepId)
+    || getCustomFields().find(field => field.id === stepId)
+    || null;
+}
+
+function getCurrentPageId() {
+  return selectedPreviewStepId;
+}
+
+function getCurrentPageFields() {
+  const page = getEditableStep(getCurrentPageId());
+
+  if (!page || page.id === "review") {
+    return [];
+  }
+
+  const baseFieldHidden = Boolean(page.baseFieldHidden);
+  const isBuiltInPage = BASE_REMINDER_STEPS.some(step => step.id === page.id);
+  const baseField = !baseFieldHidden
+    ? {
+        ...page,
+        builtIn: isBuiltInPage,
+        pageId: "",
+        isBaseField: true
+      }
+    : null;
+
+  const inlineFields = getInlineFieldsForPage(currentFormProfile, page.id).map(field => ({
+    ...field,
+    isBaseField: false
+  }));
+
+  return [baseField, ...inlineFields].filter(Boolean);
 }
 
 function isCustomStep(stepId) {
@@ -694,12 +731,29 @@ function applyStepNavigationStyles() {
   previewStepper.classList.add("is-group-editable");
 }
 
-function buildPreviewFieldMarkup(step) {
-  const isRequired = step.required === true;
+function buildPreviewFieldControlMarkup(field, options = {}) {
+  const isRequired = field.required === true;
   const badge = isRequired
     ? `<span class="label-badge required">Required</span>`
     : `<span class="label-badge">Optional</span>`;
+  const fieldLabel = field.label || field.title || "Custom Question";
+  const fieldType = field.type || "text";
+  const placeholder = escapeHtml(field.placeholder || (fieldType === "textarea" ? "Type your answer" : ""));
 
+  const inputMarkup = fieldType === "textarea"
+    ? `<textarea class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" placeholder="${placeholder}"></textarea>`
+    : `<input class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" ${fieldType === "email" ? 'type="email"' : ""} ${fieldType === "date" ? 'type="date"' : ""} ${fieldType === "time" ? 'type="time"' : ""} ${fieldType === "phone" ? 'inputmode="tel"' : ""} placeholder="${fieldType === "date" || fieldType === "time" ? "" : placeholder}">`;
+
+  return `
+    <div class="preview-field-group ${options.isPrimary ? "is-primary" : ""}" data-preview-field-group="${escapeHtml(field.id)}">
+      <label data-edit-target="field-label" data-edit-field-id="${escapeHtml(field.id)}" style="${getTypographyInline(field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE, field.labelBold !== false)}">${escapeHtml(fieldLabel)} ${badge}</label>
+      ${inputMarkup}
+      ${field.helpText ? `<p class="preview-field-help" data-edit-target="field-help" data-edit-field-id="${escapeHtml(field.id)}" style="${getTypographyInline(field.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE, Boolean(field.helpBold))}">${escapeHtml(field.helpText)}</p>` : ""}
+    </div>
+  `;
+}
+
+function buildPreviewFieldMarkup(step) {
   if (step.type === "review") {
     return `
       <div class="question-wrap is-selected">
@@ -714,15 +768,19 @@ function buildPreviewFieldMarkup(step) {
     `;
   }
 
-  const inputMarkup = step.type === "textarea"
-    ? `<textarea class="preview-field-control" placeholder="${escapeHtml(step.placeholder || "Type your answer")}"></textarea>`
-    : `<input class="preview-field-control" ${step.type === "email" ? 'type="email"' : ""} ${step.type === "date" ? 'type="date"' : ""} ${step.type === "time" ? 'type="time"' : ""} ${step.type === "phone" ? 'inputmode="tel"' : ""} placeholder="${escapeHtml(step.placeholder || "")}">`;
+  const currentPageFields = getCurrentPageFields();
+  const visibleFields = currentPageFields.length
+    ? currentPageFields
+    : (step.baseFieldHidden ? [] : [{ ...step, isBaseField: true }]);
+  const fieldMarkup = visibleFields.length
+    ? visibleFields.map((field, index) => buildPreviewFieldControlMarkup(field, {
+        isPrimary: index === 0
+      })).join("")
+    : `<div class="preview-field-empty">This page has no fields right now. Add one from the right-side tool rail.</div>`;
 
   return `
     <div class="question-wrap is-selected" data-preview-step-id="${escapeHtml(step.id)}">
-      <label data-edit-target="field-label" style="${getTypographyInline(step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE, step.labelBold !== false)}">${escapeHtml(step.label)} ${badge}</label>
-      ${inputMarkup}
-      ${step.helpText ? `<p class="preview-field-help" data-edit-target="field-help" style="${getTypographyInline(step.helpFontSize || DEFAULT_FIELD_HELP_FONT_SIZE, Boolean(step.helpBold))}">${escapeHtml(step.helpText)}</p>` : ""}
+      ${fieldMarkup}
     </div>
   `;
 }
@@ -736,7 +794,9 @@ function renderPreview() {
   }
 
   const selectedIndex = Math.max(0, steps.findIndex(step => step.id === selectedStep.id));
-  const isRequired = selectedStep.required === true;
+  const isRequired = selectedStep.type === "review"
+    ? true
+    : getCurrentPageFields().some(field => field.required) || selectedStep.required === true;
 
   if (previewTitle) {
     previewTitle.textContent = currentFormProfile.formTitle || DEFAULT_FORM_TITLE;
@@ -804,15 +864,29 @@ function renderFieldRail() {
     return;
   }
 
-  const fields = getCustomFields();
+  const fields = getCurrentPageFields();
+  const currentPage = getSelectedPreviewStep();
+
+  if (!currentPage || currentPage.id === "review") {
+    fieldRailList.innerHTML = `
+      <div class="field-rail-card is-empty">
+        <span class="field-rail-icon">+</span>
+        <div class="field-rail-body">
+          <span class="field-rail-title">Review step selected</span>
+          <span class="field-rail-meta">Add fields from any question page, not from the review step.</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   if (!fields.length) {
     fieldRailList.innerHTML = `
       <div class="field-rail-card is-empty">
         <span class="field-rail-icon">+</span>
         <div class="field-rail-body">
-          <span class="field-rail-title">No custom questions yet</span>
-          <span class="field-rail-meta">Use the floating add buttons to start building your questionnaire.</span>
+          <span class="field-rail-title">No fields on this page</span>
+          <span class="field-rail-meta">Use the add buttons above to place new questions on the current page.</span>
         </div>
       </div>
     `;
@@ -821,17 +895,24 @@ function renderFieldRail() {
 
   fieldRailList.innerHTML = fields.map(field => {
     const meta = getCustomFieldTypeMeta(field.type);
+    const isBuiltInBase = Boolean(field.isBaseField && field.builtIn);
+    const isTopLevelCustomPage = Boolean(field.isBaseField && !field.builtIn);
+    const fieldMeta = isBuiltInBase
+      ? `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`
+      : isTopLevelCustomPage
+        ? `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`
+        : `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
     return `
       <button
-        class="field-rail-card ${selectedPreviewStepId === field.id ? "is-active" : ""}"
+        class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
         type="button"
-        draggable="true"
+        ${field.isBaseField ? "" : 'draggable="true"'}
         data-field-id="${escapeHtml(field.id)}"
       >
         <span class="field-rail-icon">${escapeHtml(meta.icon)}</span>
         <span class="field-rail-body">
-          <span class="field-rail-title">${escapeHtml(field.label)}</span>
-          <span class="field-rail-meta">${escapeHtml(meta.label)}${field.required ? " - required" : ""}</span>
+          <span class="field-rail-title">${escapeHtml(field.label || field.title || "Field")}</span>
+          <span class="field-rail-meta">${fieldMeta}</span>
         </span>
         ${field.required ? `<span class="field-rail-required">Req</span>` : ""}
       </button>
@@ -840,12 +921,16 @@ function renderFieldRail() {
 
   fieldRailList.querySelectorAll("[data-field-id]").forEach(card => {
     const fieldId = card.dataset.fieldId || "";
+    const field = fields.find(entry => entry.id === fieldId);
 
     card.addEventListener("click", () => {
-      selectedPreviewStepId = fieldId;
       closeEditor();
-      renderBuilder();
+      openFieldEditor(fieldId);
     });
+
+    if (field?.isBaseField) {
+      return;
+    }
 
     card.addEventListener("dragstart", event => {
       dragFieldId = fieldId;
@@ -872,19 +957,36 @@ function renderFieldRail() {
         return;
       }
 
-      const fieldsList = [...getCustomFields()];
-      const fromIndex = fieldsList.findIndex(entry => entry.id === dragFieldId);
-      const toIndex = fieldsList.findIndex(entry => entry.id === targetId);
+      const pageId = currentPage.id;
+      const allFields = [...getCustomFields()];
+      const pageFields = allFields.filter(entry => entry.pageId === pageId);
+      const fromIndex = pageFields.findIndex(entry => entry.id === dragFieldId);
+      const toIndex = pageFields.findIndex(entry => entry.id === targetId);
 
       if (fromIndex < 0 || toIndex < 0) {
         return;
       }
 
-      const [movedField] = fieldsList.splice(fromIndex, 1);
-      fieldsList.splice(toIndex, 0, movedField);
+      const [movedField] = pageFields.splice(fromIndex, 1);
+      pageFields.splice(toIndex, 0, movedField);
+      const rebuiltFields = [];
+      let inserted = false;
+
+      allFields.forEach(entry => {
+        if (entry.pageId !== pageId) {
+          rebuiltFields.push(entry);
+          return;
+        }
+
+        if (!inserted) {
+          rebuiltFields.push(...pageFields);
+          inserted = true;
+        }
+      });
+
       currentFormProfile = {
         ...currentFormProfile,
-        fields: fieldsList
+        fields: rebuiltFields
       };
       renderBuilder();
     });
@@ -902,7 +1004,7 @@ function applyFormTemplate(templateId) {
     ...template.profile,
     isEnabled: currentFormProfile.isEnabled !== false
   });
-  selectedPreviewStepId = template.profile.fields?.[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  selectedPreviewStepId = buildPreviewStepList(currentFormProfile)[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
   closeEditor();
   renderBuilder();
   setStatus(`${template.name} template loaded. Save when you're ready to use it.`, "info");
@@ -938,6 +1040,12 @@ function renderFormTemplates() {
 }
 
 function renderBuilder() {
+  const steps = getPreviewSteps();
+
+  if (!steps.some(step => step.id === selectedPreviewStepId)) {
+    selectedPreviewStepId = steps[0]?.id || "review";
+  }
+
   if (formEnabledToggle) {
     formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
   }
@@ -1057,7 +1165,7 @@ function openFieldEditor(fieldId) {
       Helper copy
       <textarea id="editor-field-help" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
     </label>
-    ${isCustomField ? `<button id="editor-delete-field" class="delete-field-button" type="button">Delete this question</button>` : ""}
+    ${(isCustomField || isBuiltInStep) ? `<button id="editor-delete-field" class="delete-field-button" type="button">${isBuiltInStep ? "Remove this field from the form" : "Delete this question"}</button>` : ""}
   `;
 
   const labelInput = document.getElementById("editor-field-label");
@@ -1113,11 +1221,24 @@ function openFieldEditor(fieldId) {
   });
 
   deleteButton?.addEventListener("click", () => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      fields: getCustomFields().filter(entry => entry.id !== fieldId)
-    };
-    selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
+    if (isBuiltInStep) {
+      patchStepConfig(fieldId, { hidden: true });
+      const remainingFields = getInlineFieldsForPage(currentFormProfile, fieldId);
+      const previewSteps = getPreviewSteps();
+      if (!remainingFields.length && !previewSteps.some(entry => entry.id === fieldId)) {
+        selectedPreviewStepId = previewSteps[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+      }
+    } else {
+      currentFormProfile = {
+        ...currentFormProfile,
+        fields: getCustomFields().filter(entry => entry.id !== fieldId && entry.pageId !== fieldId)
+      };
+
+      if (!getPreviewSteps().some(entry => entry.id === selectedPreviewStepId)) {
+        selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+      }
+    }
+
     closeEditor();
     renderBuilder();
   });
@@ -1258,8 +1379,8 @@ function openStepNavigationEditor() {
   });
 }
 
-function openSelectedStepTextEditor(target) {
-  const step = getSelectedPreviewStep();
+function openSelectedStepTextEditor(target, fieldIdOverride = "") {
+  const step = fieldIdOverride ? getEditableStep(fieldIdOverride) : getSelectedPreviewStep();
 
   if (!step) {
     return;
@@ -1546,13 +1667,18 @@ function openPageEditor() {
 
 function addCustomField(type) {
   const nextField = createCustomField(type);
+  const currentPageId = getCurrentPageId();
+
+  if (!currentPageId || currentPageId === "review") {
+    setStatus("Pick a question page first, then add fields to that page.", "error");
+    return;
+  }
 
   currentFormProfile = {
     ...currentFormProfile,
-    fields: [...getCustomFields(), nextField]
+    fields: [...getCustomFields(), { ...nextField, pageId: currentPageId }]
   };
 
-  selectedPreviewStepId = nextField.id;
   renderBuilder();
   openFieldEditor(nextField.id);
 }
@@ -1608,7 +1734,7 @@ async function saveFormProfile(options = {}) {
 
 function resetToSaved() {
   currentFormProfile = normalizeCustomFormProfile(savedFormProfile);
-  selectedPreviewStepId = getCustomFields()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
   closeEditor();
   renderBuilder();
   setStatus("Reverted to your saved form.", "info");
@@ -1635,7 +1761,7 @@ function hydrateBuilderFromUser(user) {
   const storedProfile = normalizeCustomFormProfile(currentUser.user_metadata?.custom_form_profile || {});
   currentFormProfile = storedProfile;
   savedFormProfile = normalizeCustomFormProfile(storedProfile);
-  selectedPreviewStepId = getCustomFields()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
   renderBuilder();
 }
 
@@ -1749,9 +1875,24 @@ previewStepper?.addEventListener("click", event => {
 
 previewStepHost?.addEventListener("click", event => {
   const editTarget = event.target.closest("[data-edit-target]")?.dataset.editTarget || "";
+  const editFieldId = event.target.closest("[data-edit-field-id]")?.dataset.editFieldId || "";
 
   if (editTarget) {
+    if ((editTarget === "field-label" || editTarget === "field-help") && editFieldId) {
+      openSelectedStepTextEditor(editTarget, editFieldId);
+      return;
+    }
+
     openSelectedStepTextEditor(editTarget);
+    return;
+  }
+
+  const clickedFieldId = event.target.closest("[data-preview-field-id]")?.dataset.previewFieldId
+    || event.target.closest("[data-preview-field-group]")?.dataset.previewFieldGroup
+    || "";
+
+  if (clickedFieldId && clickedFieldId !== "review") {
+    openFieldEditor(clickedFieldId);
     return;
   }
 
