@@ -380,7 +380,7 @@ function renderFieldRail() {
 
     card.addEventListener("click", () => {
       selectedPreviewStepId = fieldId;
-      openFieldEditor(fieldId);
+      closeEditor();
       renderBuilder();
     });
 
@@ -517,7 +517,7 @@ function openFieldEditor(fieldId) {
 
   editorPopover.hidden = false;
   editorTitle.textContent = "Question settings";
-  editorCopy.textContent = "Rename this question, adjust the step label, and control how it appears in Send Reminder.";
+  editorCopy.textContent = "Rename this question and control how it appears in Send Reminder.";
   editorBody.innerHTML = `
     <label>
       Question heading
@@ -558,10 +558,6 @@ function openFieldEditor(fieldId) {
       Helper copy
       <textarea id="editor-field-help" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
     </label>
-    <label class="toggle-row">
-      <span>Required field</span>
-      <input id="editor-field-required" type="checkbox" ${step.required ? "checked" : ""}>
-    </label>
     ${isCustomField ? `<button id="editor-delete-field" class="delete-field-button" type="button">Delete this question</button>` : ""}
   `;
 
@@ -572,7 +568,6 @@ function openFieldEditor(fieldId) {
   const typeSelect = document.getElementById("editor-field-type");
   const placeholderInput = document.getElementById("editor-field-placeholder");
   const helpInput = document.getElementById("editor-field-help");
-  const requiredInput = document.getElementById("editor-field-required");
   const deleteButton = document.getElementById("editor-delete-field");
 
   const patchField = updates => {
@@ -631,10 +626,6 @@ function openFieldEditor(fieldId) {
 
   helpInput?.addEventListener("input", event => {
     patchField({ helpText: event.target.value.slice(0, 160) });
-  });
-
-  requiredInput?.addEventListener("change", event => {
-    patchField({ required: Boolean(event.target.checked) });
   });
 
   deleteButton?.addEventListener("click", () => {
@@ -724,22 +715,74 @@ function openSelectedStepTextEditor(target) {
   }
 
   if (target === "field-label") {
-    openTypographyEditor({
-      title: "Field label",
-      copy: "Edit the question label shown above the input.",
-      text: step.label,
-      fontSize: step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE,
-      bold: step.labelBold !== false,
-      minSize: 13,
-      maxSize: 28,
-      maxLength: 60,
-      apply({ text, fontSize, bold }) {
-        patchStepConfig(step.id, {
-          label: typeof text === "string" ? text : step.label,
-          labelFontSize: fontSize ?? step.labelFontSize,
-          labelBold: bold ?? step.labelBold
-        });
-      }
+    if (!editorPopover || !editorBody) {
+      return;
+    }
+
+    editorPopover.hidden = false;
+    editorTitle.textContent = "Field label";
+    editorCopy.textContent = "Edit the question label and whether this field is required.";
+    editorBody.innerHTML = `
+      <label>
+        Label text
+        <textarea id="editor-label-text" maxlength="60">${escapeHtml(step.label || "")}</textarea>
+      </label>
+      <div class="form-editor-grid">
+        <label>
+          Font size
+          <input id="editor-label-size" type="range" min="13" max="28" value="${step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}">
+        </label>
+        <label>
+          Size value
+          <input id="editor-label-size-number" type="number" min="13" max="28" value="${step.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}">
+        </label>
+      </div>
+      <label class="toggle-row">
+        <span>Bold text</span>
+        <input id="editor-label-bold" type="checkbox" ${step.labelBold !== false ? "checked" : ""}>
+      </label>
+      <label class="toggle-row">
+        <span>Required field</span>
+        <input id="editor-label-required" type="checkbox" ${step.required ? "checked" : ""}>
+      </label>
+    `;
+
+    const labelTextInput = document.getElementById("editor-label-text");
+    const labelSizeInput = document.getElementById("editor-label-size");
+    const labelSizeNumberInput = document.getElementById("editor-label-size-number");
+    const labelBoldInput = document.getElementById("editor-label-bold");
+    const labelRequiredInput = document.getElementById("editor-label-required");
+
+    const applyLabelPatch = patch => {
+      patchStepConfig(step.id, patch);
+      renderBuilder();
+    };
+
+    labelTextInput?.addEventListener("input", event => {
+      applyLabelPatch({ label: event.target.value.slice(0, 60) });
+    });
+
+    const syncLabelSize = nextValue => {
+      const numericValue = Math.min(28, Math.max(13, Number(nextValue) || DEFAULT_FIELD_LABEL_FONT_SIZE));
+      if (labelSizeInput) labelSizeInput.value = String(numericValue);
+      if (labelSizeNumberInput) labelSizeNumberInput.value = String(numericValue);
+      applyLabelPatch({ labelFontSize: numericValue });
+    };
+
+    labelSizeInput?.addEventListener("input", event => {
+      syncLabelSize(event.target.value);
+    });
+
+    labelSizeNumberInput?.addEventListener("input", event => {
+      syncLabelSize(event.target.value);
+    });
+
+    labelBoldInput?.addEventListener("change", event => {
+      applyLabelPatch({ labelBold: Boolean(event.target.checked) });
+    });
+
+    labelRequiredInput?.addEventListener("change", event => {
+      applyLabelPatch({ required: Boolean(event.target.checked) });
     });
     return;
   }
@@ -1036,12 +1079,8 @@ previewBackButton?.addEventListener("click", () => {
 
   if (index > 0) {
     selectedPreviewStepId = steps[index - 1].id;
+    closeEditor();
     renderBuilder();
-    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
-      openFieldEditor(selectedPreviewStepId);
-    } else if (selectedPreviewStepId === "review") {
-      closeEditor();
-    }
   }
 });
 previewSkipButton?.addEventListener("click", () => {
@@ -1050,12 +1089,8 @@ previewSkipButton?.addEventListener("click", () => {
 
   if (index >= 0 && index < steps.length - 1) {
     selectedPreviewStepId = steps[index + 1].id;
+    closeEditor();
     renderBuilder();
-    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
-      openFieldEditor(selectedPreviewStepId);
-    } else if (selectedPreviewStepId === "review") {
-      closeEditor();
-    }
   }
 });
 previewNextButton?.addEventListener("click", () => {
@@ -1064,12 +1099,8 @@ previewNextButton?.addEventListener("click", () => {
 
   if (index >= 0 && index < steps.length - 1) {
     selectedPreviewStepId = steps[index + 1].id;
+    closeEditor();
     renderBuilder();
-    if (!editorPopover?.hidden && selectedPreviewStepId !== "review") {
-      openFieldEditor(selectedPreviewStepId);
-    } else if (selectedPreviewStepId === "review") {
-      closeEditor();
-    }
   }
 });
 
@@ -1086,13 +1117,8 @@ previewStepper?.addEventListener("click", event => {
 
   const nextId = button.dataset.previewStep || "";
   selectedPreviewStepId = nextId;
+  closeEditor();
   renderBuilder();
-
-  if (nextId && nextId !== "review") {
-    openFieldEditor(nextId);
-  } else {
-    closeEditor();
-  }
 });
 
 previewStepHost?.addEventListener("click", event => {
