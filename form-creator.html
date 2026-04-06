@@ -5,117 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="form-creator.css?v=20260405a">
+  <link rel="stylesheet" href="form-creator.css?v=20260405b">
 </head>
 <body data-page="form-creator">
-  <div class="page">
-    <section class="hero">
-      <div class="hero-content">
-        <div class="eyebrow">
-          Form Creator
-          <span id="price-pill" class="price-pill">Signed in tool</span>
+  <div id="status-banner" class="status-banner" hidden></div>
+  <div id="auth-setup-notice" class="floating-notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
+
+  <div id="signed-out-shell" class="signed-out-shell" hidden>
+    <div class="signed-out-card">
+      <span class="signed-out-kicker">Form Creator</span>
+      <h1>Sign in to build your custom reminder form</h1>
+      <p>Save custom questions, reorder them with drag and drop, and make the Send Reminder page fit your business better.</p>
+      <a class="primary-link" href="signin.html">Go to Sign In</a>
+    </div>
+  </div>
+
+  <div id="signed-in-shell" class="form-creator-studio" hidden>
+    <aside class="floating-panel floating-panel-left">
+      <div class="floating-panel-head">
+        <div>
+          <span class="floating-panel-kicker">Custom Questions</span>
+          <h2>Drag to reorder</h2>
         </div>
-        <h1>Form Creator</h1>
-        <p class="lead">Build your own custom reminder questions, reorder them with drag and drop, and control how the Send Reminder page feels for your business.</p>
       </div>
-    </section>
+      <div class="form-creator-toolbar-actions">
+        <button id="save-form-button" class="primary-button" type="button">Save Form</button>
+        <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
+      </div>
+      <div id="field-rail-list" class="form-field-rail-list"></div>
+    </aside>
 
-    <div id="status-banner" class="status-banner" hidden></div>
+    <main class="form-preview-stage">
+      <div id="form-preview-shell" class="fc-preview-shell">
+        <div class="fc-preview-container">
+          <div class="fc-preview-wizard">
+            <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
 
-    <section class="panel">
-      <div class="panel-content">
-        <div id="auth-setup-notice" class="notice" hidden>Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel to turn on accounts.</div>
-
-        <nav class="account-page-nav" aria-label="Account pages">
-          <a class="account-page-link" href="client-details.html">Client Details</a>
-          <a class="account-page-link" href="calendar.html">Calendar</a>
-          <a class="account-page-link" href="account-info.html">Account Info</a>
-          <a class="account-page-link" href="branding.html" data-auth-only hidden>Branding</a>
-          <a class="account-page-link" href="settings.html">Settings</a>
-          <a class="account-page-link is-active" href="form-creator.html">Form Creator</a>
-        </nav>
-
-        <div class="content-stack">
-          <div id="signed-out-shell" class="section-card">
-            <h2 class="section-title">Sign in to build your custom reminder form</h2>
-            <p class="signed-out-copy">Form Creator saves to your account so the Send Reminder page can use your custom questions later.</p>
-            <div class="button-row" style="margin-top:16px;">
-              <a class="primary-link" href="signin.html">Go to Sign In</a>
-            </div>
-          </div>
-
-          <div id="signed-in-shell" hidden>
-            <div class="section-card form-creator-toolbar">
-              <div>
-                <h2 class="section-title">Live form studio</h2>
-                <p class="card-copy">Add custom questions, drag them into order, and save the exact questionnaire you want to use in Send Reminder.</p>
+            <div class="wizard-head">
+              <div class="step-meta">
+                <span id="preview-step-count" class="step-count">Step 1 of 10</span>
+                <span id="preview-step-pill" class="step-pill">Optional</span>
               </div>
-              <div class="form-creator-toolbar-actions">
-                <button id="save-form-button" class="primary-button" type="button">Save Form</button>
-                <button id="reset-form-button" class="secondary-button" type="button">Reset to Saved</button>
+              <h1 id="preview-step-title">Client Phone Number</h1>
+              <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
+
+              <div class="progress-wrap">
+                <p class="progress-status visible">This is your live Send Reminder form.</p>
+                <div class="progress-track">
+                  <div id="preview-progress-fill" class="progress-fill"></div>
+                </div>
+                <div id="preview-stepper" class="stepper" aria-label="Preview form steps"></div>
               </div>
             </div>
 
-            <div class="form-studio-shell">
-              <aside class="form-field-rail section-card">
-                <div class="form-field-rail-head">
-                  <h3>Custom questions</h3>
-                  <p>Drag to reorder your added questions.</p>
-                </div>
-                <div id="field-rail-list" class="form-field-rail-list"></div>
-              </aside>
+            <div id="preview-step-host"></div>
 
-              <section class="section-card form-preview-card">
-                <button id="page-settings-button" class="floating-tool floating-tool-page" type="button" aria-label="Edit page settings">Page</button>
-
-                <div id="form-preview-shell" class="fc-preview-shell">
-                  <div class="fc-preview-container">
-                    <div class="fc-preview-wizard">
-                      <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
-
-                      <div class="wizard-head">
-                        <div class="step-meta">
-                          <span id="preview-step-count" class="step-count">Step 1 of 10</span>
-                          <span id="preview-step-pill" class="step-pill">Optional</span>
-                        </div>
-                        <h2 id="preview-step-title">Client Phone Number</h2>
-                        <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
-
-                        <div class="progress-wrap">
-                          <p class="progress-status visible">This is your live Send Reminder form.</p>
-                          <div class="progress-track">
-                            <div id="preview-progress-fill" class="progress-fill"></div>
-                          </div>
-                          <div id="preview-stepper" class="stepper" aria-label="Preview form steps"></div>
-                        </div>
-                      </div>
-
-                      <div id="preview-step-host"></div>
-
-                      <div class="wizard-controls form-preview-controls">
-                        <button id="preview-back-button" class="secondary-button" type="button">Back</button>
-                        <button id="preview-skip-button" class="secondary-button" type="button">Skip</button>
-                        <button id="preview-next-button" class="primary-button" type="button">Next</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="floating-tool-dock" aria-label="Add question tools">
-                  <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-                  <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-                  <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-                  <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-                  <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-                  <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
-                </div>
-              </section>
+            <div class="wizard-controls form-preview-controls">
+              <button id="preview-back-button" class="secondary-button" type="button">Back</button>
+              <button id="preview-skip-button" class="secondary-button" type="button">Skip</button>
+              <button id="preview-next-button" class="primary-button" type="button">Next</button>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </main>
+
+    <aside class="floating-panel floating-panel-right">
+      <div class="floating-panel-head">
+        <div>
+          <span class="floating-panel-kicker">Build Tools</span>
+          <h2>Shape the page</h2>
+        </div>
+        <span id="price-pill" class="price-pill">Signed in tool</span>
+      </div>
+
+      <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
+
+      <div class="floating-tool-dock" aria-label="Add question tools">
+        <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
+        <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
+        <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
+        <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
+        <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
+        <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+      </div>
+    </aside>
   </div>
 
   <div id="form-editor-popover" class="form-editor-popover" hidden>
@@ -130,6 +104,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260405a"></script>
+  <script type="module" src="form-creator.js?v=20260405b"></script>
 </body>
 </html>
