@@ -176,10 +176,12 @@ function setSignedInView(user) {
 
   if (signedOutShell) {
     signedOutShell.hidden = isSignedIn;
+    signedOutShell.style.display = isSignedIn ? "none" : "grid";
   }
 
   if (signedInShell) {
     signedInShell.hidden = !isSignedIn;
+    signedInShell.style.display = isSignedIn ? "block" : "none";
   }
 
   if (pricePill) {
