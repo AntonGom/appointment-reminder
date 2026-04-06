@@ -287,6 +287,7 @@ export function normalizeCustomFormProfile(rawProfile) {
   );
 
   return {
+    templateId: safeString(profile.templateId).slice(0, 40),
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
     isEnabled: profile.isEnabled !== false,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,

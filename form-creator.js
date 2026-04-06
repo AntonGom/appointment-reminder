@@ -23,7 +23,7 @@ import {
   buildPreviewStepList,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260405e";
+} from "./custom-form-profile.js?v=20260406a";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -34,6 +34,7 @@ const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
 const fieldRailList = document.getElementById("field-rail-list");
+const templateList = document.getElementById("template-list");
 const previewShell = document.getElementById("form-preview-shell");
 const previewTitle = document.getElementById("form-preview-title");
 const previewStepCount = document.getElementById("preview-step-count");
@@ -60,6 +61,450 @@ let currentFormProfile = normalizeCustomFormProfile({});
 let savedFormProfile = normalizeCustomFormProfile({});
 let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
 let dragFieldId = "";
+
+function buildTemplateField(config) {
+  const base = createCustomField(config.type || "text");
+
+  return {
+    ...base,
+    id: config.id,
+    type: config.type || base.type,
+    title: config.title || config.label || base.title,
+    copy: config.copy || config.helpText || "",
+    label: config.label || base.label,
+    navLabel: safeShortLabel(config.navLabel || config.label || base.navLabel),
+    placeholder: typeof config.placeholder === "string" ? config.placeholder : base.placeholder,
+    helpText: config.helpText || "",
+    required: Boolean(config.required)
+  };
+}
+
+const FORM_TEMPLATE_LIBRARY = [
+  {
+    id: "barbershop",
+    name: "Barbershop",
+    subtitle: "Cuts, beard trims, and stylist preferences",
+    points: [
+      "Service request and preferred barber",
+      "Hair goals or reference details",
+      "Beard trim and add-on notes"
+    ],
+    swatches: ["#0f172a", "#e6c891", "#f7f3eb", "#201c18"],
+    profile: {
+      templateId: "barbershop",
+      formTitle: "Barbershop Reminder",
+      backgroundTop: "#0f172a",
+      backgroundBottom: "#29313f",
+      formSurfaceColor: "#f7f3eb",
+      formSurfaceAccentColor: "#e6c891",
+      formSurfaceGradient: "soft-blend",
+      formTextColor: "#1f2937",
+      stepNavBackgroundColor: "#ede3d2",
+      stepNavTextColor: "#4b3c2a",
+      stepNavActiveBackgroundColor: "#201c18",
+      stepNavActiveTextColor: "#f8fafc",
+      stepOverrides: {
+        address: {
+          title: "Shop Address",
+          label: "Shop Address",
+          copy: "Add the shop location the client should use for the visit.",
+          placeholder: "Enter shop address"
+        },
+        businessContact: {
+          title: "Shop Contact",
+          label: "Shop Contact",
+          copy: "Share the best shop number or email for reschedules.",
+          helpText: "Use the contact the client should use for questions or changes.",
+          placeholder: "Shop phone or email"
+        },
+        notes: {
+          title: "Style Notes",
+          navLabel: "Notes",
+          label: "Style Notes",
+          copy: "Add anything the barber should know before the cut.",
+          placeholder: "Reference link, beard details, parking notes, or timing requests"
+        }
+      },
+      fields: [
+        buildTemplateField({
+          id: "custom_service_request",
+          type: "text",
+          label: "Requested Service",
+          navLabel: "Service",
+          placeholder: "Haircut, beard trim, shave, or lineup",
+          helpText: "Barbers often collect service type and add-ons before the appointment.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_preferred_barber",
+          type: "text",
+          label: "Preferred Barber",
+          navLabel: "Barber",
+          placeholder: "If they have one",
+          helpText: "Useful when shops route bookings by barber."
+        }),
+        buildTemplateField({
+          id: "custom_hair_goal",
+          type: "textarea",
+          label: "Hair Goals",
+          navLabel: "Style",
+          placeholder: "Describe the look they want or paste a reference link",
+          helpText: "Many barber consult forms ask for current style and target look."
+        }),
+        buildTemplateField({
+          id: "custom_beard_addon",
+          type: "text",
+          label: "Beard or Add-On Request",
+          navLabel: "Add-On",
+          placeholder: "Beard trim, razor line-up, wash, or nothing",
+          helpText: "Use this to clarify beard services or extras."
+        })
+      ]
+    }
+  },
+  {
+    id: "pet-grooming",
+    name: "Pet Grooming",
+    subtitle: "Breed, temperament, and grooming care details",
+    points: [
+      "Pet name, breed, and size",
+      "Temperament and handling notes",
+      "Allergy, skin, and vaccine info"
+    ],
+    swatches: ["#0f4c5c", "#8ecae6", "#f4fbff", "#2a9d8f"],
+    profile: {
+      templateId: "pet-grooming",
+      formTitle: "Pet Grooming Reminder",
+      backgroundTop: "#0f3d4a",
+      backgroundBottom: "#1e6f7d",
+      formSurfaceColor: "#f4fbff",
+      formSurfaceAccentColor: "#d7f2ff",
+      formSurfaceGradient: "top-glow",
+      formTextColor: "#12303a",
+      stepNavBackgroundColor: "#dff5fb",
+      stepNavTextColor: "#115e73",
+      stepNavActiveBackgroundColor: "#2a9d8f",
+      stepNavActiveTextColor: "#f8fafc",
+      stepOverrides: {
+        address: {
+          title: "Salon Address",
+          label: "Salon Address",
+          copy: "Add the salon or drop-off location.",
+          placeholder: "Enter salon address"
+        },
+        businessContact: {
+          title: "Salon Contact",
+          label: "Salon Contact",
+          copy: "Share the best number or email for appointment changes.",
+          helpText: "Use the salon line clients should call for updates."
+        },
+        notes: {
+          title: "Pickup Notes",
+          navLabel: "Pickup",
+          label: "Pickup Notes",
+          copy: "Add anything the pet parent should know before pickup.",
+          placeholder: "Late policy, parking notes, or drop-off reminders"
+        }
+      },
+      fields: [
+        buildTemplateField({
+          id: "custom_pet_name",
+          type: "text",
+          label: "Pet Name",
+          navLabel: "Pet",
+          placeholder: "Enter pet name",
+          helpText: "Pet grooming intake forms typically collect the pet's name first.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_pet_breed",
+          type: "text",
+          label: "Breed / Size",
+          navLabel: "Breed",
+          placeholder: "Breed, weight, or size",
+          helpText: "Breed and size help groomers estimate timing and coat needs.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_grooming_service",
+          type: "text",
+          label: "Requested Grooming Service",
+          navLabel: "Service",
+          placeholder: "Bath, full groom, nail trim, de-shed",
+          helpText: "Useful for package selection before the appointment.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_temperament_notes",
+          type: "textarea",
+          label: "Temperament / Handling Notes",
+          navLabel: "Temper",
+          placeholder: "Anxious, senior, reactive, or okay with dryers",
+          helpText: "Groomers often ask about handling and behavior in advance."
+        }),
+        buildTemplateField({
+          id: "custom_pet_health",
+          type: "textarea",
+          label: "Allergies or Skin Notes",
+          navLabel: "Health",
+          placeholder: "Skin sensitivity, allergies, or hotspots",
+          helpText: "This helps groomers choose products and avoid irritation."
+        }),
+        buildTemplateField({
+          id: "custom_vaccine_notes",
+          type: "text",
+          label: "Vaccine / Flea-Tick Notes",
+          navLabel: "Vaccine",
+          placeholder: "Anything the groomer should confirm",
+          helpText: "Many grooming intake forms ask for vaccine or parasite notes."
+        })
+      ]
+    }
+  },
+  {
+    id: "massage",
+    name: "Massage Therapy",
+    subtitle: "Pressure, focus areas, and wellness intake",
+    points: [
+      "Primary pain or tension areas",
+      "Pressure preference and comfort",
+      "Health, injury, or mobility notes"
+    ],
+    swatches: ["#4b2e83", "#c4b5fd", "#faf7ff", "#7c3aed"],
+    profile: {
+      templateId: "massage",
+      formTitle: "Massage Appointment Reminder",
+      backgroundTop: "#1f1634",
+      backgroundBottom: "#5b3f8a",
+      formSurfaceColor: "#faf7ff",
+      formSurfaceAccentColor: "#ede9fe",
+      formSurfaceGradient: "soft-blend",
+      formTextColor: "#221b34",
+      stepNavBackgroundColor: "#efe7ff",
+      stepNavTextColor: "#5b21b6",
+      stepNavActiveBackgroundColor: "#7c3aed",
+      stepNavActiveTextColor: "#f8fafc",
+      stepOverrides: {
+        businessContact: {
+          title: "Clinic Contact",
+          label: "Clinic Contact",
+          copy: "Share the best number or email for appointment changes.",
+          helpText: "Use the clinic contact the client should reach if they need to reschedule."
+        },
+        notes: {
+          title: "Session Notes",
+          navLabel: "Notes",
+          label: "Session Notes",
+          copy: "Add anything the client should know before the session.",
+          placeholder: "Arrival notes, parking, or aftercare reminders"
+        }
+      },
+      fields: [
+        buildTemplateField({
+          id: "custom_focus_areas",
+          type: "textarea",
+          label: "Focus Areas",
+          navLabel: "Focus",
+          placeholder: "Neck, low back, shoulders, legs, or full body",
+          helpText: "Massage intake forms usually ask where the client wants work focused.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_pressure_preference",
+          type: "text",
+          label: "Pressure Preference",
+          navLabel: "Pressure",
+          placeholder: "Light, medium, deep, or unsure",
+          helpText: "Pressure preference is a standard question for massage bookings.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_health_notes",
+          type: "textarea",
+          label: "Injuries or Health Notes",
+          navLabel: "Health",
+          placeholder: "Recent surgery, injury, or medical concerns",
+          helpText: "Many intake forms ask about injuries, medications, or contraindications."
+        }),
+        buildTemplateField({
+          id: "custom_accommodations",
+          type: "text",
+          label: "Pregnancy or Mobility Accommodations",
+          navLabel: "Access",
+          placeholder: "Anything the therapist should plan around",
+          helpText: "This helps clinics prepare table setup or positioning."
+        })
+      ]
+    }
+  },
+  {
+    id: "house-cleaning",
+    name: "House Cleaning",
+    subtitle: "Home size, access details, and cleaning scope",
+    points: [
+      "Bedrooms, bathrooms, and property type",
+      "Deep clean or recurring service",
+      "Pets, access, and special instructions"
+    ],
+    swatches: ["#123c69", "#7dd3fc", "#f8fbff", "#0ea5e9"],
+    profile: {
+      templateId: "house-cleaning",
+      formTitle: "Cleaning Service Reminder",
+      backgroundTop: "#10273d",
+      backgroundBottom: "#245f8f",
+      formSurfaceColor: "#f8fbff",
+      formSurfaceAccentColor: "#dbeafe",
+      formSurfaceGradient: "diagonal",
+      formTextColor: "#102a43",
+      stepNavBackgroundColor: "#e0f2fe",
+      stepNavTextColor: "#0c4a6e",
+      stepNavActiveBackgroundColor: "#0ea5e9",
+      stepNavActiveTextColor: "#f8fafc",
+      stepOverrides: {
+        address: {
+          title: "Service Address",
+          label: "Service Address",
+          copy: "Add the home or property address for the cleaning visit."
+        },
+        businessContact: {
+          title: "Cleaner Contact",
+          label: "Cleaner Contact",
+          copy: "Share the number or email clients should use for schedule changes."
+        },
+        notes: {
+          title: "Arrival Notes",
+          navLabel: "Arrival",
+          label: "Arrival Notes",
+          copy: "Add gate codes, parking tips, or other arrival reminders.",
+          placeholder: "Gate code, parking notes, or alarm instructions"
+        }
+      },
+      fields: [
+        buildTemplateField({
+          id: "custom_cleaning_type",
+          type: "text",
+          label: "Cleaning Type",
+          navLabel: "Type",
+          placeholder: "Standard, deep clean, move-out, recurring",
+          helpText: "Cleaning businesses usually confirm the type of clean before arrival.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_home_size",
+          type: "text",
+          label: "Bedrooms / Bathrooms",
+          navLabel: "Rooms",
+          placeholder: "Example: 3 bed / 2 bath",
+          helpText: "Home size helps estimate timing and staffing.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_pets_home",
+          type: "text",
+          label: "Pets in the Home",
+          navLabel: "Pets",
+          placeholder: "Dog, cat, none, or crate info",
+          helpText: "Helpful for access and cleaning planning."
+        }),
+        buildTemplateField({
+          id: "custom_access_notes",
+          type: "textarea",
+          label: "Access / Special Instructions",
+          navLabel: "Access",
+          placeholder: "How to enter, areas to avoid, or anything fragile",
+          helpText: "Access notes and special instructions are common before home-service visits."
+        })
+      ]
+    }
+  },
+  {
+    id: "auto-detailing",
+    name: "Auto Detailing",
+    subtitle: "Vehicle info, package selection, and service setup",
+    points: [
+      "Make, model, and year",
+      "Detail package and add-ons",
+      "Vehicle condition and access notes"
+    ],
+    swatches: ["#111827", "#f59e0b", "#fffaf0", "#1f2937"],
+    profile: {
+      templateId: "auto-detailing",
+      formTitle: "Detailing Appointment Reminder",
+      backgroundTop: "#111827",
+      backgroundBottom: "#374151",
+      formSurfaceColor: "#fffaf0",
+      formSurfaceAccentColor: "#fde68a",
+      formSurfaceGradient: "soft-blend",
+      formTextColor: "#1f2937",
+      stepNavBackgroundColor: "#fef3c7",
+      stepNavTextColor: "#92400e",
+      stepNavActiveBackgroundColor: "#111827",
+      stepNavActiveTextColor: "#f8fafc",
+      stepOverrides: {
+        address: {
+          title: "Service Address",
+          label: "Service Address",
+          copy: "Add the address where the vehicle will be serviced."
+        },
+        businessContact: {
+          title: "Detailer Contact",
+          label: "Detailer Contact",
+          copy: "Share the best number or email for schedule changes."
+        },
+        notes: {
+          title: "Arrival Notes",
+          navLabel: "Notes",
+          label: "Arrival Notes",
+          copy: "Add access notes the client should know before service.",
+          placeholder: "Parking deck, gate code, or arrival timing"
+        }
+      },
+      fields: [
+        buildTemplateField({
+          id: "custom_vehicle_make_model",
+          type: "text",
+          label: "Vehicle Make / Model",
+          navLabel: "Vehicle",
+          placeholder: "Example: Toyota Camry",
+          helpText: "Detailing forms usually collect make and model before booking.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_vehicle_year",
+          type: "text",
+          label: "Vehicle Year",
+          navLabel: "Year",
+          placeholder: "Example: 2021"
+        }),
+        buildTemplateField({
+          id: "custom_detail_package",
+          type: "text",
+          label: "Requested Package",
+          navLabel: "Package",
+          placeholder: "Interior, exterior, full detail, ceramic add-on",
+          helpText: "Packages and add-ons are a common pre-booking question.",
+          required: true
+        }),
+        buildTemplateField({
+          id: "custom_vehicle_condition",
+          type: "textarea",
+          label: "Vehicle Condition Notes",
+          navLabel: "Condition",
+          placeholder: "Pet hair, stains, odor, heavy dirt, or scratch concerns",
+          helpText: "Condition notes help set expectations before the job."
+        }),
+        buildTemplateField({
+          id: "custom_power_water",
+          type: "text",
+          label: "Water / Power Access",
+          navLabel: "Access",
+          placeholder: "Available on-site or mobile setup needed",
+          helpText: "Mobile detailers often ask about outlet and water access."
+        })
+      ]
+    }
+  }
+];
 
 function setStatus(message, type = "info") {
   if (!statusBanner) {
@@ -446,11 +891,58 @@ function renderFieldRail() {
   });
 }
 
+function applyFormTemplate(templateId) {
+  const template = FORM_TEMPLATE_LIBRARY.find(entry => entry.id === templateId);
+
+  if (!template) {
+    return;
+  }
+
+  currentFormProfile = normalizeCustomFormProfile({
+    ...template.profile,
+    isEnabled: currentFormProfile.isEnabled !== false
+  });
+  selectedPreviewStepId = template.profile.fields?.[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  closeEditor();
+  renderBuilder();
+  setStatus(`${template.name} template loaded. Save when you're ready to use it.`, "info");
+}
+
+function renderFormTemplates() {
+  if (!templateList) {
+    return;
+  }
+
+  templateList.innerHTML = FORM_TEMPLATE_LIBRARY.map(template => `
+    <button class="form-template-card ${currentFormProfile.templateId === template.id ? "is-active" : ""}" type="button" data-template-id="${escapeHtml(template.id)}">
+      <div class="form-template-top">
+        <span class="form-template-title-wrap">
+          <span class="form-template-title">${escapeHtml(template.name)}</span>
+          <span class="form-template-subtitle">${escapeHtml(template.subtitle)}</span>
+        </span>
+        <span class="form-template-swatches">
+          ${template.swatches.map(color => `<span class="form-template-swatch" style="background:${escapeHtml(color)};"></span>`).join("")}
+        </span>
+      </div>
+      <ul class="form-template-points">
+        ${template.points.map(point => `<li>${escapeHtml(point)}</li>`).join("")}
+      </ul>
+    </button>
+  `).join("");
+
+  templateList.querySelectorAll("[data-template-id]").forEach(button => {
+    button.addEventListener("click", () => {
+      applyFormTemplate(button.dataset.templateId || "");
+    });
+  });
+}
+
 function renderBuilder() {
   if (formEnabledToggle) {
     formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
   }
   renderFieldRail();
+  renderFormTemplates();
   renderPreview();
 }
 

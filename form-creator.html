@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260405i">
+  <link rel="stylesheet" href="form-creator.css?v=20260406a">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -24,15 +24,61 @@
     <aside class="floating-panel floating-panel-left">
       <div class="floating-panel-head">
         <div>
-          <span class="floating-panel-kicker">Custom Questions</span>
-          <h2>Drag to reorder</h2>
+          <span class="floating-panel-kicker">Build Tools</span>
+          <h2>Shape the page</h2>
         </div>
+        <span id="price-pill" class="price-pill">Signed in tool</span>
       </div>
       <div class="form-creator-toolbar-actions">
         <button id="save-form-button" class="primary-button" type="button">Save Form</button>
         <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
       </div>
-      <div id="field-rail-list" class="form-field-rail-list"></div>
+
+      <div class="form-enabled-card">
+        <label class="form-enabled-row" for="form-enabled-toggle">
+          <span class="form-enabled-copy">
+            <span class="form-enabled-title">Use This As My Form</span>
+            <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
+          </span>
+          <span class="form-enabled-switch">
+            <input id="form-enabled-toggle" type="checkbox" checked>
+            <span class="form-enabled-switch-ui" aria-hidden="true"></span>
+          </span>
+        </label>
+      </div>
+
+      <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
+
+      <section class="floating-panel-section" aria-label="Add question tools">
+        <div class="floating-panel-section-head">
+          <span class="floating-panel-kicker">Add Questions</span>
+          <p class="floating-panel-copy">Drop in the kinds of questions your business needs.</p>
+        </div>
+        <div class="floating-tool-dock">
+          <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
+          <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
+          <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
+          <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
+          <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
+          <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+        </div>
+      </section>
+
+      <section class="floating-panel-section">
+        <div class="floating-panel-section-head">
+          <span class="floating-panel-kicker">Custom Questions</span>
+          <p class="floating-panel-copy">Drag these to reorder your form.</p>
+        </div>
+        <div id="field-rail-list" class="form-field-rail-list"></div>
+      </section>
+
+      <section class="floating-panel-section floating-panel-templates">
+        <div class="floating-panel-section-head">
+          <span class="floating-panel-kicker">Templates</span>
+          <p class="floating-panel-copy">Load a preset for real appointment-based businesses.</p>
+        </div>
+        <div id="template-list" class="form-template-list"></div>
+      </section>
     </aside>
 
     <main class="form-preview-stage">
@@ -68,40 +114,6 @@
         </div>
       </div>
     </main>
-
-    <aside class="floating-panel floating-panel-right">
-      <div class="floating-panel-head">
-        <div>
-          <span class="floating-panel-kicker">Build Tools</span>
-          <h2>Shape the page</h2>
-        </div>
-        <span id="price-pill" class="price-pill">Signed in tool</span>
-      </div>
-
-      <div class="form-enabled-card">
-        <label class="form-enabled-row" for="form-enabled-toggle">
-          <span class="form-enabled-copy">
-            <span class="form-enabled-title">Use This As My Form</span>
-            <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
-          </span>
-          <span class="form-enabled-switch">
-            <input id="form-enabled-toggle" type="checkbox" checked>
-            <span class="form-enabled-switch-ui" aria-hidden="true"></span>
-          </span>
-        </label>
-      </div>
-
-      <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
-
-      <div class="floating-tool-dock" aria-label="Add question tools">
-        <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-        <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-        <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-        <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-        <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-        <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
-      </div>
-    </aside>
   </div>
 
   <div id="form-editor-popover" class="form-editor-popover" hidden>
@@ -116,6 +128,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260405i"></script>
+  <script type="module" src="form-creator.js?v=20260406a"></script>
 </body>
 </html>
