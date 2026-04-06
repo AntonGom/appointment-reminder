@@ -344,15 +344,7 @@ body[data-page="form-creator"] {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  cursor: pointer;
-  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease, outline-color 0.18s ease, background 0.18s ease;
-}
-
-.question-wrap:hover {
-  outline: 3px solid rgba(239, 68, 68, 0.88);
-  outline-offset: 6px;
-  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
-  background: rgba(255, 255, 255, 0.94);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .question-wrap.is-selected {
@@ -396,6 +388,19 @@ body[data-page="form-creator"] {
   background: #fff;
   color: var(--fc-form-text-main, var(--fc-text-main));
   font-size: 18px;
+}
+
+.preview-field-control {
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, outline-color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.preview-field-control:hover {
+  outline: 3px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(239, 68, 68, 0.55);
 }
 
 .question-wrap textarea {

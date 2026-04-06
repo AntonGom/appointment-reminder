@@ -253,8 +253,8 @@ function buildPreviewFieldMarkup(step) {
   }
 
   const inputMarkup = step.type === "textarea"
-    ? `<textarea placeholder="${escapeHtml(step.placeholder || "Type your answer")}"></textarea>`
-    : `<input ${step.type === "email" ? 'type="email"' : ""} ${step.type === "date" ? 'type="date"' : ""} ${step.type === "time" ? 'type="time"' : ""} ${step.type === "phone" ? 'inputmode="tel"' : ""} placeholder="${escapeHtml(step.placeholder || "")}">`;
+    ? `<textarea class="preview-field-control" placeholder="${escapeHtml(step.placeholder || "Type your answer")}"></textarea>`
+    : `<input class="preview-field-control" ${step.type === "email" ? 'type="email"' : ""} ${step.type === "date" ? 'type="date"' : ""} ${step.type === "time" ? 'type="time"' : ""} ${step.type === "phone" ? 'inputmode="tel"' : ""} placeholder="${escapeHtml(step.placeholder || "")}">`;
 
   return `
     <div class="question-wrap is-selected" data-preview-step-id="${escapeHtml(step.id)}">
