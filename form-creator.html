@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260406b">
+  <link rel="stylesheet" href="form-creator.css?v=20260406c">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -21,128 +21,131 @@
   </div>
 
   <div id="signed-in-shell" class="form-creator-studio" hidden>
-    <aside class="floating-panel floating-panel-left">
-      <div class="floating-panel-head">
-        <div>
-          <span class="floating-panel-kicker">Build Tools</span>
-          <h2>Shape the page</h2>
+    <div id="form-creator-canvas" class="form-creator-canvas">
+      <aside class="floating-panel floating-panel-left">
+        <div class="floating-panel-head">
+          <div>
+            <span class="floating-panel-kicker">Build Tools</span>
+            <h2>Shape the page</h2>
+          </div>
+          <span id="price-pill" class="price-pill">Signed in tool</span>
         </div>
-        <span id="price-pill" class="price-pill">Signed in tool</span>
-      </div>
-      <div class="form-creator-toolbar-actions">
-        <button id="save-form-button" class="primary-button" type="button">Save Form</button>
-        <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
-      </div>
-
-      <div class="form-enabled-card">
-        <label class="form-enabled-row" for="form-enabled-toggle">
-          <span class="form-enabled-copy">
-            <span class="form-enabled-title">Use This As My Form</span>
-            <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
-          </span>
-          <span class="form-enabled-switch">
-            <input id="form-enabled-toggle" type="checkbox" checked>
-            <span class="form-enabled-switch-ui" aria-hidden="true"></span>
-          </span>
-        </label>
-      </div>
-
-      <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
-
-      <section class="floating-panel-section" aria-label="Add question tools">
-        <div class="floating-panel-section-head">
-          <span class="floating-panel-kicker">Add Questions</span>
-          <p class="floating-panel-copy">Drop in the kinds of questions your business needs.</p>
+        <div class="form-creator-toolbar-actions">
+          <button id="save-form-button" class="primary-button" type="button">Save Form</button>
+          <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
         </div>
-        <div class="floating-tool-dock">
-          <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-          <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-          <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-          <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-          <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-          <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+
+        <div class="form-enabled-card">
+          <label class="form-enabled-row" for="form-enabled-toggle">
+            <span class="form-enabled-copy">
+              <span class="form-enabled-title">Use This As My Form</span>
+              <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
+            </span>
+            <span class="form-enabled-switch">
+              <input id="form-enabled-toggle" type="checkbox" checked>
+              <span class="form-enabled-switch-ui" aria-hidden="true"></span>
+            </span>
+          </label>
         </div>
-      </section>
 
-      <section class="floating-panel-section floating-panel-templates">
-        <div class="floating-panel-section-head">
-          <span class="floating-panel-kicker">Templates</span>
-          <p class="floating-panel-copy">Load a preset for real appointment-based businesses.</p>
-        </div>
-        <div id="template-list" class="form-template-list"></div>
-      </section>
-    </aside>
+        <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
 
-    <main class="form-preview-stage">
-      <div id="form-preview-shell" class="fc-preview-shell">
-        <div class="fc-preview-container">
-          <div class="fc-preview-wizard">
-            <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
+        <section class="floating-panel-section" aria-label="Add question tools">
+          <div class="floating-panel-section-head">
+            <span class="floating-panel-kicker">Add Questions</span>
+            <p class="floating-panel-copy">Drop in the kinds of questions your business needs.</p>
+          </div>
+          <div class="floating-tool-dock">
+            <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
+            <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
+            <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
+            <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
+            <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
+            <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+          </div>
+        </section>
 
-            <div class="wizard-head">
-              <div class="step-meta">
-                <span id="preview-step-count" class="step-count">Step 1 of 10</span>
-                <span id="preview-step-pill" class="step-pill">Optional</span>
-              </div>
-              <h1 id="preview-step-title">Client Phone Number</h1>
-              <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
+        <section class="floating-panel-section floating-panel-templates">
+          <div class="floating-panel-section-head">
+            <span class="floating-panel-kicker">Templates</span>
+            <p class="floating-panel-copy">Load a preset for real appointment-based businesses.</p>
+          </div>
+          <div id="template-list" class="form-template-list"></div>
+        </section>
+      </aside>
 
-              <div class="progress-wrap">
-                <div class="progress-track">
-                  <div id="preview-progress-fill" class="progress-fill"></div>
+      <main class="form-preview-stage">
+        <div id="form-preview-shell" class="fc-preview-shell">
+          <div class="fc-preview-container">
+            <div class="fc-preview-wizard">
+              <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
+
+              <div class="wizard-head">
+                <div class="step-meta">
+                  <span id="preview-step-count" class="step-count">Step 1 of 10</span>
+                  <span id="preview-step-pill" class="step-pill">Optional</span>
                 </div>
-                <div id="preview-stepper" class="stepper" aria-label="Preview form steps"></div>
+                <h1 id="preview-step-title">Client Phone Number</h1>
+                <p id="preview-step-copy" class="step-copy visible">Add a phone number if you may want to text this client later.</p>
+
+                <div class="progress-wrap">
+                  <div class="progress-track">
+                    <div id="preview-progress-fill" class="progress-fill"></div>
+                  </div>
+                  <div id="preview-stepper" class="stepper" aria-label="Preview form steps"></div>
+                </div>
               </div>
-            </div>
 
-            <div id="preview-step-host"></div>
+              <div id="preview-step-host"></div>
 
-            <div class="wizard-controls form-preview-controls">
-              <button id="preview-back-button" class="secondary-button" type="button">Back</button>
-              <button id="preview-skip-button" class="secondary-button" type="button">Skip</button>
-              <button id="preview-next-button" class="primary-button" type="button">Next</button>
+              <div class="wizard-controls form-preview-controls">
+                <button id="preview-back-button" class="secondary-button" type="button">Back</button>
+                <button id="preview-skip-button" class="secondary-button" type="button">Skip</button>
+                <button id="preview-next-button" class="primary-button" type="button">Next</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
 
-    <aside class="floating-panel floating-panel-right">
-      <div class="floating-panel-head">
-        <div>
-          <span class="floating-panel-kicker">Current Page</span>
-          <h2>Add fields here</h2>
+      <aside class="floating-panel floating-panel-right">
+        <div class="floating-panel-head">
+          <div>
+            <span class="floating-panel-kicker">Current Page</span>
+            <h2>Add fields here</h2>
+          </div>
         </div>
-      </div>
 
-      <section class="floating-panel-section">
-        <div class="floating-panel-section-head">
-          <span class="floating-panel-kicker">Add To This Page</span>
-          <p class="floating-panel-copy">These buttons add new fields to the page you are currently editing.</p>
-        </div>
-        <div class="floating-tool-dock" aria-label="Add question tools to current page">
-          <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
-          <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
-          <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
-          <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
-          <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
-          <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
-        </div>
-      </section>
+        <section class="floating-panel-section">
+          <div class="floating-panel-section-head">
+            <span class="floating-panel-kicker">Add To This Page</span>
+            <p class="floating-panel-copy">These buttons add new fields to the page you are currently editing.</p>
+          </div>
+          <div class="floating-tool-dock" aria-label="Add question tools to current page">
+            <button class="floating-tool" type="button" data-add-type="text" title="Add short answer">Aa</button>
+            <button class="floating-tool" type="button" data-add-type="textarea" title="Add long answer">Tx</button>
+            <button class="floating-tool" type="button" data-add-type="email" title="Add email question">@</button>
+            <button class="floating-tool" type="button" data-add-type="phone" title="Add phone question">Ph</button>
+            <button class="floating-tool" type="button" data-add-type="date" title="Add date question">D</button>
+            <button class="floating-tool" type="button" data-add-type="time" title="Add time question">T</button>
+          </div>
+        </section>
 
-      <section class="floating-panel-section">
-        <div class="floating-panel-section-head">
-          <span class="floating-panel-kicker">Fields On This Page</span>
-          <p class="floating-panel-copy">Click a field to edit it. Drag custom fields to reorder them on this page.</p>
-        </div>
-        <div id="field-rail-list" class="form-field-rail-list"></div>
-      </section>
-    </aside>
+        <section class="floating-panel-section">
+          <div class="floating-panel-section-head">
+            <span class="floating-panel-kicker">Fields On This Page</span>
+            <p class="floating-panel-copy">Click a field to edit it. Drag custom fields to reorder them on this page.</p>
+          </div>
+          <div id="field-rail-list" class="form-field-rail-list"></div>
+        </section>
+      </aside>
+    </div>
   </div>
 
   <div id="form-editor-popover" class="form-editor-popover" hidden>
     <div class="form-editor-head">
       <div>
+        <span id="form-editor-handle" class="form-editor-handle" aria-hidden="true"><span></span><span></span></span>
         <strong id="form-editor-title">Question settings</strong>
         <p id="form-editor-copy">Change the selected question.</p>
       </div>
@@ -152,6 +155,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260406b"></script>
+  <script type="module" src="form-creator.js?v=20260406c"></script>
 </body>
 </html>

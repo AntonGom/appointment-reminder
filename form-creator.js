@@ -30,6 +30,7 @@ const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
 const signedOutShell = document.getElementById("signed-out-shell");
 const signedInShell = document.getElementById("signed-in-shell");
+const formCreatorCanvas = document.getElementById("form-creator-canvas");
 const pricePill = document.getElementById("price-pill");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
@@ -50,6 +51,7 @@ const previewSkipButton = document.getElementById("preview-skip-button");
 const previewNextButton = document.getElementById("preview-next-button");
 const pageSettingsButton = document.getElementById("page-settings-button");
 const editorPopover = document.getElementById("form-editor-popover");
+const editorHead = editorPopover?.querySelector(".form-editor-head") || null;
 const editorTitle = document.getElementById("form-editor-title");
 const editorCopy = document.getElementById("form-editor-copy");
 const editorBody = document.getElementById("form-editor-body");
@@ -62,6 +64,12 @@ let currentFormProfile = normalizeCustomFormProfile({});
 let savedFormProfile = normalizeCustomFormProfile({});
 let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
 let dragFieldId = "";
+let editorDragState = null;
+let editorHasCustomPosition = false;
+
+const MOBILE_STUDIO_BREAKPOINT = 1040;
+const MOBILE_CANVAS_WIDTH = 1088;
+const MOBILE_CANVAS_HEIGHT = 980;
 
 function buildTemplateField(config) {
   const base = createCustomField(config.type || "text");
@@ -1052,6 +1060,7 @@ function renderBuilder() {
   renderFieldRail();
   renderFormTemplates();
   renderPreview();
+  applyMobileStudioScale();
 }
 
 function closeEditor() {
@@ -1061,6 +1070,57 @@ function closeEditor() {
 
   editorPopover.hidden = true;
   editorBody.innerHTML = "";
+}
+
+function resetEditorPosition() {
+  if (!editorPopover) {
+    return;
+  }
+
+  editorHasCustomPosition = false;
+  editorPopover.style.removeProperty("--fc-editor-left");
+  editorPopover.style.removeProperty("--fc-editor-top");
+  editorPopover.style.removeProperty("--fc-editor-right");
+}
+
+function setEditorPosition(left, top) {
+  if (!editorPopover) {
+    return;
+  }
+
+  const width = editorPopover.offsetWidth || 360;
+  const height = editorPopover.offsetHeight || 420;
+  const clampedLeft = Math.min(Math.max(12, left), Math.max(12, window.innerWidth - width - 12));
+  const clampedTop = Math.min(Math.max(96, top), Math.max(96, window.innerHeight - height - 12));
+
+  editorPopover.style.setProperty("--fc-editor-left", `${clampedLeft}px`);
+  editorPopover.style.setProperty("--fc-editor-top", `${clampedTop}px`);
+  editorPopover.style.setProperty("--fc-editor-right", "auto");
+}
+
+function applyMobileStudioScale() {
+  if (!signedInShell || !formCreatorCanvas) {
+    return;
+  }
+
+  if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+    signedInShell.style.removeProperty("--fc-mobile-canvas-scale");
+    signedInShell.style.removeProperty("--fc-mobile-canvas-width");
+    signedInShell.style.removeProperty("--fc-mobile-canvas-height");
+    signedInShell.style.removeProperty("--fc-mobile-canvas-scaled-height");
+    return;
+  }
+
+  const widthPadding = window.innerWidth <= 720 ? 16 : 24;
+  const heightAllowance = Math.max(360, window.innerHeight - 132);
+  const widthScale = (window.innerWidth - widthPadding) / MOBILE_CANVAS_WIDTH;
+  const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
+  const nextScale = Math.max(0.34, Math.min(widthScale, heightScale, 1));
+
+  signedInShell.style.setProperty("--fc-mobile-canvas-scale", nextScale.toFixed(3));
+  signedInShell.style.setProperty("--fc-mobile-canvas-width", `${MOBILE_CANVAS_WIDTH}px`);
+  signedInShell.style.setProperty("--fc-mobile-canvas-height", `${MOBILE_CANVAS_HEIGHT}px`);
+  signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(MOBILE_CANVAS_HEIGHT * nextScale)}px`);
 }
 
 function openTypographyEditor(config) {
@@ -1916,6 +1976,74 @@ previewStepCopy?.addEventListener("click", () => openSelectedStepTextEditor("ste
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     closeEditor();
+  }
+});
+
+if (editorHead) {
+  editorHead.addEventListener("pointerdown", event => {
+    if (window.innerWidth <= 760) {
+      return;
+    }
+
+    if (event.target instanceof HTMLElement && event.target.closest("button, input, select, textarea, label, a")) {
+      return;
+    }
+
+    if (!editorPopover || editorPopover.hidden) {
+      return;
+    }
+
+    const rect = editorPopover.getBoundingClientRect();
+    editorDragState = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      pointerId: event.pointerId
+    };
+
+    editorHasCustomPosition = true;
+    editorHead.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+
+  editorHead.addEventListener("pointermove", event => {
+    if (!editorDragState || editorDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    setEditorPosition(
+      event.clientX - editorDragState.offsetX,
+      event.clientY - editorDragState.offsetY
+    );
+  });
+
+  const stopDragging = event => {
+    if (!editorDragState || editorDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    editorHead.releasePointerCapture?.(event.pointerId);
+    editorDragState = null;
+  };
+
+  editorHead.addEventListener("pointerup", stopDragging);
+  editorHead.addEventListener("pointercancel", stopDragging);
+}
+
+window.addEventListener("resize", () => {
+  applyMobileStudioScale();
+
+  if (!editorPopover || editorPopover.hidden) {
+    return;
+  }
+
+  if (window.innerWidth <= 760) {
+    resetEditorPosition();
+    return;
+  }
+
+  if (editorHasCustomPosition) {
+    const rect = editorPopover.getBoundingClientRect();
+    setEditorPosition(rect.left, rect.top);
   }
 });
 
