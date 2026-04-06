@@ -39,6 +39,7 @@ const formEnabledToggle = document.getElementById("form-enabled-toggle");
 const fieldRailList = document.getElementById("field-rail-list");
 const templateList = document.getElementById("template-list");
 const previewShell = document.getElementById("form-preview-shell");
+const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
 const previewStepCount = document.getElementById("preview-step-count");
 const previewStepPill = document.getElementById("preview-step-pill");
@@ -2272,12 +2273,19 @@ previewStepHost?.addEventListener("drop", event => {
   finishDrag();
 });
 
-previewShell?.addEventListener("click", event => {
-  if (event.target.closest("#form-preview-title, #preview-step-title, #preview-step-copy, #preview-stepper, #preview-step-host, .wizard-controls, [data-edit-target], input, textarea, button, label")) {
-    return;
-  }
+previewShellZones.forEach(zone => {
+  zone.addEventListener("mouseenter", () => {
+    previewShell?.classList.add("is-shell-edit-hover");
+  });
 
-  openFormShellEditor();
+  zone.addEventListener("mouseleave", () => {
+    previewShell?.classList.remove("is-shell-edit-hover");
+  });
+
+  zone.addEventListener("click", event => {
+    event.stopPropagation();
+    openFormShellEditor();
+  });
 });
 
 previewTitle?.addEventListener("click", openPageTitleEditor);
