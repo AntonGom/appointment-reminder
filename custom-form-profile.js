@@ -198,6 +198,7 @@ function normalizeTypography(rawTypography = {}) {
     copyBold: Boolean(rawTypography.copyBold),
     labelFontSize: clampNumber(rawTypography.labelFontSize, DEFAULT_FIELD_LABEL_FONT_SIZE, 13, 28),
     labelBold: rawTypography.labelBold !== false,
+    navLabelColor: safeString(rawTypography.navLabelColor).slice(0, 24),
     helpFontSize: clampNumber(rawTypography.helpFontSize, DEFAULT_FIELD_HELP_FONT_SIZE, 11, 24),
     helpBold: Boolean(rawTypography.helpBold)
   };
@@ -224,6 +225,7 @@ export function createCustomField(type = "text") {
     copy: meta.helpText,
     label: meta.label,
     navLabel: meta.shortLabel,
+    navLabelColor: "",
     placeholder: meta.placeholder,
     helpText: meta.helpText,
     required: false,
@@ -282,6 +284,7 @@ export function normalizeCustomFormProfile(rawProfile) {
 
   return {
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
+    isEnabled: profile.isEnabled !== false,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
     formSurfaceColor: safeString(profile.formSurfaceColor) || DEFAULT_FORM_SURFACE_COLOR,

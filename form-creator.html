@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260405g">
+  <link rel="stylesheet" href="form-creator.css?v=20260405h">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -79,6 +79,12 @@
         <span id="price-pill" class="price-pill">Signed in tool</span>
       </div>
 
+      <label class="toggle-row form-enabled-toggle">
+        <span>Use This As My Form</span>
+        <input id="form-enabled-toggle" type="checkbox" checked>
+      </label>
+      <p class="toggle-help-copy">Turn this off if you want Send Reminder to keep using the default built-in form.</p>
+
       <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
 
       <div class="floating-tool-dock" aria-label="Add question tools">
@@ -104,6 +110,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260405g"></script>
+  <script type="module" src="form-creator.js?v=20260405h"></script>
 </body>
 </html>

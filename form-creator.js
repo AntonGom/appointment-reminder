@@ -19,7 +19,7 @@ import {
   buildPreviewStepList,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260405c";
+} from "./custom-form-profile.js?v=20260405d";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -28,6 +28,7 @@ const signedInShell = document.getElementById("signed-in-shell");
 const pricePill = document.getElementById("price-pill");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
+const formEnabledToggle = document.getElementById("form-enabled-toggle");
 const fieldRailList = document.getElementById("field-rail-list");
 const previewShell = document.getElementById("form-preview-shell");
 const previewTitle = document.getElementById("form-preview-title");
@@ -311,7 +312,11 @@ function renderPreview() {
     previewStepper.innerHTML = steps.map((step, index) => `
       <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
-        <span class="preview-stepper-label">${escapeHtml(step.navLabel)}</span>
+        <span
+          class="preview-stepper-label"
+          ${step.id !== "review" ? `data-edit-target="step-nav-label" data-step-id="${escapeHtml(step.id)}"` : ""}
+          style="${step.navLabelColor ? `color:${escapeHtml(step.navLabelColor)};` : ""}"
+        >${escapeHtml(step.navLabel)}</span>
       </button>
     `).join("");
   }
@@ -429,6 +434,9 @@ function renderFieldRail() {
 }
 
 function renderBuilder() {
+  if (formEnabledToggle) {
+    formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
+  }
   renderFieldRail();
   renderPreview();
 }
@@ -647,10 +655,51 @@ function openPageTitleEditor() {
   });
 }
 
+function openStepLabelEditor(stepId = selectedPreviewStepId) {
+  const step = getEditableStep(stepId);
+
+  if (!step || step.id === "review" || !editorPopover || !editorBody) {
+    return;
+  }
+
+  editorPopover.hidden = false;
+  editorTitle.textContent = "Step label";
+  editorCopy.textContent = "Edit the step chip text and color shown in the step navigation.";
+  editorBody.innerHTML = `
+    <label>
+      Step label
+      <input id="editor-step-nav-text" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+    </label>
+    <label>
+      Step label color
+      <input id="editor-step-nav-color" type="color" value="${escapeHtml(step.navLabelColor || "#111827")}">
+    </label>
+  `;
+
+  document.getElementById("editor-step-nav-text")?.addEventListener("input", event => {
+    patchStepConfig(step.id, {
+      navLabel: safeShortLabel(event.target.value)
+    });
+    renderBuilder();
+  });
+
+  document.getElementById("editor-step-nav-color")?.addEventListener("input", event => {
+    patchStepConfig(step.id, {
+      navLabelColor: event.target.value
+    });
+    renderBuilder();
+  });
+}
+
 function openSelectedStepTextEditor(target) {
   const step = getSelectedPreviewStep();
 
   if (!step) {
+    return;
+  }
+
+  if (target === "step-nav-label") {
+    openStepLabelEditor(step.id);
     return;
   }
 
@@ -941,14 +990,23 @@ function addCustomField(type) {
   openFieldEditor(nextField.id);
 }
 
-async function saveFormProfile() {
+async function saveFormProfile(options = {}) {
+  const { silent = false, skipBusy = false } = options;
+
   if (!supabase || !currentUser) {
-    setStatus("Please sign in first.", "error");
+    if (!silent) {
+      setStatus("Please sign in first.", "error");
+    }
     return;
   }
 
-  setButtonBusy(saveFormButton, true, "Saving form...");
-  setStatus("");
+  if (!skipBusy) {
+    setButtonBusy(saveFormButton, true, "Saving form...");
+  }
+
+  if (!silent) {
+    setStatus("");
+  }
 
   try {
     const normalized = normalizeCustomFormProfile(currentFormProfile);
@@ -969,11 +1027,15 @@ async function saveFormProfile() {
     currentFormProfile = normalizeCustomFormProfile(currentUser?.user_metadata?.custom_form_profile || normalized);
     savedFormProfile = normalizeCustomFormProfile(currentFormProfile);
     renderBuilder();
-    setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
+    if (!silent) {
+      setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
+    }
   } catch (error) {
     setStatus(error.message || "Unable to save this form right now.", "error");
   } finally {
-    setButtonBusy(saveFormButton, false);
+    if (!skipBusy) {
+      setButtonBusy(saveFormButton, false);
+    }
   }
 }
 
@@ -1055,6 +1117,14 @@ pageSettingsButton?.addEventListener("click", openPageEditor);
 editorCloseButton?.addEventListener("click", closeEditor);
 saveFormButton?.addEventListener("click", saveFormProfile);
 resetFormButton?.addEventListener("click", resetToSaved);
+formEnabledToggle?.addEventListener("change", async event => {
+  currentFormProfile = {
+    ...currentFormProfile,
+    isEnabled: Boolean(event.target.checked)
+  };
+  renderBuilder();
+  await saveFormProfile({ silent: true, skipBusy: true });
+});
 previewBackButton?.addEventListener("click", () => {
   const steps = getPreviewSteps();
   const index = steps.findIndex(step => step.id === selectedPreviewStepId);
@@ -1091,6 +1161,20 @@ document.querySelectorAll("[data-add-type]").forEach(button => {
 });
 
 previewStepper?.addEventListener("click", event => {
+  const labelTarget = event.target.closest('[data-edit-target="step-nav-label"]');
+
+  if (labelTarget) {
+    const nextId = labelTarget.dataset.stepId || "";
+    if (!nextId) {
+      return;
+    }
+
+    selectedPreviewStepId = nextId;
+    renderBuilder();
+    openStepLabelEditor(nextId);
+    return;
+  }
+
   const button = event.target.closest("[data-preview-step]");
 
   if (!button) {

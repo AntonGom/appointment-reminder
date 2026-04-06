@@ -35,7 +35,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405c";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260405d";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -1111,6 +1111,17 @@ function getActiveStepTypography(stepElement) {
   };
 }
 
+function getStepNavigationAppearance(stepElement) {
+  const fieldId = stepElement?.dataset?.field || "";
+  const customField = getCustomFieldConfig(fieldId);
+  const builtInOverride = activeCustomFormProfile?.stepOverrides?.[fieldId] || null;
+  const source = customField || builtInOverride || {};
+
+  return {
+    navLabelColor: typeof source.navLabelColor === "string" ? source.navLabelColor.trim() : ""
+  };
+}
+
 function applyBuiltInStepOverrides() {
   Object.entries(BUILT_IN_FORM_STEP_DEFAULTS).forEach(([fieldId, defaults]) => {
     const stepElement = document.querySelector(`.wizard-step[data-field="${fieldId}"]`);
@@ -1129,6 +1140,7 @@ function applyBuiltInStepOverrides() {
 
     stepElement.dataset.title = override.title || defaults.title;
     stepElement.dataset.nav = override.navLabel || defaults.navLabel;
+    stepElement.dataset.navColor = override.navLabelColor || "";
     stepElement.dataset.copy = override.copy || defaults.copy;
     stepElement.dataset.optional = required ? "false" : "true";
 
@@ -1180,7 +1192,7 @@ function buildCustomWizardStepMarkup(field) {
     : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${placeholder.replace(/"/g, "&quot;")}">`;
 
   return `
-    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
+    <div class="wizard-step custom-wizard-step" data-title="${title.replace(/"/g, "&quot;")}" data-nav="${navLabel.replace(/"/g, "&quot;")}" data-nav-color="${(field.navLabelColor || "").replace(/"/g, "&quot;")}" data-field="${field.id}" data-copy="${stepCopy.replace(/"/g, "&quot;") || "Custom question added from Form Creator."}" data-optional="${field?.required ? "false" : "true"}">
       <div class="question-wrap">
         <label for="${field.id}" style="font-size:${field.labelFontSize || DEFAULT_FIELD_LABEL_FONT_SIZE}px;font-weight:${field.labelBold === false ? 500 : 800};">${label} ${optionalBadge}</label>
         ${inputMarkup}
@@ -1245,7 +1257,22 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
 
   try {
     const module = await getCustomFormModule();
-    activeCustomFormProfile = module.normalizeCustomFormProfile(profile);
+    const normalizedProfile = module.normalizeCustomFormProfile(profile);
+
+    if (normalizedProfile.isEnabled === false) {
+      activeCustomFormProfile = null;
+      activeCustomFormFields = [];
+      customFormFieldLookup = new Map();
+      renderCustomWizardSteps();
+      applyCustomFormPresentation(null);
+      currentStepIndex = 0;
+      requiredFieldAttemptIds.clear();
+      initWizard();
+      refreshFormState();
+      return;
+    }
+
+    activeCustomFormProfile = normalizedProfile;
     activeCustomFormFields = Array.isArray(activeCustomFormProfile.fields) ? activeCustomFormProfile.fields : [];
     customFormFieldLookup = new Map(activeCustomFormFields.map(field => [field.id, field]));
     renderCustomWizardSteps();
@@ -2316,6 +2343,7 @@ function renderStepNavigation() {
   wizardSteps.forEach((step, index) => {
     const button = document.createElement("button");
     const label = step.dataset.nav || step.dataset.title || `Step ${index + 1}`;
+    const navAppearance = getStepNavigationAppearance(step);
     const invalid = isStepInvalid(step);
     const complete = isStepComplete(step, index);
     const stepIcon = invalid ? "X" : complete ? "&#10003;" : String(index + 1);
@@ -2327,6 +2355,11 @@ function renderStepNavigation() {
       <span class="stepper-circle">${stepIcon}</span>
       <span class="stepper-label">${label}</span>
     `;
+
+    const labelElement = button.querySelector(".stepper-label");
+    if (labelElement && navAppearance.navLabelColor) {
+      labelElement.style.color = navAppearance.navLabelColor;
+    }
 
     if (index === currentStepIndex) {
       button.classList.add("active");
