@@ -194,6 +194,62 @@ function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
 }
 
+function isMissingColumnError(error, columnName) {
+  const normalizedColumn = String(columnName || "").trim().toLowerCase();
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
+  return Boolean(normalizedColumn && message.includes(normalizedColumn));
+}
+
+function normalizeCustomAnswerEntry(rawAnswer, fallbackFieldId = "") {
+  const fieldId = String(rawAnswer?.field_id || fallbackFieldId || "").trim();
+  const label = String(rawAnswer?.label || rawAnswer?.title || fieldId || "Saved answer").trim();
+  const rawValue = String(rawAnswer?.raw_value ?? rawAnswer?.value ?? "").trim();
+  const displayValue = String(rawAnswer?.display_value ?? rawValue).trim();
+
+  if (!fieldId || !displayValue) {
+    return null;
+  }
+
+  return {
+    field_id: fieldId,
+    label,
+    type: String(rawAnswer?.type || "text").trim(),
+    page_id: String(rawAnswer?.page_id || "").trim(),
+    page_title: String(rawAnswer?.page_title || "").trim(),
+    raw_value: rawValue,
+    display_value: displayValue,
+    source_appointment_id: String(rawAnswer?.source_appointment_id || "").trim(),
+    source_service_date: String(rawAnswer?.source_service_date || "").trim(),
+    updated_at: String(rawAnswer?.updated_at || rawAnswer?.captured_at || "").trim()
+  };
+}
+
+function normalizeCustomAnswerList(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(entry => normalizeCustomAnswerEntry(entry))
+    .filter(Boolean);
+}
+
+function normalizeProfileCustomAnswers(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce((accumulator, [fieldId, rawAnswer]) => {
+    const normalized = normalizeCustomAnswerEntry(rawAnswer, fieldId);
+
+    if (normalized) {
+      accumulator[normalized.field_id] = normalized;
+    }
+
+    return accumulator;
+  }, {});
+}
+
 function getTierKey(user) {
   const candidates = [
     user?.user_metadata?.tier,
@@ -894,17 +950,57 @@ async function backfillClientsFromAppointments(ownerId, clients, appointments) {
   return [...(data || []), ...(Array.isArray(clients) ? [...clients] : [])];
 }
 
+async function loadSavedClientRows(ownerId) {
+  if (!supabase || !ownerId) {
+    return [];
+  }
+
+  const fallbackSelect = "id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at";
+  const primarySelect = `${fallbackSelect}, profile_custom_answers`;
+  let { data, error } = await supabase
+    .from("clients")
+    .select(primarySelect)
+    .order("created_at", { ascending: false });
+
+  if (error && isMissingColumnError(error, "profile_custom_answers")) {
+    ({ data, error } = await supabase
+      .from("clients")
+      .select(fallbackSelect)
+      .order("created_at", { ascending: false }));
+  }
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map(client => ({
+    ...client,
+    profile_custom_answers: normalizeProfileCustomAnswers(client?.profile_custom_answers)
+  }));
+}
+
 async function loadSavedAppointmentsForClients(ownerId) {
   if (!supabase || !ownerId) {
     return [];
   }
 
-  const { data, error } = await supabase
+  const fallbackSelect = "id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, updated_at";
+  const primarySelect = `${fallbackSelect}, custom_answers`;
+  let { data, error } = await supabase
     .from("appointments")
-    .select("id, client_id, client_name, client_email, client_phone, service_location, notes, updated_at")
+    .select(primarySelect)
     .eq("owner_id", ownerId)
     .order("updated_at", { ascending: false })
     .limit(500);
+
+  if (error && isMissingColumnError(error, "custom_answers")) {
+    ({ data, error } = await supabase
+      .from("appointments")
+      .select(fallbackSelect)
+      .eq("owner_id", ownerId)
+      .order("updated_at", { ascending: false })
+      .limit(500));
+  }
 
   if (error) {
     if (error.code === "42P01") {
@@ -914,7 +1010,10 @@ async function loadSavedAppointmentsForClients(ownerId) {
     throw error;
   }
 
-  return data || [];
+  return (data || []).map(appointment => ({
+    ...appointment,
+    custom_answers: normalizeCustomAnswerList(appointment?.custom_answers)
+  }));
 }
 
 async function loadReminderHistoryForDelete(ownerId) {
@@ -937,6 +1036,41 @@ async function loadReminderHistoryForDelete(ownerId) {
   }
 
   return data || [];
+}
+
+function attachAppointmentsToClients(clients, appointments) {
+  const clientsWithAppointments = (clients || []).map(client => ({
+    ...client,
+    profile_custom_answers: normalizeProfileCustomAnswers(client?.profile_custom_answers),
+    appointments: []
+  }));
+  const lookup = buildClientLookup(clientsWithAppointments);
+
+  (appointments || []).forEach(appointment => {
+    const match = findMatchingClientRecord(appointment, lookup);
+
+    if (!match) {
+      return;
+    }
+
+    if (!Array.isArray(match.appointments)) {
+      match.appointments = [];
+    }
+
+    match.appointments.push({
+      ...appointment,
+      custom_answers: normalizeCustomAnswerList(appointment?.custom_answers)
+    });
+  });
+
+  return clientsWithAppointments.map(client => ({
+    ...client,
+    appointments: (client.appointments || []).sort((left, right) => {
+      const rightKey = `${right?.service_date || ""} ${right?.service_time || ""} ${right?.updated_at || ""}`;
+      const leftKey = `${left?.service_date || ""} ${left?.service_time || ""} ${left?.updated_at || ""}`;
+      return rightKey.localeCompare(leftKey);
+    })
+  }));
 }
 
 function isUniqueClientEmail(client, clients) {
@@ -1210,6 +1344,151 @@ function renderExpandedReminderHistory(client) {
   `;
 }
 
+function formatAppointmentDate(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  const parsed = new Date(`${normalized}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
+function formatAppointmentTime(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  const [hoursRaw = "0", minutesRaw = "00"] = normalized.split(":");
+  let hours = Number.parseInt(hoursRaw, 10);
+  const minutes = String(minutesRaw).padStart(2, "0");
+
+  if (!Number.isFinite(hours)) {
+    return normalized;
+  }
+
+  const meridiem = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${meridiem}`;
+}
+
+function getRememberedClientAnswers(client) {
+  return Object.values(normalizeProfileCustomAnswers(client?.profile_custom_answers)).sort((left, right) => {
+    const rightUpdated = String(right?.updated_at || "").trim();
+    const leftUpdated = String(left?.updated_at || "").trim();
+    return rightUpdated.localeCompare(leftUpdated) || String(left?.label || "").localeCompare(String(right?.label || ""));
+  });
+}
+
+function getAppointmentsWithCustomAnswers(client) {
+  return (Array.isArray(client?.appointments) ? client.appointments : [])
+    .map(appointment => ({
+      ...appointment,
+      custom_answers: normalizeCustomAnswerList(appointment?.custom_answers)
+    }))
+    .filter(appointment => appointment.custom_answers.length > 0);
+}
+
+function isRememberedClientAnswer(client, answer) {
+  const rememberedAnswer = normalizeProfileCustomAnswers(client?.profile_custom_answers)?.[String(answer?.field_id || "").trim()];
+
+  if (!rememberedAnswer) {
+    return false;
+  }
+
+  return String(rememberedAnswer?.display_value || "").trim() === String(answer?.display_value || "").trim();
+}
+
+function renderRememberedClientAnswers(client) {
+  const rememberedAnswers = getRememberedClientAnswers(client);
+
+  if (!rememberedAnswers.length) {
+    return "";
+  }
+
+  return `
+    <div class="expanded-client-block expanded-client-block-plain">
+      <div class="expanded-client-label">Remembered For This Client</div>
+      <div class="client-memory-list">
+        ${rememberedAnswers.map(answer => {
+          const sourceParts = [formatAppointmentDate(answer.source_service_date)].filter(Boolean);
+
+          return `
+            <div class="client-memory-item">
+              <div class="client-memory-label">${escapeHtml(answer.label)}</div>
+              <div class="client-memory-value">${escapeHtml(answer.display_value)}</div>
+              ${sourceParts.length ? `<div class="client-memory-meta">Saved from ${escapeHtml(sourceParts.join(" "))}</div>` : ""}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderAppointmentAnswerHistory(client) {
+  const appointmentGroups = getAppointmentsWithCustomAnswers(client);
+
+  if (!appointmentGroups.length) {
+    return "";
+  }
+
+  return `
+    <div class="expanded-client-block expanded-client-block-plain">
+      <div class="expanded-client-label">Appointment Answers</div>
+      <div class="client-answer-group-list">
+        ${appointmentGroups.map(appointment => {
+          const dateLabel = formatAppointmentDate(appointment.service_date);
+          const timeLabel = formatAppointmentTime(appointment.service_time);
+          const headerLabel = [dateLabel, timeLabel].filter(Boolean).join(" at ") || "Saved appointment";
+          const subLabel = String(appointment.service_location || appointment.notes || "").trim();
+
+          return `
+            <div class="client-answer-group">
+              <div class="client-answer-group-top">
+                <div class="client-answer-group-title">${escapeHtml(headerLabel)}</div>
+                ${subLabel ? `<div class="client-answer-group-copy">${escapeHtml(subLabel)}</div>` : ""}
+              </div>
+              <div class="client-answer-list">
+                ${appointment.custom_answers.map(answer => `
+                  <div class="client-answer-item">
+                    <div class="client-answer-copy">
+                      <div class="client-answer-label">${escapeHtml(answer.label)}</div>
+                      <div class="client-answer-value">${escapeHtml(answer.display_value)}</div>
+                    </div>
+                    ${isRememberedClientAnswer(client, answer)
+                      ? `<span class="remembered-answer-pill">Remembered</span>`
+                      : `<button
+                          type="button"
+                          class="remember-answer-button"
+                          data-remember-answer
+                          data-client-id="${escapeHtml(client.id)}"
+                          data-appointment-id="${escapeHtml(appointment.id || "")}"
+                          data-field-id="${escapeHtml(answer.field_id)}"
+                        >Remember this</button>`}
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function getClientSearchText(client) {
   return [
     client.client_name,
@@ -1251,12 +1530,91 @@ function getLatestReminderStatusAt(client, targetStatus) {
 function renderExpandedClientDetails(client) {
   return `
     <div class="expanded-client-panel">
+      ${renderRememberedClientAnswers(client)}
+      ${renderAppointmentAnswerHistory(client)}
       <div class="expanded-client-block expanded-client-block-plain expanded-reminder-activity-shell">
         <div class="expanded-client-label">Full Reminder Activity</div>
         ${renderExpandedReminderHistory(client)}
       </div>
     </div>
   `;
+}
+
+async function rememberClientAnswer(clientId, appointmentId, fieldId) {
+  if (!supabase) {
+    return;
+  }
+
+  const normalizedClientId = String(clientId || "").trim();
+  const normalizedAppointmentId = String(appointmentId || "").trim();
+  const normalizedFieldId = String(fieldId || "").trim();
+  const client = savedClients.find(entry => String(entry?.id || "").trim() === normalizedClientId);
+
+  if (!client || !normalizedAppointmentId || !normalizedFieldId) {
+    setStatus("Unable to find that saved answer.", "error");
+    return;
+  }
+
+  const appointment = (client.appointments || []).find(entry => String(entry?.id || "").trim() === normalizedAppointmentId);
+  const answer = appointment?.custom_answers?.find(entry => String(entry?.field_id || "").trim() === normalizedFieldId);
+
+  if (!appointment || !answer) {
+    setStatus("Unable to find that appointment answer.", "error");
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    setStatus("Please sign in again before saving that client detail.", "error");
+    return;
+  }
+
+  const nextProfileAnswers = normalizeProfileCustomAnswers(client.profile_custom_answers);
+  nextProfileAnswers[normalizedFieldId] = {
+    ...answer,
+    field_id: normalizedFieldId,
+    source_appointment_id: normalizedAppointmentId,
+    source_service_date: String(appointment?.service_date || "").trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  let { error } = await supabase
+    .from("clients")
+    .update({
+      profile_custom_answers: nextProfileAnswers,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", normalizedClientId)
+    .eq("owner_id", user.id);
+
+  if (error && isMissingColumnError(error, "profile_custom_answers")) {
+    setStatus("Run the new custom-answer SQL update before using Remember this.", "error");
+    return;
+  }
+
+  if (error) {
+    setStatus(error.message || "Unable to save that client detail.", "error");
+    return;
+  }
+
+  savedClients = savedClients.map(entry => (
+    String(entry?.id || "").trim() === normalizedClientId
+      ? {
+          ...entry,
+          profile_custom_answers: nextProfileAnswers,
+          updated_at: new Date().toISOString()
+        }
+      : entry
+  ));
+
+  if (clientDetailModal && !clientDetailModal.hidden) {
+    openClientDetailModal(normalizedClientId);
+  }
+
+  setStatus(`Saved "${answer.label}" to this client profile.`, "success");
 }
 
 function sortContacts(contacts, mode = clientsSortMode) {
@@ -1599,27 +1957,20 @@ async function loadSavedClients() {
       return;
     }
 
-    const [clientsResult, historyRows, appointmentsRows] = await Promise.all([
-      supabase
-        .from("clients")
-        .select("id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at")
-        .order("created_at", { ascending: false }),
+    const [clientsRows, historyRows, appointmentsRows] = await Promise.all([
+      loadSavedClientRows(user.id),
       loadReminderHistory(user.id),
       loadSavedAppointmentsForClients(user.id)
     ]);
 
-    if (clientsResult.error) {
-      throw clientsResult.error;
-    }
-
-    let clientsData = clientsResult.data || [];
+    let clientsData = clientsRows || [];
     clientsData = await backfillClientsFromAppointments(user.id, clientsData, appointmentsRows);
 
     if (clientsData.length > CLIENTS_PER_PAGE * 2) {
       await new Promise(resolve => window.requestAnimationFrame(resolve));
     }
 
-    savedClients = attachReminderHistory(clientsData, historyRows);
+    savedClients = attachAppointmentsToClients(attachReminderHistory(clientsData, historyRows), appointmentsRows);
   } catch (error) {
     savedClients = [];
     setStatus(error.message || "Unable to load saved clients.", "error");
@@ -2195,7 +2546,8 @@ function useClientInReminder(clientId) {
       email: client.client_email || "",
       phone: client.client_phone ? formatPhone(client.client_phone) : "",
       address: client.service_address || "",
-      notes: client.notes || ""
+      notes: client.notes || "",
+      profileCustomAnswers: normalizeProfileCustomAnswers(client.profile_custom_answers)
     })
   );
 
@@ -2335,6 +2687,23 @@ function handleClientsListClick(event) {
       openClientDetailModal(rowClientId);
     }
   }
+}
+
+function handleClientDetailBodyClick(event) {
+  const rememberButton = event.target.closest("[data-remember-answer]");
+
+  if (!rememberButton) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  rememberClientAnswer(
+    rememberButton.dataset.clientId,
+    rememberButton.dataset.appointmentId,
+    rememberButton.dataset.fieldId
+  );
 }
 
 async function handleUpgrade() {
@@ -2511,6 +2880,10 @@ async function initAccountPage() {
 
   if (closeClientDetailButton) {
     closeClientDetailButton.addEventListener("click", closeClientDetailModal);
+  }
+
+  if (clientDetailBody) {
+    clientDetailBody.addEventListener("click", handleClientDetailBodyClick);
   }
 
   if (closeStatusHelpButton) {

@@ -85,6 +85,7 @@ let activeCustomFormFields = [];
 let customFormFieldLookup = new Map();
 let wizardControlsInitialized = false;
 let requiredFieldAttemptIds = new Set();
+let pendingClientProfilePrefillAnswers = {};
 
 const BUILT_IN_FORM_STEP_DEFAULTS = {
   phone: {
@@ -399,6 +400,80 @@ function formatCustomFieldDisplayValue(field, value) {
   }
 
   return safeValue;
+}
+
+function getFieldPageTitle(field, fallbackStep) {
+  const pageId = String(field?.pageId || field?.id || fallbackStep?.id || "").trim();
+  const matchingStep = getOrderedActiveSteps().find(step => String(step?.id || "").trim() === pageId);
+  return String(matchingStep?.title || fallbackStep?.title || field?.title || field?.label || "").trim();
+}
+
+function buildCustomFieldAnswerSnapshots() {
+  const answers = [];
+  const seenFieldIds = new Set();
+
+  getOrderedActiveSteps().forEach(step => {
+    const includeBaseField = step.type !== "page" && !BASE_FORM_FIELD_IDS.includes(step.id);
+    const orderedFields = getOrderedFieldsForPage(step.id, includeBaseField ? step : null);
+
+    orderedFields.forEach(field => {
+      if (BASE_FORM_FIELD_IDS.includes(field.id) || seenFieldIds.has(field.id)) {
+        return;
+      }
+
+      seenFieldIds.add(field.id);
+
+      const rawValue = getFieldValue(field.id);
+      const formattedValue = formatCustomFieldDisplayValue(field, rawValue);
+
+      if (!formattedValue) {
+        return;
+      }
+
+      answers.push({
+        field_id: String(field.id || "").trim(),
+        label: String(field.label || field.title || "Custom Question").trim(),
+        type: String(field.type || "text").trim(),
+        page_id: String(field.pageId || step.id || "").trim(),
+        page_title: getFieldPageTitle(field, step),
+        raw_value: String(rawValue || "").trim(),
+        display_value: formattedValue,
+        captured_at: new Date().toISOString()
+      });
+    });
+  });
+
+  return answers;
+}
+
+function applyPendingClientProfilePrefill() {
+  if (!pendingClientProfilePrefillAnswers || typeof pendingClientProfilePrefillAnswers !== "object") {
+    return;
+  }
+
+  const remainingAnswers = {};
+
+  Object.entries(pendingClientProfilePrefillAnswers).forEach(([fieldId, rawAnswer]) => {
+    const normalizedFieldId = String(rawAnswer?.field_id || fieldId || "").trim();
+
+    if (!normalizedFieldId) {
+      return;
+    }
+
+    const element = document.getElementById(normalizedFieldId);
+
+    if (!element) {
+      remainingAnswers[normalizedFieldId] = rawAnswer;
+      return;
+    }
+
+    const nextValue = String(rawAnswer?.raw_value ?? rawAnswer?.value ?? "").trim();
+    const fieldType = String(rawAnswer?.type || getCustomFieldConfig(normalizedFieldId)?.type || "").trim().toLowerCase();
+
+    element.value = fieldType === "phone" ? formatPhoneNumber(nextValue) : nextValue;
+  });
+
+  pendingClientProfilePrefillAnswers = remainingAnswers;
 }
 
 function getBronzePreviewFrame() {
@@ -1034,6 +1109,9 @@ function applySavedClientPrefill() {
 
     const client = JSON.parse(rawValue);
     linkedPrefillClientId = String(client?.id || "").trim();
+    pendingClientProfilePrefillAnswers = client?.profileCustomAnswers && typeof client.profileCustomAnswers === "object"
+      ? { ...client.profileCustomAnswers }
+      : {};
 
     const mappedFields = {
       name: client.name || "",
@@ -1051,8 +1129,11 @@ function applySavedClientPrefill() {
       }
     });
 
+    applyPendingClientProfilePrefill();
+
     window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
   } catch (error) {
+    pendingClientProfilePrefillAnswers = {};
     window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
     console.warn("Saved client prefill failed", error);
   }
@@ -1448,6 +1529,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     activeCustomFormFields = [];
     customFormFieldLookup = new Map();
     renderCustomWizardSteps();
+    applyPendingClientProfilePrefill();
     applyCustomFormPresentation(null);
     currentStepIndex = 0;
     requiredFieldAttemptIds.clear();
@@ -1465,6 +1547,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
       activeCustomFormFields = [];
       customFormFieldLookup = new Map();
       renderCustomWizardSteps();
+      applyPendingClientProfilePrefill();
       applyCustomFormPresentation(null);
       currentStepIndex = 0;
       requiredFieldAttemptIds.clear();
@@ -1478,6 +1561,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     customFormFieldLookup = new Map(activeCustomFormFields.map(field => [field.id, field]));
     renderCustomWizardSteps();
     bindCustomFieldInputListeners();
+    applyPendingClientProfilePrefill();
     applyCustomFormPresentation(activeCustomFormProfile);
     currentStepIndex = 0;
     requiredFieldAttemptIds.clear();
@@ -1490,40 +1574,16 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
 
 function buildCustomFieldMessageLines() {
   const lines = [];
-  const seenFieldIds = new Set();
+  buildCustomFieldAnswerSnapshots().forEach(answer => {
+    lines.push("");
 
-  getOrderedActiveSteps().forEach(step => {
-    const includeBaseField = step.type !== "page" && !BASE_FORM_FIELD_IDS.includes(step.id);
-    const orderedFields = getOrderedFieldsForPage(step.id, includeBaseField ? step : null);
+    if (answer.type === "textarea") {
+      lines.push(`${answer.label}:`);
+      lines.push(answer.display_value);
+      return;
+    }
 
-    orderedFields.forEach(field => {
-      if (BASE_FORM_FIELD_IDS.includes(field.id)) {
-        return;
-      }
-
-      if (seenFieldIds.has(field.id)) {
-        return;
-      }
-
-      seenFieldIds.add(field.id);
-
-      const rawValue = getFieldValue(field.id);
-      const formattedValue = formatCustomFieldDisplayValue(field, rawValue);
-
-      if (!formattedValue) {
-        return;
-      }
-
-      lines.push("");
-
-      if (field.type === "textarea") {
-        lines.push(`${field.label}:`);
-        lines.push(formattedValue);
-        return;
-      }
-
-      lines.push(`${field.label}: ${formattedValue}`);
-    });
+    lines.push(`${answer.label}: ${answer.display_value}`);
   });
 
   return lines;
@@ -2228,10 +2288,17 @@ function buildBronzeAppointmentPayload({ clientId, channel, source }) {
     service_time: serviceTime || null,
     service_location: getFieldValue("address").slice(0, FIELD_LIMITS.address.maxLength),
     notes: getFieldValue("notes").slice(0, 1200),
+    custom_answers: buildCustomFieldAnswerSnapshots(),
     last_channel: channel || null,
     last_source: source || "",
     updated_at: new Date().toISOString()
   };
+}
+
+function isSupabaseMissingColumnError(error, columnName) {
+  const normalizedColumn = String(columnName || "").trim().toLowerCase();
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase();
+  return Boolean(normalizedColumn && message.includes(normalizedColumn));
 }
 
 async function findExistingBronzeAppointmentId(payload) {
@@ -2324,11 +2391,22 @@ async function upsertBronzeAppointment({ clientId, channel, source }) {
     const existingId = await findExistingBronzeAppointmentId(payload);
 
     if (existingId) {
-      const { error } = await appSupabase
+      let { error } = await appSupabase
         .from("appointments")
         .update(payload)
         .eq("id", existingId)
         .eq("owner_id", payload.owner_id);
+
+      if (error && isSupabaseMissingColumnError(error, "custom_answers")) {
+        const fallbackPayload = { ...payload };
+        delete fallbackPayload.custom_answers;
+
+        ({ error } = await appSupabase
+          .from("appointments")
+          .update(fallbackPayload)
+          .eq("id", existingId)
+          .eq("owner_id", payload.owner_id));
+      }
 
       if (error) {
         throw error;
@@ -2337,11 +2415,22 @@ async function upsertBronzeAppointment({ clientId, channel, source }) {
       return existingId;
     }
 
-    const { data, error } = await appSupabase
+    let { data, error } = await appSupabase
       .from("appointments")
       .insert(payload)
       .select("id")
       .single();
+
+    if (error && isSupabaseMissingColumnError(error, "custom_answers")) {
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.custom_answers;
+
+      ({ data, error } = await appSupabase
+        .from("appointments")
+        .insert(fallbackPayload)
+        .select("id")
+        .single());
+    }
 
     if (error) {
       throw error;
