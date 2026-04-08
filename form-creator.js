@@ -74,6 +74,8 @@ let dragPayload = null;
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
 const MOBILE_CANVAS_HEIGHT = 980;
+const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea"].includes(option.id));
+const BUILT_IN_STEP_MAP = new Map(BASE_REMINDER_STEPS.map(step => [step.id, step]));
 
 function buildTemplateField(config) {
   const base = createCustomField(config.type || "text");
@@ -590,6 +592,18 @@ function getCustomFields() {
   return Array.isArray(currentFormProfile.fields) ? currentFormProfile.fields : [];
 }
 
+function getBuilderFieldTypeOptions(currentType = "") {
+  if (BUILDER_CUSTOM_FIELD_TYPES.some(option => option.id === currentType)) {
+    return BUILDER_CUSTOM_FIELD_TYPES;
+  }
+
+  if (!currentType) {
+    return BUILDER_CUSTOM_FIELD_TYPES;
+  }
+
+  return [getCustomFieldTypeMeta(currentType), ...BUILDER_CUSTOM_FIELD_TYPES.filter(option => option.id !== currentType)];
+}
+
 function getCustomPages() {
   return Array.isArray(currentFormProfile.customPages) ? currentFormProfile.customPages : [];
 }
@@ -758,6 +772,53 @@ function insertFieldIntoCurrentPage(type, insertIndex = null) {
   openFieldEditor(nextField.id);
 }
 
+function restoreBuiltInStep(stepId, options = {}) {
+  const baseStep = BUILT_IN_STEP_MAP.get(stepId);
+
+  if (!baseStep) {
+    return;
+  }
+
+  const { insertIndex = null, openEditor = false } = options;
+  const currentOrder = getCurrentStepOrder();
+  const existingIndex = currentOrder.indexOf(stepId);
+  const isReorderingExistingStep = existingIndex >= 0 && typeof insertIndex === "number";
+  const nextOrder = [...currentOrder];
+  const wasHidden = currentFormProfile.stepOverrides?.[stepId]?.hidden === true;
+
+  if (existingIndex >= 0 && typeof insertIndex === "number") {
+    const [movedId] = nextOrder.splice(existingIndex, 1);
+    const normalizedIndex = Math.max(0, Math.min(insertIndex, nextOrder.length));
+    nextOrder.splice(normalizedIndex, 0, movedId);
+  } else if (existingIndex < 0) {
+    const selectedIndex = nextOrder.indexOf(getCurrentPageId());
+    const fallbackIndex = selectedIndex >= 0 ? selectedIndex + 1 : nextOrder.length;
+    const normalizedIndex = typeof insertIndex === "number"
+      ? Math.max(0, Math.min(insertIndex, nextOrder.length))
+      : fallbackIndex;
+    nextOrder.splice(normalizedIndex, 0, stepId);
+  }
+
+  patchStepConfig(stepId, { hidden: false });
+  ensureStepOrderIds(nextOrder);
+  selectedPreviewStepId = stepId;
+  renderBuilder();
+
+  if (openEditor) {
+    openFieldEditor(stepId);
+  }
+
+  if (wasHidden) {
+    setStatus(`${baseStep.navLabel} restored to your form.`, "success");
+  } else if (isReorderingExistingStep) {
+    setStatus(`${baseStep.navLabel} moved in your form.`, "success");
+  } else if (existingIndex < 0) {
+    setStatus(`${baseStep.navLabel} added to your form.`, "success");
+  } else {
+    setStatus(`${baseStep.navLabel} is already part of your form.`, "info");
+  }
+}
+
 function addBlankPage(insertIndex = null) {
   const nextPage = createCustomPage();
   const currentOrder = getCurrentStepOrder();
@@ -792,7 +853,10 @@ function startDrag(payload, event, draggedElement = null) {
   }
 
   if (previewStepper) {
-    previewStepper.classList.toggle("is-dragging-steps", payload?.kind === "step" || payload?.kind === "page-template");
+    previewStepper.classList.toggle(
+      "is-dragging-steps",
+      payload?.kind === "step" || payload?.kind === "page-template" || payload?.kind === "built-in-step-template"
+    );
   }
 
   if (draggedElement) {
@@ -1385,7 +1449,7 @@ function openFieldEditor(fieldId) {
       <label>
         Field type
         <select id="editor-field-type">
-          ${CUSTOM_FIELD_TYPES.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === step.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          ${getBuilderFieldTypeOptions(step.type).map(option => `<option value="${escapeHtml(option.id)}" ${option.id === step.type ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
         </select>
       </label>
     ` : `
@@ -2103,6 +2167,21 @@ document.querySelectorAll("[data-add-type]").forEach(button => {
   });
 });
 
+document.querySelectorAll("[data-add-step]").forEach(button => {
+  button.addEventListener("click", () => {
+    restoreBuiltInStep(button.dataset.addStep || "", { openEditor: true });
+  });
+  button.addEventListener("dragstart", event => {
+    startDrag({
+      kind: "built-in-step-template",
+      stepId: button.dataset.addStep || ""
+    }, event, button);
+  });
+  button.addEventListener("dragend", () => {
+    finishDrag(button);
+  });
+});
+
 document.querySelectorAll("[data-add-page]").forEach(button => {
   button.addEventListener("click", () => addBlankPage());
   button.addEventListener("dragstart", event => {
@@ -2156,7 +2235,7 @@ previewStepper?.addEventListener("dragend", event => {
 previewStepper?.addEventListener("dragover", event => {
   const dropzone = event.target.closest("[data-drop-step-index]");
 
-  if (!dropzone || !dragPayload || (dragPayload.kind !== "step" && dragPayload.kind !== "page-template")) {
+  if (!dropzone || !dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
     return;
   }
 
@@ -2167,7 +2246,7 @@ previewStepper?.addEventListener("dragover", event => {
 previewStepper?.addEventListener("dragenter", event => {
   const dropzone = event.target.closest("[data-drop-step-index]");
 
-  if (!dropzone || !dragPayload || (dragPayload.kind !== "step" && dragPayload.kind !== "page-template")) {
+  if (!dropzone || !dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
     return;
   }
 
@@ -2196,6 +2275,8 @@ previewStepper?.addEventListener("drop", event => {
 
   if (dragPayload.kind === "step" && dragPayload.stepId) {
     reorderStep(dragPayload.stepId, insertIndex);
+  } else if (dragPayload.kind === "built-in-step-template" && dragPayload.stepId) {
+    restoreBuiltInStep(dragPayload.stepId, { insertIndex });
   } else if (dragPayload.kind === "page-template") {
     addBlankPage(insertIndex);
   }
