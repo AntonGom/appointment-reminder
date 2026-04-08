@@ -21,6 +21,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body[data-page="form-creator"] {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   margin: 0;

@@ -1544,10 +1544,12 @@ function renderGlobalSettingsTab() {
 
   if (globalBgGradientWrap) {
     globalBgGradientWrap.hidden = backgroundStyle === "solid";
+    globalBgGradientWrap.style.display = backgroundStyle === "solid" ? "none" : "grid";
   }
 
   if (globalBgSolidWrap) {
     globalBgSolidWrap.hidden = backgroundStyle !== "solid";
+    globalBgSolidWrap.style.display = backgroundStyle === "solid" ? "grid" : "none";
   }
 
   if (!backgroundPresetRow) {
