@@ -2234,9 +2234,18 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       return;
     }
 
+    const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
+    const isCustomField = getCustomFields().some(entry => entry.id === step.id);
+    const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(step.id);
+    const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn;
+    const rememberToggleChecked = isCustomField
+      ? step?.rememberClientAnswer === true
+      : isAutoRememberedBuiltIn;
+    const rememberToggleDisabled = isAutoRememberedBuiltIn;
+
     editorPopover.hidden = false;
     editorTitle.textContent = "Field label";
-    editorCopy.textContent = "Edit the question label and whether this field is required.";
+    editorCopy.textContent = "Edit the question label, whether it is required, and whether the answer should be remembered later.";
     editorBody.innerHTML = `
       <label>
         Label text
@@ -2260,6 +2269,15 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
         <span>Required field</span>
         <input id="editor-label-required" type="checkbox" ${step.required ? "checked" : ""}>
       </label>
+      ${shouldShowRememberToggle ? `
+        <label class="toggle-row">
+          <span>Remember this answer for future visits and show it in Client Details</span>
+          <input id="editor-label-remember" type="checkbox" ${rememberToggleChecked ? "checked" : ""} ${rememberToggleDisabled ? "disabled" : ""}>
+        </label>
+        <div class="editor-inline-note">${isAutoRememberedBuiltIn
+          ? "This built-in client field is already remembered automatically."
+          : "Turn this on if this answer should be saved on the client profile for future appointments."}</div>
+      ` : ""}
     `;
 
     const labelTextInput = document.getElementById("editor-label-text");
@@ -2267,6 +2285,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     const labelSizeNumberInput = document.getElementById("editor-label-size-number");
     const labelBoldInput = document.getElementById("editor-label-bold");
     const labelRequiredInput = document.getElementById("editor-label-required");
+    const labelRememberInput = document.getElementById("editor-label-remember");
 
     const applyLabelPatch = patch => {
       patchStepConfig(step.id, patch);
@@ -2298,6 +2317,14 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
 
     labelRequiredInput?.addEventListener("change", event => {
       applyLabelPatch({ required: Boolean(event.target.checked) });
+    });
+
+    labelRememberInput?.addEventListener("change", event => {
+      if (!isCustomField) {
+        return;
+      }
+
+      applyLabelPatch({ rememberClientAnswer: Boolean(event.target.checked) });
     });
     return;
   }
