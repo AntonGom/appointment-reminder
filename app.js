@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408f";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408h";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -58,6 +58,8 @@ const DEFAULT_STEP_NAV_BACKGROUND = "#f8fafc";
 const DEFAULT_STEP_NAV_ACTIVE_BACKGROUND = "#dbeafe";
 const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
 const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
+const DEFAULT_STEP_NAV_SHAPE = "rounded";
+const DEFAULT_STEP_NAV_SIZE = "medium";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -1303,6 +1305,68 @@ function getStepNavigationAppearance(stepElement) {
     stepNavTextColor: typeof profile.stepNavTextColor === "string" ? profile.stepNavTextColor.trim() : "",
     stepNavActiveBackgroundColor: typeof profile.stepNavActiveBackgroundColor === "string" ? profile.stepNavActiveBackgroundColor.trim() : "",
     stepNavActiveTextColor: typeof profile.stepNavActiveTextColor === "string" ? profile.stepNavActiveTextColor.trim() : ""
+  };
+}
+
+function getStepNavigationSurfaceState(profile = activeCustomFormProfile || {}) {
+  const size = typeof profile?.stepNavSize === "string" && profile.stepNavSize.trim()
+    ? profile.stepNavSize.trim()
+    : DEFAULT_STEP_NAV_SIZE;
+  const shape = typeof profile?.stepNavShape === "string" && profile.stepNavShape.trim()
+    ? profile.stepNavShape.trim()
+    : DEFAULT_STEP_NAV_SHAPE;
+
+  const sizeState = {
+    compact: {
+      width: "72px",
+      minHeight: "60px",
+      padding: "8px 7px",
+      itemGap: "5px",
+      rowGap: "6px",
+      labelSize: "10px",
+      circleSize: "28px",
+      circleFontSize: "11px"
+    },
+    large: {
+      width: "96px",
+      minHeight: "78px",
+      padding: "12px 10px",
+      itemGap: "7px",
+      rowGap: "8px",
+      labelSize: "12px",
+      circleSize: "34px",
+      circleFontSize: "13px"
+    },
+    medium: {
+      width: "88px",
+      minHeight: "68px",
+      padding: "9px 8px",
+      itemGap: "6px",
+      rowGap: "8px",
+      labelSize: "11px",
+      circleSize: "30px",
+      circleFontSize: "12px"
+    }
+  }[size] || {
+    width: "88px",
+    minHeight: "68px",
+    padding: "9px 8px",
+    itemGap: "6px",
+    rowGap: "8px",
+    labelSize: "11px",
+    circleSize: "30px",
+    circleFontSize: "12px"
+  };
+
+  const radius = {
+    pill: "999px",
+    rectangular: "8px",
+    rounded: "16px"
+  }[shape] || "16px";
+
+  return {
+    ...sizeState,
+    radius
   };
 }
 
@@ -2856,6 +2920,17 @@ function renderStepNavigation() {
     return;
   }
 
+  const stepSurfaceState = getStepNavigationSurfaceState(activeCustomFormProfile || {});
+
+  stepper.style.setProperty("--step-nav-width", stepSurfaceState.width);
+  stepper.style.setProperty("--step-nav-min-height", stepSurfaceState.minHeight);
+  stepper.style.setProperty("--step-nav-padding", stepSurfaceState.padding);
+  stepper.style.setProperty("--step-nav-item-gap", stepSurfaceState.itemGap);
+  stepper.style.setProperty("--step-nav-gap-size", stepSurfaceState.rowGap);
+  stepper.style.setProperty("--step-nav-label-size", stepSurfaceState.labelSize);
+  stepper.style.setProperty("--step-nav-circle-size", stepSurfaceState.circleSize);
+  stepper.style.setProperty("--step-nav-circle-font-size", stepSurfaceState.circleFontSize);
+  stepper.style.setProperty("--step-nav-radius", stepSurfaceState.radius);
   stepper.innerHTML = "";
 
   wizardSteps.forEach((step, index) => {

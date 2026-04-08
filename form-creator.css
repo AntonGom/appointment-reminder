@@ -335,7 +335,7 @@ body[data-page="form-creator"] {
 .stepper {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: var(--fc-step-nav-gap-size, 6px);
   margin-top: 16px;
   padding: 4px 2px 8px;
   overflow-x: auto;
@@ -343,18 +343,18 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper-button {
-  flex: 0 0 78px;
-  width: 78px;
-  min-height: 68px;
-  padding: 9px 8px;
+  flex: 0 0 var(--fc-step-nav-width, 78px);
+  width: var(--fc-step-nav-width, 78px);
+  min-height: var(--fc-step-nav-min-height, 68px);
+  padding: var(--fc-step-nav-padding, 9px 8px);
   border: 1px solid color-mix(in srgb, var(--fc-step-nav-bg) 70%, rgba(148, 163, 184, 0.52));
-  border-radius: 16px;
+  border-radius: var(--fc-step-nav-radius, 16px);
   background: var(--fc-step-nav-bg);
   color: var(--fc-step-nav-text);
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 6px;
+  gap: var(--fc-step-nav-item-gap, 6px);
   cursor: grab;
   user-select: none;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
@@ -378,8 +378,8 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper-circle {
-  width: 30px;
-  height: 30px;
+  width: var(--fc-step-nav-circle-size, 30px);
+  height: var(--fc-step-nav-circle-size, 30px);
   border-radius: 999px;
   border: 2px solid rgba(148, 163, 184, 0.44);
   background: #fff;
@@ -387,7 +387,7 @@ body[data-page="form-creator"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fc-step-nav-circle-font-size, 12px);
   font-weight: 800;
 }
 
@@ -398,7 +398,7 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper-label {
-  font-size: 11px;
+  font-size: var(--fc-step-nav-label-size, 11px);
   font-weight: 800;
   line-height: 1.18;
   text-align: center;
@@ -1430,7 +1430,7 @@ body[data-page="form-creator"] {
   justify-content: center;
   min-height: 42px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--chip-radius, 14px);
   border: 1px solid color-mix(in srgb, var(--chip-bg, #f8fafc) 70%, rgba(148, 163, 184, 0.52));
   background: var(--chip-bg, #f8fafc);
   color: var(--chip-text, #0f172a);

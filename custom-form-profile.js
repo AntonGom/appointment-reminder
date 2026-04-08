@@ -23,6 +23,8 @@ export const DEFAULT_STEP_NAV_BACKGROUND = "#f8fafc";
 export const DEFAULT_STEP_NAV_ACTIVE_BACKGROUND = "#dbeafe";
 export const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
 export const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
+export const DEFAULT_STEP_NAV_SHAPE = "rounded";
+export const DEFAULT_STEP_NAV_SIZE = "medium";
 export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address", "notes"];
 
 export const BASE_REMINDER_STEPS = [
@@ -200,6 +202,18 @@ export const FORM_SURFACE_LAYOUT_OPTIONS = [
   { id: "compact", label: "Compact" },
   { id: "medium", label: "Medium" },
   { id: "extended", label: "Extended" }
+];
+
+export const STEP_NAV_SHAPE_OPTIONS = [
+  { id: "rounded", label: "Rounded" },
+  { id: "rectangular", label: "Rectangular" },
+  { id: "pill", label: "Pill" }
+];
+
+export const STEP_NAV_SIZE_OPTIONS = [
+  { id: "compact", label: "Compact" },
+  { id: "medium", label: "Medium" },
+  { id: "large", label: "Large" }
 ];
 
 function safeString(value) {
@@ -388,6 +402,8 @@ export function normalizeCustomFormProfile(rawProfile) {
     stepNavActiveBackgroundColor: safeString(profile.stepNavActiveBackgroundColor) || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
     stepNavTextColor: safeString(profile.stepNavTextColor) || DEFAULT_STEP_NAV_TEXT_COLOR,
     stepNavActiveTextColor: safeString(profile.stepNavActiveTextColor) || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
+    stepNavShape: pickOption(profile.stepNavShape, DEFAULT_STEP_NAV_SHAPE, STEP_NAV_SHAPE_OPTIONS),
+    stepNavSize: pickOption(profile.stepNavSize, DEFAULT_STEP_NAV_SIZE, STEP_NAV_SIZE_OPTIONS),
     formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
     formTitleBold: profile.formTitleBold !== false,
     stepOverrides,

@@ -150,10 +150,9 @@
     }
 
     .stepper {
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(88px, 1fr);
-      gap: 8px;
+      display: flex;
+      align-items: stretch;
+      gap: var(--step-nav-gap-size, 8px);
       margin-top: 16px;
       padding: 4px 2px 8px;
       overflow-x: auto;
@@ -171,17 +170,18 @@
     }
 
     .stepper-button {
-      width: 100%;
-      min-height: 68px;
-      padding: 9px 8px;
+      flex: 0 0 var(--step-nav-width, 88px);
+      width: var(--step-nav-width, 88px);
+      min-height: var(--step-nav-min-height, 68px);
+      padding: var(--step-nav-padding, 9px 8px);
       border: 1px solid color-mix(in srgb, var(--step-nav-bg, rgba(255, 255, 255, 0.7)) 70%, rgba(148, 163, 184, 0.52));
-      border-radius: 16px;
+      border-radius: var(--step-nav-radius, 16px);
       background: var(--step-nav-bg, rgba(255, 255, 255, 0.7));
       color: var(--step-nav-text, var(--text-main));
       display: grid;
       justify-items: center;
       align-content: center;
-      gap: 6px;
+      gap: var(--step-nav-item-gap, 6px);
       box-shadow: none;
       transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
     }
@@ -221,8 +221,8 @@
 
     .stepper-circle {
       position: relative;
-      width: 30px;
-      height: 30px;
+      width: var(--step-nav-circle-size, 30px);
+      height: var(--step-nav-circle-size, 30px);
       border-radius: 999px;
       border: 2px solid rgba(148, 163, 184, 0.44);
       background: #ffffff;
@@ -230,7 +230,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: var(--step-nav-circle-font-size, 12px);
       font-weight: 800;
       transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
     }
@@ -267,7 +267,7 @@
     }
 
     .stepper-label {
-      font-size: 11px;
+      font-size: var(--step-nav-label-size, 11px);
       font-weight: 800;
       line-height: 1.18;
       text-align: center;
@@ -1183,12 +1183,12 @@
       }
 
       .stepper {
-        grid-auto-columns: minmax(84px, 1fr);
+        gap: var(--step-nav-gap-size, 8px);
       }
 
       .stepper-button {
-        min-height: 64px;
-        border-radius: 16px;
+        min-height: var(--step-nav-min-height, 64px);
+        border-radius: var(--step-nav-radius, 16px);
       }
 
       .wizard-controls {
@@ -1474,7 +1474,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408f"></script>
+<script src="app.js?v=20260408h"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

@@ -30,6 +30,10 @@ import {
   DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
   DEFAULT_STEP_NAV_TEXT_COLOR,
   DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
+  DEFAULT_STEP_NAV_SHAPE,
+  DEFAULT_STEP_NAV_SIZE,
+  STEP_NAV_SHAPE_OPTIONS,
+  STEP_NAV_SIZE_OPTIONS,
   normalizeCustomFormProfile,
   createCustomField,
   createCustomPage,
@@ -38,7 +42,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408f";
+} from "./custom-form-profile.js?v=20260408h";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -61,6 +65,7 @@ const globalBgGradientWrap = document.getElementById("global-bg-gradient-wrap");
 const globalBgSolidWrap = document.getElementById("global-bg-solid-wrap");
 const formSurfaceControls = document.getElementById("form-surface-controls");
 const questionSurfaceControls = document.getElementById("question-surface-controls");
+const stepNavigationControls = document.getElementById("step-navigation-controls");
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
@@ -1125,15 +1130,84 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-question-selected-shadow", questionState.selectedShadow);
 }
 
+function getStepNavigationSurfaceState(profile = currentFormProfile) {
+  const size = profile?.stepNavSize || DEFAULT_STEP_NAV_SIZE;
+  const shape = profile?.stepNavShape || DEFAULT_STEP_NAV_SHAPE;
+
+  const sizeState = {
+    compact: {
+      width: "72px",
+      minHeight: "60px",
+      padding: "8px 7px",
+      itemGap: "5px",
+      rowGap: "6px",
+      labelSize: "10px",
+      circleSize: "28px",
+      circleFontSize: "11px"
+    },
+    large: {
+      width: "96px",
+      minHeight: "78px",
+      padding: "12px 10px",
+      itemGap: "7px",
+      rowGap: "8px",
+      labelSize: "12px",
+      circleSize: "34px",
+      circleFontSize: "13px"
+    },
+    medium: {
+      width: "78px",
+      minHeight: "68px",
+      padding: "9px 8px",
+      itemGap: "6px",
+      rowGap: "6px",
+      labelSize: "11px",
+      circleSize: "30px",
+      circleFontSize: "12px"
+    }
+  }[size] || {
+    width: "78px",
+    minHeight: "68px",
+    padding: "9px 8px",
+    itemGap: "6px",
+    rowGap: "6px",
+    labelSize: "11px",
+    circleSize: "30px",
+    circleFontSize: "12px"
+  };
+
+  const radius = {
+    pill: "999px",
+    rectangular: "8px",
+    rounded: "16px"
+  }[shape] || "16px";
+
+  return {
+    ...sizeState,
+    radius
+  };
+}
+
 function applyStepNavigationStyles() {
   if (!previewStepper) {
     return;
   }
 
+  const stepSurfaceState = getStepNavigationSurfaceState();
+
   previewStepper.style.setProperty("--fc-step-nav-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
   previewStepper.style.setProperty("--fc-step-nav-active-bg", currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
   previewStepper.style.setProperty("--fc-step-nav-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
   previewStepper.style.setProperty("--fc-step-nav-active-text", currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
+  previewStepper.style.setProperty("--fc-step-nav-width", stepSurfaceState.width);
+  previewStepper.style.setProperty("--fc-step-nav-min-height", stepSurfaceState.minHeight);
+  previewStepper.style.setProperty("--fc-step-nav-padding", stepSurfaceState.padding);
+  previewStepper.style.setProperty("--fc-step-nav-item-gap", stepSurfaceState.itemGap);
+  previewStepper.style.setProperty("--fc-step-nav-gap-size", stepSurfaceState.rowGap);
+  previewStepper.style.setProperty("--fc-step-nav-label-size", stepSurfaceState.labelSize);
+  previewStepper.style.setProperty("--fc-step-nav-circle-size", stepSurfaceState.circleSize);
+  previewStepper.style.setProperty("--fc-step-nav-circle-font-size", stepSurfaceState.circleFontSize);
+  previewStepper.style.setProperty("--fc-step-nav-radius", stepSurfaceState.radius);
   previewStepper.classList.add("is-group-editable");
 }
 
@@ -1513,6 +1587,147 @@ function renderGlobalSettingsTab() {
   });
 }
 
+function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
+  const editableSteps = getPreviewSteps().filter(step => step.id !== "review");
+  const stepSurfaceState = getStepNavigationSurfaceState();
+
+  return `
+    <div class="form-editor-grid">
+      <label>
+        Step box shape
+        <select id="${prefix}-shape">
+          ${STEP_NAV_SHAPE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepNavShape || DEFAULT_STEP_NAV_SHAPE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Step box size
+        <select id="${prefix}-size">
+          ${STEP_NAV_SIZE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepNavSize || DEFAULT_STEP_NAV_SIZE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <div class="form-editor-grid">
+      <label>
+        Default box color
+        <input id="${prefix}-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)}">
+      </label>
+      <label>
+        Default text color
+        <input id="${prefix}-text-color" type="color" value="${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)}">
+      </label>
+      <label>
+        Active box color
+        <input id="${prefix}-active-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND)}">
+      </label>
+      <label>
+        Active text color
+        <input id="${prefix}-active-text" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR)}">
+      </label>
+    </div>
+    <div class="step-nav-editor-list">
+      ${editableSteps.map(step => `
+        <label class="step-nav-editor-item">
+          <span
+            class="step-nav-editor-chip"
+            style="--chip-bg:${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)};--chip-text:${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)};--chip-radius:${escapeHtml(stepSurfaceState.radius)};"
+          >${escapeHtml(step.navLabel || step.title || step.label || "Step")}</span>
+          <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
+  if (!root) {
+    return;
+  }
+
+  const syncStepNavEditorChips = () => {
+    const stepSurfaceState = getStepNavigationSurfaceState();
+
+    root.querySelectorAll(".step-nav-editor-chip").forEach(chip => {
+      chip.style.setProperty("--chip-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+      chip.style.setProperty("--chip-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
+      chip.style.setProperty("--chip-radius", stepSurfaceState.radius);
+    });
+  };
+
+  syncStepNavEditorChips();
+
+  root.querySelector(`#${prefix}-shape`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavShape: event.target.value || DEFAULT_STEP_NAV_SHAPE
+    };
+    syncStepNavEditorChips();
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-size`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavSize: event.target.value || DEFAULT_STEP_NAV_SIZE
+    };
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-bg`)?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavBackgroundColor: event.target.value
+    };
+    syncStepNavEditorChips();
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-text-color`)?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavTextColor: event.target.value
+    };
+    syncStepNavEditorChips();
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-active-bg`)?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavActiveBackgroundColor: event.target.value
+    };
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-active-text`)?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavActiveTextColor: event.target.value
+    };
+    renderPreview();
+  });
+
+  root.querySelectorAll("[data-step-nav-text-input]").forEach(input => {
+    input.addEventListener("input", event => {
+      const stepId = event.target.dataset.stepId || "";
+
+      if (!stepId) {
+        return;
+      }
+
+      patchStepConfig(stepId, {
+        navLabel: safeShortLabel(event.target.value)
+      });
+
+      const previewChip = event.target.closest(".step-nav-editor-item")?.querySelector(".step-nav-editor-chip");
+      if (previewChip) {
+        previewChip.textContent = safeShortLabel(event.target.value);
+      }
+
+      renderPreview();
+    });
+  });
+}
+
 function renderFormSettingsTab() {
   if (formSurfaceControls) {
     formSurfaceControls.innerHTML = `
@@ -1626,6 +1841,11 @@ function renderFormSettingsTab() {
       currentFormProfile = { ...currentFormProfile, questionTextColor: event.target.value };
       renderBuilder();
     });
+  }
+
+  if (stepNavigationControls) {
+    stepNavigationControls.innerHTML = buildStepNavigationSettingsMarkup("inline-step-nav");
+    bindStepNavigationSettings(stepNavigationControls, "inline-step-nav");
   }
 }
 
@@ -1944,108 +2164,15 @@ function openStepNavigationEditor() {
     return;
   }
 
-  const editableSteps = getPreviewSteps().filter(step => step.id !== "review");
-
-  if (!editableSteps.length) {
+  if (!getPreviewSteps().some(step => step.id !== "review")) {
     return;
   }
 
   editorPopover.hidden = false;
   editorTitle.textContent = "Step labels";
-  editorCopy.textContent = "Edit every step chip here and set the shared colors for the whole step row.";
-  editorBody.innerHTML = `
-    <div class="form-editor-grid">
-      <label>
-        Default box color
-        <input id="editor-step-nav-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)}">
-      </label>
-      <label>
-        Default text color
-        <input id="editor-step-nav-text-color" type="color" value="${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)}">
-      </label>
-      <label>
-        Active box color
-        <input id="editor-step-nav-active-bg" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND)}">
-      </label>
-      <label>
-        Active text color
-        <input id="editor-step-nav-active-text" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR)}">
-      </label>
-    </div>
-    <div class="step-nav-editor-list">
-      ${editableSteps.map(step => `
-        <label class="step-nav-editor-item">
-          <span
-            class="step-nav-editor-chip"
-            style="--chip-bg:${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)};--chip-text:${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)};"
-          >${escapeHtml(step.navLabel || step.title || step.label || "Step")}</span>
-          <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
-        </label>
-      `).join("")}
-    </div>
-  `;
-
-  const syncStepNavEditorChips = () => {
-    editorBody.querySelectorAll(".step-nav-editor-chip").forEach(chip => {
-      chip.style.setProperty("--chip-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
-      chip.style.setProperty("--chip-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
-    });
-  };
-
-  syncStepNavEditorChips();
-
-  document.getElementById("editor-step-nav-bg")?.addEventListener("input", event => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      stepNavBackgroundColor: event.target.value
-    };
-    syncStepNavEditorChips();
-    renderBuilder();
-  });
-
-  document.getElementById("editor-step-nav-text-color")?.addEventListener("input", event => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      stepNavTextColor: event.target.value
-    };
-    syncStepNavEditorChips();
-    renderBuilder();
-  });
-
-  document.getElementById("editor-step-nav-active-bg")?.addEventListener("input", event => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      stepNavActiveBackgroundColor: event.target.value
-    };
-    renderBuilder();
-  });
-
-  document.getElementById("editor-step-nav-active-text")?.addEventListener("input", event => {
-    currentFormProfile = {
-      ...currentFormProfile,
-      stepNavActiveTextColor: event.target.value
-    };
-    renderBuilder();
-  });
-
-  editorBody.querySelectorAll("[data-step-nav-text-input]").forEach(input => {
-    input.addEventListener("input", event => {
-      const stepId = event.target.dataset.stepId || "";
-
-      if (!stepId) {
-        return;
-      }
-
-      patchStepConfig(stepId, {
-        navLabel: safeShortLabel(event.target.value)
-      });
-      const previewChip = event.target.closest(".step-nav-editor-item")?.querySelector(".step-nav-editor-chip");
-      if (previewChip) {
-        previewChip.textContent = safeShortLabel(event.target.value);
-      }
-      renderBuilder();
-    });
-  });
+  editorCopy.textContent = "Edit the whole step row here, including chip size, shape, colors, and labels.";
+  editorBody.innerHTML = buildStepNavigationSettingsMarkup("editor-step-nav");
+  bindStepNavigationSettings(editorBody, "editor-step-nav");
 }
 
 function openSelectedStepTextEditor(target, fieldIdOverride = "") {
