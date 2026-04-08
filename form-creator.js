@@ -72,6 +72,7 @@ let dragFieldId = "";
 let editorDragState = null;
 let editorHasCustomPosition = false;
 let dragPayload = null;
+let statusBannerTimer = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -552,6 +553,11 @@ function setStatus(message, type = "info") {
     return;
   }
 
+  if (statusBannerTimer) {
+    clearTimeout(statusBannerTimer);
+    statusBannerTimer = null;
+  }
+
   if (!message) {
     statusBanner.hidden = true;
     statusBanner.textContent = "";
@@ -562,6 +568,11 @@ function setStatus(message, type = "info") {
   statusBanner.hidden = false;
   statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
+
+  const autoHideDelay = type === "error" ? 7000 : type === "success" ? 4200 : 3600;
+  statusBannerTimer = window.setTimeout(() => {
+    setStatus("");
+  }, autoHideDelay);
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -2196,6 +2207,9 @@ async function init() {
 
 pageSettingsButton?.addEventListener("click", openPageEditor);
 editorCloseButton?.addEventListener("click", closeEditor);
+statusBanner?.addEventListener("click", () => {
+  setStatus("");
+});
 saveFormButton?.addEventListener("click", saveFormProfile);
 resetFormButton?.addEventListener("click", resetToSaved);
 formEnabledToggle?.addEventListener("change", async event => {
