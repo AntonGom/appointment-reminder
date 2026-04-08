@@ -8,6 +8,8 @@
   --fc-form-surface-background: var(--fc-card);
   --fc-form-text-main: var(--fc-text-main);
   --fc-form-text-soft: var(--fc-text-soft);
+  --fc-field-text-main: #111827;
+  --fc-field-placeholder: #6b7280;
   --fc-field-border: #cbd5e1;
   --fc-accent: #2563eb;
   --fc-accent-2: #3b82f6;
@@ -529,8 +531,14 @@ body[data-page="form-creator"] {
   border-radius: 16px;
   border: 1px solid var(--fc-field-border);
   background: #fff;
-  color: var(--fc-question-text-main, var(--fc-form-text-main, var(--fc-text-main)));
+  color: var(--fc-field-text-main, #111827);
   font-size: 18px;
+}
+
+.question-wrap input::placeholder,
+.question-wrap textarea::placeholder {
+  color: var(--fc-field-placeholder, #6b7280);
+  opacity: 1;
 }
 
 .question-shell-edit-zone {

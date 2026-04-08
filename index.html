@@ -26,6 +26,8 @@
       --question-surface-shadow: none;
       --question-text-main: var(--text-main);
       --question-text-soft: var(--text-soft);
+      --field-text-main: #111827;
+      --field-placeholder: #6b7280;
       --field-bg: #ffffff;
       --field-border: #cbd5e1;
       --field-focus: #2563eb;
@@ -370,10 +372,16 @@
       border-radius: 16px;
       border: 1px solid var(--field-border);
       background: var(--field-bg);
-      color: var(--question-text-main);
+      color: var(--field-text-main);
       font-size: 18px;
       outline: none;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--field-placeholder);
+      opacity: 1;
     }
 
     input[type="date"],
@@ -1474,7 +1482,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408i"></script>
+<script src="app.js?v=20260408j"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

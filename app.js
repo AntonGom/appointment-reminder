@@ -49,6 +49,8 @@ const DEFAULT_FORM_SURFACE_LAYOUT = "compact";
 const DEFAULT_FORM_TEXT_COLOR = "#111827";
 const DEFAULT_QUESTION_SURFACE_COLOR = "#f8fafc";
 const DEFAULT_QUESTION_TEXT_COLOR = "#111827";
+const DEFAULT_FIELD_INPUT_TEXT_COLOR = "#111827";
+const DEFAULT_FIELD_PLACEHOLDER_COLOR = "#6b7280";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 const DEFAULT_STEP_COPY_FONT_SIZE = 15;
@@ -1255,6 +1257,8 @@ function applyCustomFormPresentation(profile) {
     container.style.setProperty("--question-text-main", questionState.text);
     container.style.setProperty("--question-text-soft", questionState.textSoft);
     container.style.setProperty("--question-surface-shadow", questionState.shadow);
+    container.style.setProperty("--field-text-main", DEFAULT_FIELD_INPUT_TEXT_COLOR);
+    container.style.setProperty("--field-placeholder", DEFAULT_FIELD_PLACEHOLDER_COLOR);
   }
 
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
@@ -1653,6 +1657,8 @@ function renderCustomWizardSteps() {
 
   if (!reviewStep) {
     applyBuiltInStepOverrides();
+    bindBaseFieldListeners();
+    bindCustomFieldInputListeners();
     return;
   }
 
@@ -1671,6 +1677,8 @@ function renderCustomWizardSteps() {
   });
 
   applyBuiltInStepOverrides();
+  bindBaseFieldListeners();
+  bindCustomFieldInputListeners();
 }
 
 function bindCustomFieldInputListeners() {
@@ -1681,14 +1689,17 @@ function bindCustomFieldInputListeners() {
       return;
     }
 
-    element.dataset.formCreatorBound = "true";
-    element.addEventListener("input", () => {
+    const handleFieldValueChange = () => {
       if (field.type === "phone") {
         element.value = formatPhoneNumber(element.value);
       }
 
       refreshFormState();
-    });
+    };
+
+    element.dataset.formCreatorBound = "true";
+    element.addEventListener("input", handleFieldValueChange);
+    element.addEventListener("change", handleFieldValueChange);
   });
 }
 
@@ -3171,8 +3182,7 @@ function bindBaseFieldListeners() {
       return;
     }
 
-    element.dataset.baseFieldBound = "true";
-    element.addEventListener("input", () => {
+    const handleFieldValueChange = () => {
       if (fieldId === "phone") {
         syncPhoneFieldFormatting();
       }
@@ -3187,7 +3197,11 @@ function bindBaseFieldListeners() {
       }
 
       refreshFormState();
-    });
+    };
+
+    element.dataset.baseFieldBound = "true";
+    element.addEventListener("input", handleFieldValueChange);
+    element.addEventListener("change", handleFieldValueChange);
   });
 }
 
