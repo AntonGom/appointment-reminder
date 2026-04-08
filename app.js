@@ -1796,6 +1796,11 @@ function generateMessage() {
   return lines.join("\n");
 }
 
+function invalidateBronzeReviewManualMessage() {
+  bronzePreviewUsesManualMessage = false;
+  bronzePreviewManualMessage = generateMessage();
+}
+
 function refreshFormState() {
   if (sendEmailLockedAfterSuccess) {
     setSendEmailButtonState("idle");
@@ -1806,6 +1811,7 @@ function refreshFormState() {
   }
 
   syncCopyEmailOption();
+  invalidateBronzeReviewManualMessage();
 
   const preview = document.getElementById("preview");
 
