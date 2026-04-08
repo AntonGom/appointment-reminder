@@ -902,6 +902,18 @@ body[data-page="form-creator"] {
   gap: 12px;
 }
 
+.floating-panel-studio .floating-panel-head {
+  position: sticky;
+  top: -2px;
+  z-index: 5;
+  margin: -6px -6px 8px;
+  padding: 10px 10px 8px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 248, 255, 0.72));
+  backdrop-filter: blur(18px) saturate(155%);
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+}
+
 .floating-panel-head h2 {
   margin: 0;
   font-size: 22px;
@@ -1521,13 +1533,13 @@ body[data-page="form-creator"] {
   right: var(--fc-editor-right, 22px);
   left: var(--fc-editor-left, auto);
   z-index: 60;
-  width: min(360px, calc(100vw - 28px));
-  padding: 16px;
-  border-radius: 22px;
+  width: min(312px, calc(100vw - 24px));
+  padding: 12px;
+  border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px) saturate(145%);
 }
 
 .form-editor-head {
@@ -1535,7 +1547,7 @@ body[data-page="form-creator"] {
   align-items: start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -1544,15 +1556,15 @@ body[data-page="form-creator"] {
 .form-editor-head strong {
   display: block;
   color: #0f172a;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.15;
 }
 
 .form-editor-head p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .form-editor-head:active {
@@ -1576,14 +1588,14 @@ body[data-page="form-creator"] {
 
 .form-editor-body {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .form-editor-body label {
   display: grid;
   gap: 6px;
   color: #0f172a;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1591,16 +1603,17 @@ body[data-page="form-creator"] {
 .form-editor-body textarea,
 .form-editor-body select {
   width: 100%;
-  padding: 12px 13px;
-  border-radius: 14px;
+  padding: 9px 11px;
+  border-radius: 12px;
   border: 1px solid var(--fc-field-border);
   background: #fff;
   color: var(--fc-text-main);
   font: inherit;
+  font-size: 13px;
 }
 
 .form-editor-body input[type="color"] {
-  min-height: 54px;
+  min-height: 46px;
   padding: 6px;
   cursor: pointer;
 }
@@ -1815,7 +1828,7 @@ body[data-page="form-creator"] {
   }
 
   .form-editor-popover {
-    width: min(300px, calc(100vw - 34px));
+    width: min(264px, calc(100vw - 26px));
     top: max(168px, calc(env(safe-area-inset-top) + 124px));
     right: auto;
     left: 50%;

@@ -1941,7 +1941,7 @@ function setEditorPosition(left, top) {
   const width = editorPopover.offsetWidth || 360;
   const height = editorPopover.offsetHeight || 420;
   const clampedLeft = Math.min(Math.max(12, left), Math.max(12, window.innerWidth - width - 12));
-  const clampedTop = Math.min(Math.max(96, top), Math.max(96, window.innerHeight - height - 12));
+  const clampedTop = Math.min(Math.max(12, top), Math.max(12, window.innerHeight - height - 12));
 
   editorPopover.style.setProperty("--fc-editor-left", `${clampedLeft}px`);
   editorPopover.style.setProperty("--fc-editor-top", `${clampedTop}px`);
@@ -1969,7 +1969,7 @@ function setStudioPanelPosition(left, top) {
   const width = studioPanel.offsetWidth || 316;
   const height = studioPanel.offsetHeight || 620;
   const clampedLeft = Math.min(Math.max(12, left), Math.max(12, window.innerWidth - width - 12));
-  const clampedTop = Math.min(Math.max(92, top), Math.max(92, window.innerHeight - height - 12));
+  const clampedTop = Math.min(Math.max(12, top), Math.max(12, window.innerHeight - height - 12));
 
   studioPanel.style.setProperty("--fc-studio-left", `${clampedLeft}px`);
   studioPanel.style.setProperty("--fc-studio-top", `${clampedTop}px`);
