@@ -101,6 +101,7 @@ let customFormFieldLookup = new Map();
 let wizardControlsInitialized = false;
 let requiredFieldAttemptIds = new Set();
 let pendingClientProfilePrefillAnswers = {};
+let latestSignedInUserSyncInFlight = false;
 
 const BUILT_IN_FORM_STEP_DEFAULTS = {
   phone: {
@@ -337,6 +338,9 @@ async function initAccountTierState() {
     renderBronzeFeatures();
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);
+    if (session?.user) {
+      await syncLatestSignedInUser({ silent: true });
+    }
 
     appSupabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {
@@ -1216,6 +1220,49 @@ function applySavedClientPrefill() {
     pendingClientProfilePrefillAnswers = {};
     window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
     console.warn("Saved client prefill failed", error);
+  }
+}
+
+async function syncLatestSignedInUser(options = {}) {
+  const { silent = true } = options;
+
+  if (!appSupabase || latestSignedInUserSyncInFlight) {
+    return;
+  }
+
+  latestSignedInUserSyncInFlight = true;
+
+  try {
+    const {
+      data: { session }
+    } = await appSupabase.auth.getSession();
+
+    if (!session?.user) {
+      currentSignedInUser = null;
+      currentAuthUserId = "";
+      renderBronzeFeatures();
+      updateDraftPreviewChrome();
+      await syncCustomFormFromUser(null);
+      return;
+    }
+
+    const { data, error } = await appSupabase.auth.getUser();
+
+    if (error) {
+      throw error;
+    }
+
+    currentSignedInUser = data?.user || session.user;
+    currentAuthUserId = currentSignedInUser?.id || session.user.id || "";
+    renderBronzeFeatures();
+    updateDraftPreviewChrome();
+    await syncCustomFormFromUser(currentSignedInUser);
+  } catch (error) {
+    if (!silent) {
+      console.warn("Unable to refresh latest signed-in user.", error);
+    }
+  } finally {
+    latestSignedInUserSyncInFlight = false;
   }
 }
 
@@ -3291,6 +3338,14 @@ document.addEventListener("keydown", event => {
 });
 
 window.addEventListener("resize", scheduleBronzePreviewScale);
+window.addEventListener("focus", () => {
+  syncLatestSignedInUser({ silent: true });
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    syncLatestSignedInUser({ silent: true });
+  }
+});
 
 window.addEventListener("beforeunload", event => {
   if (suppressBeforeUnload || !hasUnsavedFormData()) {

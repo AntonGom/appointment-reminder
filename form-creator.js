@@ -111,6 +111,7 @@ let dragPayload = null;
 let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
 let activeMenuPreviewHoverTarget = "";
+let latestUserSyncInFlight = false;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -1100,6 +1101,86 @@ function setSignedInView(user) {
   if (signedInShell) {
     signedInShell.hidden = !isSignedIn;
     signedInShell.style.display = isSignedIn ? "block" : "none";
+  }
+}
+
+function areProfilesEquivalent(a, b) {
+  return JSON.stringify(normalizeCustomFormProfile(a || {})) === JSON.stringify(normalizeCustomFormProfile(b || {}));
+}
+
+async function getLatestSignedInUser() {
+  if (!supabase) {
+    return null;
+  }
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.user || session.user;
+}
+
+async function syncLatestUserProfile(options = {}) {
+  const { silent = true, preserveDirty = true } = options;
+
+  if (!supabase || latestUserSyncInFlight) {
+    return;
+  }
+
+  latestUserSyncInFlight = true;
+
+  try {
+    const latestUser = await getLatestSignedInUser();
+
+    if (!latestUser) {
+      hydrateBuilderFromUser(null);
+      return;
+    }
+
+    const latestProfile = normalizeCustomFormProfile(latestUser.user_metadata?.custom_form_profile || {});
+    const savedProfileChanged = !areProfilesEquivalent(latestProfile, savedFormProfile);
+    const localProfileDirty = !areProfilesEquivalent(currentFormProfile, savedFormProfile);
+
+    currentUser = latestUser;
+    setSignedInView(currentUser);
+
+    if (!savedProfileChanged) {
+      return;
+    }
+
+    if (localProfileDirty && preserveDirty) {
+      savedFormProfile = latestProfile;
+      if (!silent) {
+        setStatus("A newer saved form was found from another device. Save here to overwrite it, or Reset to load it.", "info");
+      }
+      return;
+    }
+
+    currentFormProfile = latestProfile;
+    savedFormProfile = normalizeCustomFormProfile(latestProfile);
+    selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+    closeEditor();
+    renderBuilder();
+
+    if (!silent) {
+      setStatus("Loaded your latest saved form.", "success");
+    }
+  } catch (error) {
+    if (!silent) {
+      setStatus(error.message || "Unable to refresh the latest saved form right now.", "error");
+    }
+  } finally {
+    latestUserSyncInFlight = false;
   }
 }
 
@@ -2848,6 +2929,9 @@ async function init() {
   } = await supabase.auth.getSession();
 
   hydrateBuilderFromUser(session?.user || null);
+  if (session?.user) {
+    await syncLatestUserProfile({ silent: true, preserveDirty: false });
+  }
 
   supabase.auth.onAuthStateChange((event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
@@ -2876,6 +2960,16 @@ studioTabButtons.forEach(button => {
   button.addEventListener("click", () => {
     setActiveStudioTab(button.dataset.studioTab || "add-fields");
   });
+});
+
+window.addEventListener("focus", () => {
+  syncLatestUserProfile({ silent: true, preserveDirty: true });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    syncLatestUserProfile({ silent: true, preserveDirty: true });
+  }
 });
 globalBgTopInput?.addEventListener("input", event => {
   currentFormProfile = {
