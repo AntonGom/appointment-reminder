@@ -17,6 +17,11 @@
       --card-border: rgba(95, 118, 148, 0.22);
       --text-main: #111827;
       --text-soft: #5b6472;
+      --question-surface-background: rgba(248, 250, 252, 0.88);
+      --question-surface-border: 1px solid rgba(148, 163, 184, 0.22);
+      --question-surface-shadow: none;
+      --question-text-main: var(--text-main);
+      --question-text-soft: var(--text-soft);
       --field-bg: #ffffff;
       --field-border: #cbd5e1;
       --field-focus: #2563eb;
@@ -306,15 +311,16 @@
     .question-wrap {
       padding: 22px;
       border-radius: 24px;
-      background: rgba(248, 250, 252, 0.88);
-      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: var(--question-surface-background);
+      border: var(--question-surface-border);
       min-height: 280px;
       max-width: var(--form-question-max-width, 470px);
       margin: 0 auto;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      box-shadow: var(--question-surface-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
     .question-wrap.wide-wrap {
@@ -337,7 +343,7 @@
     label {
       display: block;
       margin-bottom: 12px;
-      color: var(--text-main);
+      color: var(--question-text-main);
       font-size: 16px;
       font-weight: 800;
       letter-spacing: 0.01em;
@@ -363,7 +369,7 @@
       border-radius: 16px;
       border: 1px solid var(--field-border);
       background: var(--field-bg);
-      color: var(--text-main);
+      color: var(--question-text-main);
       font-size: 18px;
       outline: none;
       transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -408,7 +414,7 @@
     .field-note {
       display: none;
       margin-top: 10px;
-      color: var(--text-soft);
+      color: var(--question-text-soft);
       font-size: 13px;
       line-height: 1.55;
     }
@@ -1467,7 +1473,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408d"></script>
+<script src="app.js?v=20260408e"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

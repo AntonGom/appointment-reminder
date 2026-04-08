@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408c";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408e";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -45,6 +45,8 @@ const DEFAULT_FORM_SURFACE_SHINE_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_SHAPE = "rounded";
 const DEFAULT_FORM_SURFACE_LAYOUT = "compact";
 const DEFAULT_FORM_TEXT_COLOR = "#111827";
+const DEFAULT_QUESTION_SURFACE_COLOR = "#f8fafc";
+const DEFAULT_QUESTION_TEXT_COLOR = "#111827";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 const DEFAULT_STEP_COPY_FONT_SIZE = 15;
@@ -1214,6 +1216,7 @@ function applyCustomFormPresentation(profile) {
   const sectionTitle = document.querySelector(".section-title");
   const normalizedTitle = String(profile?.formTitle || "").trim();
   const surfaceState = getCustomFormSurfaceState(profile);
+  const questionState = getCustomQuestionSurfaceState(profile);
 
   if (sectionTitle) {
     sectionTitle.textContent = normalizedTitle || "Appointment Reminder";
@@ -1242,6 +1245,11 @@ function applyCustomFormPresentation(profile) {
     container.style.setProperty("--form-question-wide-max-width", surfaceState.questionWideMaxWidth);
     container.style.setProperty("--text-main", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
     container.style.setProperty("--text-soft", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+    container.style.setProperty("--question-surface-background", questionState.background);
+    container.style.setProperty("--question-surface-border", questionState.border);
+    container.style.setProperty("--question-text-main", questionState.text);
+    container.style.setProperty("--question-text-soft", questionState.textSoft);
+    container.style.setProperty("--question-surface-shadow", questionState.shadow);
   }
 
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
@@ -2314,10 +2322,11 @@ function getCustomFormSurfaceState(profile) {
   const shape = profile?.formSurfaceShape === "rectangular" || profile?.formSurfaceShape === "invisible"
     ? profile.formSurfaceShape
     : DEFAULT_FORM_SURFACE_SHAPE;
-  const layout = profile?.formSurfaceLayout === "extended"
-    ? "extended"
+  const layout = profile?.formSurfaceLayout === "medium" || profile?.formSurfaceLayout === "extended"
+    ? profile.formSurfaceLayout
     : DEFAULT_FORM_SURFACE_LAYOUT;
   const isInvisible = shape === "invisible";
+  const isMedium = layout === "medium";
   const isExtended = layout === "extended";
 
   return {
@@ -2330,11 +2339,24 @@ function getCustomFormSurfaceState(profile) {
     border: isInvisible ? "1px solid transparent" : "1px solid var(--card-border)",
     shadow: isInvisible ? "none" : "0 26px 60px rgba(15, 23, 42, 0.22)",
     backdrop: isInvisible ? "none" : "blur(12px)",
-    maxWidth: isExtended ? "min(880px, calc(100vw - 36px))" : "560px",
-    padding: isInvisible ? "0px" : isExtended ? "30px" : "28px",
-    mobilePadding: isInvisible ? "0px" : "22px",
-    questionMaxWidth: isExtended ? "100%" : "470px",
-    questionWideMaxWidth: isExtended ? "100%" : "560px"
+    maxWidth: isExtended ? "min(980px, calc(100vw - 36px))" : isMedium ? "760px" : "560px",
+    padding: isInvisible ? "0px" : isExtended ? "32px" : isMedium ? "30px" : "28px",
+    mobilePadding: isInvisible ? "0px" : isExtended ? "26px" : isMedium ? "24px" : "22px",
+    questionMaxWidth: isExtended ? "100%" : isMedium ? "560px" : "470px",
+    questionWideMaxWidth: isExtended ? "100%" : isMedium ? "640px" : "560px"
+  };
+}
+
+function getCustomQuestionSurfaceState(profile) {
+  const isVisible = profile?.questionSurfaceVisible !== false;
+  const textColor = String(profile?.questionTextColor || DEFAULT_QUESTION_TEXT_COLOR).trim() || DEFAULT_QUESTION_TEXT_COLOR;
+
+  return {
+    background: isVisible ? (String(profile?.questionSurfaceColor || DEFAULT_QUESTION_SURFACE_COLOR).trim() || DEFAULT_QUESTION_SURFACE_COLOR) : "transparent",
+    border: isVisible ? "1px solid rgba(148, 163, 184, 0.22)" : "1px solid transparent",
+    text: textColor,
+    textSoft: `color-mix(in srgb, ${textColor} 72%, white 28%)`,
+    shadow: "none"
   };
 }
 

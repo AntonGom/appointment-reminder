@@ -9,6 +9,9 @@ export const DEFAULT_FORM_SURFACE_SHINE_COLOR = "#ffffff";
 export const DEFAULT_FORM_SURFACE_SHAPE = "rounded";
 export const DEFAULT_FORM_SURFACE_LAYOUT = "compact";
 export const DEFAULT_FORM_TEXT_COLOR = "#111827";
+export const DEFAULT_QUESTION_SURFACE_COLOR = "#f8fafc";
+export const DEFAULT_QUESTION_TEXT_COLOR = "#111827";
+export const DEFAULT_QUESTION_SURFACE_VISIBLE = true;
 export const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
 export const DEFAULT_STEP_COPY_FONT_SIZE = 15;
@@ -193,6 +196,7 @@ export const FORM_SURFACE_SHAPE_OPTIONS = [
 
 export const FORM_SURFACE_LAYOUT_OPTIONS = [
   { id: "compact", label: "Compact" },
+  { id: "medium", label: "Medium" },
   { id: "extended", label: "Extended" }
 ];
 
@@ -373,6 +377,9 @@ export function normalizeCustomFormProfile(rawProfile) {
     formSurfaceShape: pickOption(profile.formSurfaceShape, DEFAULT_FORM_SURFACE_SHAPE, FORM_SURFACE_SHAPE_OPTIONS),
     formSurfaceLayout: pickOption(profile.formSurfaceLayout, DEFAULT_FORM_SURFACE_LAYOUT, FORM_SURFACE_LAYOUT_OPTIONS),
     formTextColor: safeString(profile.formTextColor) || DEFAULT_FORM_TEXT_COLOR,
+    questionSurfaceColor: safeString(profile.questionSurfaceColor) || DEFAULT_QUESTION_SURFACE_COLOR,
+    questionTextColor: safeString(profile.questionTextColor) || DEFAULT_QUESTION_TEXT_COLOR,
+    questionSurfaceVisible: profile.questionSurfaceVisible !== false,
     stepNavBackgroundColor: safeString(profile.stepNavBackgroundColor) || DEFAULT_STEP_NAV_BACKGROUND,
     stepNavActiveBackgroundColor: safeString(profile.stepNavActiveBackgroundColor) || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,
     stepNavTextColor: safeString(profile.stepNavTextColor) || DEFAULT_STEP_NAV_TEXT_COLOR,

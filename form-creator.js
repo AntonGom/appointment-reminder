@@ -15,6 +15,10 @@ import {
   DEFAULT_FORM_SURFACE_SHAPE,
   DEFAULT_FORM_SURFACE_LAYOUT,
   DEFAULT_FORM_TEXT_COLOR,
+  DEFAULT_BACKGROUND_TOP,
+  DEFAULT_BACKGROUND_BOTTOM,
+  DEFAULT_QUESTION_SURFACE_COLOR,
+  DEFAULT_QUESTION_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
   DEFAULT_STEP_TITLE_FONT_SIZE,
   DEFAULT_STEP_COPY_FONT_SIZE,
@@ -32,7 +36,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408c";
+} from "./custom-form-profile.js?v=20260408e";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -45,6 +49,11 @@ const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
 const fieldRailList = document.getElementById("field-rail-list");
 const templateList = document.getElementById("template-list");
+const studioTabButtons = Array.from(document.querySelectorAll("[data-studio-tab]"));
+const studioTabPanels = Array.from(document.querySelectorAll("[data-studio-panel]"));
+const backgroundPresetRow = document.getElementById("background-preset-row");
+const globalBgTopInput = document.getElementById("global-bg-top");
+const globalBgBottomInput = document.getElementById("global-bg-bottom");
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
@@ -58,7 +67,6 @@ const previewStepHost = document.getElementById("preview-step-host");
 const previewBackButton = document.getElementById("preview-back-button");
 const previewSkipButton = document.getElementById("preview-skip-button");
 const previewNextButton = document.getElementById("preview-next-button");
-const pageSettingsButton = document.getElementById("page-settings-button");
 const editorPopover = document.getElementById("form-editor-popover");
 const editorHead = editorPopover?.querySelector(".form-editor-head") || null;
 const editorTitle = document.getElementById("form-editor-title");
@@ -77,6 +85,7 @@ let editorDragState = null;
 let editorHasCustomPosition = false;
 let dragPayload = null;
 let statusBannerTimer = null;
+let activeStudioTab = "add-fields";
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -991,10 +1000,11 @@ function getFormSurfaceState(profile = currentFormProfile) {
   const shape = profile?.formSurfaceShape === "rectangular" || profile?.formSurfaceShape === "invisible"
     ? profile.formSurfaceShape
     : DEFAULT_FORM_SURFACE_SHAPE;
-  const layout = profile?.formSurfaceLayout === "extended"
-    ? "extended"
+  const layout = profile?.formSurfaceLayout === "medium" || profile?.formSurfaceLayout === "extended"
+    ? profile.formSurfaceLayout
     : DEFAULT_FORM_SURFACE_LAYOUT;
   const isInvisible = shape === "invisible";
+  const isMedium = layout === "medium";
   const isExtended = layout === "extended";
 
   return {
@@ -1006,16 +1016,52 @@ function getFormSurfaceState(profile = currentFormProfile) {
     shadow: isInvisible ? "none" : "0 26px 60px rgba(15, 23, 42, 0.22)",
     backdrop: isInvisible ? "none" : "blur(12px)",
     radius: shape === "rectangular" ? "8px" : isInvisible ? "0px" : "28px",
-    width: isExtended ? "min(720px, calc(100vw - 620px))" : "min(560px, calc(100vw - 660px))",
-    minWidth: isExtended ? "420px" : "360px",
-    mobileWidth: isExtended ? "640px" : "560px",
-    mobileMinWidth: isExtended ? "640px" : "560px",
-    padding: isInvisible ? "0px" : isExtended ? "30px" : "28px",
-    questionMaxWidth: isExtended ? "100%" : "470px",
-    questionWideMaxWidth: isExtended ? "100%" : "560px",
+    width: isExtended
+      ? "min(980px, calc(100vw - 390px))"
+      : isMedium
+        ? "min(760px, calc(100vw - 410px))"
+        : "min(560px, calc(100vw - 450px))",
+    minWidth: isExtended ? "560px" : isMedium ? "460px" : "360px",
+    mobileWidth: isExtended ? "860px" : isMedium ? "700px" : "560px",
+    mobileMinWidth: isExtended ? "860px" : isMedium ? "700px" : "560px",
+    padding: isInvisible ? "0px" : isExtended ? "32px" : isMedium ? "30px" : "28px",
+    questionMaxWidth: isExtended ? "100%" : isMedium ? "560px" : "470px",
+    questionWideMaxWidth: isExtended ? "100%" : isMedium ? "640px" : "560px",
     shellOutlineInset: isInvisible ? "0px" : "10px",
     shellOutlineRadius: isInvisible ? "0px" : shape === "rectangular" ? "6px" : "22px"
   };
+}
+
+function getQuestionSurfaceState(profile = currentFormProfile) {
+  const isInvisible = profile?.questionSurfaceVisible === false;
+  const textColor = String(profile?.questionTextColor || DEFAULT_QUESTION_TEXT_COLOR).trim() || DEFAULT_QUESTION_TEXT_COLOR;
+
+  return {
+    background: isInvisible ? "transparent" : (profile?.questionSurfaceColor || DEFAULT_QUESTION_SURFACE_COLOR),
+    border: isInvisible ? "1px solid transparent" : "1px solid rgba(148, 163, 184, 0.22)",
+    text: textColor,
+    textSoft: `color-mix(in srgb, ${textColor} 72%, white 28%)`,
+    shadow: "none",
+    selectedBorder: isInvisible ? "transparent" : "rgba(37, 99, 235, 0.38)",
+    selectedShadow: isInvisible ? "none" : "0 18px 34px rgba(37, 99, 235, 0.12)"
+  };
+}
+
+function setActiveStudioTab(tabId = activeStudioTab) {
+  const availableTabIds = new Set(studioTabPanels.map(panel => panel.dataset.studioPanel || ""));
+  activeStudioTab = availableTabIds.has(tabId) ? tabId : "add-fields";
+
+  studioTabButtons.forEach(button => {
+    const isActive = button.dataset.studioTab === activeStudioTab;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  studioTabPanels.forEach(panel => {
+    const isActive = panel.dataset.studioPanel === activeStudioTab;
+    panel.hidden = !isActive;
+    panel.classList.toggle("is-active", isActive);
+  });
 }
 
 function getTypographyInline(fontSize, isBold) {
@@ -1057,11 +1103,12 @@ function applyBackgroundToPreview() {
   }
 
   const surfaceState = getFormSurfaceState(currentFormProfile);
+  const questionState = getQuestionSurfaceState(currentFormProfile);
 
   previewShell.dataset.formShape = surfaceState.shape;
   previewShell.dataset.formLayout = surfaceState.layout;
-  previewShell.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop);
-  previewShell.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom);
+  document.documentElement.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop || DEFAULT_BACKGROUND_TOP);
+  document.documentElement.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM);
   previewShell.style.setProperty("--fc-form-surface-background", surfaceState.background);
   previewShell.style.setProperty("--fc-form-shine-background", buildFormSurfaceShineBackground(currentFormProfile));
   previewShell.style.setProperty("--fc-form-shine-opacity", surfaceState.shineOpacity);
@@ -1080,6 +1127,13 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-form-shell-outline-radius", surfaceState.shellOutlineRadius);
   previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  previewShell.style.setProperty("--fc-question-surface-background", questionState.background);
+  previewShell.style.setProperty("--fc-question-surface-border", questionState.border);
+  previewShell.style.setProperty("--fc-question-text-main", questionState.text);
+  previewShell.style.setProperty("--fc-question-text-soft", questionState.textSoft);
+  previewShell.style.setProperty("--fc-question-surface-shadow", questionState.shadow);
+  previewShell.style.setProperty("--fc-question-selected-border", questionState.selectedBorder);
+  previewShell.style.setProperty("--fc-question-selected-shadow", questionState.selectedShadow);
 }
 
 function applyStepNavigationStyles() {
@@ -1150,6 +1204,8 @@ function buildPreviewFieldMarkup(step) {
 
   return `
     <div class="question-wrap is-selected" data-preview-step-id="${escapeHtml(step.id)}">
+      <div class="question-shell-edit-zone question-shell-edit-zone-left" data-question-shell-zone="left" aria-hidden="true"></div>
+      <div class="question-shell-edit-zone question-shell-edit-zone-right" data-question-shell-zone="right" aria-hidden="true"></div>
       ${fieldMarkup}
     </div>
   `;
@@ -1404,6 +1460,50 @@ function renderFormTemplates() {
   });
 }
 
+function renderGlobalSettingsTab() {
+  if (globalBgTopInput) {
+    globalBgTopInput.value = currentFormProfile.backgroundTop || DEFAULT_BACKGROUND_TOP;
+  }
+
+  if (globalBgBottomInput) {
+    globalBgBottomInput.value = currentFormProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM;
+  }
+
+  if (!backgroundPresetRow) {
+    return;
+  }
+
+  const activePresetId = getBackgroundPresetMatch(currentFormProfile)?.id || "";
+
+  backgroundPresetRow.innerHTML = FORM_BACKGROUND_PRESETS.map(preset => `
+    <button
+      class="preset-chip ${preset.id === activePresetId ? "is-active" : ""}"
+      type="button"
+      data-background-preset="${escapeHtml(preset.id)}"
+    >
+      ${escapeHtml(preset.label)}
+    </button>
+  `).join("");
+
+  backgroundPresetRow.querySelectorAll("[data-background-preset]").forEach(button => {
+    button.addEventListener("click", () => {
+      const preset = FORM_BACKGROUND_PRESETS.find(entry => entry.id === button.dataset.backgroundPreset);
+
+      if (!preset) {
+        return;
+      }
+
+      currentFormProfile = {
+        ...currentFormProfile,
+        backgroundTop: preset.top,
+        backgroundBottom: preset.bottom
+      };
+
+      renderBuilder();
+    });
+  });
+}
+
 function renderBuilder() {
   const steps = getPreviewSteps();
 
@@ -1414,6 +1514,8 @@ function renderBuilder() {
   if (formEnabledToggle) {
     formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
   }
+  setActiveStudioTab(activeStudioTab);
+  renderGlobalSettingsTab();
   renderFieldRail();
   renderFormTemplates();
   renderPreview();
@@ -2086,6 +2188,56 @@ function openFormShellEditor() {
   });
 }
 
+function openQuestionShellEditor() {
+  if (!editorPopover || !editorBody) {
+    return;
+  }
+
+  editorPopover.hidden = false;
+  editorTitle.textContent = "Question card style";
+  editorCopy.textContent = "Change the inner white question card without affecting the whole form shell.";
+  editorBody.innerHTML = `
+    <label class="toggle-row">
+      <span>Show question card</span>
+      <input id="editor-question-visible" type="checkbox" ${currentFormProfile.questionSurfaceVisible !== false ? "checked" : ""}>
+    </label>
+    <div class="form-editor-grid">
+      <label>
+        Card color
+        <input id="editor-question-surface" type="color" value="${escapeHtml(currentFormProfile.questionSurfaceColor || DEFAULT_QUESTION_SURFACE_COLOR)}">
+      </label>
+      <label>
+        Text color
+        <input id="editor-question-text" type="color" value="${escapeHtml(currentFormProfile.questionTextColor || DEFAULT_QUESTION_TEXT_COLOR)}">
+      </label>
+    </div>
+  `;
+
+  document.getElementById("editor-question-visible")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      questionSurfaceVisible: Boolean(event.target.checked)
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-question-surface")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      questionSurfaceColor: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-question-text")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      questionTextColor: event.target.value
+    };
+    renderBuilder();
+  });
+}
+
 function openPageEditor() {
   if (!editorPopover || !editorBody) {
     return;
@@ -2287,7 +2439,6 @@ async function init() {
   });
 }
 
-pageSettingsButton?.addEventListener("click", openPageEditor);
 editorCloseButton?.addEventListener("click", closeEditor);
 statusBanner?.addEventListener("click", () => {
   setStatus("");
@@ -2301,6 +2452,25 @@ formEnabledToggle?.addEventListener("change", async event => {
   };
   renderBuilder();
   await saveFormProfile({ silent: true, skipBusy: true });
+});
+studioTabButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    setActiveStudioTab(button.dataset.studioTab || "add-fields");
+  });
+});
+globalBgTopInput?.addEventListener("input", event => {
+  currentFormProfile = {
+    ...currentFormProfile,
+    backgroundTop: event.target.value || DEFAULT_BACKGROUND_TOP
+  };
+  renderBuilder();
+});
+globalBgBottomInput?.addEventListener("input", event => {
+  currentFormProfile = {
+    ...currentFormProfile,
+    backgroundBottom: event.target.value || DEFAULT_BACKGROUND_BOTTOM
+  };
+  renderBuilder();
 });
 previewBackButton?.addEventListener("click", () => {
   const steps = getPreviewSteps();
@@ -2464,6 +2634,14 @@ previewStepper?.addEventListener("drop", event => {
 });
 
 previewStepHost?.addEventListener("click", event => {
+  const questionShellZone = event.target.closest("[data-question-shell-zone]");
+
+  if (questionShellZone) {
+    event.stopPropagation();
+    openQuestionShellEditor();
+    return;
+  }
+
   const editTarget = event.target.closest("[data-edit-target]")?.dataset.editTarget || "";
   const editFieldId = event.target.closest("[data-edit-field-id]")?.dataset.editFieldId || "";
 
@@ -2489,6 +2667,26 @@ previewStepHost?.addEventListener("click", event => {
   if (selectedPreviewStepId && selectedPreviewStepId !== "review") {
     openFieldEditor(selectedPreviewStepId);
   }
+});
+previewStepHost?.addEventListener("mouseover", event => {
+  const zone = event.target.closest("[data-question-shell-zone]");
+  if (!zone) {
+    return;
+  }
+
+  zone.closest(".question-wrap")?.classList.add("is-card-edit-hover");
+});
+previewStepHost?.addEventListener("mouseout", event => {
+  const zone = event.target.closest("[data-question-shell-zone]");
+  if (!zone) {
+    return;
+  }
+
+  if (zone.contains(event.relatedTarget)) {
+    return;
+  }
+
+  zone.closest(".question-wrap")?.classList.remove("is-card-edit-hover");
 });
 
 previewStepHost?.addEventListener("dragstart", event => {
