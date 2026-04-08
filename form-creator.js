@@ -49,6 +49,7 @@ const authSetupNotice = document.getElementById("auth-setup-notice");
 const signedOutShell = document.getElementById("signed-out-shell");
 const signedInShell = document.getElementById("signed-in-shell");
 const formCreatorCanvas = document.getElementById("form-creator-canvas");
+const formPreviewStage = document.getElementById("form-preview-stage");
 const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
@@ -104,6 +105,7 @@ let studioPanelHasCustomFrame = false;
 let dragPayload = null;
 let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
+let activeMenuPreviewHoverTarget = "";
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -1096,6 +1098,36 @@ function setSignedInView(user) {
   }
 }
 
+function syncMenuPreviewHoverState() {
+  if (previewShell) {
+    previewShell.classList.toggle("is-shell-edit-hover", activeMenuPreviewHoverTarget === "shell");
+  }
+
+  if (formPreviewStage) {
+    formPreviewStage.classList.toggle("is-background-edit-hover", activeMenuPreviewHoverTarget === "background");
+  }
+
+  if (previewStepper) {
+    previewStepper.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps");
+  }
+
+  const questionWrap = previewStepHost?.querySelector(".question-wrap");
+  if (questionWrap) {
+    questionWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "question");
+  }
+}
+
+function setMenuPreviewHoverTarget(target = "") {
+  activeMenuPreviewHoverTarget = target || "";
+  syncMenuPreviewHoverState();
+}
+
+function refreshPreviewOnly() {
+  renderPreview();
+  applyMobileStudioScale();
+  syncMenuPreviewHoverState();
+}
+
 function applyBackgroundToPreview() {
   if (!previewShell) {
     return;
@@ -1353,6 +1385,7 @@ function renderPreview() {
 
   applyBackgroundToPreview();
   applyStepNavigationStyles();
+  syncMenuPreviewHoverState();
 }
 
 function renderFieldRail() {
@@ -1791,19 +1824,19 @@ function renderFormSettingsTab() {
 
     document.getElementById("inline-surface-shape")?.addEventListener("change", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceShape: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-layout")?.addEventListener("change", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceLayout: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-base")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-accent")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceAccentColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-gradient")?.addEventListener("change", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceGradient: event.target.value };
@@ -1811,15 +1844,15 @@ function renderFormSettingsTab() {
     });
     document.getElementById("inline-surface-shine-toggle")?.addEventListener("change", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceShineEnabled: Boolean(event.target.checked) };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-shine-color")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, formSurfaceShineColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-surface-text")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, formTextColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
   }
 
@@ -1843,15 +1876,15 @@ function renderFormSettingsTab() {
 
     document.getElementById("inline-question-visible")?.addEventListener("change", event => {
       currentFormProfile = { ...currentFormProfile, questionSurfaceVisible: Boolean(event.target.checked) };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-question-surface")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, questionSurfaceColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
     document.getElementById("inline-question-text")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, questionTextColor: event.target.value };
-      renderBuilder();
+      refreshPreviewOnly();
     });
   }
 
@@ -2468,7 +2501,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-accent")?.addEventListener("input", event => {
@@ -2476,7 +2509,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceAccentColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-gradient")?.addEventListener("change", event => {
@@ -2493,7 +2526,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceShape: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-layout")?.addEventListener("change", event => {
@@ -2501,7 +2534,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceLayout: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-shine-toggle")?.addEventListener("change", event => {
@@ -2509,7 +2542,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceShineEnabled: Boolean(event.target.checked)
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-shine-color")?.addEventListener("input", event => {
@@ -2517,7 +2550,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formSurfaceShineColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-surface-text")?.addEventListener("input", event => {
@@ -2525,7 +2558,7 @@ function openFormShellEditor() {
       ...currentFormProfile,
       formTextColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 }
 
@@ -2559,7 +2592,7 @@ function openQuestionShellEditor() {
       ...currentFormProfile,
       questionSurfaceVisible: Boolean(event.target.checked)
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-question-surface")?.addEventListener("input", event => {
@@ -2567,7 +2600,7 @@ function openQuestionShellEditor() {
       ...currentFormProfile,
       questionSurfaceColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-question-text")?.addEventListener("input", event => {
@@ -2575,7 +2608,7 @@ function openQuestionShellEditor() {
       ...currentFormProfile,
       questionTextColor: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 }
 
@@ -2614,7 +2647,7 @@ function openPageEditor() {
       ...currentFormProfile,
       formTitle: event.target.value.slice(0, 60) || DEFAULT_FORM_TITLE
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-bg-top")?.addEventListener("input", event => {
@@ -2622,7 +2655,7 @@ function openPageEditor() {
       ...currentFormProfile,
       backgroundTop: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   document.getElementById("editor-bg-bottom")?.addEventListener("input", event => {
@@ -2630,7 +2663,7 @@ function openPageEditor() {
       ...currentFormProfile,
       backgroundBottom: event.target.value
     };
-    renderBuilder();
+    refreshPreviewOnly();
   });
 
   editorBody.querySelectorAll("[data-background-preset]").forEach(button => {
@@ -2804,14 +2837,14 @@ globalBgTopInput?.addEventListener("input", event => {
     ...currentFormProfile,
     backgroundTop: event.target.value || DEFAULT_BACKGROUND_TOP
   };
-  renderBuilder();
+  refreshPreviewOnly();
 });
 globalBgBottomInput?.addEventListener("input", event => {
   currentFormProfile = {
     ...currentFormProfile,
     backgroundBottom: event.target.value || DEFAULT_BACKGROUND_BOTTOM
   };
-  renderBuilder();
+  refreshPreviewOnly();
 });
 globalBgStyleSelect?.addEventListener("change", event => {
   currentFormProfile = {
@@ -2825,7 +2858,7 @@ globalBgSolidInput?.addEventListener("input", event => {
     ...currentFormProfile,
     backgroundSolidColor: event.target.value || DEFAULT_BACKGROUND_SOLID_COLOR
   };
-  renderBuilder();
+  refreshPreviewOnly();
 });
 previewBackButton?.addEventListener("click", () => {
   const steps = getPreviewSteps();
@@ -3134,6 +3167,16 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     closeEditor();
   }
+});
+
+document.querySelectorAll("[data-preview-hover]").forEach(element => {
+  element.addEventListener("mouseenter", () => {
+    setMenuPreviewHoverTarget(element.dataset.previewHover || "");
+  });
+
+  element.addEventListener("mouseleave", () => {
+    setMenuPreviewHoverTarget("");
+  });
 });
 
 if (editorHead) {

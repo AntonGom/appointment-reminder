@@ -228,6 +228,12 @@ body[data-page="form-creator"] {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
 }
 
+.form-preview-stage.is-background-edit-hover {
+  outline: 3px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 10px;
+  border-radius: 34px;
+}
+
 .section-title.visible {
   display: block;
 }
@@ -430,6 +436,18 @@ body[data-page="form-creator"] {
   transform: translateY(-1px);
 }
 
+.preview-stepper.is-menu-highlight {
+  outline: 3px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 6px;
+  border-radius: 18px;
+}
+
+.preview-stepper.is-menu-highlight .preview-stepper-button {
+  border-color: rgba(239, 68, 68, 0.78);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  transform: translateY(-1px);
+}
+
 .preview-step-dropzone {
   flex: 0 0 0;
   width: 0;
@@ -546,6 +564,12 @@ body[data-page="form-creator"] {
 }
 
 .question-wrap.is-card-edit-hover::after {
+  border-color: rgba(239, 68, 68, 0.88);
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.question-wrap.is-menu-highlight::after {
   border-color: rgba(239, 68, 68, 0.88);
   box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408s">
+  <link rel="stylesheet" href="form-creator.css?v=20260408t">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -22,7 +22,7 @@
 
   <div id="signed-in-shell" class="form-creator-studio" hidden>
     <div id="form-creator-canvas" class="form-creator-canvas">
-      <main class="form-preview-stage">
+      <main class="form-preview-stage" id="form-preview-stage">
         <div id="form-preview-shell" class="fc-preview-shell">
           <div class="form-shell-edit-zone form-shell-edit-zone-left" data-form-shell-zone="left" aria-hidden="true"></div>
           <div class="form-shell-edit-zone form-shell-edit-zone-right" data-form-shell-zone="right" aria-hidden="true"></div>
@@ -133,7 +133,7 @@
               <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
             </div>
 
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-preview-hover="shell" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Form Shell</span>
@@ -147,7 +147,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-preview-hover="question" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Question Card</span>
@@ -161,7 +161,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-preview-hover="steps" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Step Boxes</span>
@@ -187,7 +187,7 @@
           </section>
 
           <section class="studio-tab-panel" role="tabpanel" data-studio-panel="global-settings" hidden>
-            <section class="floating-panel-section">
+            <section class="floating-panel-section" data-preview-hover="background">
               <div class="floating-panel-section-head">
                 <span class="floating-panel-kicker">Page Background</span>
                 <p class="floating-panel-copy">These colors change the entire page behind the form, not the form itself.</p>
@@ -239,6 +239,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408o"></script>
+  <script type="module" src="form-creator.js?v=20260408p"></script>
 </body>
 </html>
