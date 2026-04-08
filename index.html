@@ -12,6 +12,8 @@
       --bg-bottom: #1a2230;
       --card: rgba(246, 248, 252, 0.96);
       --card-background: var(--card);
+      --form-shine-background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+      --form-shine-opacity: 1;
       --card-border: rgba(95, 118, 148, 0.22);
       --text-main: #111827;
       --text-soft: #5b6472;
@@ -62,7 +64,8 @@
       position: absolute;
       inset: 0 0 auto 0;
       height: 128px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+      background: var(--form-shine-background);
+      opacity: var(--form-shine-opacity);
       pointer-events: none;
     }
 
@@ -1464,7 +1467,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408b"></script>
+<script src="app.js?v=20260408c"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

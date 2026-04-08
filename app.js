@@ -36,10 +36,12 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408a";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408b";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
+const DEFAULT_FORM_SURFACE_SHINE_ENABLED = true;
+const DEFAULT_FORM_SURFACE_SHINE_COLOR = "#ffffff";
 const DEFAULT_FORM_TEXT_COLOR = "#111827";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
@@ -1223,6 +1225,8 @@ function applyCustomFormPresentation(profile) {
   if (container) {
     container.style.setProperty("--card", profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR);
     container.style.setProperty("--card-background", buildCustomFormSurfaceBackground(profile));
+    container.style.setProperty("--form-shine-background", buildCustomFormSurfaceShineBackground(profile));
+    container.style.setProperty("--form-shine-opacity", profile?.formSurfaceShineEnabled === false ? "0" : "1");
     container.style.setProperty("--text-main", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
     container.style.setProperty("--text-soft", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   }
@@ -2291,6 +2295,16 @@ async function autoSaveBronzeContact() {
     console.warn("Unable to auto-save Bronze contact.", error);
     return null;
   }
+}
+
+function buildCustomFormSurfaceShineBackground(profile) {
+  const shineColor = String(profile?.formSurfaceShineColor || DEFAULT_FORM_SURFACE_SHINE_COLOR).trim() || DEFAULT_FORM_SURFACE_SHINE_COLOR;
+
+  if (profile?.formSurfaceShineEnabled === false) {
+    return "linear-gradient(135deg, transparent 0%, transparent 100%)";
+  }
+
+  return `linear-gradient(135deg, ${shineColor}70 0%, ${shineColor}26 34%, transparent 76%)`;
 }
 
 async function persistBronzeClientProfileAnswers(clientId, appointmentId) {

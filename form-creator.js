@@ -8,6 +8,8 @@ import {
   DEFAULT_FORM_SURFACE_COLOR,
   DEFAULT_FORM_SURFACE_ACCENT_COLOR,
   DEFAULT_FORM_SURFACE_GRADIENT,
+  DEFAULT_FORM_SURFACE_SHINE_ENABLED,
+  DEFAULT_FORM_SURFACE_SHINE_COLOR,
   DEFAULT_FORM_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
   DEFAULT_STEP_TITLE_FONT_SIZE,
@@ -26,7 +28,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408a";
+} from "./custom-form-profile.js?v=20260408b";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -90,7 +92,8 @@ function buildTemplateField(config) {
     navLabel: safeShortLabel(config.navLabel || config.label || base.navLabel),
     placeholder: typeof config.placeholder === "string" ? config.placeholder : base.placeholder,
     helpText: config.helpText || "",
-    required: Boolean(config.required)
+    required: Boolean(config.required),
+    rememberClientAnswer: config.rememberClientAnswer === true
   };
 }
 
@@ -98,7 +101,8 @@ const FORM_TEMPLATE_LIBRARY = [
   {
     id: "barbershop",
     name: "Barbershop",
-    subtitle: "Cuts, beard trims, and stylist preferences",
+    subtitle: "Classic, polished, and built for high-touch service shops",
+    badge: "Professional",
     points: [
       "Service request and preferred barber",
       "Hair goals or reference details",
@@ -113,6 +117,8 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f7f3eb",
       formSurfaceAccentColor: "#e6c891",
       formSurfaceGradient: "soft-blend",
+      formSurfaceShineEnabled: true,
+      formSurfaceShineColor: "#fff3d3",
       formTextColor: "#1f2937",
       stepNavBackgroundColor: "#ede3d2",
       stepNavTextColor: "#4b3c2a",
@@ -156,7 +162,8 @@ const FORM_TEMPLATE_LIBRARY = [
           label: "Preferred Barber",
           navLabel: "Barber",
           placeholder: "If they have one",
-          helpText: "Useful when shops route bookings by barber."
+          helpText: "Useful when shops route bookings by barber.",
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_hair_goal",
@@ -180,7 +187,8 @@ const FORM_TEMPLATE_LIBRARY = [
   {
     id: "pet-grooming",
     name: "Pet Grooming",
-    subtitle: "Breed, temperament, and grooming care details",
+    subtitle: "Playful, bright, and perfect for pet-first intake details",
+    badge: "Creative",
     points: [
       "Pet name, breed, and size",
       "Temperament and handling notes",
@@ -195,6 +203,8 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f4fbff",
       formSurfaceAccentColor: "#d7f2ff",
       formSurfaceGradient: "top-glow",
+      formSurfaceShineEnabled: true,
+      formSurfaceShineColor: "#d9fbff",
       formTextColor: "#12303a",
       stepNavBackgroundColor: "#dff5fb",
       stepNavTextColor: "#115e73",
@@ -229,7 +239,8 @@ const FORM_TEMPLATE_LIBRARY = [
           navLabel: "Pet",
           placeholder: "Enter pet name",
           helpText: "Pet grooming intake forms typically collect the pet's name first.",
-          required: true
+          required: true,
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_pet_breed",
@@ -238,7 +249,8 @@ const FORM_TEMPLATE_LIBRARY = [
           navLabel: "Breed",
           placeholder: "Breed, weight, or size",
           helpText: "Breed and size help groomers estimate timing and coat needs.",
-          required: true
+          required: true,
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_grooming_service",
@@ -279,7 +291,8 @@ const FORM_TEMPLATE_LIBRARY = [
   {
     id: "massage",
     name: "Massage Therapy",
-    subtitle: "Pressure, focus areas, and wellness intake",
+    subtitle: "Calm, elevated, and designed for premium wellness brands",
+    badge: "Luxe",
     points: [
       "Primary pain or tension areas",
       "Pressure preference and comfort",
@@ -294,6 +307,8 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#faf7ff",
       formSurfaceAccentColor: "#ede9fe",
       formSurfaceGradient: "soft-blend",
+      formSurfaceShineEnabled: true,
+      formSurfaceShineColor: "#f4ebff",
       formTextColor: "#221b34",
       stepNavBackgroundColor: "#efe7ff",
       stepNavTextColor: "#5b21b6",
@@ -331,7 +346,8 @@ const FORM_TEMPLATE_LIBRARY = [
           navLabel: "Pressure",
           placeholder: "Light, medium, deep, or unsure",
           helpText: "Pressure preference is a standard question for massage bookings.",
-          required: true
+          required: true,
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_health_notes",
@@ -355,7 +371,8 @@ const FORM_TEMPLATE_LIBRARY = [
   {
     id: "house-cleaning",
     name: "House Cleaning",
-    subtitle: "Home size, access details, and cleaning scope",
+    subtitle: "Clean, trustworthy, and built for operational service teams",
+    badge: "Operational",
     points: [
       "Bedrooms, bathrooms, and property type",
       "Deep clean or recurring service",
@@ -370,6 +387,8 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#f8fbff",
       formSurfaceAccentColor: "#dbeafe",
       formSurfaceGradient: "diagonal",
+      formSurfaceShineEnabled: true,
+      formSurfaceShineColor: "#eff8ff",
       formTextColor: "#102a43",
       stepNavBackgroundColor: "#e0f2fe",
       stepNavTextColor: "#0c4a6e",
@@ -411,7 +430,8 @@ const FORM_TEMPLATE_LIBRARY = [
           navLabel: "Rooms",
           placeholder: "Example: 3 bed / 2 bath",
           helpText: "Home size helps estimate timing and staffing.",
-          required: true
+          required: true,
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_pets_home",
@@ -419,7 +439,8 @@ const FORM_TEMPLATE_LIBRARY = [
           label: "Pets in the Home",
           navLabel: "Pets",
           placeholder: "Dog, cat, none, or crate info",
-          helpText: "Helpful for access and cleaning planning."
+          helpText: "Helpful for access and cleaning planning.",
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_access_notes",
@@ -435,7 +456,8 @@ const FORM_TEMPLATE_LIBRARY = [
   {
     id: "auto-detailing",
     name: "Auto Detailing",
-    subtitle: "Vehicle info, package selection, and service setup",
+    subtitle: "Bold, high-contrast, and made for premium mobile detailing brands",
+    badge: "Bold",
     points: [
       "Make, model, and year",
       "Detail package and add-ons",
@@ -450,6 +472,8 @@ const FORM_TEMPLATE_LIBRARY = [
       formSurfaceColor: "#fffaf0",
       formSurfaceAccentColor: "#fde68a",
       formSurfaceGradient: "soft-blend",
+      formSurfaceShineEnabled: true,
+      formSurfaceShineColor: "#fff0bf",
       formTextColor: "#1f2937",
       stepNavBackgroundColor: "#fef3c7",
       stepNavTextColor: "#92400e",
@@ -482,14 +506,16 @@ const FORM_TEMPLATE_LIBRARY = [
           navLabel: "Vehicle",
           placeholder: "Example: Toyota Camry",
           helpText: "Detailing forms usually collect make and model before booking.",
-          required: true
+          required: true,
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_vehicle_year",
           type: "text",
           label: "Vehicle Year",
           navLabel: "Year",
-          placeholder: "Example: 2021"
+          placeholder: "Example: 2021",
+          rememberClientAnswer: true
         }),
         buildTemplateField({
           id: "custom_detail_package",
@@ -936,6 +962,16 @@ function buildFormSurfaceBackground(profile = currentFormProfile) {
   }
 }
 
+function buildFormSurfaceShineBackground(profile = currentFormProfile) {
+  const shineColor = String(profile?.formSurfaceShineColor || DEFAULT_FORM_SURFACE_SHINE_COLOR).trim() || DEFAULT_FORM_SURFACE_SHINE_COLOR;
+
+  if (profile?.formSurfaceShineEnabled === false) {
+    return "linear-gradient(135deg, transparent 0%, transparent 100%)";
+  }
+
+  return `linear-gradient(135deg, ${shineColor}70 0%, ${shineColor}26 34%, transparent 76%)`;
+}
+
 function getTypographyInline(fontSize, isBold) {
   const styles = [];
 
@@ -977,6 +1013,8 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop);
   previewShell.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom);
   previewShell.style.setProperty("--fc-form-surface-background", buildFormSurfaceBackground(currentFormProfile));
+  previewShell.style.setProperty("--fc-form-shine-background", buildFormSurfaceShineBackground(currentFormProfile));
+  previewShell.style.setProperty("--fc-form-shine-opacity", currentFormProfile.formSurfaceShineEnabled === false ? "0" : "1");
   previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
 }
@@ -1259,7 +1297,28 @@ function renderFormTemplates() {
   }
 
   templateList.innerHTML = FORM_TEMPLATE_LIBRARY.map(template => `
-    <button class="form-template-card ${currentFormProfile.templateId === template.id ? "is-active" : ""}" type="button" data-template-id="${escapeHtml(template.id)}">
+    <button
+      class="form-template-card ${currentFormProfile.templateId === template.id ? "is-active" : ""}"
+      type="button"
+      data-template-id="${escapeHtml(template.id)}"
+      style="--template-top:${escapeHtml(template.profile.backgroundTop)};--template-bottom:${escapeHtml(template.profile.backgroundBottom)};--template-surface:${escapeHtml(template.profile.formSurfaceColor)};--template-accent:${escapeHtml(template.profile.formSurfaceAccentColor)};--template-text:${escapeHtml(template.profile.formTextColor)};"
+    >
+      <div class="form-template-preview-shell">
+        <div class="form-template-preview-hero">
+          <span class="form-template-preview-badge">${escapeHtml(template.badge || "Template")}</span>
+          <span class="form-template-preview-mark"></span>
+        </div>
+        <div class="form-template-preview-body">
+          <span class="form-template-preview-line form-template-preview-line-title"></span>
+          <span class="form-template-preview-line"></span>
+          <span class="form-template-preview-line form-template-preview-line-soft"></span>
+          <div class="form-template-preview-grid">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
       <div class="form-template-top">
         <span class="form-template-title-wrap">
           <span class="form-template-title">${escapeHtml(template.name)}</span>
@@ -1853,7 +1912,7 @@ function openFormShellEditor() {
 
   editorPopover.hidden = false;
   editorTitle.textContent = "Form box style";
-  editorCopy.textContent = "Change the full form card color, gradient, and overall text color for Send Reminder.";
+  editorCopy.textContent = "Change the full form card color, gradient, shine, and overall text color for Send Reminder.";
   editorBody.innerHTML = `
     <div class="form-editor-grid">
       <label>
@@ -1870,6 +1929,14 @@ function openFormShellEditor() {
       <select id="editor-surface-gradient">
         ${FORM_SURFACE_GRADIENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
       </select>
+    </label>
+    <label class="toggle-row">
+      <span>Top shine</span>
+      <input id="editor-surface-shine-toggle" type="checkbox" ${currentFormProfile.formSurfaceShineEnabled !== false ? "checked" : ""}>
+    </label>
+    <label>
+      Shine color
+      <input id="editor-surface-shine-color" type="color" value="${escapeHtml(currentFormProfile.formSurfaceShineColor || DEFAULT_FORM_SURFACE_SHINE_COLOR)}">
     </label>
     <label>
       Text color
@@ -1897,6 +1964,22 @@ function openFormShellEditor() {
     currentFormProfile = {
       ...currentFormProfile,
       formSurfaceGradient: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-shine-toggle")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceShineEnabled: Boolean(event.target.checked)
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-shine-color")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceShineColor: event.target.value
     };
     renderBuilder();
   });

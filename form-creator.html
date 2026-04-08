@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408i">
+  <link rel="stylesheet" href="form-creator.css?v=20260408j">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -47,35 +47,6 @@
             </span>
           </label>
         </div>
-
-        <section class="floating-panel-section" aria-label="Add question tools">
-          <div class="floating-panel-section-head">
-            <span class="floating-panel-kicker">Core Fields</span>
-            <p class="floating-panel-copy">Restore the real reminder fields so Name, Email, Phone, and the rest keep their built-in behavior.</p>
-          </div>
-          <div class="floating-tool-dock">
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Restore client name"><span class="floating-tool-icon">N</span><span class="floating-tool-label">Name</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Restore client email"><span class="floating-tool-icon">@</span><span class="floating-tool-label">Email</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Restore client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Restore date of service"><span class="floating-tool-icon">D</span><span class="floating-tool-label">Date</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Restore time of service"><span class="floating-tool-icon">T</span><span class="floating-tool-label">Time</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Restore service location"><span class="floating-tool-icon">L</span><span class="floating-tool-label">Location</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Restore business contact"><span class="floating-tool-icon">Co</span><span class="floating-tool-label">Contact</span></button>
-            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Restore additional details"><span class="floating-tool-icon">De</span><span class="floating-tool-label">Details</span></button>
-          </div>
-        </section>
-
-        <section class="floating-panel-section" aria-label="Add question tools">
-          <div class="floating-panel-section-head">
-            <span class="floating-panel-kicker">Custom Questions</span>
-            <p class="floating-panel-copy">Add business-specific questions that live only in your custom form.</p>
-          </div>
-          <div class="floating-tool-dock">
-            <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Aa</span><span class="floating-tool-label">Short Text</span></button>
-            <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Tx</span><span class="floating-tool-label">Long Text</span></button>
-            <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
-          </div>
-        </section>
 
         <section class="floating-panel-section floating-panel-templates">
           <div class="floating-panel-section-head">
@@ -132,11 +103,28 @@
 
         <section class="floating-panel-section">
           <div class="floating-panel-section-head">
-            <span class="floating-panel-kicker">Add To This Page</span>
-            <p class="floating-panel-copy">These buttons add custom questions to the page you are currently editing. Core fields live in the left menu.</p>
+            <span class="floating-panel-kicker">Core Fields</span>
+            <p class="floating-panel-copy">Restore the real reminder fields here so they keep their built-in behavior in Send Reminder.</p>
           </div>
           <button id="page-settings-button" class="floating-action-button" type="button">Page Style</button>
-          <div class="floating-tool-dock" aria-label="Add question tools to current page">
+          <div class="floating-tool-dock" aria-label="Restore core reminder fields">
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Restore client name"><span class="floating-tool-icon">N</span><span class="floating-tool-label">Name</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Restore client email"><span class="floating-tool-icon">@</span><span class="floating-tool-label">Email</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Restore client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Restore date of service"><span class="floating-tool-icon">D</span><span class="floating-tool-label">Date</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Restore time of service"><span class="floating-tool-icon">T</span><span class="floating-tool-label">Time</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Restore service location"><span class="floating-tool-icon">L</span><span class="floating-tool-label">Location</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Restore business contact"><span class="floating-tool-icon">Co</span><span class="floating-tool-label">Contact</span></button>
+            <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Restore additional details"><span class="floating-tool-icon">De</span><span class="floating-tool-label">Details</span></button>
+          </div>
+        </section>
+
+        <section class="floating-panel-section">
+          <div class="floating-panel-section-head">
+            <span class="floating-panel-kicker">Custom Questions</span>
+            <p class="floating-panel-copy">Add business-specific fields to the page you are currently editing.</p>
+          </div>
+          <div class="floating-tool-dock" aria-label="Add custom question tools to current page">
             <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Aa</span><span class="floating-tool-label">Short Text</span></button>
             <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Tx</span><span class="floating-tool-label">Long Text</span></button>
             <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
@@ -167,6 +155,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408c"></script>
+  <script type="module" src="form-creator.js?v=20260408d"></script>
 </body>
 </html>
