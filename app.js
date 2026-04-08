@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408i";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408j";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -592,6 +592,166 @@ function getReviewDraftCard() {
   return document.getElementById("review-draft-card");
 }
 
+function getMainWizardShell() {
+  return document.querySelector(".wizard-shell");
+}
+
+function getThankYouShell() {
+  return document.getElementById("thank-you-shell");
+}
+
+function getThankYouTitleElement() {
+  return document.getElementById("thank-you-title");
+}
+
+function getThankYouCopyElement() {
+  return document.getElementById("thank-you-copy");
+}
+
+function getThankYouButtonElement() {
+  return document.getElementById("thank-you-reset");
+}
+
+function getThankYouImageElement() {
+  return document.getElementById("thank-you-image");
+}
+
+function getThankYouImageWrap() {
+  return document.getElementById("thank-you-image-wrap");
+}
+
+function getThankYouPlaceholder() {
+  return document.getElementById("thank-you-image-placeholder");
+}
+
+function buildFormScreenImageMarkup(imageUrl, type = "welcome") {
+  const safeUrl = String(imageUrl || "").trim();
+
+  if (safeUrl) {
+    return `
+      <div class="wizard-screen-media">
+        <img class="wizard-screen-image" src="${escapeHtml(safeUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">
+        <span class="wizard-screen-placeholder" hidden>${type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="wizard-screen-media is-placeholder">
+      <span class="wizard-screen-placeholder">${type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
+    </div>
+  `;
+}
+
+function buildWelcomeWizardStepMarkup(profile = activeCustomFormProfile || {}) {
+  const title = String(profile?.welcomeTitle || "Welcome").trim() || "Welcome";
+  const copy = String(profile?.welcomeCopy || "Answer a few quick questions so we can personalize your reminder.").trim();
+  const cta = String(profile?.welcomeButtonText || "Start").trim() || "Start";
+
+  return `
+    <div class="wizard-step custom-wizard-step wizard-step-screen" data-step-kind="welcome" data-title="${escapeHtml(title)}" data-nav="Start" data-field="welcome" data-copy="${escapeHtml(copy)}" data-optional="false" data-cta="${escapeHtml(cta)}">
+      <div class="question-wrap screen-question-wrap">
+        ${buildFormScreenImageMarkup(profile?.welcomeImageUrl, "welcome")}
+        <div class="wizard-screen-content">
+          <span class="wizard-screen-kicker">Welcome screen</span>
+          <button class="wizard-screen-button" type="button" tabindex="-1">${escapeHtml(cta)}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function hideThankYouScreen() {
+  const thankYouShell = getThankYouShell();
+  const wizardShell = getMainWizardShell();
+
+  if (thankYouShell) {
+    thankYouShell.hidden = true;
+  }
+
+  if (wizardShell) {
+    wizardShell.hidden = false;
+  }
+}
+
+function showThankYouScreen() {
+  const profile = activeCustomFormProfile;
+  const thankYouShell = getThankYouShell();
+  const wizardShell = getMainWizardShell();
+
+  if (!thankYouShell || !profile?.thankYouScreenEnabled) {
+    return false;
+  }
+
+  const title = String(profile.thankYouTitle || "You're all set").trim() || "You're all set";
+  const copy = String(profile.thankYouCopy || "Your reminder details are ready to send.").trim()
+    || "Your reminder details are ready to send.";
+  const buttonText = String(profile.thankYouButtonText || "Create another reminder").trim()
+    || "Create another reminder";
+  const imageUrl = String(profile.thankYouImageUrl || "").trim();
+  const titleElement = getThankYouTitleElement();
+  const copyElement = getThankYouCopyElement();
+  const buttonElement = getThankYouButtonElement();
+  const imageElement = getThankYouImageElement();
+  const imageWrap = getThankYouImageWrap();
+  const placeholder = getThankYouPlaceholder();
+
+  if (titleElement) {
+    titleElement.textContent = title;
+    titleElement.style.fontSize = `${Number(profile.thankYouTitleFontSize) || DEFAULT_STEP_TITLE_FONT_SIZE}px`;
+    titleElement.style.fontWeight = profile.thankYouTitleBold === false ? "500" : "800";
+  }
+
+  if (copyElement) {
+    copyElement.textContent = copy;
+    copyElement.style.fontSize = `${Number(profile.thankYouCopyFontSize) || DEFAULT_STEP_COPY_FONT_SIZE}px`;
+    copyElement.style.fontWeight = profile.thankYouCopyBold ? "800" : "500";
+  }
+
+  if (buttonElement) {
+    buttonElement.textContent = buttonText;
+  }
+
+  if (imageWrap) {
+    imageWrap.hidden = false;
+    imageWrap.classList.toggle("is-placeholder", !imageUrl);
+  }
+
+  if (imageElement) {
+    imageElement.onload = () => {
+      imageWrap?.classList.remove("is-placeholder");
+      if (placeholder) {
+        placeholder.hidden = true;
+      }
+    };
+    imageElement.onerror = () => {
+      imageElement.hidden = true;
+      imageWrap?.classList.add("is-placeholder");
+      if (placeholder) {
+        placeholder.hidden = false;
+      }
+    };
+    if (imageUrl) {
+      imageElement.src = imageUrl;
+      imageElement.hidden = false;
+    } else {
+      imageElement.hidden = true;
+      imageElement.removeAttribute("src");
+    }
+  }
+
+  if (placeholder) {
+    placeholder.hidden = Boolean(imageUrl);
+  }
+
+  if (wizardShell) {
+    wizardShell.hidden = true;
+  }
+
+  thankYouShell.hidden = false;
+  return true;
+}
+
 function formatTime(time) {
   if (!time) return "";
   let [hour, minute] = time.split(":");
@@ -607,7 +767,7 @@ function formatDate(dateString) {
   return month && day && year ? month + "/" + day + "/" + year : dateString;
 }
 
-function generatePreviewSubject() {
+function legacyGeneratePreviewSubject() {
   const date = getFieldValue("date");
   const time = getFieldValue("time");
   const name = getFieldValue("name");
@@ -1333,6 +1493,16 @@ function buildCustomFormSurfaceBackground(profile) {
 
 function getActiveStepTypography(stepElement) {
   const fieldId = stepElement?.dataset?.field || "";
+
+  if (fieldId === "welcome") {
+    return {
+      titleFontSize: Number(activeCustomFormProfile?.welcomeTitleFontSize) || DEFAULT_STEP_TITLE_FONT_SIZE,
+      titleBold: activeCustomFormProfile?.welcomeTitleBold !== false,
+      copyFontSize: Number(activeCustomFormProfile?.welcomeCopyFontSize) || DEFAULT_STEP_COPY_FONT_SIZE,
+      copyBold: Boolean(activeCustomFormProfile?.welcomeCopyBold)
+    };
+  }
+
   const customField = getCustomFieldConfig(fieldId);
   const builtInOverride = activeCustomFormProfile?.stepOverrides?.[fieldId] || null;
   const source = customField || builtInOverride || {};
@@ -1711,6 +1881,10 @@ function renderCustomWizardSteps() {
     return;
   }
 
+  if (activeCustomFormProfile?.welcomeScreenEnabled) {
+    reviewStep.insertAdjacentHTML("beforebegin", buildWelcomeWizardStepMarkup(activeCustomFormProfile));
+  }
+
   orderedSteps.forEach(step => {
     if (step.builtIn) {
       const builtInStep = document.querySelector(`.wizard-step[data-field="${step.id}"]`);
@@ -1759,6 +1933,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     activeCustomFormProfile = null;
     activeCustomFormFields = [];
     customFormFieldLookup = new Map();
+    hideThankYouScreen();
     renderCustomWizardSteps();
     applyPendingClientProfilePrefill();
     applyCustomFormPresentation(null);
@@ -1777,6 +1952,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
       activeCustomFormProfile = null;
       activeCustomFormFields = [];
       customFormFieldLookup = new Map();
+      hideThankYouScreen();
       renderCustomWizardSteps();
       applyPendingClientProfilePrefill();
       applyCustomFormPresentation(null);
@@ -1790,6 +1966,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     activeCustomFormProfile = normalizedProfile;
     activeCustomFormFields = Array.isArray(activeCustomFormProfile.fields) ? activeCustomFormProfile.fields : [];
     customFormFieldLookup = new Map(activeCustomFormFields.map(field => [field.id, field]));
+    hideThankYouScreen();
     renderCustomWizardSteps();
     bindCustomFieldInputListeners();
     applyPendingClientProfilePrefill();
@@ -2960,6 +3137,10 @@ function isStepComplete(step, index) {
     return false;
   }
 
+  if (step.dataset.stepKind === "welcome") {
+    return Boolean(visitedSteps[index]);
+  }
+
   const fieldId = step.dataset.field || "";
   const isOptional = step.dataset.optional === "true";
 
@@ -2972,6 +3153,10 @@ function isStepComplete(step, index) {
 
 function isStepInvalid(step) {
   if (!step) {
+    return false;
+  }
+
+  if (step.dataset.stepKind === "welcome") {
     return false;
   }
 
@@ -3041,6 +3226,10 @@ function renderStepNavigation() {
 }
 
 function focusStepField(step) {
+  if (step?.dataset?.stepKind === "welcome") {
+    return;
+  }
+
   const field = step.querySelector("input, textarea");
 
   if (!field || field.id === "preview" || field.type === "checkbox") {
@@ -3075,6 +3264,7 @@ function updateWizardUI() {
   const isFinalStep = currentStepIndex === totalSteps - 1;
   const isOptional = currentStep.dataset.optional === "true";
   const stepNavPlacement = activeCustomFormProfile?.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
+  const isWelcomeStep = currentStep.dataset.stepKind === "welcome";
 
   wizardSteps.forEach((step, index) => {
     step.classList.toggle("active", index === currentStepIndex);
@@ -3100,7 +3290,10 @@ function updateWizardUI() {
     progressWrap.hidden = stepNavPlacement === "hidden";
   }
 
-  if (isFinalStep) {
+  if (isWelcomeStep) {
+    stepPill.textContent = "Welcome";
+    stepPill.className = "step-pill";
+  } else if (isFinalStep) {
     stepPill.textContent = "Final Step";
     stepPill.className = "step-pill final";
   } else {
@@ -3109,9 +3302,13 @@ function updateWizardUI() {
   }
 
   backButton.hidden = currentStepIndex === 0;
-  skipButton.hidden = isFinalStep || !isOptional;
+  skipButton.hidden = isFinalStep || !isOptional || isWelcomeStep;
   nextButton.hidden = isFinalStep;
-  nextButton.textContent = currentStepIndex === totalSteps - 2 ? "Review" : "Next";
+  nextButton.textContent = isWelcomeStep
+    ? (currentStep.dataset.cta || "Start")
+    : currentStepIndex === totalSteps - 2
+      ? "Review"
+      : "Next";
 
   if (wizardControls) {
     const visibleButtons = [backButton, skipButton, nextButton].filter(button => !button.hidden).length;
@@ -3286,6 +3483,10 @@ if (previewTextarea) {
     updateReviewPreview();
   });
 }
+
+getThankYouButtonElement()?.addEventListener("click", () => {
+  window.location.reload();
+});
 
 const addressInput = document.getElementById("address");
 if (addressInput) {
@@ -3544,6 +3745,7 @@ async function confirmSendBrevoEmail() {
       await persistBronzeClientProfileAnswers(clientId, appointmentId);
       safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
+      showThankYouScreen();
     } else {
       setSendEmailButtonState("idle");
       alert(data.error || "Error sending email");

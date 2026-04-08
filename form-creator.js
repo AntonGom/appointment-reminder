@@ -45,7 +45,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408i";
+} from "./custom-form-profile.js?v=20260408j";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -73,6 +73,8 @@ const globalBgSolidWrap = document.getElementById("global-bg-solid-wrap");
 const formSurfaceControls = document.getElementById("form-surface-controls");
 const questionSurfaceControls = document.getElementById("question-surface-controls");
 const stepNavigationControls = document.getElementById("step-navigation-controls");
+const welcomeScreenControls = document.getElementById("welcome-screen-controls");
+const thankYouScreenControls = document.getElementById("thank-you-screen-controls");
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
@@ -689,7 +691,7 @@ function getCurrentPageId() {
 function getCurrentPageFields() {
   const page = getEditableStep(getCurrentPageId());
 
-  if (!page || page.id === "review") {
+  if (!page || ["review", "welcome", "thankyou"].includes(page.id) || ["review", "welcome", "thankyou"].includes(String(page.type || "").trim())) {
     return [];
   }
 
@@ -780,7 +782,7 @@ function ensureStepOrderIds(stepIds) {
 }
 
 function getCurrentStepOrder() {
-  return getPreviewSteps().filter(step => step.id !== "review").map(step => step.id);
+  return getPreviewSteps().filter(isReorderablePreviewStep).map(step => step.id);
 }
 
 function setFieldOrderForPage(pageId, orderedIds) {
@@ -801,7 +803,7 @@ function insertFieldIntoCurrentPage(type, insertIndex = null) {
   const nextField = createCustomField(type);
   const currentPageId = getCurrentPageId();
 
-  if (!currentPageId || currentPageId === "review") {
+  if (!currentPageId || ["review", "welcome", "thankyou"].includes(currentPageId)) {
     setStatus("Pick a question page first, then add fields to that page.", "error");
     return;
   }
@@ -934,7 +936,7 @@ function finishDrag(draggedElement = null) {
 function reorderCurrentPageField(fieldId, insertIndex) {
   const currentPageId = getCurrentPageId();
 
-  if (!currentPageId || currentPageId === "review") {
+  if (!currentPageId || ["review", "welcome", "thankyou"].includes(currentPageId)) {
     return;
   }
 
@@ -1261,6 +1263,16 @@ function syncMenuPreviewHoverState() {
   if (questionWrap) {
     questionWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "question");
   }
+
+  const welcomeWrap = previewStepHost?.querySelector('[data-preview-area="welcome"]');
+  if (welcomeWrap) {
+    welcomeWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "welcome");
+  }
+
+  const thankYouWrap = previewStepHost?.querySelector('[data-preview-area="thankyou"]');
+  if (thankYouWrap) {
+    thankYouWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "thankyou");
+  }
 }
 
 function setMenuPreviewHoverTarget(target = "") {
@@ -1405,6 +1417,34 @@ function applyStepNavigationStyles() {
   }
 }
 
+function isSpecialPreviewScreen(step) {
+  const stepType = String(step?.type || step?.id || "").trim().toLowerCase();
+  return stepType === "welcome" || stepType === "thankyou";
+}
+
+function isReorderablePreviewStep(step) {
+  return Boolean(step) && step.id !== "review" && !isSpecialPreviewScreen(step);
+}
+
+function buildScreenImageMarkup(step) {
+  const imageUrl = String(step?.imageUrl || "").trim();
+
+  if (imageUrl) {
+    return `
+      <div class="screen-preview-media">
+        <img class="screen-preview-image" src="${escapeHtml(imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">
+        <span class="screen-preview-placeholder" hidden>${step.type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="screen-preview-media is-placeholder">
+      <span class="screen-preview-placeholder">${step.type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
+    </div>
+  `;
+}
+
 function buildPreviewFieldControlMarkup(field, options = {}) {
   const isRequired = field.required === true;
   const badge = isRequired
@@ -1430,6 +1470,21 @@ function buildPreviewFieldControlMarkup(field, options = {}) {
 }
 
 function buildPreviewFieldMarkup(step) {
+  if (step.type === "welcome" || step.type === "thankyou") {
+    return `
+      <div class="question-wrap is-selected is-screen-preview" data-preview-area="${escapeHtml(step.type)}">
+        <div class="screen-preview-shell">
+          ${buildScreenImageMarkup(step)}
+          <div class="screen-preview-content">
+            <span class="screen-preview-kicker">${step.type === "thankyou" ? "After send" : "First screen"}</span>
+            <div class="screen-preview-copy">${escapeHtml(step.type === "thankyou" ? "This preview matches the optional finish your client sees after a send." : "This preview matches the optional first screen that appears before the questions start.")}</div>
+            <button class="screen-preview-button" type="button" tabindex="-1">${escapeHtml(step.buttonText || (step.type === "thankyou" ? "Create another reminder" : "Start"))}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   if (step.type === "review") {
     return `
       <div class="question-wrap is-selected">
@@ -1492,8 +1547,16 @@ function renderPreview() {
   }
 
   if (previewStepPill) {
-    previewStepPill.textContent = isRequired ? "Required" : "Optional";
-    previewStepPill.classList.toggle("is-required", isRequired);
+    if (selectedStep.type === "welcome") {
+      previewStepPill.textContent = "Welcome";
+      previewStepPill.classList.remove("is-required");
+    } else if (selectedStep.type === "thankyou") {
+      previewStepPill.textContent = "Thank You";
+      previewStepPill.classList.remove("is-required");
+    } else {
+      previewStepPill.textContent = isRequired ? "Required" : "Optional";
+      previewStepPill.classList.toggle("is-required", isRequired);
+    }
   }
 
   if (previewStepTitle) {
@@ -1515,11 +1578,11 @@ function renderPreview() {
   if (previewStepper) {
     previewStepper.innerHTML = steps.map((step, index) => `
       <div class="preview-step-dropzone" data-drop-step-index="${index}"></div>
-      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${step.id === "review" ? "false" : "true"}">
+      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderablePreviewStep(step) ? "true" : "false"}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
         <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
       </button>
-    `).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${steps.filter(step => step.id !== "review").length}"></div>`;
+    `).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${steps.filter(isReorderablePreviewStep).length}"></div>`;
   }
 
   if (previewStepHost) {
@@ -1535,7 +1598,15 @@ function renderPreview() {
   }
 
   if (previewNextButton) {
-    previewNextButton.textContent = selectedIndex === steps.length - 2 ? "Review" : "Next";
+    if (selectedStep.type === "welcome") {
+      previewNextButton.textContent = selectedStep.buttonText || "Start";
+    } else if (selectedStep.type === "review" && steps[selectedIndex + 1]?.type === "thankyou") {
+      previewNextButton.textContent = "Thank You";
+    } else if (selectedIndex === steps.length - 2) {
+      previewNextButton.textContent = "Review";
+    } else {
+      previewNextButton.textContent = "Next";
+    }
     previewNextButton.disabled = selectedIndex >= steps.length - 1;
   }
 
@@ -1552,13 +1623,23 @@ function renderFieldRail() {
   const fields = getCurrentPageFields();
   const currentPage = getSelectedPreviewStep();
 
-  if (!currentPage || currentPage.id === "review") {
+  if (!currentPage || ["review", "welcome", "thankyou"].includes(currentPage.id) || isSpecialPreviewScreen(currentPage)) {
+    const pageLabel = currentPage?.type === "welcome"
+      ? "Welcome screen selected"
+      : currentPage?.type === "thankyou"
+        ? "Thank-you screen selected"
+        : "Review step selected";
+    const pageMeta = currentPage?.type === "welcome"
+      ? "Welcome screens do not hold question fields. Use Form Settings to edit the title, copy, button text, and image."
+      : currentPage?.type === "thankyou"
+        ? "Thank-you screens do not hold question fields. Use Form Settings to edit the title, copy, button text, and image."
+        : "Add fields from any question page, not from the review step.";
     fieldRailList.innerHTML = `
       <div class="field-rail-card is-empty">
         <span class="field-rail-icon">+</span>
         <div class="field-rail-body">
-          <span class="field-rail-title">Review step selected</span>
-          <span class="field-rail-meta">Add fields from any question page, not from the review step.</span>
+          <span class="field-rail-title">${pageLabel}</span>
+          <span class="field-rail-meta">${pageMeta}</span>
         </div>
       </div>
     `;
@@ -1785,7 +1866,7 @@ function renderGlobalSettingsTab() {
 }
 
 function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
-  const editableSteps = getPreviewSteps().filter(step => step.id !== "review");
+  const editableSteps = getPreviewSteps().filter(isReorderablePreviewStep);
   const stepSurfaceState = getStepNavigationSurfaceState();
 
   return `
@@ -2073,6 +2154,134 @@ function renderFormSettingsTab() {
   if (stepNavigationControls) {
     stepNavigationControls.innerHTML = buildStepNavigationSettingsMarkup("inline-step-nav");
     bindStepNavigationSettings(stepNavigationControls, "inline-step-nav");
+  }
+
+  if (welcomeScreenControls) {
+    welcomeScreenControls.innerHTML = `
+      <label class="toggle-row">
+        <span>Show welcome screen first</span>
+        <input id="inline-welcome-enabled" type="checkbox" ${currentFormProfile.welcomeScreenEnabled ? "checked" : ""}>
+      </label>
+      <div class="form-editor-grid">
+        <label>
+          Welcome title
+          <input id="inline-welcome-title" type="text" maxlength="60" value="${escapeHtml(currentFormProfile.welcomeTitle || "")}">
+        </label>
+        <label>
+          Button text
+          <input id="inline-welcome-button" type="text" maxlength="32" value="${escapeHtml(currentFormProfile.welcomeButtonText || "")}">
+        </label>
+      </div>
+      <label>
+        Welcome copy
+        <textarea id="inline-welcome-copy" maxlength="180">${escapeHtml(currentFormProfile.welcomeCopy || "")}</textarea>
+      </label>
+      <label>
+        Image URL
+        <input id="inline-welcome-image" type="url" inputmode="url" placeholder="https://example.com/image.jpg" value="${escapeHtml(currentFormProfile.welcomeImageUrl || "")}">
+      </label>
+      <div class="editor-inline-note">Use a direct image URL for the best results. If you leave it blank, the welcome screen uses a styled placeholder.</div>
+    `;
+
+    document.getElementById("inline-welcome-enabled")?.addEventListener("change", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        welcomeScreenEnabled: Boolean(event.target.checked)
+      };
+      renderBuilder();
+    });
+    document.getElementById("inline-welcome-title")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        welcomeTitle: event.target.value.slice(0, 60)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-welcome-button")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        welcomeButtonText: event.target.value.slice(0, 32)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-welcome-copy")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        welcomeCopy: event.target.value.slice(0, 180)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-welcome-image")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        welcomeImageUrl: event.target.value.slice(0, 500)
+      };
+      refreshPreviewOnly();
+    });
+  }
+
+  if (thankYouScreenControls) {
+    thankYouScreenControls.innerHTML = `
+      <label class="toggle-row">
+        <span>Show thank-you screen after send</span>
+        <input id="inline-thankyou-enabled" type="checkbox" ${currentFormProfile.thankYouScreenEnabled ? "checked" : ""}>
+      </label>
+      <div class="form-editor-grid">
+        <label>
+          Thank-you title
+          <input id="inline-thankyou-title" type="text" maxlength="60" value="${escapeHtml(currentFormProfile.thankYouTitle || "")}">
+        </label>
+        <label>
+          Button text
+          <input id="inline-thankyou-button" type="text" maxlength="32" value="${escapeHtml(currentFormProfile.thankYouButtonText || "")}">
+        </label>
+      </div>
+      <label>
+        Thank-you copy
+        <textarea id="inline-thankyou-copy" maxlength="180">${escapeHtml(currentFormProfile.thankYouCopy || "")}</textarea>
+      </label>
+      <label>
+        Image URL
+        <input id="inline-thankyou-image" type="url" inputmode="url" placeholder="https://example.com/image.jpg" value="${escapeHtml(currentFormProfile.thankYouImageUrl || "")}">
+      </label>
+      <div class="editor-inline-note">Use a direct image URL for the best results. If you leave it blank, the thank-you screen uses a styled placeholder.</div>
+    `;
+
+    document.getElementById("inline-thankyou-enabled")?.addEventListener("change", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        thankYouScreenEnabled: Boolean(event.target.checked)
+      };
+      renderBuilder();
+    });
+    document.getElementById("inline-thankyou-title")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        thankYouTitle: event.target.value.slice(0, 60)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-thankyou-button")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        thankYouButtonText: event.target.value.slice(0, 32)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-thankyou-copy")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        thankYouCopy: event.target.value.slice(0, 180)
+      };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-thankyou-image")?.addEventListener("input", event => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        thankYouImageUrl: event.target.value.slice(0, 500)
+      };
+      refreshPreviewOnly();
+    });
   }
 }
 
@@ -2454,6 +2663,58 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
 
   if (!step) {
     return;
+  }
+
+  if (isSpecialPreviewScreen(step)) {
+    const stepPrefix = step.type === "thankyou" ? "thankYou" : "welcome";
+
+    if (target === "step-title") {
+      openTypographyEditor({
+        title: step.type === "thankyou" ? "Thank-you title" : "Welcome title",
+        copy: step.type === "thankyou"
+          ? "Edit the title that appears on the optional thank-you screen."
+          : "Edit the title that appears on the optional welcome screen.",
+        text: currentFormProfile[`${stepPrefix}Title`] || step.title,
+        fontSize: currentFormProfile[`${stepPrefix}TitleFontSize`] || step.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
+        bold: currentFormProfile[`${stepPrefix}TitleBold`] !== false,
+        minSize: 20,
+        maxSize: 60,
+        maxLength: 60,
+        apply({ text, fontSize, bold }) {
+          currentFormProfile = {
+            ...currentFormProfile,
+            [`${stepPrefix}Title`]: typeof text === "string" ? text : currentFormProfile[`${stepPrefix}Title`],
+            [`${stepPrefix}TitleFontSize`]: fontSize ?? currentFormProfile[`${stepPrefix}TitleFontSize`],
+            [`${stepPrefix}TitleBold`]: bold ?? currentFormProfile[`${stepPrefix}TitleBold`]
+          };
+        }
+      });
+      return;
+    }
+
+    if (target === "step-copy") {
+      openTypographyEditor({
+        title: step.type === "thankyou" ? "Thank-you copy" : "Welcome copy",
+        copy: step.type === "thankyou"
+          ? "Edit the supporting text on the optional thank-you screen."
+          : "Edit the supporting text on the optional welcome screen.",
+        text: currentFormProfile[`${stepPrefix}Copy`] || step.copy || "",
+        fontSize: currentFormProfile[`${stepPrefix}CopyFontSize`] || step.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
+        bold: Boolean(currentFormProfile[`${stepPrefix}CopyBold`]),
+        minSize: 12,
+        maxSize: 26,
+        maxLength: 180,
+        apply({ text, fontSize, bold }) {
+          currentFormProfile = {
+            ...currentFormProfile,
+            [`${stepPrefix}Copy`]: typeof text === "string" ? text : currentFormProfile[`${stepPrefix}Copy`],
+            [`${stepPrefix}CopyFontSize`]: fontSize ?? currentFormProfile[`${stepPrefix}CopyFontSize`],
+            [`${stepPrefix}CopyBold`]: bold ?? currentFormProfile[`${stepPrefix}CopyBold`]
+          };
+        }
+      });
+      return;
+    }
   }
 
   if (target === "step-nav-label") {
@@ -3154,7 +3415,9 @@ previewStepper?.addEventListener("click", event => {
 previewStepper?.addEventListener("dragstart", event => {
   const button = event.target.closest("[data-preview-step]");
 
-  if (!button || button.dataset.previewStep === "review") {
+  const step = getPreviewSteps().find(entry => entry.id === (button?.dataset.previewStep || ""));
+
+  if (!button || !isReorderablePreviewStep(step)) {
     return;
   }
 
@@ -3249,6 +3512,12 @@ previewStepHost?.addEventListener("click", event => {
 
   if (clickedFieldId && clickedFieldId !== "review") {
     openFieldEditor(clickedFieldId);
+    return;
+  }
+
+  const selectedStep = getSelectedPreviewStep();
+
+  if (selectedStep && isSpecialPreviewScreen(selectedStep)) {
     return;
   }
 

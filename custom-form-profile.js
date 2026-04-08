@@ -1,4 +1,14 @@
 export const DEFAULT_FORM_TITLE = "Appointment Reminder";
+export const DEFAULT_WELCOME_SCREEN_ENABLED = false;
+export const DEFAULT_WELCOME_TITLE = "Welcome";
+export const DEFAULT_WELCOME_COPY = "Answer a few quick questions so we can personalize your reminder.";
+export const DEFAULT_WELCOME_BUTTON_TEXT = "Start";
+export const DEFAULT_WELCOME_IMAGE_URL = "";
+export const DEFAULT_THANK_YOU_SCREEN_ENABLED = false;
+export const DEFAULT_THANK_YOU_TITLE = "You're all set";
+export const DEFAULT_THANK_YOU_COPY = "Your reminder details are ready to send.";
+export const DEFAULT_THANK_YOU_BUTTON_TEXT = "Create another reminder";
+export const DEFAULT_THANK_YOU_IMAGE_URL = "";
 export const DEFAULT_BACKGROUND_TOP = "#10141c";
 export const DEFAULT_BACKGROUND_BOTTOM = "#1a2230";
 export const DEFAULT_BACKGROUND_STYLE = "gradient";
@@ -243,6 +253,10 @@ function pickOption(value, fallback, options) {
   return options.some(option => option.id === normalized) ? normalized : fallback;
 }
 
+function normalizeImageUrl(value) {
+  return safeString(value).slice(0, 500);
+}
+
 function normalizeTypography(rawTypography = {}) {
   return {
     titleFontSize: clampNumber(rawTypography.titleFontSize, DEFAULT_STEP_TITLE_FONT_SIZE, 20, 60),
@@ -391,6 +405,24 @@ export function normalizeCustomFormProfile(rawProfile) {
     templateId: safeString(profile.templateId).slice(0, 40),
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
     isEnabled: profile.isEnabled !== false,
+    welcomeScreenEnabled: profile.welcomeScreenEnabled === true,
+    welcomeTitle: safeString(profile.welcomeTitle) || DEFAULT_WELCOME_TITLE,
+    welcomeCopy: safeString(profile.welcomeCopy) || DEFAULT_WELCOME_COPY,
+    welcomeButtonText: safeString(profile.welcomeButtonText) || DEFAULT_WELCOME_BUTTON_TEXT,
+    welcomeImageUrl: normalizeImageUrl(profile.welcomeImageUrl) || DEFAULT_WELCOME_IMAGE_URL,
+    welcomeTitleFontSize: clampNumber(profile.welcomeTitleFontSize, DEFAULT_STEP_TITLE_FONT_SIZE, 20, 60),
+    welcomeTitleBold: profile.welcomeTitleBold !== false,
+    welcomeCopyFontSize: clampNumber(profile.welcomeCopyFontSize, DEFAULT_STEP_COPY_FONT_SIZE, 12, 26),
+    welcomeCopyBold: Boolean(profile.welcomeCopyBold),
+    thankYouScreenEnabled: profile.thankYouScreenEnabled === true,
+    thankYouTitle: safeString(profile.thankYouTitle) || DEFAULT_THANK_YOU_TITLE,
+    thankYouCopy: safeString(profile.thankYouCopy) || DEFAULT_THANK_YOU_COPY,
+    thankYouButtonText: safeString(profile.thankYouButtonText) || DEFAULT_THANK_YOU_BUTTON_TEXT,
+    thankYouImageUrl: normalizeImageUrl(profile.thankYouImageUrl) || DEFAULT_THANK_YOU_IMAGE_URL,
+    thankYouTitleFontSize: clampNumber(profile.thankYouTitleFontSize, DEFAULT_STEP_TITLE_FONT_SIZE, 20, 60),
+    thankYouTitleBold: profile.thankYouTitleBold !== false,
+    thankYouCopyFontSize: clampNumber(profile.thankYouCopyFontSize, DEFAULT_STEP_COPY_FONT_SIZE, 12, 26),
+    thankYouCopyBold: Boolean(profile.thankYouCopyBold),
     backgroundStyle: safeString(profile.backgroundStyle) === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
@@ -505,6 +537,22 @@ export function buildPreviewStepList(profile) {
   ]);
 
   return [
+    ...(normalized.welcomeScreenEnabled ? [{
+      id: "welcome",
+      title: normalized.welcomeTitle,
+      navLabel: "Start",
+      copy: normalized.welcomeCopy,
+      label: normalized.welcomeTitle,
+      type: "welcome",
+      required: false,
+      builtIn: true,
+      buttonText: normalized.welcomeButtonText,
+      imageUrl: normalized.welcomeImageUrl,
+      titleFontSize: normalized.welcomeTitleFontSize,
+      titleBold: normalized.welcomeTitleBold,
+      copyFontSize: normalized.welcomeCopyFontSize,
+      copyBold: normalized.welcomeCopyBold
+    }] : []),
     ...orderedSteps,
     {
       id: "review",
@@ -515,7 +563,23 @@ export function buildPreviewStepList(profile) {
       type: "review",
       required: true,
       builtIn: true
-    }
+    },
+    ...(normalized.thankYouScreenEnabled ? [{
+      id: "thankyou",
+      title: normalized.thankYouTitle,
+      navLabel: "Thanks",
+      copy: normalized.thankYouCopy,
+      label: normalized.thankYouTitle,
+      type: "thankyou",
+      required: false,
+      builtIn: true,
+      buttonText: normalized.thankYouButtonText,
+      imageUrl: normalized.thankYouImageUrl,
+      titleFontSize: normalized.thankYouTitleFontSize,
+      titleBold: normalized.thankYouTitleBold,
+      copyFontSize: normalized.thankYouCopyFontSize,
+      copyBold: normalized.thankYouCopyBold
+    }] : [])
   ];
 }
 
