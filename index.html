@@ -101,6 +101,21 @@
       text-align: center;
     }
 
+    .wizard-head.is-nav-above {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wizard-head.is-nav-above .progress-wrap {
+      order: -1;
+      margin-top: 0;
+      margin-bottom: 18px;
+    }
+
+    .wizard-head.is-nav-hidden .progress-wrap {
+      display: none;
+    }
+
     .step-meta {
       display: flex;
       justify-content: center;
@@ -188,8 +203,17 @@
       transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
     }
 
+    .stepper.is-readonly .stepper-button {
+      cursor: default;
+    }
+
     .stepper-button:hover {
       box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+    }
+
+    .stepper.is-readonly .stepper-button:hover {
+      box-shadow: none;
+      transform: none;
     }
 
     .stepper-button.active {
@@ -1281,7 +1305,7 @@
   <div class="wizard-shell">
     <p class="section-title">Appointment Reminder</p>
 
-    <div class="wizard-head">
+    <div id="wizard-head" class="wizard-head">
       <div class="step-meta">
         <span id="step-count" class="step-count">Step 1 of 9</span>
         <span id="step-pill" class="step-pill">Optional</span>
@@ -1289,7 +1313,7 @@
       <h2 id="step-title">Client Phone Number</h2>
       <p id="step-copy" class="step-copy">Add a phone number if you may want to text this client later.</p>
 
-      <div class="progress-wrap">
+      <div id="progress-wrap" class="progress-wrap">
         <p id="progress-status" class="progress-status">Just a few quick questions</p>
         <div class="progress-track">
           <div id="progress-fill" class="progress-fill"></div>
@@ -1482,7 +1506,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408j"></script>
+<script src="app.js?v=20260408k"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

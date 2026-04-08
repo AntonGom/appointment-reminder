@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408h";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408i";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -62,6 +62,8 @@ const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
 const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
 const DEFAULT_STEP_NAV_SHAPE = "rounded";
 const DEFAULT_STEP_NAV_SIZE = "medium";
+const DEFAULT_STEP_NAV_PLACEMENT = "below-title";
+const DEFAULT_STEP_NAV_CLICKABLE = true;
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -2938,6 +2940,7 @@ function renderStepNavigation() {
   }
 
   const stepSurfaceState = getStepNavigationSurfaceState(activeCustomFormProfile || {});
+  const stepNavClickable = (activeCustomFormProfile?.stepNavClickable ?? DEFAULT_STEP_NAV_CLICKABLE) !== false;
 
   stepper.style.setProperty("--step-nav-width", stepSurfaceState.width);
   stepper.style.setProperty("--step-nav-min-height", stepSurfaceState.minHeight);
@@ -2948,6 +2951,7 @@ function renderStepNavigation() {
   stepper.style.setProperty("--step-nav-circle-size", stepSurfaceState.circleSize);
   stepper.style.setProperty("--step-nav-circle-font-size", stepSurfaceState.circleFontSize);
   stepper.style.setProperty("--step-nav-radius", stepSurfaceState.radius);
+  stepper.classList.toggle("is-readonly", !stepNavClickable);
   stepper.innerHTML = "";
 
   wizardSteps.forEach((step, index) => {
@@ -2956,6 +2960,7 @@ function renderStepNavigation() {
     const navAppearance = getStepNavigationAppearance(step);
     const invalid = isStepInvalid(step);
     const complete = isStepComplete(step, index);
+    const canActivateStep = stepNavClickable || index <= currentStepIndex || complete;
     const stepIcon = invalid ? "X" : complete ? "&#10003;" : String(index + 1);
 
     button.type = "button";
@@ -2981,7 +2986,9 @@ function renderStepNavigation() {
       button.classList.add("complete");
     }
 
-    button.addEventListener("click", () => setStep(index));
+    if (canActivateStep) {
+      button.addEventListener("click", () => setStep(index));
+    }
     stepper.appendChild(button);
   });
 }
@@ -3006,10 +3013,12 @@ function updateWizardUI() {
   const currentStep = wizardSteps[currentStepIndex];
   const totalSteps = wizardSteps.length;
   const wizardShell = document.querySelector(".wizard-shell");
+  const wizardHead = document.getElementById("wizard-head");
   const stepCount = document.getElementById("step-count");
   const stepTitle = document.getElementById("step-title");
   const stepCopy = document.getElementById("step-copy");
   const stepPill = document.getElementById("step-pill");
+  const progressWrap = document.getElementById("progress-wrap");
   const progressStatus = document.getElementById("progress-status");
   const progressFill = document.getElementById("progress-fill");
   const backButton = document.getElementById("back-button");
@@ -3018,6 +3027,7 @@ function updateWizardUI() {
   const wizardControls = document.querySelector(".wizard-controls");
   const isFinalStep = currentStepIndex === totalSteps - 1;
   const isOptional = currentStep.dataset.optional === "true";
+  const stepNavPlacement = activeCustomFormProfile?.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
 
   wizardSteps.forEach((step, index) => {
     step.classList.toggle("active", index === currentStepIndex);
@@ -3033,6 +3043,15 @@ function updateWizardUI() {
   stepCopy.style.fontWeight = stepTypography.copyBold ? "800" : "500";
   progressStatus.textContent = getProgressStatus(currentStepIndex, totalSteps);
   progressFill.style.width = `${((currentStepIndex + 1) / totalSteps) * 100}%`;
+
+  if (wizardHead) {
+    wizardHead.classList.toggle("is-nav-above", stepNavPlacement === "above-title");
+    wizardHead.classList.toggle("is-nav-hidden", stepNavPlacement === "hidden");
+  }
+
+  if (progressWrap) {
+    progressWrap.hidden = stepNavPlacement === "hidden";
+  }
 
   if (isFinalStep) {
     stepPill.textContent = "Final Step";

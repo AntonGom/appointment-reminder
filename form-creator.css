@@ -275,6 +275,21 @@ body[data-page="form-creator"] {
   text-align: center;
 }
 
+.wizard-head.is-nav-above {
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-head.is-nav-above .progress-wrap {
+  order: -1;
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.wizard-head.is-nav-hidden .progress-wrap {
+  display: none;
+}
+
 .step-meta {
   display: flex;
   justify-content: center;
@@ -326,6 +341,19 @@ body[data-page="form-creator"] {
 
 .progress-wrap {
   margin-top: 18px;
+}
+
+.progress-wrap.is-menu-highlight {
+  outline: 3px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 6px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.progress-wrap.is-menu-highlight .preview-stepper-button {
+  border-color: rgba(239, 68, 68, 0.78);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  transform: translateY(-1px);
 }
 
 .progress-track {
@@ -439,15 +467,7 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper.is-menu-highlight {
-  outline: 3px solid rgba(239, 68, 68, 0.88);
-  outline-offset: 6px;
   border-radius: 18px;
-}
-
-.preview-stepper.is-menu-highlight .preview-stepper-button {
-  border-color: rgba(239, 68, 68, 0.78);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
-  transform: translateY(-1px);
 }
 
 .preview-step-dropzone {

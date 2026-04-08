@@ -32,8 +32,11 @@ import {
   DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR,
   DEFAULT_STEP_NAV_SHAPE,
   DEFAULT_STEP_NAV_SIZE,
+  DEFAULT_STEP_NAV_PLACEMENT,
+  DEFAULT_STEP_NAV_CLICKABLE,
   STEP_NAV_SHAPE_OPTIONS,
   STEP_NAV_SIZE_OPTIONS,
+  STEP_NAV_PLACEMENT_OPTIONS,
   normalizeCustomFormProfile,
   createCustomField,
   createCustomPage,
@@ -42,7 +45,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408h";
+} from "./custom-form-profile.js?v=20260408i";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -73,10 +76,12 @@ const stepNavigationControls = document.getElementById("step-navigation-controls
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
+const previewWizardHead = document.getElementById("preview-wizard-head");
 const previewStepCount = document.getElementById("preview-step-count");
 const previewStepPill = document.getElementById("preview-step-pill");
 const previewStepTitle = document.getElementById("preview-step-title");
 const previewStepCopy = document.getElementById("preview-step-copy");
+const previewProgressWrap = document.getElementById("preview-progress-wrap");
 const previewProgressFill = document.getElementById("preview-progress-fill");
 const previewStepper = document.getElementById("preview-stepper");
 const previewStepHost = document.getElementById("preview-step-host");
@@ -1107,6 +1112,10 @@ function syncMenuPreviewHoverState() {
     formPreviewStage.classList.toggle("is-background-edit-hover", activeMenuPreviewHoverTarget === "background");
   }
 
+  if (previewProgressWrap) {
+    previewProgressWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps");
+  }
+
   if (previewStepper) {
     previewStepper.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps");
   }
@@ -1232,6 +1241,7 @@ function applyStepNavigationStyles() {
   }
 
   const stepSurfaceState = getStepNavigationSurfaceState();
+  const stepNavPlacement = currentFormProfile.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
 
   previewStepper.style.setProperty("--fc-step-nav-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
   previewStepper.style.setProperty("--fc-step-nav-active-bg", currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
@@ -1247,6 +1257,15 @@ function applyStepNavigationStyles() {
   previewStepper.style.setProperty("--fc-step-nav-circle-font-size", stepSurfaceState.circleFontSize);
   previewStepper.style.setProperty("--fc-step-nav-radius", stepSurfaceState.radius);
   previewStepper.classList.add("is-group-editable");
+
+  if (previewWizardHead) {
+    previewWizardHead.classList.toggle("is-nav-above", stepNavPlacement === "above-title");
+    previewWizardHead.classList.toggle("is-nav-hidden", stepNavPlacement === "hidden");
+  }
+
+  if (previewProgressWrap) {
+    previewProgressWrap.hidden = stepNavPlacement === "hidden";
+  }
 }
 
 function buildPreviewFieldControlMarkup(field, options = {}) {
@@ -1635,6 +1654,12 @@ function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
   return `
     <div class="form-editor-grid">
       <label>
+        Navigation placement
+        <select id="${prefix}-placement">
+          ${STEP_NAV_PLACEMENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
         Step box shape
         <select id="${prefix}-shape">
           ${STEP_NAV_SHAPE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepNavShape || DEFAULT_STEP_NAV_SHAPE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
@@ -1647,6 +1672,10 @@ function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
         </select>
       </label>
     </div>
+    <label class="toggle-row">
+      <span>Allow clients to click step boxes</span>
+      <input id="${prefix}-clickable" type="checkbox" ${currentFormProfile.stepNavClickable !== false ? "checked" : ""}>
+    </label>
     <div class="form-editor-grid">
       <label>
         Default box color
@@ -1696,6 +1725,14 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
 
   syncStepNavEditorChips();
 
+  root.querySelector(`#${prefix}-placement`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavPlacement: event.target.value || DEFAULT_STEP_NAV_PLACEMENT
+    };
+    renderPreview();
+  });
+
   root.querySelector(`#${prefix}-shape`)?.addEventListener("change", event => {
     currentFormProfile = {
       ...currentFormProfile,
@@ -1709,6 +1746,14 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
     currentFormProfile = {
       ...currentFormProfile,
       stepNavSize: event.target.value || DEFAULT_STEP_NAV_SIZE
+    };
+    renderPreview();
+  });
+
+  root.querySelector(`#${prefix}-clickable`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepNavClickable: Boolean(event.target.checked)
     };
     renderPreview();
   });
