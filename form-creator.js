@@ -93,6 +93,7 @@ const editorHead = editorPopover?.querySelector(".form-editor-head") || null;
 const editorTitle = document.getElementById("form-editor-title");
 const editorCopy = document.getElementById("form-editor-copy");
 const editorBody = document.getElementById("form-editor-body");
+const editorBackButton = document.getElementById("form-editor-back");
 const editorCloseButton = document.getElementById("form-editor-close");
 
 let supabase = null;
@@ -1075,6 +1076,35 @@ function setActiveStudioTab(tabId = activeStudioTab) {
   });
 }
 
+function syncStudioEditorState() {
+  if (!studioPanel || !editorPopover) {
+    return;
+  }
+
+  const isEditorOpen = !editorPopover.hidden;
+  studioPanel.classList.toggle("is-editor-open", isEditorOpen);
+
+  if (isEditorOpen && window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+    requestAnimationFrame(() => {
+      studioPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+}
+
+function showEditorView(title, copy, markup) {
+  if (!editorPopover || !editorBody || !editorTitle || !editorCopy) {
+    return false;
+  }
+
+  editorPopover.hidden = false;
+  editorTitle.textContent = title;
+  editorCopy.textContent = copy;
+  editorBody.innerHTML = markup;
+  editorPopover.scrollTop = 0;
+  syncStudioEditorState();
+  return true;
+}
+
 function getTypographyInline(fontSize, isBold) {
   const styles = [];
 
@@ -2037,6 +2067,7 @@ function renderBuilder() {
   renderFormTemplates();
   renderPreview();
   applyMobileStudioScale();
+  syncStudioEditorState();
 }
 
 function closeEditor() {
@@ -2046,6 +2077,7 @@ function closeEditor() {
 
   editorPopover.hidden = true;
   editorBody.innerHTML = "";
+  syncStudioEditorState();
 }
 
 function resetEditorPosition() {
@@ -2148,10 +2180,7 @@ function openTypographyEditor(config) {
     return;
   }
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = config.title;
-  editorCopy.textContent = config.copy;
-  editorBody.innerHTML = `
+  if (!showEditorView(config.title, config.copy, `
     <label>
       Text
       <textarea id="editor-typography-text" maxlength="${config.maxLength || 180}">${escapeHtml(config.text || "")}</textarea>
@@ -2170,7 +2199,9 @@ function openTypographyEditor(config) {
       <span>Bold text</span>
       <input id="editor-typography-bold" type="checkbox" ${config.bold ? "checked" : ""}>
     </label>
-  `;
+  `)) {
+    return;
+  }
 
   const textInput = document.getElementById("editor-typography-text");
   const sizeInput = document.getElementById("editor-typography-size");
@@ -2222,10 +2253,7 @@ function openFieldEditor(fieldId) {
     return;
   }
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = "Question settings";
-  editorCopy.textContent = "Rename this question and control how it appears in Send Reminder.";
-  editorBody.innerHTML = `
+  if (!showEditorView("Question settings", "Rename this question and control how it appears in Send Reminder.", `
     <label>
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
@@ -2259,9 +2287,11 @@ function openFieldEditor(fieldId) {
       <div class="editor-inline-note">${isAutoRememberedBuiltIn
         ? "This built-in client field is already remembered automatically."
         : "Turn this on if this custom answer should be saved on the client profile for future appointments."}</div>
-    ` : ""}
+      ` : ""}
     ${(isCustomField || isBuiltInStep) ? `<button id="editor-delete-field" class="delete-field-button" type="button">${isBuiltInStep ? "Remove this field from the form" : "Delete this question"}</button>` : ""}
-  `;
+  `)) {
+    return;
+  }
 
   const labelInput = document.getElementById("editor-field-label");
   const typeSelect = document.getElementById("editor-field-type");
@@ -2383,10 +2413,13 @@ function openStepNavigationEditor() {
     return;
   }
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = "Step labels";
-  editorCopy.textContent = "Edit the whole step row here, including chip size, shape, colors, and labels.";
-  editorBody.innerHTML = buildStepNavigationSettingsMarkup("editor-step-nav");
+  if (!showEditorView(
+    "Step labels",
+    "Edit the whole step row here, including chip size, shape, colors, and labels.",
+    buildStepNavigationSettingsMarkup("editor-step-nav")
+  )) {
+    return;
+  }
   bindStepNavigationSettings(editorBody, "editor-step-nav");
 }
 
@@ -2458,10 +2491,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       : isAutoRememberedBuiltIn;
     const rememberToggleDisabled = isAutoRememberedBuiltIn;
 
-    editorPopover.hidden = false;
-    editorTitle.textContent = "Field label";
-    editorCopy.textContent = "Edit the question label, whether it is required, and whether the answer should be remembered later.";
-    editorBody.innerHTML = `
+    if (!showEditorView("Field label", "Edit the question label, whether it is required, and whether the answer should be remembered later.", `
       <label>
         Label text
         <textarea id="editor-label-text" maxlength="60">${escapeHtml(step.label || "")}</textarea>
@@ -2493,7 +2523,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
           ? "This built-in client field is already remembered automatically."
           : "Turn this on if this answer should be saved on the client profile for future appointments."}</div>
       ` : ""}
-    `;
+    `)) {
+      return;
+    }
 
     const labelTextInput = document.getElementById("editor-label-text");
     const labelSizeInput = document.getElementById("editor-label-size");
@@ -2572,10 +2604,7 @@ function openFormShellEditor() {
 
   const isSurfaceSolid = (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) === "solid";
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = "Form box style";
-  editorCopy.textContent = "Change the form shape, layout, color, shine, and text styling for Send Reminder.";
-  editorBody.innerHTML = `
+  if (!showEditorView("Form box style", "Change the form shape, layout, color, shine, and text styling for Send Reminder.", `
     <div class="form-editor-grid">
       <label>
         Form shape
@@ -2620,7 +2649,9 @@ function openFormShellEditor() {
       Text color
       <input id="editor-surface-text" type="color" value="${escapeHtml(currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR)}">
     </label>
-  `;
+  `)) {
+    return;
+  }
 
   document.getElementById("editor-surface-base")?.addEventListener("input", event => {
     currentFormProfile = {
@@ -2693,10 +2724,7 @@ function openQuestionShellEditor() {
     return;
   }
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = "Question card style";
-  editorCopy.textContent = "Change the inner white question card without affecting the whole form shell.";
-  editorBody.innerHTML = `
+  if (!showEditorView("Question card style", "Change the inner white question card without affecting the whole form shell.", `
     <label class="toggle-row">
       <span>Show question card</span>
       <input id="editor-question-visible" type="checkbox" ${currentFormProfile.questionSurfaceVisible !== false ? "checked" : ""}>
@@ -2711,7 +2739,9 @@ function openQuestionShellEditor() {
         <input id="editor-question-text" type="color" value="${escapeHtml(currentFormProfile.questionTextColor || DEFAULT_QUESTION_TEXT_COLOR)}">
       </label>
     </div>
-  `;
+  `)) {
+    return;
+  }
 
   document.getElementById("editor-question-visible")?.addEventListener("change", event => {
     currentFormProfile = {
@@ -2745,10 +2775,7 @@ function openPageEditor() {
 
   const activePreset = getBackgroundPresetMatch(currentFormProfile)?.id || "";
 
-  editorPopover.hidden = false;
-  editorTitle.textContent = "Page settings";
-  editorCopy.textContent = "Control the form name and the Send Reminder page background colors.";
-  editorBody.innerHTML = `
+  if (!showEditorView("Page settings", "Control the form name and the Send Reminder page background colors.", `
     <label>
       Page name
       <input id="editor-form-title" type="text" value="${escapeHtml(currentFormProfile.formTitle)}" maxlength="60">
@@ -2766,7 +2793,9 @@ function openPageEditor() {
         <input id="editor-bg-bottom" type="color" value="${escapeHtml(currentFormProfile.backgroundBottom)}">
       </label>
     </div>
-  `;
+  `)) {
+    return;
+  }
 
   document.getElementById("editor-form-title")?.addEventListener("input", event => {
     currentFormProfile = {
@@ -2942,6 +2971,7 @@ async function init() {
   });
 }
 
+editorBackButton?.addEventListener("click", closeEditor);
 editorCloseButton?.addEventListener("click", closeEditor);
 statusBanner?.addEventListener("click", () => {
   setStatus("");
@@ -3320,6 +3350,10 @@ document.querySelectorAll("[data-preview-hover]").forEach(element => {
 
 if (editorHead) {
   editorHead.addEventListener("pointerdown", event => {
+    if (editorPopover?.closest("#form-studio-panel")) {
+      return;
+    }
+
     if (window.innerWidth <= 760) {
       return;
     }

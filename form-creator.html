@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408w">
+  <link rel="stylesheet" href="form-creator.css?v=20260408x">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -221,24 +221,27 @@
             </section>
           </section>
         </div>
+
+        <section id="form-editor-popover" class="form-editor-popover" hidden>
+          <div class="form-editor-head">
+            <button id="form-editor-back" class="form-editor-back-button" type="button" aria-label="Back to Form Studio">
+              <span aria-hidden="true">←</span>
+              <span>Back</span>
+            </button>
+            <div class="form-editor-head-copy">
+              <strong id="form-editor-title">Question settings</strong>
+              <p id="form-editor-copy">Change the selected question.</p>
+            </div>
+            <button id="form-editor-close" class="icon-button" type="button" aria-label="Close editor">X</button>
+          </div>
+          <div id="form-editor-body" class="form-editor-body"></div>
+        </section>
         <div id="form-studio-panel-resize" class="studio-panel-resize-handle" aria-hidden="true"></div>
       </aside>
     </div>
   </div>
 
-  <div id="form-editor-popover" class="form-editor-popover" hidden>
-    <div class="form-editor-head">
-      <div>
-        <span id="form-editor-handle" class="form-editor-handle" aria-hidden="true"><span></span><span></span></span>
-        <strong id="form-editor-title">Question settings</strong>
-        <p id="form-editor-copy">Change the selected question.</p>
-      </div>
-      <button id="form-editor-close" class="icon-button" type="button" aria-label="Close editor">X</button>
-    </div>
-    <div id="form-editor-body" class="form-editor-body"></div>
-  </div>
-
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408s"></script>
+  <script type="module" src="form-creator.js?v=20260408t"></script>
 </body>
 </html>
