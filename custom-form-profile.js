@@ -14,6 +14,7 @@ export const DEFAULT_STEP_NAV_BACKGROUND = "#f8fafc";
 export const DEFAULT_STEP_NAV_ACTIVE_BACKGROUND = "#dbeafe";
 export const DEFAULT_STEP_NAV_TEXT_COLOR = "#0f172a";
 export const DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR = "#1d4ed8";
+export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address", "notes"];
 
 export const BASE_REMINDER_STEPS = [
   {
@@ -245,8 +246,13 @@ export function createCustomField(type = "text") {
     placeholder: meta.placeholder,
     helpText: meta.helpText,
     required: false,
+    rememberClientAnswer: false,
     ...normalizeTypography()
   };
+}
+
+export function isDefaultRememberedClientField(fieldId) {
+  return DEFAULT_REMEMBERED_CLIENT_FIELD_IDS.includes(String(fieldId || "").trim());
 }
 
 function normalizeCustomPage(rawPage, index) {
@@ -284,6 +290,7 @@ function normalizeCustomField(rawField, index) {
     placeholder: placeholder.slice(0, 120),
     helpText: safeString(rawField?.helpText).slice(0, 160),
     required: Boolean(rawField?.required),
+    rememberClientAnswer: rawField?.rememberClientAnswer === true,
     icon: meta.icon,
     ...normalizeTypography(rawField)
   };
@@ -298,6 +305,8 @@ function normalizeStepOverride(rawOverride = {}, fallbackStep = {}) {
     helpText: safeString(rawOverride.helpText).slice(0, 180) || fallbackStep.helpText || "",
     placeholder: safeString(rawOverride.placeholder).slice(0, 120) || fallbackStep.placeholder || "",
     required: rawOverride.required === true,
+    rememberClientAnswer: rawOverride.rememberClientAnswer === true
+      || (rawOverride.rememberClientAnswer == null && isDefaultRememberedClientField(fallbackStep.id)),
     hidden: rawOverride.hidden === true,
     ...normalizeTypography(rawOverride)
   };

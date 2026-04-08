@@ -24,8 +24,9 @@ import {
   buildPreviewStepList,
   getInlineFieldsForPage,
   getCustomFieldTypeMeta,
-  getBackgroundPresetMatch
-} from "./custom-form-profile.js?v=20260406d";
+  getBackgroundPresetMatch,
+  isDefaultRememberedClientField
+} from "./custom-form-profile.js?v=20260408a";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -1361,6 +1362,12 @@ function openFieldEditor(fieldId) {
   const customField = getCustomFields().find(entry => entry.id === fieldId) || null;
   const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
   const isCustomField = Boolean(customField);
+  const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(fieldId);
+  const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn;
+  const rememberToggleChecked = isCustomField
+    ? step?.rememberClientAnswer === true
+    : isAutoRememberedBuiltIn;
+  const rememberToggleDisabled = isAutoRememberedBuiltIn;
 
   if ((!isBuiltInStep && !isCustomField) || !step || !editorPopover || !editorBody) {
     return;
@@ -1395,6 +1402,15 @@ function openFieldEditor(fieldId) {
       Helper copy
       <textarea id="editor-field-help" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
     </label>
+    ${shouldShowRememberToggle ? `
+      <label class="toggle-row">
+        <span>Remember this answer for future visits and show it in Client Details</span>
+        <input id="editor-field-remember-answer" type="checkbox" ${rememberToggleChecked ? "checked" : ""} ${rememberToggleDisabled ? "disabled" : ""}>
+      </label>
+      <div class="editor-inline-note">${isAutoRememberedBuiltIn
+        ? "This built-in client field is already remembered automatically."
+        : "Turn this on if this custom answer should be saved on the client profile for future appointments."}</div>
+    ` : ""}
     ${(isCustomField || isBuiltInStep) ? `<button id="editor-delete-field" class="delete-field-button" type="button">${isBuiltInStep ? "Remove this field from the form" : "Delete this question"}</button>` : ""}
   `;
 
@@ -1402,6 +1418,7 @@ function openFieldEditor(fieldId) {
   const typeSelect = document.getElementById("editor-field-type");
   const placeholderInput = document.getElementById("editor-field-placeholder");
   const helpInput = document.getElementById("editor-field-help");
+  const rememberInput = document.getElementById("editor-field-remember-answer");
   const deleteButton = document.getElementById("editor-delete-field");
 
   const patchField = updates => {
@@ -1448,6 +1465,14 @@ function openFieldEditor(fieldId) {
 
   helpInput?.addEventListener("input", event => {
     patchField({ helpText: event.target.value.slice(0, 160) });
+  });
+
+  rememberInput?.addEventListener("change", event => {
+    if (!isCustomField) {
+      return;
+    }
+
+    patchField({ rememberClientAnswer: Boolean(event.target.checked) });
   });
 
   deleteButton?.addEventListener("click", () => {

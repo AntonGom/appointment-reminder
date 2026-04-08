@@ -1220,6 +1220,13 @@ body[data-page="form-creator"] {
   height: 18px;
 }
 
+.editor-inline-note {
+  margin-top: -4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .delete-field-button {
   width: 100%;
   padding: 12px 14px;

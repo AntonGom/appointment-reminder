@@ -28,6 +28,7 @@ const FIELD_LIMITS = {
 
 const PHONE_DIGIT_LIMIT = 10;
 const BASE_FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
+const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = new Set(["phone", "email", "name", "address", "notes"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
@@ -35,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260406d";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408a";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -402,6 +403,55 @@ function formatCustomFieldDisplayValue(field, value) {
   return safeValue;
 }
 
+function isDefaultRememberedClientField(fieldId) {
+  return DEFAULT_REMEMBERED_CLIENT_FIELD_IDS.has(String(fieldId || "").trim());
+}
+
+function shouldRememberClientAnswerField(field) {
+  const fieldId = String(field?.id || "").trim();
+
+  if (!fieldId) {
+    return false;
+  }
+
+  const customField = getCustomFieldConfig(fieldId);
+
+  if (customField) {
+    return customField.rememberClientAnswer === true;
+  }
+
+  const builtInOverride = activeCustomFormProfile?.stepOverrides?.[fieldId] || null;
+
+  if (builtInOverride && typeof builtInOverride.rememberClientAnswer === "boolean") {
+    return builtInOverride.rememberClientAnswer;
+  }
+
+  return isDefaultRememberedClientField(fieldId);
+}
+
+function normalizeClientProfileAnswerMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce((accumulator, [fieldId, rawAnswer]) => {
+    const normalizedFieldId = String(rawAnswer?.field_id || fieldId || "").trim();
+    const displayValue = String(rawAnswer?.display_value ?? rawAnswer?.raw_value ?? rawAnswer?.value ?? "").trim();
+
+    if (!normalizedFieldId || !displayValue) {
+      return accumulator;
+    }
+
+    accumulator[normalizedFieldId] = {
+      ...rawAnswer,
+      field_id: normalizedFieldId,
+      display_value: displayValue,
+      raw_value: String(rawAnswer?.raw_value ?? rawAnswer?.value ?? displayValue).trim()
+    };
+    return accumulator;
+  }, {});
+}
+
 function getFieldPageTitle(field, fallbackStep) {
   const pageId = String(field?.pageId || field?.id || fallbackStep?.id || "").trim();
   const matchingStep = getOrderedActiveSteps().find(step => String(step?.id || "").trim() === pageId);
@@ -444,6 +494,22 @@ function buildCustomFieldAnswerSnapshots() {
   });
 
   return answers;
+}
+
+function buildRememberedClientAnswerSnapshots({ appointmentId = "" } = {}) {
+  const serviceDate = getFieldValue("date");
+
+  return buildCustomFieldAnswerSnapshots()
+    .filter(answer => shouldRememberClientAnswerField({ id: answer.field_id }))
+    .reduce((accumulator, answer) => {
+      accumulator[answer.field_id] = {
+        ...answer,
+        source_appointment_id: String(appointmentId || "").trim(),
+        source_service_date: serviceDate || "",
+        updated_at: new Date().toISOString()
+      };
+      return accumulator;
+    }, {});
 }
 
 function applyPendingClientProfilePrefill() {
@@ -2227,6 +2293,59 @@ async function autoSaveBronzeContact() {
   }
 }
 
+async function persistBronzeClientProfileAnswers(clientId, appointmentId) {
+  if (!appSupabase || !currentSignedInUser || !isBronzeUser() || !clientId) {
+    return;
+  }
+
+  const rememberedAnswers = buildRememberedClientAnswerSnapshots({ appointmentId });
+
+  if (!Object.keys(rememberedAnswers).length) {
+    return;
+  }
+
+  try {
+    let { data, error } = await appSupabase
+      .from("clients")
+      .select("profile_custom_answers")
+      .eq("id", clientId)
+      .eq("owner_id", currentSignedInUser.id)
+      .maybeSingle();
+
+    if (error && isSupabaseMissingColumnError(error, "profile_custom_answers")) {
+      return;
+    }
+
+    if (error) {
+      throw error;
+    }
+
+    const nextProfileAnswers = {
+      ...normalizeClientProfileAnswerMap(data?.profile_custom_answers),
+      ...rememberedAnswers
+    };
+
+    ({ error } = await appSupabase
+      .from("clients")
+      .update({
+        profile_custom_answers: nextProfileAnswers,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", clientId)
+      .eq("owner_id", currentSignedInUser.id));
+
+    if (error && isSupabaseMissingColumnError(error, "profile_custom_answers")) {
+      return;
+    }
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn("Unable to save remembered client answers.", error);
+  }
+}
+
 async function logBronzeReminderHistory({ clientId, channel, source, messageId, status, eventType, occurredAt, recipientEmail, messagePreview, rawEvent }) {
   if (!appSupabase || !currentSignedInUser || !isBronzeUser() || !clientId || !channel) {
     return;
@@ -3155,11 +3274,12 @@ async function confirmSendBrevoEmail() {
         storeQaLastSentEmail(data.qaEmailDebug);
       }
 
-      await upsertBronzeAppointment({
+      const appointmentId = await upsertBronzeAppointment({
         clientId,
         channel: "email",
         source: "automated_email"
       });
+      await persistBronzeClientProfileAnswers(clientId, appointmentId);
       safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
     } else {
@@ -3203,11 +3323,12 @@ async function sendLocalText() {
   }
 
   const clientId = await autoSaveBronzeContact();
-  await upsertBronzeAppointment({
+  const appointmentId = await upsertBronzeAppointment({
     clientId,
     channel: "sms",
     source: "device_sms"
   });
+  await persistBronzeClientProfileAnswers(clientId, appointmentId);
   await logBronzeReminderHistory({
     clientId,
     channel: "sms",
