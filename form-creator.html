@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408l">
+  <link rel="stylesheet" href="form-creator.css?v=20260408n">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -64,12 +64,25 @@
             <span class="floating-panel-kicker">Form Studio</span>
             <h2>Shape your form</h2>
           </div>
-          <span id="price-pill" class="price-pill">Signed in tool</span>
+        </div>
+
+        <div class="form-enabled-card form-enabled-card-persistent">
+          <label class="form-enabled-row" for="form-enabled-toggle">
+            <span class="form-enabled-copy">
+              <span class="form-enabled-title">Use This As My Form</span>
+              <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
+            </span>
+            <span class="form-enabled-switch">
+              <input id="form-enabled-toggle" type="checkbox" checked>
+              <span class="form-enabled-switch-ui" aria-hidden="true"></span>
+            </span>
+          </label>
         </div>
 
         <div class="studio-tabs" role="tablist" aria-label="Form Creator sections">
           <button class="studio-tab-button is-active" type="button" role="tab" aria-selected="true" data-studio-tab="add-fields">Add Fields</button>
           <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="form-settings">Form Settings</button>
+          <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="templates">Templates</button>
           <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="global-settings">Global Settings</button>
         </div>
 
@@ -119,26 +132,24 @@
               <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
             </div>
 
-            <div class="form-enabled-card">
-              <label class="form-enabled-row" for="form-enabled-toggle">
-                <span class="form-enabled-copy">
-                  <span class="form-enabled-title">Use This As My Form</span>
-                  <span class="form-enabled-text">Turn this off if you want Send Reminder to keep using the default built-in form.</span>
-                </span>
-                <span class="form-enabled-switch">
-                  <input id="form-enabled-toggle" type="checkbox" checked>
-                  <span class="form-enabled-switch-ui" aria-hidden="true"></span>
-                </span>
-              </label>
-            </div>
+            <section class="floating-panel-section">
+              <div class="floating-panel-section-head">
+                <span class="floating-panel-kicker">Form Shell</span>
+                <p class="floating-panel-copy">These controls shape the outer form box that sits on the page background.</p>
+              </div>
+              <div id="form-surface-controls" class="inline-settings-grid"></div>
+            </section>
 
             <section class="floating-panel-section">
               <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Form Surface</span>
-                <p class="floating-panel-copy">Click the outer form edges to edit the full form. Click the inner white question card edges to edit the card itself.</p>
+                <span class="floating-panel-kicker">Question Card</span>
+                <p class="floating-panel-copy">This is the inner white card that holds the live question and input on each step.</p>
               </div>
+              <div id="question-surface-controls" class="inline-settings-grid"></div>
             </section>
+          </section>
 
+          <section class="studio-tab-panel" role="tabpanel" data-studio-panel="templates" hidden>
             <section class="floating-panel-section floating-panel-templates">
               <div class="floating-panel-section-head">
                 <span class="floating-panel-kicker">Templates</span>
@@ -154,16 +165,31 @@
                 <span class="floating-panel-kicker">Page Background</span>
                 <p class="floating-panel-copy">These colors change the entire page behind the form, not the form itself.</p>
               </div>
-              <div id="background-preset-row" class="preset-row"></div>
-              <div class="form-editor-grid">
+              <div class="global-settings-card">
                 <label>
-                  Background top
-                  <input id="global-bg-top" type="color">
+                  Background style
+                  <select id="global-bg-style">
+                    <option value="gradient">Gradient</option>
+                    <option value="solid">Solid</option>
+                  </select>
                 </label>
-                <label>
-                  Background bottom
-                  <input id="global-bg-bottom" type="color">
-                </label>
+                <div id="background-preset-row" class="preset-row"></div>
+                <div id="global-bg-gradient-wrap" class="form-editor-grid">
+                  <label>
+                    Background top
+                    <input id="global-bg-top" type="color">
+                  </label>
+                  <label>
+                    Background bottom
+                    <input id="global-bg-bottom" type="color">
+                  </label>
+                </div>
+                <div id="global-bg-solid-wrap" class="form-editor-grid" hidden>
+                  <label>
+                    Solid background
+                    <input id="global-bg-solid" type="color">
+                  </label>
+                </div>
               </div>
             </section>
           </section>
@@ -185,6 +211,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408g"></script>
+  <script type="module" src="form-creator.js?v=20260408i"></script>
 </body>
 </html>

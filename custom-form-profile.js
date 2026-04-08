@@ -1,6 +1,8 @@
 export const DEFAULT_FORM_TITLE = "Appointment Reminder";
 export const DEFAULT_BACKGROUND_TOP = "#10141c";
 export const DEFAULT_BACKGROUND_BOTTOM = "#1a2230";
+export const DEFAULT_BACKGROUND_STYLE = "gradient";
+export const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 export const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 export const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 export const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -367,8 +369,10 @@ export function normalizeCustomFormProfile(rawProfile) {
     templateId: safeString(profile.templateId).slice(0, 40),
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
     isEnabled: profile.isEnabled !== false,
+    backgroundStyle: safeString(profile.backgroundStyle) === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE,
     backgroundTop: safeString(profile.backgroundTop) || DEFAULT_BACKGROUND_TOP,
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
+    backgroundSolidColor: safeString(profile.backgroundSolidColor) || DEFAULT_BACKGROUND_SOLID_COLOR,
     formSurfaceColor: safeString(profile.formSurfaceColor) || DEFAULT_FORM_SURFACE_COLOR,
     formSurfaceAccentColor: safeString(profile.formSurfaceAccentColor) || DEFAULT_FORM_SURFACE_ACCENT_COLOR,
     formSurfaceGradient: pickOption(profile.formSurfaceGradient, DEFAULT_FORM_SURFACE_GRADIENT, FORM_SURFACE_GRADIENT_OPTIONS),
@@ -491,6 +495,9 @@ export function buildPreviewStepList(profile) {
 
 export function getBackgroundPresetMatch(profile) {
   const normalized = normalizeCustomFormProfile(profile);
+  if (normalized.backgroundStyle === "solid") {
+    return null;
+  }
   return FORM_BACKGROUND_PRESETS.find(preset => (
     preset.top.toLowerCase() === normalized.backgroundTop.toLowerCase()
       && preset.bottom.toLowerCase() === normalized.backgroundBottom.toLowerCase()

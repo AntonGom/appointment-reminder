@@ -36,7 +36,9 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408e";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408f";
+const DEFAULT_BACKGROUND_STYLE = "gradient";
+const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
@@ -1225,6 +1227,7 @@ function applyCustomFormPresentation(profile) {
     sectionTitle.style.fontWeight = profile?.formTitleBold === false ? "500" : "800";
   }
 
+  document.documentElement.style.setProperty("--page-background", buildCustomPageBackground(profile));
   document.documentElement.style.setProperty("--bg-top", profile?.backgroundTop || "#10141c");
   document.documentElement.style.setProperty("--bg-bottom", profile?.backgroundBottom || "#1a2230");
 
@@ -1329,6 +1332,19 @@ function getBuiltInFieldType(fieldId) {
 
 function getInlineCustomFieldsForPage(pageId) {
   return activeCustomFormFields.filter(field => field.pageId === pageId);
+}
+
+function buildCustomPageBackground(profile) {
+  const backgroundStyle = profile?.backgroundStyle === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE;
+  const solidColor = String(profile?.backgroundSolidColor || DEFAULT_BACKGROUND_SOLID_COLOR).trim() || DEFAULT_BACKGROUND_SOLID_COLOR;
+  const top = String(profile?.backgroundTop || "#10141c").trim() || "#10141c";
+  const bottom = String(profile?.backgroundBottom || "#1a2230").trim() || "#1a2230";
+
+  if (backgroundStyle === "solid") {
+    return solidColor;
+  }
+
+  return `radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%), radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%), linear-gradient(160deg, ${top} 0%, ${bottom} 100%)`;
 }
 
 function getActiveCustomPages() {

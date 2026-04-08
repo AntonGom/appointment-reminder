@@ -17,6 +17,8 @@ import {
   DEFAULT_FORM_TEXT_COLOR,
   DEFAULT_BACKGROUND_TOP,
   DEFAULT_BACKGROUND_BOTTOM,
+  DEFAULT_BACKGROUND_STYLE,
+  DEFAULT_BACKGROUND_SOLID_COLOR,
   DEFAULT_QUESTION_SURFACE_COLOR,
   DEFAULT_QUESTION_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
@@ -36,14 +38,13 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408e";
+} from "./custom-form-profile.js?v=20260408f";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
 const signedOutShell = document.getElementById("signed-out-shell");
 const signedInShell = document.getElementById("signed-in-shell");
 const formCreatorCanvas = document.getElementById("form-creator-canvas");
-const pricePill = document.getElementById("price-pill");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
@@ -52,8 +53,14 @@ const templateList = document.getElementById("template-list");
 const studioTabButtons = Array.from(document.querySelectorAll("[data-studio-tab]"));
 const studioTabPanels = Array.from(document.querySelectorAll("[data-studio-panel]"));
 const backgroundPresetRow = document.getElementById("background-preset-row");
+const globalBgStyleSelect = document.getElementById("global-bg-style");
 const globalBgTopInput = document.getElementById("global-bg-top");
 const globalBgBottomInput = document.getElementById("global-bg-bottom");
+const globalBgSolidInput = document.getElementById("global-bg-solid");
+const globalBgGradientWrap = document.getElementById("global-bg-gradient-wrap");
+const globalBgSolidWrap = document.getElementById("global-bg-solid-wrap");
+const formSurfaceControls = document.getElementById("form-surface-controls");
+const questionSurfaceControls = document.getElementById("question-surface-controls");
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
@@ -601,34 +608,6 @@ function setButtonBusy(button, isBusy, busyText) {
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
 }
 
-function getTierKey(user) {
-  const candidates = [
-    user?.user_metadata?.tier,
-    user?.user_metadata?.plan,
-    user?.app_metadata?.tier,
-    user?.app_metadata?.plan,
-    user?.app_metadata?.subscription_tier
-  ];
-
-  return String(candidates.find(value => typeof value === "string" && value.trim()) || "free")
-    .trim()
-    .toLowerCase();
-}
-
-function getTierLabel(user) {
-  const tier = getTierKey(user);
-
-  if (tier === "bronze") {
-    return "Bronze";
-  }
-
-  if (tier === "free") {
-    return "FREE";
-  }
-
-  return tier ? `${tier.charAt(0).toUpperCase()}${tier.slice(1)}` : "FREE";
-}
-
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -1047,6 +1026,19 @@ function getQuestionSurfaceState(profile = currentFormProfile) {
   };
 }
 
+function buildPageBackground(profile = currentFormProfile) {
+  const backgroundStyle = profile?.backgroundStyle === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE;
+  const solidColor = String(profile?.backgroundSolidColor || DEFAULT_BACKGROUND_SOLID_COLOR).trim() || DEFAULT_BACKGROUND_SOLID_COLOR;
+  const top = String(profile?.backgroundTop || DEFAULT_BACKGROUND_TOP).trim() || DEFAULT_BACKGROUND_TOP;
+  const bottom = String(profile?.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM).trim() || DEFAULT_BACKGROUND_BOTTOM;
+
+  if (backgroundStyle === "solid") {
+    return solidColor;
+  }
+
+  return `radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%), radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%), linear-gradient(160deg, ${top} 0%, ${bottom} 100%)`;
+}
+
 function setActiveStudioTab(tabId = activeStudioTab) {
   const availableTabIds = new Set(studioTabPanels.map(panel => panel.dataset.studioPanel || ""));
   activeStudioTab = availableTabIds.has(tabId) ? tabId : "add-fields";
@@ -1091,10 +1083,6 @@ function setSignedInView(user) {
     signedInShell.hidden = !isSignedIn;
     signedInShell.style.display = isSignedIn ? "block" : "none";
   }
-
-  if (pricePill) {
-    pricePill.textContent = isSignedIn ? `${getTierLabel(user)} account` : "Signed in tool";
-  }
 }
 
 function applyBackgroundToPreview() {
@@ -1107,6 +1095,7 @@ function applyBackgroundToPreview() {
 
   previewShell.dataset.formShape = surfaceState.shape;
   previewShell.dataset.formLayout = surfaceState.layout;
+  document.documentElement.style.setProperty("--fc-page-background", buildPageBackground(currentFormProfile));
   document.documentElement.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop || DEFAULT_BACKGROUND_TOP);
   document.documentElement.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM);
   previewShell.style.setProperty("--fc-form-surface-background", surfaceState.background);
@@ -1461,6 +1450,12 @@ function renderFormTemplates() {
 }
 
 function renderGlobalSettingsTab() {
+  const backgroundStyle = currentFormProfile.backgroundStyle === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE;
+
+  if (globalBgStyleSelect) {
+    globalBgStyleSelect.value = backgroundStyle;
+  }
+
   if (globalBgTopInput) {
     globalBgTopInput.value = currentFormProfile.backgroundTop || DEFAULT_BACKGROUND_TOP;
   }
@@ -1469,11 +1464,24 @@ function renderGlobalSettingsTab() {
     globalBgBottomInput.value = currentFormProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM;
   }
 
+  if (globalBgSolidInput) {
+    globalBgSolidInput.value = currentFormProfile.backgroundSolidColor || DEFAULT_BACKGROUND_SOLID_COLOR;
+  }
+
+  if (globalBgGradientWrap) {
+    globalBgGradientWrap.hidden = backgroundStyle === "solid";
+  }
+
+  if (globalBgSolidWrap) {
+    globalBgSolidWrap.hidden = backgroundStyle !== "solid";
+  }
+
   if (!backgroundPresetRow) {
     return;
   }
 
   const activePresetId = getBackgroundPresetMatch(currentFormProfile)?.id || "";
+  backgroundPresetRow.hidden = backgroundStyle === "solid";
 
   backgroundPresetRow.innerHTML = FORM_BACKGROUND_PRESETS.map(preset => `
     <button
@@ -1495,6 +1503,7 @@ function renderGlobalSettingsTab() {
 
       currentFormProfile = {
         ...currentFormProfile,
+        backgroundStyle: "gradient",
         backgroundTop: preset.top,
         backgroundBottom: preset.bottom
       };
@@ -1502,6 +1511,122 @@ function renderGlobalSettingsTab() {
       renderBuilder();
     });
   });
+}
+
+function renderFormSettingsTab() {
+  if (formSurfaceControls) {
+    formSurfaceControls.innerHTML = `
+      <div class="form-editor-grid">
+        <label>
+          Form shape
+          <select id="inline-surface-shape">
+            ${FORM_SURFACE_SHAPE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceShape || DEFAULT_FORM_SURFACE_SHAPE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          Form layout
+          <select id="inline-surface-layout">
+            ${FORM_SURFACE_LAYOUT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceLayout || DEFAULT_FORM_SURFACE_LAYOUT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <div class="form-editor-grid">
+        <label>
+          Form color
+          <input id="inline-surface-base" type="color" value="${escapeHtml(currentFormProfile.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR)}">
+        </label>
+        <label>
+          Gradient color
+          <input id="inline-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
+        </label>
+      </div>
+      <label>
+        Gradient style
+        <select id="inline-surface-gradient">
+          ${FORM_SURFACE_GRADIENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="toggle-row">
+        <span>Top shine</span>
+        <input id="inline-surface-shine-toggle" type="checkbox" ${currentFormProfile.formSurfaceShineEnabled !== false ? "checked" : ""}>
+      </label>
+      <div class="form-editor-grid">
+        <label>
+          Shine color
+          <input id="inline-surface-shine-color" type="color" value="${escapeHtml(currentFormProfile.formSurfaceShineColor || DEFAULT_FORM_SURFACE_SHINE_COLOR)}">
+        </label>
+        <label>
+          Text color
+          <input id="inline-surface-text" type="color" value="${escapeHtml(currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR)}">
+        </label>
+      </div>
+    `;
+
+    document.getElementById("inline-surface-shape")?.addEventListener("change", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceShape: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-layout")?.addEventListener("change", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceLayout: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-base")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceColor: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-accent")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceAccentColor: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-gradient")?.addEventListener("change", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceGradient: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-shine-toggle")?.addEventListener("change", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceShineEnabled: Boolean(event.target.checked) };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-shine-color")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, formSurfaceShineColor: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-surface-text")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, formTextColor: event.target.value };
+      renderBuilder();
+    });
+  }
+
+  if (questionSurfaceControls) {
+    questionSurfaceControls.innerHTML = `
+      <label class="toggle-row">
+        <span>Show question card</span>
+        <input id="inline-question-visible" type="checkbox" ${currentFormProfile.questionSurfaceVisible !== false ? "checked" : ""}>
+      </label>
+      <div class="form-editor-grid">
+        <label>
+          Card color
+          <input id="inline-question-surface" type="color" value="${escapeHtml(currentFormProfile.questionSurfaceColor || DEFAULT_QUESTION_SURFACE_COLOR)}">
+        </label>
+        <label>
+          Text color
+          <input id="inline-question-text" type="color" value="${escapeHtml(currentFormProfile.questionTextColor || DEFAULT_QUESTION_TEXT_COLOR)}">
+        </label>
+      </div>
+    `;
+
+    document.getElementById("inline-question-visible")?.addEventListener("change", event => {
+      currentFormProfile = { ...currentFormProfile, questionSurfaceVisible: Boolean(event.target.checked) };
+      renderBuilder();
+    });
+    document.getElementById("inline-question-surface")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, questionSurfaceColor: event.target.value };
+      renderBuilder();
+    });
+    document.getElementById("inline-question-text")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, questionTextColor: event.target.value };
+      renderBuilder();
+    });
+  }
 }
 
 function renderBuilder() {
@@ -1515,6 +1640,7 @@ function renderBuilder() {
     formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
   }
   setActiveStudioTab(activeStudioTab);
+  renderFormSettingsTab();
   renderGlobalSettingsTab();
   renderFieldRail();
   renderFormTemplates();
@@ -2469,6 +2595,20 @@ globalBgBottomInput?.addEventListener("input", event => {
   currentFormProfile = {
     ...currentFormProfile,
     backgroundBottom: event.target.value || DEFAULT_BACKGROUND_BOTTOM
+  };
+  renderBuilder();
+});
+globalBgStyleSelect?.addEventListener("change", event => {
+  currentFormProfile = {
+    ...currentFormProfile,
+    backgroundStyle: event.target.value === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE
+  };
+  renderBuilder();
+});
+globalBgSolidInput?.addEventListener("input", event => {
+  currentFormProfile = {
+    ...currentFormProfile,
+    backgroundSolidColor: event.target.value || DEFAULT_BACKGROUND_SOLID_COLOR
   };
   renderBuilder();
 });

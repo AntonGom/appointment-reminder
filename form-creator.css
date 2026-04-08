@@ -25,10 +25,11 @@ body[data-page="form-creator"] {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   margin: 0;
   min-height: 100vh;
-  background:
+  background: var(--fc-page-background,
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
     radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%),
-    linear-gradient(160deg, var(--fc-bg-top) 0%, var(--fc-bg-bottom) 100%);
+    linear-gradient(160deg, var(--fc-bg-top) 0%, var(--fc-bg-bottom) 100%)
+  );
   padding: 28px 18px 42px;
 }
 
@@ -718,7 +719,7 @@ body[data-page="form-creator"] {
 }
 
 .floating-panel-studio {
-  width: 320px;
+  width: 344px;
 }
 
 .floating-panel-left {
@@ -741,35 +742,46 @@ body[data-page="form-creator"] {
 
 .studio-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 4px 0 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 10px 0 0;
+  align-items: end;
 }
 
 .studio-tab-button {
-  min-height: 42px;
-  padding: 10px 8px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 14px;
-  background: rgba(241, 245, 249, 0.86);
-  color: #475569;
+  min-height: 44px;
+  padding: 11px 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, rgba(240, 244, 252, 0.88), rgba(228, 235, 247, 0.92));
+  color: #64748b;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transform: translateY(8px);
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .studio-tab-button.is-active {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(59, 130, 246, 0.2));
-  color: #1d4ed8;
-  border-color: rgba(37, 99, 235, 0.28);
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.98));
+  color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.24);
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(0);
 }
 
 .studio-tab-panels {
   display: grid;
+  margin-top: -1px;
+  padding: 18px 16px 16px;
+  border-radius: 0 20px 20px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.97));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .studio-tab-panel {
@@ -794,12 +806,16 @@ body[data-page="form-creator"] {
 }
 
 .form-enabled-card {
-  margin: 4px 0 6px;
+  margin: 6px 0 6px;
   padding: 14px 16px;
   border-radius: 20px;
   border: 1px solid rgba(37, 99, 235, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.96));
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+}
+
+.form-enabled-card-persistent {
+  margin-bottom: 2px;
 }
 
 .form-enabled-row {
@@ -879,20 +895,6 @@ body[data-page="form-creator"] {
   transform: translateX(26px);
 }
 
-.price-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 11px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.1);
-  color: #1d4ed8;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
 .form-creator-toolbar-actions {
   display: grid;
   gap: 10px;
@@ -914,6 +916,53 @@ body[data-page="form-creator"] {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.5;
+}
+
+.inline-settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.inline-settings-grid .form-editor-grid {
+  gap: 10px;
+}
+
+.inline-settings-grid label,
+.global-settings-card label {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inline-settings-grid input,
+.inline-settings-grid select,
+.global-settings-card input,
+.global-settings-card select {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+}
+
+.global-settings-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0) 52%),
+    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(239, 244, 255, 0.96));
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
 }
 
 .form-field-rail-list {
@@ -1555,7 +1604,7 @@ body[data-page="form-creator"] {
   }
 
   .studio-tabs {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .form-editor-grid,
