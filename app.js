@@ -2419,7 +2419,7 @@ function getCustomFormSurfaceState(profile) {
     border: isInvisible ? "1px solid transparent" : "1px solid var(--card-border)",
     shadow: isInvisible ? "none" : "0 26px 60px rgba(15, 23, 42, 0.22)",
     backdrop: isInvisible ? "none" : "blur(12px)",
-    maxWidth: isExtended ? "min(980px, calc(100vw - 36px))" : isMedium ? "760px" : "560px",
+    maxWidth: isExtended ? "calc(100vw - 28px)" : isMedium ? "760px" : "560px",
     padding: isInvisible ? "0px" : isExtended ? "32px" : isMedium ? "30px" : "28px",
     mobilePadding: isInvisible ? "0px" : isExtended ? "26px" : isMedium ? "24px" : "22px",
     questionMaxWidth: isExtended ? "100%" : isMedium ? "560px" : "470px",

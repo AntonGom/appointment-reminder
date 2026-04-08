@@ -1001,13 +1001,13 @@ function getFormSurfaceState(profile = currentFormProfile) {
     backdrop: isInvisible ? "none" : "blur(12px)",
     radius: shape === "rectangular" ? "8px" : isInvisible ? "0px" : "28px",
     width: isExtended
-      ? "min(980px, calc(100vw - 390px))"
+      ? "min(1400px, calc(100vw - 48px))"
       : isMedium
         ? "min(760px, calc(100vw - 410px))"
         : "min(560px, calc(100vw - 450px))",
-    minWidth: isExtended ? "560px" : isMedium ? "460px" : "360px",
-    mobileWidth: isExtended ? "860px" : isMedium ? "700px" : "560px",
-    mobileMinWidth: isExtended ? "860px" : isMedium ? "700px" : "560px",
+    minWidth: isExtended ? "0px" : isMedium ? "460px" : "360px",
+    mobileWidth: isExtended ? "980px" : isMedium ? "700px" : "560px",
+    mobileMinWidth: isExtended ? "920px" : isMedium ? "700px" : "560px",
     padding: isInvisible ? "0px" : isExtended ? "32px" : isMedium ? "30px" : "28px",
     questionMaxWidth: isExtended ? "100%" : isMedium ? "560px" : "470px",
     questionWideMaxWidth: isExtended ? "100%" : isMedium ? "640px" : "560px",
