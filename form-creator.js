@@ -49,6 +49,9 @@ const authSetupNotice = document.getElementById("auth-setup-notice");
 const signedOutShell = document.getElementById("signed-out-shell");
 const signedInShell = document.getElementById("signed-in-shell");
 const formCreatorCanvas = document.getElementById("form-creator-canvas");
+const studioPanel = document.getElementById("form-studio-panel");
+const studioPanelHandle = document.getElementById("form-studio-panel-handle");
+const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
@@ -95,6 +98,9 @@ let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
 let dragFieldId = "";
 let editorDragState = null;
 let editorHasCustomPosition = false;
+let studioPanelDragState = null;
+let studioPanelResizeState = null;
+let studioPanelHasCustomFrame = false;
 let dragPayload = null;
 let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
@@ -1909,6 +1915,50 @@ function setEditorPosition(left, top) {
   editorPopover.style.setProperty("--fc-editor-right", "auto");
 }
 
+function resetStudioPanelFrame() {
+  if (!studioPanel) {
+    return;
+  }
+
+  studioPanelHasCustomFrame = false;
+  studioPanel.style.removeProperty("--fc-studio-left");
+  studioPanel.style.removeProperty("--fc-studio-top");
+  studioPanel.style.removeProperty("--fc-studio-right");
+  studioPanel.style.removeProperty("--fc-studio-width");
+  studioPanel.style.removeProperty("--fc-studio-height");
+}
+
+function setStudioPanelPosition(left, top) {
+  if (!studioPanel) {
+    return;
+  }
+
+  const width = studioPanel.offsetWidth || 316;
+  const height = studioPanel.offsetHeight || 620;
+  const clampedLeft = Math.min(Math.max(12, left), Math.max(12, window.innerWidth - width - 12));
+  const clampedTop = Math.min(Math.max(92, top), Math.max(92, window.innerHeight - height - 12));
+
+  studioPanel.style.setProperty("--fc-studio-left", `${clampedLeft}px`);
+  studioPanel.style.setProperty("--fc-studio-top", `${clampedTop}px`);
+  studioPanel.style.setProperty("--fc-studio-right", "auto");
+}
+
+function setStudioPanelSize(width, height) {
+  if (!studioPanel) {
+    return;
+  }
+
+  const minWidth = 288;
+  const maxWidth = Math.min(430, window.innerWidth - 24);
+  const minHeight = 420;
+  const maxHeight = Math.min(900, window.innerHeight - 112);
+  const clampedWidth = Math.min(Math.max(minWidth, width), Math.max(minWidth, maxWidth));
+  const clampedHeight = Math.min(Math.max(minHeight, height), Math.max(minHeight, maxHeight));
+
+  studioPanel.style.setProperty("--fc-studio-width", `${clampedWidth}px`);
+  studioPanel.style.setProperty("--fc-studio-height", `${clampedHeight}px`);
+}
+
 function applyMobileStudioScale() {
   if (!signedInShell || !formCreatorCanvas) {
     return;
@@ -3136,8 +3186,117 @@ if (editorHead) {
   editorHead.addEventListener("pointercancel", stopDragging);
 }
 
+if (studioPanelHandle && studioPanel) {
+  studioPanelHandle.addEventListener("pointerdown", event => {
+    if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+      return;
+    }
+
+    if (event.target instanceof HTMLElement && event.target.closest("button, input, select, textarea, label, a")) {
+      return;
+    }
+
+    const rect = studioPanel.getBoundingClientRect();
+    studioPanelDragState = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      pointerId: event.pointerId
+    };
+
+    studioPanelHasCustomFrame = true;
+    studioPanelHandle.classList.add("is-dragging");
+    studioPanelHandle.setPointerCapture?.(event.pointerId);
+    setStudioPanelSize(rect.width, rect.height);
+    setStudioPanelPosition(rect.left, rect.top);
+    event.preventDefault();
+  });
+
+  studioPanelHandle.addEventListener("pointermove", event => {
+    if (!studioPanelDragState || studioPanelDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    setStudioPanelPosition(
+      event.clientX - studioPanelDragState.offsetX,
+      event.clientY - studioPanelDragState.offsetY
+    );
+  });
+
+  const stopStudioPanelDragging = event => {
+    if (!studioPanelDragState || studioPanelDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    studioPanelHandle.releasePointerCapture?.(event.pointerId);
+    studioPanelHandle.classList.remove("is-dragging");
+    studioPanelDragState = null;
+  };
+
+  studioPanelHandle.addEventListener("pointerup", stopStudioPanelDragging);
+  studioPanelHandle.addEventListener("pointercancel", stopStudioPanelDragging);
+}
+
+if (studioPanelResizeHandle && studioPanel) {
+  studioPanelResizeHandle.addEventListener("pointerdown", event => {
+    if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+      return;
+    }
+
+    const rect = studioPanel.getBoundingClientRect();
+    studioPanelResizeState = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      startLeft: rect.left,
+      startTop: rect.top,
+      pointerId: event.pointerId
+    };
+
+    studioPanelHasCustomFrame = true;
+    setStudioPanelPosition(rect.left, rect.top);
+    setStudioPanelSize(rect.width, rect.height);
+    studioPanelResizeHandle.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+
+  studioPanelResizeHandle.addEventListener("pointermove", event => {
+    if (!studioPanelResizeState || studioPanelResizeState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const nextWidth = studioPanelResizeState.startWidth + (event.clientX - studioPanelResizeState.startX);
+    const nextHeight = studioPanelResizeState.startHeight + (event.clientY - studioPanelResizeState.startY);
+
+    setStudioPanelSize(nextWidth, nextHeight);
+    setStudioPanelPosition(studioPanelResizeState.startLeft, studioPanelResizeState.startTop);
+  });
+
+  const stopStudioPanelResizing = event => {
+    if (!studioPanelResizeState || studioPanelResizeState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    studioPanelResizeHandle.releasePointerCapture?.(event.pointerId);
+    studioPanelResizeState = null;
+  };
+
+  studioPanelResizeHandle.addEventListener("pointerup", stopStudioPanelResizing);
+  studioPanelResizeHandle.addEventListener("pointercancel", stopStudioPanelResizing);
+}
+
 window.addEventListener("resize", () => {
   applyMobileStudioScale();
+
+  if (studioPanel) {
+    if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+      resetStudioPanelFrame();
+    } else if (studioPanelHasCustomFrame) {
+      const rect = studioPanel.getBoundingClientRect();
+      setStudioPanelSize(rect.width, rect.height);
+      setStudioPanelPosition(rect.left, rect.top);
+    }
+  }
 
   if (!editorPopover || editorPopover.hidden) {
     return;

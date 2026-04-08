@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408r">
+  <link rel="stylesheet" href="form-creator.css?v=20260408s">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -58,9 +58,10 @@
         </div>
       </main>
 
-      <aside class="floating-panel floating-panel-right floating-panel-studio">
-        <div class="floating-panel-head">
+      <aside id="form-studio-panel" class="floating-panel floating-panel-right floating-panel-studio">
+        <div id="form-studio-panel-handle" class="floating-panel-head floating-panel-head-draggable">
           <div>
+            <span class="floating-panel-window-grip" aria-hidden="true"><span></span><span></span></span>
             <span class="floating-panel-kicker">Form Studio</span>
             <h2>Shape your form</h2>
           </div>
@@ -220,6 +221,7 @@
             </section>
           </section>
         </div>
+        <div id="form-studio-panel-resize" class="studio-panel-resize-handle" aria-hidden="true"></div>
       </aside>
     </div>
   </div>
@@ -237,6 +239,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408n"></script>
+  <script type="module" src="form-creator.js?v=20260408o"></script>
 </body>
 </html>

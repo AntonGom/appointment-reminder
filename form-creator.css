@@ -723,7 +723,22 @@ body[data-page="form-creator"] {
 }
 
 .floating-panel-studio {
-  width: 344px;
+  top: var(--fc-studio-top, 102px);
+  right: var(--fc-studio-right, 22px);
+  left: var(--fc-studio-left, auto);
+  width: var(--fc-studio-width, 316px);
+  height: var(--fc-studio-height, auto);
+  min-width: 288px;
+  min-height: 420px;
+  max-width: min(430px, calc(100vw - 24px));
+  max-height: min(900px, calc(100vh - 118px));
+  padding: 14px 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(242, 247, 255, 0.58));
+  box-shadow:
+    0 28px 60px rgba(15, 23, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(24px) saturate(155%);
 }
 
 .floating-panel-left {
@@ -742,6 +757,30 @@ body[data-page="form-creator"] {
   gap: 14px;
   overflow-y: auto;
   padding-right: 6px;
+}
+
+.floating-panel-head-draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+.floating-panel-head-draggable.is-dragging {
+  cursor: grabbing;
+}
+
+.floating-panel-window-grip {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.floating-panel-window-grip span {
+  display: block;
+  width: 18px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.96), rgba(100, 116, 139, 0.84));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }
 
 .floating-panel-right,
@@ -819,7 +858,7 @@ body[data-page="form-creator"] {
   padding: 18px 16px 16px;
   border-radius: 0 20px 20px 20px;
   border: 1px solid rgba(148, 163, 184, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.97));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(246, 249, 255, 0.72));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
@@ -849,7 +888,7 @@ body[data-page="form-creator"] {
   padding: 14px 16px;
   border-radius: 20px;
   border: 1px solid rgba(37, 99, 235, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.96));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(244, 248, 255, 0.68));
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
 }
 
@@ -972,7 +1011,7 @@ body[data-page="form-creator"] {
   gap: 0;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.96));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(244, 248, 255, 0.74));
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
@@ -1041,6 +1080,44 @@ body[data-page="form-creator"] {
   gap: 12px;
   padding: 0 18px 18px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.studio-panel-resize-handle {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(226, 232, 240, 0.38)),
+    rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 12px 18px rgba(15, 23, 42, 0.12);
+  cursor: nwse-resize;
+  z-index: 3;
+}
+
+.studio-panel-resize-handle::before,
+.studio-panel-resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(71, 85, 105, 0.78);
+  transform: rotate(-45deg);
+  transform-origin: center;
+}
+
+.studio-panel-resize-handle::after {
+  right: 10px;
+  bottom: 10px;
+  width: 6px;
 }
 
 .inline-settings-grid .form-editor-grid {
@@ -1634,7 +1711,7 @@ body[data-page="form-creator"] {
   }
 
   .floating-panel-studio {
-    width: 300px;
+    width: var(--fc-studio-width, 292px);
   }
 
   .fc-preview-shell {
@@ -1680,6 +1757,26 @@ body[data-page="form-creator"] {
   .floating-panel-right {
     right: 0;
     width: 276px;
+  }
+
+  .floating-panel-studio {
+    top: 8px;
+    left: auto;
+    right: 0;
+    width: 276px;
+    height: auto;
+    min-height: unset;
+    max-width: 276px;
+    max-height: calc(var(--fc-mobile-canvas-height) - 16px);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(242, 247, 255, 0.64));
+  }
+
+  .floating-panel-head-draggable {
+    cursor: default;
+  }
+
+  .studio-panel-resize-handle {
+    display: none;
   }
 
   .form-preview-stage {
