@@ -113,6 +113,7 @@ let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
 let activeMenuPreviewHoverTarget = "";
 let latestUserSyncInFlight = false;
+let latestUserSyncInterval = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 1088;
@@ -1212,6 +1213,31 @@ async function syncLatestUserProfile(options = {}) {
   } finally {
     latestUserSyncInFlight = false;
   }
+}
+
+function stopLatestUserSyncLoop() {
+  if (!latestUserSyncInterval) {
+    return;
+  }
+
+  window.clearInterval(latestUserSyncInterval);
+  latestUserSyncInterval = null;
+}
+
+function startLatestUserSyncLoop() {
+  stopLatestUserSyncLoop();
+
+  if (!supabase) {
+    return;
+  }
+
+  latestUserSyncInterval = window.setInterval(() => {
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+
+    syncLatestUserProfile({ silent: true, preserveDirty: true });
+  }, 12000);
 }
 
 function syncMenuPreviewHoverState() {
@@ -2961,6 +2987,7 @@ async function init() {
   if (session?.user) {
     await syncLatestUserProfile({ silent: true, preserveDirty: false });
   }
+  startLatestUserSyncLoop();
 
   supabase.auth.onAuthStateChange((event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
@@ -2993,6 +3020,10 @@ studioTabButtons.forEach(button => {
 });
 
 window.addEventListener("focus", () => {
+  syncLatestUserProfile({ silent: true, preserveDirty: true });
+});
+
+window.addEventListener("pageshow", () => {
   syncLatestUserProfile({ silent: true, preserveDirty: true });
 });
 
