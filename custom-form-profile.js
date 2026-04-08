@@ -6,6 +6,8 @@ export const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 export const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
 export const DEFAULT_FORM_SURFACE_SHINE_ENABLED = true;
 export const DEFAULT_FORM_SURFACE_SHINE_COLOR = "#ffffff";
+export const DEFAULT_FORM_SURFACE_SHAPE = "rounded";
+export const DEFAULT_FORM_SURFACE_LAYOUT = "compact";
 export const DEFAULT_FORM_TEXT_COLOR = "#111827";
 export const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 export const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
@@ -183,6 +185,17 @@ export const FORM_SURFACE_GRADIENT_OPTIONS = [
   { id: "diagonal", label: "Diagonal Sweep" }
 ];
 
+export const FORM_SURFACE_SHAPE_OPTIONS = [
+  { id: "rounded", label: "Rounded" },
+  { id: "rectangular", label: "Rectangular" },
+  { id: "invisible", label: "Invisible" }
+];
+
+export const FORM_SURFACE_LAYOUT_OPTIONS = [
+  { id: "compact", label: "Compact" },
+  { id: "extended", label: "Extended" }
+];
+
 function safeString(value) {
   return String(value || "").trim();
 }
@@ -195,6 +208,11 @@ function clampNumber(value, fallback, min, max) {
   }
 
   return Math.min(max, Math.max(min, numeric));
+}
+
+function pickOption(value, fallback, options) {
+  const normalized = safeString(value);
+  return options.some(option => option.id === normalized) ? normalized : fallback;
 }
 
 function normalizeTypography(rawTypography = {}) {
@@ -349,9 +367,11 @@ export function normalizeCustomFormProfile(rawProfile) {
     backgroundBottom: safeString(profile.backgroundBottom) || DEFAULT_BACKGROUND_BOTTOM,
     formSurfaceColor: safeString(profile.formSurfaceColor) || DEFAULT_FORM_SURFACE_COLOR,
     formSurfaceAccentColor: safeString(profile.formSurfaceAccentColor) || DEFAULT_FORM_SURFACE_ACCENT_COLOR,
-    formSurfaceGradient: safeString(profile.formSurfaceGradient) || DEFAULT_FORM_SURFACE_GRADIENT,
+    formSurfaceGradient: pickOption(profile.formSurfaceGradient, DEFAULT_FORM_SURFACE_GRADIENT, FORM_SURFACE_GRADIENT_OPTIONS),
     formSurfaceShineEnabled: profile.formSurfaceShineEnabled !== false,
     formSurfaceShineColor: safeString(profile.formSurfaceShineColor) || DEFAULT_FORM_SURFACE_SHINE_COLOR,
+    formSurfaceShape: pickOption(profile.formSurfaceShape, DEFAULT_FORM_SURFACE_SHAPE, FORM_SURFACE_SHAPE_OPTIONS),
+    formSurfaceLayout: pickOption(profile.formSurfaceLayout, DEFAULT_FORM_SURFACE_LAYOUT, FORM_SURFACE_LAYOUT_OPTIONS),
     formTextColor: safeString(profile.formTextColor) || DEFAULT_FORM_TEXT_COLOR,
     stepNavBackgroundColor: safeString(profile.stepNavBackgroundColor) || DEFAULT_STEP_NAV_BACKGROUND,
     stepNavActiveBackgroundColor: safeString(profile.stepNavActiveBackgroundColor) || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND,

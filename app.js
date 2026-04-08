@@ -36,12 +36,14 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408b";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408c";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
 const DEFAULT_FORM_SURFACE_ACCENT_COLOR = "#ffffff";
 const DEFAULT_FORM_SURFACE_GRADIENT = "solid";
 const DEFAULT_FORM_SURFACE_SHINE_ENABLED = true;
 const DEFAULT_FORM_SURFACE_SHINE_COLOR = "#ffffff";
+const DEFAULT_FORM_SURFACE_SHAPE = "rounded";
+const DEFAULT_FORM_SURFACE_LAYOUT = "compact";
 const DEFAULT_FORM_TEXT_COLOR = "#111827";
 const DEFAULT_FORM_TITLE_FONT_SIZE = 12;
 const DEFAULT_STEP_TITLE_FONT_SIZE = 36;
@@ -1211,6 +1213,7 @@ function applyCustomFormPresentation(profile) {
   const container = document.querySelector(".container");
   const sectionTitle = document.querySelector(".section-title");
   const normalizedTitle = String(profile?.formTitle || "").trim();
+  const surfaceState = getCustomFormSurfaceState(profile);
 
   if (sectionTitle) {
     sectionTitle.textContent = normalizedTitle || "Appointment Reminder";
@@ -1224,9 +1227,19 @@ function applyCustomFormPresentation(profile) {
 
   if (container) {
     container.style.setProperty("--card", profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR);
-    container.style.setProperty("--card-background", buildCustomFormSurfaceBackground(profile));
+    container.style.setProperty("--card-background", surfaceState.background);
     container.style.setProperty("--form-shine-background", buildCustomFormSurfaceShineBackground(profile));
-    container.style.setProperty("--form-shine-opacity", profile?.formSurfaceShineEnabled === false ? "0" : "1");
+    container.style.setProperty("--form-shine-opacity", surfaceState.shineOpacity);
+    container.style.setProperty("--form-shell-max-width", surfaceState.maxWidth);
+    container.style.setProperty("--form-shell-padding", surfaceState.padding);
+    container.style.setProperty("--form-shell-padding-mobile", surfaceState.mobilePadding);
+    container.style.setProperty("--form-shell-radius", surfaceState.radius);
+    container.style.setProperty("--form-shell-radius-mobile", surfaceState.mobileRadius);
+    container.style.setProperty("--form-shell-border", surfaceState.border);
+    container.style.setProperty("--form-shell-shadow", surfaceState.shadow);
+    container.style.setProperty("--form-shell-backdrop", surfaceState.backdrop);
+    container.style.setProperty("--form-question-max-width", surfaceState.questionMaxWidth);
+    container.style.setProperty("--form-question-wide-max-width", surfaceState.questionWideMaxWidth);
     container.style.setProperty("--text-main", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
     container.style.setProperty("--text-soft", profile?.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   }
@@ -2295,6 +2308,34 @@ async function autoSaveBronzeContact() {
     console.warn("Unable to auto-save Bronze contact.", error);
     return null;
   }
+}
+
+function getCustomFormSurfaceState(profile) {
+  const shape = profile?.formSurfaceShape === "rectangular" || profile?.formSurfaceShape === "invisible"
+    ? profile.formSurfaceShape
+    : DEFAULT_FORM_SURFACE_SHAPE;
+  const layout = profile?.formSurfaceLayout === "extended"
+    ? "extended"
+    : DEFAULT_FORM_SURFACE_LAYOUT;
+  const isInvisible = shape === "invisible";
+  const isExtended = layout === "extended";
+
+  return {
+    shape,
+    layout,
+    background: isInvisible ? "transparent" : buildCustomFormSurfaceBackground(profile),
+    shineOpacity: isInvisible || profile?.formSurfaceShineEnabled === false ? "0" : "1",
+    radius: shape === "rectangular" ? "8px" : isInvisible ? "0px" : "28px",
+    mobileRadius: shape === "rectangular" ? "6px" : isInvisible ? "0px" : "22px",
+    border: isInvisible ? "1px solid transparent" : "1px solid var(--card-border)",
+    shadow: isInvisible ? "none" : "0 26px 60px rgba(15, 23, 42, 0.22)",
+    backdrop: isInvisible ? "none" : "blur(12px)",
+    maxWidth: isExtended ? "min(880px, calc(100vw - 36px))" : "560px",
+    padding: isInvisible ? "0px" : isExtended ? "30px" : "28px",
+    mobilePadding: isInvisible ? "0px" : "22px",
+    questionMaxWidth: isExtended ? "100%" : "470px",
+    questionWideMaxWidth: isExtended ? "100%" : "560px"
+  };
 }
 
 function buildCustomFormSurfaceShineBackground(profile) {

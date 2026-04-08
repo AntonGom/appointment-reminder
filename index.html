@@ -51,12 +51,12 @@
       background: var(--card-background, var(--card));
       color: var(--text-main);
       width: 100%;
-      max-width: 560px;
-      padding: 28px;
-      border-radius: 28px;
-      border: 1px solid var(--card-border);
-      box-shadow: 0 26px 60px rgba(15, 23, 42, 0.22);
-      backdrop-filter: blur(12px);
+      max-width: var(--form-shell-max-width, 560px);
+      padding: var(--form-shell-padding, 28px);
+      border-radius: var(--form-shell-radius, 28px);
+      border: var(--form-shell-border, 1px solid var(--card-border));
+      box-shadow: var(--form-shell-shadow, 0 26px 60px rgba(15, 23, 42, 0.22));
+      backdrop-filter: var(--form-shell-backdrop, blur(12px));
     }
 
     .container::before {
@@ -309,7 +309,7 @@
       background: rgba(248, 250, 252, 0.88);
       border: 1px solid rgba(148, 163, 184, 0.22);
       min-height: 280px;
-      max-width: 470px;
+      max-width: var(--form-question-max-width, 470px);
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -318,7 +318,7 @@
     }
 
     .question-wrap.wide-wrap {
-      max-width: 560px;
+      max-width: var(--form-question-wide-max-width, 560px);
     }
 
     .question-wrap.review-wrap {
@@ -1162,8 +1162,8 @@
       }
 
       .container {
-        padding: 22px;
-        border-radius: 22px;
+        padding: var(--form-shell-padding-mobile, 22px);
+        border-radius: var(--form-shell-radius-mobile, 22px);
       }
 
       h2 {
@@ -1467,7 +1467,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408c"></script>
+<script src="app.js?v=20260408d"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

@@ -4,12 +4,16 @@ import {
   CUSTOM_FIELD_TYPES,
   FORM_BACKGROUND_PRESETS,
   FORM_SURFACE_GRADIENT_OPTIONS,
+  FORM_SURFACE_SHAPE_OPTIONS,
+  FORM_SURFACE_LAYOUT_OPTIONS,
   DEFAULT_FORM_TITLE,
   DEFAULT_FORM_SURFACE_COLOR,
   DEFAULT_FORM_SURFACE_ACCENT_COLOR,
   DEFAULT_FORM_SURFACE_GRADIENT,
   DEFAULT_FORM_SURFACE_SHINE_ENABLED,
   DEFAULT_FORM_SURFACE_SHINE_COLOR,
+  DEFAULT_FORM_SURFACE_SHAPE,
+  DEFAULT_FORM_SURFACE_LAYOUT,
   DEFAULT_FORM_TEXT_COLOR,
   DEFAULT_FORM_TITLE_FONT_SIZE,
   DEFAULT_STEP_TITLE_FONT_SIZE,
@@ -28,7 +32,7 @@ import {
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408b";
+} from "./custom-form-profile.js?v=20260408c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -983,6 +987,37 @@ function buildFormSurfaceShineBackground(profile = currentFormProfile) {
   return `linear-gradient(135deg, ${shineColor}70 0%, ${shineColor}26 34%, transparent 76%)`;
 }
 
+function getFormSurfaceState(profile = currentFormProfile) {
+  const shape = profile?.formSurfaceShape === "rectangular" || profile?.formSurfaceShape === "invisible"
+    ? profile.formSurfaceShape
+    : DEFAULT_FORM_SURFACE_SHAPE;
+  const layout = profile?.formSurfaceLayout === "extended"
+    ? "extended"
+    : DEFAULT_FORM_SURFACE_LAYOUT;
+  const isInvisible = shape === "invisible";
+  const isExtended = layout === "extended";
+
+  return {
+    shape,
+    layout,
+    background: isInvisible ? "transparent" : buildFormSurfaceBackground(profile),
+    shineOpacity: isInvisible || profile?.formSurfaceShineEnabled === false ? "0" : "1",
+    border: isInvisible ? "1px solid transparent" : "1px solid var(--fc-card-border)",
+    shadow: isInvisible ? "none" : "0 26px 60px rgba(15, 23, 42, 0.22)",
+    backdrop: isInvisible ? "none" : "blur(12px)",
+    radius: shape === "rectangular" ? "8px" : isInvisible ? "0px" : "28px",
+    width: isExtended ? "min(720px, calc(100vw - 620px))" : "min(560px, calc(100vw - 660px))",
+    minWidth: isExtended ? "420px" : "360px",
+    mobileWidth: isExtended ? "640px" : "560px",
+    mobileMinWidth: isExtended ? "640px" : "560px",
+    padding: isInvisible ? "0px" : isExtended ? "30px" : "28px",
+    questionMaxWidth: isExtended ? "100%" : "470px",
+    questionWideMaxWidth: isExtended ? "100%" : "560px",
+    shellOutlineInset: isInvisible ? "0px" : "10px",
+    shellOutlineRadius: isInvisible ? "0px" : shape === "rectangular" ? "6px" : "22px"
+  };
+}
+
 function getTypographyInline(fontSize, isBold) {
   const styles = [];
 
@@ -1021,11 +1056,28 @@ function applyBackgroundToPreview() {
     return;
   }
 
+  const surfaceState = getFormSurfaceState(currentFormProfile);
+
+  previewShell.dataset.formShape = surfaceState.shape;
+  previewShell.dataset.formLayout = surfaceState.layout;
   previewShell.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop);
   previewShell.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom);
-  previewShell.style.setProperty("--fc-form-surface-background", buildFormSurfaceBackground(currentFormProfile));
+  previewShell.style.setProperty("--fc-form-surface-background", surfaceState.background);
   previewShell.style.setProperty("--fc-form-shine-background", buildFormSurfaceShineBackground(currentFormProfile));
-  previewShell.style.setProperty("--fc-form-shine-opacity", currentFormProfile.formSurfaceShineEnabled === false ? "0" : "1");
+  previewShell.style.setProperty("--fc-form-shine-opacity", surfaceState.shineOpacity);
+  previewShell.style.setProperty("--fc-form-shell-width", surfaceState.width);
+  previewShell.style.setProperty("--fc-form-shell-min-width", surfaceState.minWidth);
+  previewShell.style.setProperty("--fc-form-shell-mobile-width", surfaceState.mobileWidth);
+  previewShell.style.setProperty("--fc-form-shell-mobile-min-width", surfaceState.mobileMinWidth);
+  previewShell.style.setProperty("--fc-form-shell-padding", surfaceState.padding);
+  previewShell.style.setProperty("--fc-form-shell-radius", surfaceState.radius);
+  previewShell.style.setProperty("--fc-form-shell-border", surfaceState.border);
+  previewShell.style.setProperty("--fc-form-shell-shadow", surfaceState.shadow);
+  previewShell.style.setProperty("--fc-form-shell-backdrop", surfaceState.backdrop);
+  previewShell.style.setProperty("--fc-form-question-max-width", surfaceState.questionMaxWidth);
+  previewShell.style.setProperty("--fc-form-question-wide-max-width", surfaceState.questionWideMaxWidth);
+  previewShell.style.setProperty("--fc-form-shell-outline-inset", surfaceState.shellOutlineInset);
+  previewShell.style.setProperty("--fc-form-shell-outline-radius", surfaceState.shellOutlineRadius);
   previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
 }
@@ -1923,8 +1975,22 @@ function openFormShellEditor() {
 
   editorPopover.hidden = false;
   editorTitle.textContent = "Form box style";
-  editorCopy.textContent = "Change the full form card color, gradient, shine, and overall text color for Send Reminder.";
+  editorCopy.textContent = "Change the form shape, layout, color, shine, and text styling for Send Reminder.";
   editorBody.innerHTML = `
+    <div class="form-editor-grid">
+      <label>
+        Form shape
+        <select id="editor-surface-shape">
+          ${FORM_SURFACE_SHAPE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceShape || DEFAULT_FORM_SURFACE_SHAPE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Form layout
+        <select id="editor-surface-layout">
+          ${FORM_SURFACE_LAYOUT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceLayout || DEFAULT_FORM_SURFACE_LAYOUT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
     <div class="form-editor-grid">
       <label>
         Form color
@@ -1975,6 +2041,22 @@ function openFormShellEditor() {
     currentFormProfile = {
       ...currentFormProfile,
       formSurfaceGradient: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-shape")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceShape: event.target.value
+    };
+    renderBuilder();
+  });
+
+  document.getElementById("editor-surface-layout")?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formSurfaceLayout: event.target.value
     };
     renderBuilder();
   });
