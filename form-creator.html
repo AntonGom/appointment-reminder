@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408q">
+  <link rel="stylesheet" href="form-creator.css?v=20260408r">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -132,29 +132,47 @@
               <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
             </div>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Form Shell</span>
-                <p class="floating-panel-copy">These controls shape the outer form box that sits on the page background.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Form Shell</span>
+                  <span class="settings-accordion-title">Outer Form</span>
+                  <span class="floating-panel-copy">These controls shape the outer form box that sits on the page background.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div id="form-surface-controls" class="inline-settings-grid"></div>
               </div>
-              <div id="form-surface-controls" class="inline-settings-grid"></div>
-            </section>
+            </details>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Question Card</span>
-                <p class="floating-panel-copy">This is the inner white card that holds the live question and input on each step.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Question Card</span>
+                  <span class="settings-accordion-title">Inner Question Box</span>
+                  <span class="floating-panel-copy">This is the inner white card that holds the live question and input on each step.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div id="question-surface-controls" class="inline-settings-grid"></div>
               </div>
-              <div id="question-surface-controls" class="inline-settings-grid"></div>
-            </section>
+            </details>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Step Boxes</span>
-                <p class="floating-panel-copy">Style the full step row here, including box size, box shape, and the step labels.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Step Boxes</span>
+                  <span class="settings-accordion-title">Step Navigation</span>
+                  <span class="floating-panel-copy">Style the full step row here, including box size, box shape, and the step labels.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div id="step-navigation-controls" class="inline-settings-grid"></div>
               </div>
-              <div id="step-navigation-controls" class="inline-settings-grid"></div>
-            </section>
+            </details>
           </section>
 
           <section class="studio-tab-panel" role="tabpanel" data-studio-panel="templates" hidden>
@@ -219,6 +237,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408m"></script>
+  <script type="module" src="form-creator.js?v=20260408n"></script>
 </body>
 </html>

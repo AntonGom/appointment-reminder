@@ -1731,6 +1731,8 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
 }
 
 function renderFormSettingsTab() {
+  const isSurfaceSolid = (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) === "solid";
+
   if (formSurfaceControls) {
     formSurfaceControls.innerHTML = `
       <div class="form-editor-grid">
@@ -1752,13 +1754,15 @@ function renderFormSettingsTab() {
           Form color
           <input id="inline-surface-base" type="color" value="${escapeHtml(currentFormProfile.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR)}">
         </label>
-        <label>
-          Gradient color
-          <input id="inline-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
-        </label>
+        ${isSurfaceSolid ? "" : `
+          <label>
+            Gradient color
+            <input id="inline-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
+          </label>
+        `}
       </div>
       <label>
-        Gradient style
+        Form finish
         <select id="inline-surface-gradient">
           ${FORM_SURFACE_GRADIENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
         </select>
@@ -2357,6 +2361,8 @@ function openFormShellEditor() {
     return;
   }
 
+  const isSurfaceSolid = (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) === "solid";
+
   editorPopover.hidden = false;
   editorTitle.textContent = "Form box style";
   editorCopy.textContent = "Change the form shape, layout, color, shine, and text styling for Send Reminder.";
@@ -2380,13 +2386,15 @@ function openFormShellEditor() {
         Form color
         <input id="editor-surface-base" type="color" value="${escapeHtml(currentFormProfile.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR)}">
       </label>
-      <label>
-        Gradient color
-        <input id="editor-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
-      </label>
+      ${isSurfaceSolid ? "" : `
+        <label>
+          Gradient color
+          <input id="editor-surface-accent" type="color" value="${escapeHtml(currentFormProfile.formSurfaceAccentColor || DEFAULT_FORM_SURFACE_ACCENT_COLOR)}">
+        </label>
+      `}
     </div>
     <label>
-      Gradient style
+      Form finish
       <select id="editor-surface-gradient">
         ${FORM_SURFACE_GRADIENT_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
       </select>
@@ -2427,6 +2435,7 @@ function openFormShellEditor() {
       formSurfaceGradient: event.target.value
     };
     renderBuilder();
+    openFormShellEditor();
   });
 
   document.getElementById("editor-surface-shape")?.addEventListener("change", event => {
