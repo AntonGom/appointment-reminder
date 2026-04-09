@@ -1,4 +1,5 @@
 export const DEFAULT_FORM_TITLE = "Appointment Reminder";
+export const DEFAULT_FORM_LOGO_URL = "";
 export const DEFAULT_WELCOME_SCREEN_ENABLED = false;
 export const DEFAULT_WELCOME_TITLE = "Welcome";
 export const DEFAULT_WELCOME_COPY = "Answer a few quick questions so we can personalize your reminder.";
@@ -444,6 +445,7 @@ export function normalizeCustomFormProfile(rawProfile) {
   return {
     templateId: safeString(profile.templateId).slice(0, 40),
     formTitle: safeString(profile.formTitle) || DEFAULT_FORM_TITLE,
+    formLogoUrl: normalizeImageUrl(profile.formLogoUrl) || DEFAULT_FORM_LOGO_URL,
     isEnabled: profile.isEnabled !== false,
     welcomeScreenEnabled: profile.welcomeScreenEnabled === true,
     welcomeTitle: safeString(profile.welcomeTitle) || DEFAULT_WELCOME_TITLE,

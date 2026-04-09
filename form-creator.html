@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408z">
+  <link rel="stylesheet" href="form-creator.css?v=20260408aa">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -28,7 +28,12 @@
           <div class="form-shell-edit-zone form-shell-edit-zone-right" data-form-shell-zone="right" aria-hidden="true"></div>
           <div class="fc-preview-container">
             <div class="fc-preview-wizard">
-              <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
+              <div class="form-preview-brand-row">
+                <p id="form-preview-title" class="section-title visible">Appointment Reminder</p>
+                <div id="form-preview-logo-wrap" class="form-preview-logo-wrap" hidden>
+                  <img id="form-preview-logo-image" class="form-preview-logo-image" alt="" loading="lazy" referrerpolicy="no-referrer">
+                </div>
+              </div>
 
               <div id="preview-wizard-head" class="wizard-head">
                 <div class="step-meta">
@@ -125,7 +130,6 @@
               </div>
               <div class="floating-tool-dock" aria-label="Add content blocks to current page">
                 <button class="floating-tool" type="button" draggable="true" data-add-type="content-text" title="Add text block"><span class="floating-tool-icon">Tb</span><span class="floating-tool-label">Text Block</span></button>
-                <button class="floating-tool" type="button" draggable="true" data-add-type="content-image" title="Add image block"><span class="floating-tool-icon">Img</span><span class="floating-tool-label">Image Block</span></button>
                 <button class="floating-tool" type="button" draggable="true" data-add-type="content-divider" title="Add divider"><span class="floating-tool-icon">Dv</span><span class="floating-tool-label">Divider</span></button>
               </div>
             </section>
@@ -282,6 +286,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408w"></script>
+  <script type="module" src="form-creator.js?v=20260408aa"></script>
 </body>
 </html>

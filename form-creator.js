@@ -46,7 +46,7 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260408k";
+} from "./custom-form-profile.js?v=20260408aa";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -79,6 +79,8 @@ const thankYouScreenControls = document.getElementById("thank-you-screen-control
 const previewShell = document.getElementById("form-preview-shell");
 const previewShellZones = Array.from(document.querySelectorAll("[data-form-shell-zone]"));
 const previewTitle = document.getElementById("form-preview-title");
+const previewLogoWrap = document.getElementById("form-preview-logo-wrap");
+const previewLogoImage = document.getElementById("form-preview-logo-image");
 const previewWizardHead = document.getElementById("preview-wizard-head");
 const previewStepCount = document.getElementById("preview-step-count");
 const previewStepPill = document.getElementById("preview-step-pill");
@@ -1606,6 +1608,8 @@ function renderPreview() {
     previewTitle.style.fontWeight = currentFormProfile.formTitleBold === false ? "500" : "800";
   }
 
+  updatePreviewLogo();
+
   if (previewStepCount) {
     previewStepCount.textContent = `Step ${selectedIndex + 1} of ${steps.length}`;
   }
@@ -1677,6 +1681,32 @@ function renderPreview() {
   applyBackgroundToPreview();
   applyStepNavigationStyles();
   syncMenuPreviewHoverState();
+}
+
+function updatePreviewLogo() {
+  if (!previewLogoWrap || !previewLogoImage) {
+    return;
+  }
+
+  const logoUrl = String(currentFormProfile.formLogoUrl || "").trim();
+
+  if (!logoUrl) {
+    previewLogoWrap.hidden = true;
+    previewLogoImage.removeAttribute("src");
+    return;
+  }
+
+  previewLogoWrap.hidden = false;
+  previewLogoImage.hidden = false;
+  previewLogoImage.onerror = () => {
+    previewLogoWrap.hidden = true;
+  };
+  previewLogoImage.onload = () => {
+    previewLogoWrap.hidden = false;
+  };
+  if (previewLogoImage.getAttribute("src") !== logoUrl) {
+    previewLogoImage.src = logoUrl;
+  }
 }
 
 function renderFieldRail() {
@@ -2149,6 +2179,11 @@ function renderFormSettingsTab() {
           <input id="inline-surface-text" type="color" value="${escapeHtml(currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR)}">
         </label>
       </div>
+      <label>
+        Logo image URL
+        <input id="inline-surface-logo-url" type="url" inputmode="url" placeholder="https://example.com/logo.png" value="${escapeHtml(currentFormProfile.formLogoUrl || "")}">
+      </label>
+      <div class="editor-inline-note">Use a direct image file URL for the logo. Leave it blank if you want no logo in the top-right corner.</div>
     `;
 
     document.getElementById("inline-surface-shape")?.addEventListener("change", event => {
@@ -2181,6 +2216,10 @@ function renderFormSettingsTab() {
     });
     document.getElementById("inline-surface-text")?.addEventListener("input", event => {
       currentFormProfile = { ...currentFormProfile, formTextColor: event.target.value };
+      refreshPreviewOnly();
+    });
+    document.getElementById("inline-surface-logo-url")?.addEventListener("input", event => {
+      currentFormProfile = { ...currentFormProfile, formLogoUrl: event.target.value.slice(0, 500) };
       refreshPreviewOnly();
     });
   }
@@ -3047,7 +3086,7 @@ function openFormShellEditor() {
 
   const isSurfaceSolid = (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) === "solid";
 
-  if (!showEditorView("Form box style", "Change the form shape, layout, color, shine, and text styling for Send Reminder.", `
+  if (!showEditorView("Form box style", "Change the form shape, layout, color, shine, logo, and text styling for Send Reminder.", `
     <div class="form-editor-grid">
       <label>
         Form shape
@@ -3092,6 +3131,11 @@ function openFormShellEditor() {
       Text color
       <input id="editor-surface-text" type="color" value="${escapeHtml(currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR)}">
     </label>
+    <label>
+      Logo image URL
+      <input id="editor-surface-logo-url" type="url" inputmode="url" placeholder="https://example.com/logo.png" value="${escapeHtml(currentFormProfile.formLogoUrl || "")}">
+    </label>
+    <div class="editor-inline-note">Use a direct image file URL for the logo. Leave it blank if you want the top-right corner to stay clean.</div>
   `)) {
     return;
   }
@@ -3157,6 +3201,14 @@ function openFormShellEditor() {
     currentFormProfile = {
       ...currentFormProfile,
       formTextColor: event.target.value
+    };
+    refreshPreviewOnly();
+  });
+
+  document.getElementById("editor-surface-logo-url")?.addEventListener("input", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      formLogoUrl: event.target.value.slice(0, 500)
     };
     refreshPreviewOnly();
   });

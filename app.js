@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408k";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408aa";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -598,6 +598,14 @@ function getReviewDraftCard() {
 
 function getMainWizardShell() {
   return document.querySelector(".wizard-shell");
+}
+
+function getFormLogoWrap() {
+  return document.getElementById("form-logo-wrap");
+}
+
+function getFormLogoImage() {
+  return document.getElementById("form-logo-image");
 }
 
 function getThankYouShell() {
@@ -1432,6 +1440,7 @@ async function syncLatestSignedInUser(options = {}) {
 
 function applyCustomFormPresentation(profile) {
   const container = document.querySelector(".container");
+  const brandRow = document.querySelector(".form-brand-row");
   const sectionTitle = document.querySelector(".section-title");
   const normalizedTitle = String(profile?.formTitle || "").trim();
   const surfaceState = getCustomFormSurfaceState(profile);
@@ -1442,6 +1451,10 @@ function applyCustomFormPresentation(profile) {
     sectionTitle.classList.toggle("visible", Boolean(normalizedTitle));
     sectionTitle.style.fontSize = `${profile?.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE}px`;
     sectionTitle.style.fontWeight = profile?.formTitleBold === false ? "500" : "800";
+  }
+
+  if (brandRow) {
+    brandRow.hidden = !normalizedTitle && !String(profile?.formLogoUrl || "").trim();
   }
 
   document.documentElement.style.setProperty("--page-background", buildCustomPageBackground(profile));
@@ -1474,7 +1487,42 @@ function applyCustomFormPresentation(profile) {
     container.style.setProperty("--field-placeholder", DEFAULT_FIELD_PLACEHOLDER_COLOR);
   }
 
+  updateCustomFormLogo(profile);
+
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
+}
+
+function updateCustomFormLogo(profile) {
+  const logoWrap = getFormLogoWrap();
+  const logoImage = getFormLogoImage();
+
+  if (!logoWrap || !logoImage) {
+    return;
+  }
+
+  const logoUrl = String(profile?.formLogoUrl || "").trim();
+
+  if (!logoUrl) {
+    logoWrap.hidden = true;
+    logoImage.hidden = true;
+    logoImage.removeAttribute("src");
+    return;
+  }
+
+  logoWrap.hidden = false;
+  logoImage.hidden = false;
+  logoImage.onload = () => {
+    logoWrap.hidden = false;
+    logoImage.hidden = false;
+  };
+  logoImage.onerror = () => {
+    logoWrap.hidden = true;
+    logoImage.hidden = true;
+  };
+
+  if (logoImage.getAttribute("src") !== logoUrl) {
+    logoImage.src = logoUrl;
+  }
 }
 
 function buildCustomFormSurfaceBackground(profile) {

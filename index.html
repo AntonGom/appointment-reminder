@@ -65,6 +65,8 @@
       border: var(--form-shell-border, 1px solid var(--card-border));
       box-shadow: var(--form-shell-shadow, 0 26px 60px rgba(15, 23, 42, 0.22));
       backdrop-filter: var(--form-shell-backdrop, blur(12px));
+      transition: transform 0.28s cubic-bezier(0.2, 0.82, 0.2, 1), box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+      animation: formShellSettle 0.52s cubic-bezier(0.2, 0.82, 0.2, 1);
     }
 
     .container::before {
@@ -96,9 +98,51 @@
       display: block;
     }
 
+    .form-brand-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .form-brand-row .section-title {
+      margin: 0;
+    }
+
+    .form-logo-wrap {
+      position: relative;
+      flex: 0 0 auto;
+      width: 74px;
+      height: 74px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(12px);
+    }
+
+    .form-logo-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .form-logo-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      padding: 10px;
+      object-fit: contain;
+    }
+
     .wizard-head {
       margin-bottom: 24px;
       text-align: center;
+      transition: transform 0.28s cubic-bezier(0.2, 0.82, 0.2, 1), opacity 0.22s ease;
     }
 
     .wizard-head.is-nav-above {
@@ -461,6 +505,18 @@
 
     .wizard-shell[data-direction="backward"] .wizard-step.active .question-wrap {
       animation: slideInBackward 0.26s ease both;
+    }
+
+    .wizard-shell[data-direction="forward"] .wizard-head {
+      animation: headSlideForward 0.3s ease both;
+    }
+
+    .wizard-shell[data-direction="backward"] .wizard-head {
+      animation: headSlideBackward 0.3s ease both;
+    }
+
+    .wizard-shell[data-direction] .stepper-button.active {
+      animation: activeStepPop 0.28s ease;
     }
 
     label {
@@ -1223,6 +1279,17 @@
       }
     }
 
+    @keyframes formShellSettle {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     @keyframes slideInForward {
       from {
         opacity: 0;
@@ -1231,6 +1298,40 @@
       to {
         opacity: 1;
         transform: translateX(0) translateY(0);
+      }
+    }
+
+    @keyframes headSlideForward {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes headSlideBackward {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes activeStepPop {
+      0% {
+        transform: scale(0.96);
+      }
+      65% {
+        transform: scale(1.03);
+      }
+      100% {
+        transform: scale(1);
       }
     }
 
@@ -1421,6 +1522,16 @@
         border-radius: var(--form-shell-radius-mobile, 22px);
       }
 
+      .form-logo-wrap {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+      }
+
+      .form-logo-image {
+        padding: 8px;
+      }
+
       h2 {
         font-size: 30px;
       }
@@ -1538,7 +1649,12 @@
 
 <div class="container">
   <div class="wizard-shell">
-    <p class="section-title">Appointment Reminder</p>
+    <div class="form-brand-row" hidden>
+      <p class="section-title">Appointment Reminder</p>
+      <div id="form-logo-wrap" class="form-logo-wrap" hidden>
+        <img id="form-logo-image" class="form-logo-image" alt="" loading="lazy" referrerpolicy="no-referrer">
+      </div>
+    </div>
 
     <div id="wizard-head" class="wizard-head">
       <div class="step-meta">
@@ -1756,7 +1872,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408n"></script>
+<script src="app.js?v=20260408aa"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>
