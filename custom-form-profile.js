@@ -186,6 +186,30 @@ export const CUSTOM_FIELD_TYPES = [
     icon: "T",
     placeholder: "",
     helpText: "Use this for a time-of-day question."
+  },
+  {
+    id: "content-text",
+    label: "Text Block",
+    shortLabel: "Text",
+    icon: "¶",
+    placeholder: "",
+    helpText: "Use this for extra context, section intros, or short notes between questions."
+  },
+  {
+    id: "content-image",
+    label: "Image Block",
+    shortLabel: "Image",
+    icon: "Img",
+    placeholder: "",
+    helpText: "Use this for a linked image, banner, or example photo inside the form."
+  },
+  {
+    id: "content-divider",
+    label: "Divider",
+    shortLabel: "Line",
+    icon: "—",
+    placeholder: "",
+    helpText: "Use this to break a page into cleaner visual sections."
   }
 ];
 
@@ -291,7 +315,21 @@ export function createCustomPage() {
 }
 
 export function getCustomFieldTypeMeta(type) {
-  return CUSTOM_FIELD_TYPES.find(option => option.id === type) || CUSTOM_FIELD_TYPES[0];
+  const meta = CUSTOM_FIELD_TYPES.find(option => option.id === type) || CUSTOM_FIELD_TYPES[0];
+
+  if (meta.id === "content-text") {
+    return { ...meta, icon: "Tb" };
+  }
+
+  if (meta.id === "content-divider") {
+    return { ...meta, icon: "Dv" };
+  }
+
+  return meta;
+}
+
+export function isContentBlockType(type = "") {
+  return ["content-text", "content-image", "content-divider"].includes(String(type || "").trim());
 }
 
 export function createCustomField(type = "text") {
@@ -307,6 +345,7 @@ export function createCustomField(type = "text") {
     navLabelColor: "",
     placeholder: meta.placeholder,
     helpText: meta.helpText,
+    imageUrl: "",
     required: false,
     rememberClientAnswer: false,
     ...normalizeTypography()
@@ -337,7 +376,7 @@ function normalizeCustomField(rawField, index) {
   const fallbackField = createCustomField(meta.id);
   const label = safeString(rawField?.label) || meta.label;
   const navLabel = safeString(rawField?.navLabel) || label.slice(0, 12) || meta.shortLabel;
-  const placeholder = meta.id === "date" || meta.id === "time"
+  const placeholder = meta.id === "date" || meta.id === "time" || isContentBlockType(meta.id)
     ? ""
     : safeString(rawField?.placeholder) || meta.placeholder;
 
@@ -350,9 +389,10 @@ function normalizeCustomField(rawField, index) {
     label: label.slice(0, 60),
     navLabel: navLabel.slice(0, 12),
     placeholder: placeholder.slice(0, 120),
-    helpText: safeString(rawField?.helpText).slice(0, 160),
+    helpText: safeString(rawField?.helpText).slice(0, 240),
+    imageUrl: normalizeImageUrl(rawField?.imageUrl || fallbackField.imageUrl || ""),
     required: Boolean(rawField?.required),
-    rememberClientAnswer: rawField?.rememberClientAnswer === true,
+    rememberClientAnswer: isContentBlockType(meta.id) ? false : rawField?.rememberClientAnswer === true,
     icon: meta.icon,
     ...normalizeTypography(rawField)
   };

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408y">
+  <link rel="stylesheet" href="form-creator.css?v=20260408z">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -120,8 +120,20 @@
 
             <section class="floating-panel-section">
               <div class="floating-panel-section-head">
+                <span class="floating-panel-kicker">Content Blocks</span>
+                <p class="floating-panel-copy">Drop in richer content so the form feels more like a branded page and less like a plain questionnaire.</p>
+              </div>
+              <div class="floating-tool-dock" aria-label="Add content blocks to current page">
+                <button class="floating-tool" type="button" draggable="true" data-add-type="content-text" title="Add text block"><span class="floating-tool-icon">Tb</span><span class="floating-tool-label">Text Block</span></button>
+                <button class="floating-tool" type="button" draggable="true" data-add-type="content-image" title="Add image block"><span class="floating-tool-icon">Img</span><span class="floating-tool-label">Image Block</span></button>
+                <button class="floating-tool" type="button" draggable="true" data-add-type="content-divider" title="Add divider"><span class="floating-tool-icon">Dv</span><span class="floating-tool-label">Divider</span></button>
+              </div>
+            </section>
+
+            <section class="floating-panel-section">
+              <div class="floating-panel-section-head">
                 <span class="floating-panel-kicker">Fields On This Page</span>
-                <p class="floating-panel-copy">Click a field to edit it. Drag custom fields to reorder them on this page.</p>
+                <p class="floating-panel-copy">Click a field or block to edit it. Drag custom items to reorder them on this page.</p>
               </div>
               <div id="field-rail-list" class="form-field-rail-list"></div>
             </section>
@@ -270,6 +282,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408v"></script>
+  <script type="module" src="form-creator.js?v=20260408w"></script>
 </body>
 </html>

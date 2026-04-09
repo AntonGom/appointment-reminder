@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408j";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408k";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -399,6 +399,10 @@ function isPhoneLikeField(fieldId) {
   return getCustomFieldConfig(fieldId)?.type === "phone";
 }
 
+function isContentBlockFieldType(type = "") {
+  return ["content-text", "content-image", "content-divider"].includes(String(type || "").trim());
+}
+
 function formatCustomFieldDisplayValue(field, value) {
   const safeValue = String(value || "").trim();
 
@@ -485,7 +489,7 @@ function buildCustomFieldAnswerSnapshots() {
     const orderedFields = getOrderedFieldsForPage(step.id, includeBaseField ? step : null);
 
     orderedFields.forEach(field => {
-      if (BASE_FORM_FIELD_IDS.includes(field.id) || seenFieldIds.has(field.id)) {
+      if (BASE_FORM_FIELD_IDS.includes(field.id) || seenFieldIds.has(field.id) || isContentBlockFieldType(field.type)) {
         return;
       }
 
@@ -1746,6 +1750,43 @@ function buildWizardFieldControlMarkup(field, options = {}) {
   const label = String(field?.label || field?.title || "Custom Question").trim();
   const helpText = String(field?.helpText || "").trim();
   const placeholder = String(field?.placeholder || "").trim();
+  const groupStyle = options.isBuiltIn || options.isFirst ? "" : ' style="margin-top:18px;"';
+
+  if (isContentBlockFieldType(type)) {
+    if (type === "content-text") {
+      return `
+        <div class="wizard-content-block wizard-content-block-text" data-inline-field="${field.id}"${groupStyle}>
+          <span class="wizard-content-kicker">Text block</span>
+          <div class="wizard-content-heading">${escapeHtml(label || "Text Block")}</div>
+          <p class="wizard-content-body">${escapeHtml(helpText || field?.copy || "Use this space for context, notes, or a cleaner section intro.")}</p>
+        </div>
+      `;
+    }
+
+    if (type === "content-image") {
+      const imageUrl = String(field?.imageUrl || "").trim();
+
+      return `
+        <div class="wizard-content-block wizard-content-block-image ${imageUrl ? "" : "is-placeholder"}" data-inline-field="${field.id}"${groupStyle}>
+          <div class="wizard-content-media">
+            ${imageUrl ? `<img class="wizard-content-image" src="${escapeHtml(imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">` : ""}
+            <span class="wizard-content-placeholder" ${imageUrl ? "hidden" : ""}>${imageUrl ? "Image blocked" : "Image block"}</span>
+          </div>
+          <div class="wizard-content-caption">${escapeHtml(label || "Image block")}</div>
+          ${helpText ? `<p class="wizard-content-body">${escapeHtml(helpText)}</p>` : ""}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="wizard-content-block wizard-content-block-divider" data-inline-field="${field.id}"${groupStyle}>
+        <span class="wizard-content-divider-line"></span>
+        ${label ? `<span class="wizard-content-divider-label">${escapeHtml(label)}</span>` : ""}
+        <span class="wizard-content-divider-line"></span>
+      </div>
+    `;
+  }
+
   const isRequired = field?.required === true;
   const optionalBadge = isRequired
     ? `<span class="label-badge" style="background:#fee2e2;color:#b91c1c;">Required</span>`
@@ -1753,7 +1794,6 @@ function buildWizardFieldControlMarkup(field, options = {}) {
   const groupClassName = options.isBuiltIn
     ? "wizard-field-group is-built-in"
     : "wizard-field-group";
-  const groupStyle = options.isBuiltIn || options.isFirst ? "" : ' style="margin-top:18px;"';
   const inputMarkup = type === "textarea"
     ? `<textarea id="${field.id}" placeholder="${placeholder.replace(/"/g, "&quot;")}"></textarea>`
     : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${(type === "date" || type === "time" ? "" : placeholder).replace(/"/g, "&quot;")}">`;
@@ -3016,7 +3056,7 @@ function validateMessageSafety(options = {}) {
     return false;
   }
 
-  const missingRequiredCustomField = activeCustomFormFields.find(field => field.required && !getFieldValue(field.id));
+  const missingRequiredCustomField = activeCustomFormFields.find(field => !isContentBlockFieldType(field.type) && field.required && !getFieldValue(field.id));
 
   if (missingRequiredCustomField) {
     requiredFieldAttemptIds.add(missingRequiredCustomField.id);
@@ -3042,6 +3082,10 @@ function validateMessageSafety(options = {}) {
   ];
 
   activeCustomFormFields.forEach(field => {
+    if (isContentBlockFieldType(field.type)) {
+      return;
+    }
+
     const value = getFieldValue(field.id);
 
     if (!value) {

@@ -44,8 +44,9 @@ import {
   getInlineFieldsForPage,
   getCustomFieldTypeMeta,
   getBackgroundPresetMatch,
-  isDefaultRememberedClientField
-} from "./custom-form-profile.js?v=20260408j";
+  isDefaultRememberedClientField,
+  isContentBlockType
+} from "./custom-form-profile.js?v=20260408k";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -1426,6 +1427,10 @@ function isReorderablePreviewStep(step) {
   return Boolean(step) && step.id !== "review" && !isSpecialPreviewScreen(step);
 }
 
+function isContentBlockField(field) {
+  return isContentBlockType(field?.type || "");
+}
+
 function buildScreenImageMarkup(step) {
   const imageUrl = String(step?.imageUrl || "").trim();
 
@@ -1445,7 +1450,66 @@ function buildScreenImageMarkup(step) {
   `;
 }
 
+function buildPreviewContentBlockMarkup(field) {
+  const type = String(field?.type || "").trim();
+  const offsetStyle = field?.__isFirst ? "" : ' style="margin-top:18px;"';
+
+  if (type === "content-text") {
+    const heading = String(field?.label || field?.title || "Text Block").trim() || "Text Block";
+    const body = String(field?.helpText || field?.copy || "Add a short note, explainer, or section intro here.").trim()
+      || "Add a short note, explainer, or section intro here.";
+
+    return `
+      <div class="preview-field-sortable" data-sortable-field-id="${escapeHtml(field.id)}" draggable="true"${offsetStyle}>
+        <div class="preview-content-block preview-content-block-text" data-preview-field-group="${escapeHtml(field.id)}">
+          <div class="preview-content-kicker">Text block</div>
+          <div class="preview-content-heading">${escapeHtml(heading)}</div>
+          <p class="preview-content-body">${escapeHtml(body)}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  if (type === "content-image") {
+    const imageUrl = String(field?.imageUrl || "").trim();
+    const caption = String(field?.label || field?.title || "Image block").trim() || "Image block";
+    const body = String(field?.helpText || field?.copy || "").trim();
+    const mediaMarkup = imageUrl
+      ? `<img class="preview-content-image" src="${escapeHtml(imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">`
+      : "";
+
+    return `
+      <div class="preview-field-sortable" data-sortable-field-id="${escapeHtml(field.id)}" draggable="true"${offsetStyle}>
+        <div class="preview-content-block preview-content-block-image ${imageUrl ? "" : "is-placeholder"}" data-preview-field-group="${escapeHtml(field.id)}">
+          <div class="preview-content-media">
+            ${mediaMarkup}
+            <span class="preview-content-placeholder" ${imageUrl ? "hidden" : ""}>${imageUrl ? "Image blocked" : "Image block"}</span>
+          </div>
+          <div class="preview-content-caption">${escapeHtml(caption)}</div>
+          ${body ? `<p class="preview-content-body">${escapeHtml(body)}</p>` : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  const dividerLabel = String(field?.label || field?.title || "").trim();
+
+  return `
+    <div class="preview-field-sortable" data-sortable-field-id="${escapeHtml(field.id)}" draggable="true"${offsetStyle}>
+      <div class="preview-content-block preview-content-block-divider" data-preview-field-group="${escapeHtml(field.id)}">
+        <span class="preview-content-divider-line"></span>
+        ${dividerLabel ? `<span class="preview-content-divider-label">${escapeHtml(dividerLabel)}</span>` : ""}
+        <span class="preview-content-divider-line"></span>
+      </div>
+    </div>
+  `;
+}
+
 function buildPreviewFieldControlMarkup(field, options = {}) {
+  if (isContentBlockField(field)) {
+    return buildPreviewContentBlockMarkup({ ...field, __isFirst: Boolean(options.isPrimary) });
+  }
+
   const isRequired = field.required === true;
   const badge = isRequired
     ? `<span class="label-badge required">Required</span>`
@@ -1651,8 +1715,8 @@ function renderFieldRail() {
       <div class="field-rail-card is-empty">
         <span class="field-rail-icon">+</span>
         <div class="field-rail-body">
-          <span class="field-rail-title">No fields on this page</span>
-          <span class="field-rail-meta">Use the add buttons above to place new questions on the current page.</span>
+          <span class="field-rail-title">Nothing on this page yet</span>
+          <span class="field-rail-meta">Use the add buttons above to place new questions or content blocks on the current page.</span>
         </div>
       </div>
     `;
@@ -1661,7 +1725,9 @@ function renderFieldRail() {
 
   fieldRailList.innerHTML = fields.map(field => {
     const meta = getCustomFieldTypeMeta(field.type);
-    const fieldMeta = `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
+    const fieldMeta = isContentBlockField(field)
+      ? `${escapeHtml(meta.label)} block`
+      : `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
     return `
       <button
         class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
@@ -2477,6 +2543,7 @@ function openFieldEditor(fieldId) {
   const customField = getCustomFields().find(entry => entry.id === fieldId) || null;
   const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
   const isCustomField = Boolean(customField);
+  const isContentBlock = Boolean(customField && isContentBlockField(customField));
   const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(fieldId);
   const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn;
   const rememberToggleChecked = isCustomField
@@ -2485,6 +2552,95 @@ function openFieldEditor(fieldId) {
   const rememberToggleDisabled = isAutoRememberedBuiltIn;
 
   if ((!isBuiltInStep && !isCustomField) || !step || !editorPopover || !editorBody) {
+    return;
+  }
+
+  if (isContentBlock) {
+    const blockType = String(step.type || "").trim();
+    const title = blockType === "content-image"
+      ? "Image block"
+      : blockType === "content-divider"
+        ? "Divider block"
+        : "Text block";
+    const copy = blockType === "content-image"
+      ? "Use a direct image URL and optional caption so the form feels more editorial."
+      : blockType === "content-divider"
+        ? "Add a simple visual break or a short section label between questions."
+        : "Use text blocks for short intros, directions, trust cues, or service notes.";
+    const markup = blockType === "content-image"
+      ? `
+        <label>
+          Caption
+          <input id="editor-block-caption" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
+        </label>
+        <label>
+          Image URL
+          <input id="editor-block-image-url" type="url" inputmode="url" placeholder="https://example.com/image.jpg" value="${escapeHtml(step.imageUrl || "")}" maxlength="500">
+        </label>
+        <label>
+          Supporting copy
+          <textarea id="editor-block-copy" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
+        </label>
+        <div class="editor-inline-note">Use a direct image file link for the best results. If the host blocks hotlinking, the block will fall back to a placeholder.</div>
+        <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
+      `
+      : blockType === "content-divider"
+        ? `
+          <label>
+            Divider label
+            <input id="editor-block-caption" type="text" value="${escapeHtml(step.label || "")}" maxlength="40" placeholder="Optional section label">
+          </label>
+          <div class="editor-inline-note">Leave this blank if you want a clean divider line with no text.</div>
+          <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
+        `
+        : `
+          <label>
+            Heading
+            <input id="editor-block-caption" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
+          </label>
+          <label>
+            Body copy
+            <textarea id="editor-block-copy" maxlength="240">${escapeHtml(step.helpText || step.copy || "")}</textarea>
+          </label>
+          <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
+        `;
+
+    if (!showEditorView(title, copy, markup)) {
+      return;
+    }
+
+    const captionInput = document.getElementById("editor-block-caption");
+    const imageUrlInput = document.getElementById("editor-block-image-url");
+    const copyInput = document.getElementById("editor-block-copy");
+    const deleteButton = document.getElementById("editor-delete-field");
+    const patchBlock = updates => {
+      patchStepConfig(fieldId, updates);
+      renderBuilder();
+    };
+
+    captionInput?.addEventListener("input", event => {
+      patchBlock({ label: event.target.value.slice(0, blockType === "content-divider" ? 40 : 60) });
+    });
+
+    imageUrlInput?.addEventListener("input", event => {
+      patchBlock({ imageUrl: event.target.value.slice(0, 500) });
+    });
+
+    copyInput?.addEventListener("input", event => {
+      patchBlock({
+        helpText: event.target.value.slice(0, blockType === "content-text" ? 240 : 160),
+        copy: event.target.value.slice(0, blockType === "content-text" ? 240 : 160)
+      });
+    });
+
+    deleteButton?.addEventListener("click", () => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        fields: getCustomFields().filter(entry => entry.id !== fieldId && entry.pageId !== fieldId)
+      };
+      closeEditor();
+      renderBuilder();
+    });
     return;
   }
 
