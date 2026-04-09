@@ -913,10 +913,6 @@ function clearDragIndicators() {
   });
 }
 
-function isTouchDragCapableViewport() {
-  return window.matchMedia?.("(pointer: coarse)").matches || window.innerWidth <= MOBILE_STUDIO_BREAKPOINT;
-}
-
 function getReorderablePreviewStepButtons() {
   if (!previewStepper) {
     return [];
@@ -936,6 +932,25 @@ function getStepDropzoneByIndex(insertIndex) {
 function showStepDropIndicator(insertIndex) {
   clearDragIndicators();
   getStepDropzoneByIndex(insertIndex)?.classList.add("is-over");
+}
+
+function getStepInsertIndexFromPointer(clientX) {
+  const buttons = getReorderablePreviewStepButtons();
+
+  if (!buttons.length || typeof clientX !== "number") {
+    return buttons.length ? 0 : null;
+  }
+
+  for (let index = 0; index < buttons.length; index += 1) {
+    const rect = buttons[index].getBoundingClientRect();
+    const midpoint = rect.left + (rect.width / 2);
+
+    if (clientX < midpoint) {
+      return index;
+    }
+  }
+
+  return buttons.length;
 }
 
 function getStepInsertIndexFromTarget(target, clientX = null) {
@@ -1034,7 +1049,7 @@ function updateStepPointerDrag(clientX) {
   }
 
   autoScrollPreviewStepper(clientX);
-  const insertIndex = getStepInsertIndexFromTarget(document.elementFromPoint(clientX, stepPointerDragState.clientY) || previewStepper, clientX);
+  const insertIndex = getStepInsertIndexFromPointer(clientX);
 
   if (insertIndex === null) {
     return;
@@ -1045,7 +1060,7 @@ function updateStepPointerDrag(clientX) {
 }
 
 function maybeStartStepPointerDrag(event) {
-  if (!isTouchDragCapableViewport() || !previewStepper) {
+  if (!previewStepper || event.button !== 0) {
     return;
   }
 
@@ -1871,7 +1886,7 @@ function renderPreview() {
 
       return `
       <div class="preview-step-dropzone" data-drop-step-index="${dropIndex}"></div>
-      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderable ? "true" : "false"}">
+      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="false">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
         <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
       </button>
@@ -4020,26 +4035,6 @@ previewStepper?.addEventListener("click", event => {
   renderBuilder();
 });
 
-previewStepper?.addEventListener("dragstart", event => {
-  const button = event.target.closest("[data-preview-step]");
-
-  const step = getPreviewSteps().find(entry => entry.id === (button?.dataset.previewStep || ""));
-
-  if (!button || !isReorderablePreviewStep(step)) {
-    return;
-  }
-
-  startDrag({
-    kind: "step",
-    stepId: button.dataset.previewStep || ""
-  }, event, button);
-});
-
-previewStepper?.addEventListener("dragend", event => {
-  const button = event.target.closest("[data-preview-step]");
-  finishDrag(button || null);
-});
-
 previewStepper?.addEventListener("dragover", event => {
   if (!dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
     return;
@@ -4091,11 +4086,11 @@ previewStepper?.addEventListener("pointerdown", event => {
   maybeStartStepPointerDrag(event);
 });
 
-previewStepper?.addEventListener("pointermove", event => {
+window.addEventListener("pointermove", event => {
   handleStepPointerMove(event);
 });
 
-previewStepper?.addEventListener("pointerup", event => {
+window.addEventListener("pointerup", event => {
   if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
     return;
   }
@@ -4103,7 +4098,7 @@ previewStepper?.addEventListener("pointerup", event => {
   finishStepPointerDrop();
 });
 
-previewStepper?.addEventListener("pointercancel", event => {
+window.addEventListener("pointercancel", event => {
   if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
     return;
   }
