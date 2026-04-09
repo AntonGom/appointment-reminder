@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408ac";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260409c";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -628,37 +628,6 @@ function getThankYouButtonElement() {
   return document.getElementById("thank-you-reset");
 }
 
-function getThankYouImageElement() {
-  return document.getElementById("thank-you-image");
-}
-
-function getThankYouImageWrap() {
-  return document.getElementById("thank-you-image-wrap");
-}
-
-function getThankYouPlaceholder() {
-  return document.getElementById("thank-you-image-placeholder");
-}
-
-function buildFormScreenImageMarkup(imageUrl, type = "welcome") {
-  const safeUrl = String(imageUrl || "").trim();
-
-  if (safeUrl) {
-    return `
-      <div class="wizard-screen-media">
-        <img class="wizard-screen-image" src="${escapeHtml(safeUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">
-        <span class="wizard-screen-placeholder" hidden>${type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="wizard-screen-media is-placeholder">
-      <span class="wizard-screen-placeholder">${type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
-    </div>
-  `;
-}
-
 function buildWelcomeWizardStepMarkup(profile = activeCustomFormProfile || {}) {
   const title = String(profile?.welcomeTitle || "Welcome").trim() || "Welcome";
   const copy = String(profile?.welcomeCopy || "Answer a few quick questions so we can personalize your reminder.").trim();
@@ -667,7 +636,6 @@ function buildWelcomeWizardStepMarkup(profile = activeCustomFormProfile || {}) {
   return `
     <div class="wizard-step custom-wizard-step wizard-step-screen" data-step-kind="welcome" data-title="${escapeHtml(title)}" data-nav="Start" data-field="welcome" data-copy="${escapeHtml(copy)}" data-optional="false" data-cta="${escapeHtml(cta)}">
       <div class="question-wrap screen-question-wrap">
-        ${buildFormScreenImageMarkup(profile?.welcomeImageUrl, "welcome")}
         <div class="wizard-screen-content">
           <span class="wizard-screen-kicker">Welcome screen</span>
           <button class="wizard-screen-button" type="button" tabindex="-1">${escapeHtml(cta)}</button>
@@ -704,13 +672,9 @@ function showThankYouScreen() {
     || "Your reminder details are ready to send.";
   const buttonText = String(profile.thankYouButtonText || "Create another reminder").trim()
     || "Create another reminder";
-  const imageUrl = String(profile.thankYouImageUrl || "").trim();
   const titleElement = getThankYouTitleElement();
   const copyElement = getThankYouCopyElement();
   const buttonElement = getThankYouButtonElement();
-  const imageElement = getThankYouImageElement();
-  const imageWrap = getThankYouImageWrap();
-  const placeholder = getThankYouPlaceholder();
 
   if (titleElement) {
     titleElement.textContent = title;
@@ -726,38 +690,6 @@ function showThankYouScreen() {
 
   if (buttonElement) {
     buttonElement.textContent = buttonText;
-  }
-
-  if (imageWrap) {
-    imageWrap.hidden = false;
-    imageWrap.classList.toggle("is-placeholder", !imageUrl);
-  }
-
-  if (imageElement) {
-    imageElement.onload = () => {
-      imageWrap?.classList.remove("is-placeholder");
-      if (placeholder) {
-        placeholder.hidden = true;
-      }
-    };
-    imageElement.onerror = () => {
-      imageElement.hidden = true;
-      imageWrap?.classList.add("is-placeholder");
-      if (placeholder) {
-        placeholder.hidden = false;
-      }
-    };
-    if (imageUrl) {
-      imageElement.src = imageUrl;
-      imageElement.hidden = false;
-    } else {
-      imageElement.hidden = true;
-      imageElement.removeAttribute("src");
-    }
-  }
-
-  if (placeholder) {
-    placeholder.hidden = Boolean(imageUrl);
   }
 
   if (wizardShell) {

@@ -55,7 +55,7 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260408ac";
+} from "./custom-form-profile.js?v=20260409c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -1257,6 +1257,8 @@ function startLatestUserSyncLoop() {
 }
 
 function syncMenuPreviewHoverState() {
+  const isMotionHighlight = activeMenuPreviewHoverTarget === "motion";
+
   if (previewShell) {
     previewShell.classList.toggle("is-shell-edit-hover", activeMenuPreviewHoverTarget === "shell");
   }
@@ -1266,16 +1268,20 @@ function syncMenuPreviewHoverState() {
   }
 
   if (previewProgressWrap) {
-    previewProgressWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps");
+    previewProgressWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps" || isMotionHighlight);
   }
 
   if (previewStepper) {
-    previewStepper.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps");
+    previewStepper.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps" || isMotionHighlight);
+  }
+
+  if (previewWizardHead) {
+    previewWizardHead.classList.toggle("is-menu-highlight", isMotionHighlight);
   }
 
   const questionWrap = previewStepHost?.querySelector(".question-wrap");
   if (questionWrap) {
-    questionWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "question");
+    questionWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "question" || isMotionHighlight);
   }
 
   const welcomeWrap = previewStepHost?.querySelector('[data-preview-area="welcome"]');
@@ -1444,25 +1450,6 @@ function isContentBlockField(field) {
   return isContentBlockType(field?.type || "");
 }
 
-function buildScreenImageMarkup(step) {
-  const imageUrl = String(step?.imageUrl || "").trim();
-
-  if (imageUrl) {
-    return `
-      <div class="screen-preview-media">
-        <img class="screen-preview-image" src="${escapeHtml(imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true; this.parentElement.classList.add('is-placeholder'); if (this.nextElementSibling) this.nextElementSibling.hidden=false;">
-        <span class="screen-preview-placeholder" hidden>${step.type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="screen-preview-media is-placeholder">
-      <span class="screen-preview-placeholder">${step.type === "thankyou" ? "Thank-you image" : "Welcome image"}</span>
-    </div>
-  `;
-}
-
 function buildPreviewContentBlockMarkup(field) {
   const type = String(field?.type || "").trim();
   const offsetStyle = field?.__isFirst ? "" : ' style="margin-top:18px;"';
@@ -1561,7 +1548,6 @@ function buildPreviewFieldMarkup(step) {
     return `
       <div class="question-wrap is-selected is-screen-preview" data-preview-area="${escapeHtml(step.type)}">
         <div class="screen-preview-shell">
-          ${buildScreenImageMarkup(step)}
           <div class="screen-preview-content">
             <span class="screen-preview-kicker">${step.type === "thankyou" ? "After send" : "First screen"}</span>
             <div class="screen-preview-copy">${escapeHtml(step.type === "thankyou" ? "This preview matches the optional finish your client sees after a send." : "This preview matches the optional first screen that appears before the questions start.")}</div>
@@ -2456,11 +2442,7 @@ function renderFormSettingsTab() {
         Welcome copy
         <textarea id="inline-welcome-copy" maxlength="180">${escapeHtml(currentFormProfile.welcomeCopy || "")}</textarea>
       </label>
-      <label>
-        Image URL
-        <input id="inline-welcome-image" type="url" inputmode="url" placeholder="https://example.com/image.jpg" value="${escapeHtml(currentFormProfile.welcomeImageUrl || "")}">
-      </label>
-      <div class="editor-inline-note">Use a direct image URL for the best results. If you leave it blank, the welcome screen uses a styled placeholder.</div>
+      <div class="editor-inline-note">This intro screen is text-only now, so it stays cleaner and more consistent across devices.</div>
     `;
 
     document.getElementById("inline-welcome-enabled")?.addEventListener("change", event => {
@@ -2491,13 +2473,6 @@ function renderFormSettingsTab() {
       };
       refreshPreviewOnly();
     });
-    document.getElementById("inline-welcome-image")?.addEventListener("input", event => {
-      currentFormProfile = {
-        ...currentFormProfile,
-        welcomeImageUrl: event.target.value.slice(0, 500)
-      };
-      refreshPreviewOnly();
-    });
   }
 
   if (thankYouScreenControls) {
@@ -2520,11 +2495,7 @@ function renderFormSettingsTab() {
         Thank-you copy
         <textarea id="inline-thankyou-copy" maxlength="180">${escapeHtml(currentFormProfile.thankYouCopy || "")}</textarea>
       </label>
-      <label>
-        Image URL
-        <input id="inline-thankyou-image" type="url" inputmode="url" placeholder="https://example.com/image.jpg" value="${escapeHtml(currentFormProfile.thankYouImageUrl || "")}">
-      </label>
-      <div class="editor-inline-note">Use a direct image URL for the best results. If you leave it blank, the thank-you screen uses a styled placeholder.</div>
+      <div class="editor-inline-note">This finish screen is text-only now, so it feels cleaner and more predictable on mobile.</div>
     `;
 
     document.getElementById("inline-thankyou-enabled")?.addEventListener("change", event => {
@@ -2552,13 +2523,6 @@ function renderFormSettingsTab() {
       currentFormProfile = {
         ...currentFormProfile,
         thankYouCopy: event.target.value.slice(0, 180)
-      };
-      refreshPreviewOnly();
-    });
-    document.getElementById("inline-thankyou-image")?.addEventListener("input", event => {
-      currentFormProfile = {
-        ...currentFormProfile,
-        thankYouImageUrl: event.target.value.slice(0, 500)
       };
       refreshPreviewOnly();
     });

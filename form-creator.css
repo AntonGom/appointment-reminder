@@ -407,6 +407,14 @@ body[data-page="form-creator"] {
   text-align: center;
 }
 
+.wizard-head.is-menu-highlight {
+  outline: 3px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 8px;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .wizard-head.is-nav-above {
   display: flex;
   flex-direction: column;

@@ -273,11 +273,8 @@ export const STEP_NAV_PLACEMENT_OPTIONS = [
 
 export const STEP_MOTION_STYLE_OPTIONS = [
   { id: "slide-horizontal", label: "Slide Horizontal" },
-  { id: "slide-vertical", label: "Slide Vertical" },
-  { id: "fade", label: "Fade" },
   { id: "scale", label: "Scale In" },
   { id: "flip", label: "Flip" },
-  { id: "blur", label: "Blur In" },
   { id: "drift", label: "Luxury Drift" },
   { id: "bounce", label: "Bounce" },
   { id: "none", label: "None" }
@@ -292,15 +289,12 @@ export const STEP_MOTION_SPEED_OPTIONS = [
 
 export const STEP_HEAD_MOTION_OPTIONS = [
   { id: "lift", label: "Lift" },
-  { id: "fade", label: "Fade" },
   { id: "glide", label: "Glide" },
-  { id: "blur", label: "Blur" },
   { id: "none", label: "None" }
 ];
 
 export const STEP_CHIP_MOTION_OPTIONS = [
   { id: "pop", label: "Pop" },
-  { id: "pulse", label: "Pulse" },
   { id: "glow", label: "Glow" },
   { id: "sweep", label: "Sweep" },
   { id: "none", label: "None" }
@@ -655,7 +649,6 @@ export function buildPreviewStepList(profile) {
       required: false,
       builtIn: true,
       buttonText: normalized.welcomeButtonText,
-      imageUrl: normalized.welcomeImageUrl,
       titleFontSize: normalized.welcomeTitleFontSize,
       titleBold: normalized.welcomeTitleBold,
       copyFontSize: normalized.welcomeCopyFontSize,
@@ -682,7 +675,6 @@ export function buildPreviewStepList(profile) {
       required: false,
       builtIn: true,
       buttonText: normalized.thankYouButtonText,
-      imageUrl: normalized.thankYouImageUrl,
       titleFontSize: normalized.thankYouTitleFontSize,
       titleBold: normalized.thankYouTitleBold,
       copyFontSize: normalized.thankYouCopyFontSize,
