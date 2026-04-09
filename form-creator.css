@@ -2485,7 +2485,7 @@ body[data-page="form-creator"] {
     left: auto;
     right: auto;
     width: 100%;
-    height: var(--fc-mobile-panel-height, 272px);
+    height: var(--fc-mobile-panel-height, 248px);
     min-height: 0;
     max-width: 100%;
     max-height: none;
@@ -2517,8 +2517,12 @@ body[data-page="form-creator"] {
     height: 100%;
     align-items: flex-start;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     position: relative;
+    padding-bottom: 8px;
   }
 
   .fc-preview-shell {
