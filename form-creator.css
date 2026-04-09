@@ -2132,18 +2132,24 @@ body[data-page="form-creator"] {
 @media (max-width: 1040px) {
   body[data-page="form-creator"] {
     padding: 92px 10px 24px;
+    overflow: hidden;
   }
 
   .form-creator-studio {
     min-height: auto;
+    height: calc(100vh - 116px);
+    overflow: hidden;
   }
 
   .form-creator-canvas {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-rows: var(--fc-mobile-canvas-scaled-height, 420px) minmax(0, 1fr);
+    gap: 12px;
     min-height: auto;
-    align-items: start;
+    height: 100%;
+    align-items: stretch;
+    overflow: hidden;
   }
 
   .floating-panel {
@@ -2158,7 +2164,7 @@ body[data-page="form-creator"] {
   }
 
   .floating-panel-right {
-    overflow: visible;
+    overflow: hidden;
     padding-right: 0;
   }
 
@@ -2167,16 +2173,20 @@ body[data-page="form-creator"] {
     top: auto;
     left: auto;
     right: auto;
-    width: min(100%, 420px);
-    height: auto;
-    min-height: unset;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
     max-width: 100%;
     max-height: none;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(242, 247, 255, 0.64));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .floating-panel-head-draggable {
     cursor: default;
+    flex: 0 0 auto;
   }
 
   .studio-panel-resize-handle {
@@ -2186,15 +2196,24 @@ body[data-page="form-creator"] {
   .form-preview-stage {
     order: 1;
     width: 100%;
-    min-height: auto;
+    min-height: 0;
+    height: 100%;
     align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
   }
 
   .fc-preview-shell {
-    width: min(560px, 100%);
+    width: var(--fc-mobile-canvas-width, 560px);
     min-width: 0;
     margin-top: 0;
     padding: 22px 18px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) scale(var(--fc-mobile-canvas-scale, 0.58));
+    transform-origin: top center;
   }
 
   .form-editor-popover {
@@ -2219,11 +2238,22 @@ body[data-page="form-creator"] {
     aspect-ratio: 4 / 3;
   }
 
+  .studio-tab-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .form-preview-stage {
+    min-height: var(--fc-mobile-canvas-scaled-height, 420px);
+  }
+
 }
 
 @media (max-width: 720px) {
   body[data-page="form-creator"] {
-    padding: 88px 8px 20px;
+    padding: 88px 8px 16px;
   }
 
   .form-preview-logo-wrap {

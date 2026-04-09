@@ -121,8 +121,8 @@ let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
-const MOBILE_CANVAS_WIDTH = 1088;
-const MOBILE_CANVAS_HEIGHT = 980;
+const MOBILE_CANVAS_WIDTH = 560;
+const MOBILE_CANVAS_HEIGHT = 760;
 const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea"].includes(option.id));
 const BUILT_IN_STEP_MAP = new Map(BASE_REMINDER_STEPS.map(step => [step.id, step]));
 
@@ -2500,11 +2500,13 @@ function applyMobileStudioScale() {
     signedInShell.style.removeProperty("--fc-mobile-canvas-width");
     signedInShell.style.removeProperty("--fc-mobile-canvas-height");
     signedInShell.style.removeProperty("--fc-mobile-canvas-scaled-height");
+    signedInShell.style.removeProperty("--fc-mobile-panel-height");
     return;
   }
 
   const widthPadding = window.innerWidth <= 720 ? 16 : 24;
-  const heightAllowance = Math.max(360, window.innerHeight - 132);
+  const panelHeight = Math.max(260, Math.min(380, Math.round(window.innerHeight * 0.34)));
+  const heightAllowance = Math.max(300, window.innerHeight - panelHeight - 164);
   const widthScale = (window.innerWidth - widthPadding) / MOBILE_CANVAS_WIDTH;
   const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
   const nextScale = Math.max(0.34, Math.min(widthScale, heightScale, 1));
@@ -2513,6 +2515,7 @@ function applyMobileStudioScale() {
   signedInShell.style.setProperty("--fc-mobile-canvas-width", `${MOBILE_CANVAS_WIDTH}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-height", `${MOBILE_CANVAS_HEIGHT}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(MOBILE_CANVAS_HEIGHT * nextScale)}px`);
+  signedInShell.style.setProperty("--fc-mobile-panel-height", `${panelHeight}px`);
 }
 
 function openTypographyEditor(config) {
