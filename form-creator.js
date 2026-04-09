@@ -2679,15 +2679,17 @@ function applyMobileStudioScale() {
     return;
   }
 
-  const widthPadding = window.innerWidth <= 720 ? 16 : 24;
-  const panelHeight = Math.max(260, Math.min(380, Math.round(window.innerHeight * 0.34)));
-  const heightAllowance = Math.max(300, window.innerHeight - panelHeight - 164);
-  const widthScale = (window.innerWidth - widthPadding) / MOBILE_CANVAS_WIDTH;
+  const widthPadding = window.innerWidth <= 720 ? 10 : 18;
+  const mobileCanvasWidth = window.innerWidth <= 720 ? 520 : MOBILE_CANVAS_WIDTH;
+  const panelHeight = Math.max(220, Math.min(300, Math.round(window.innerHeight * 0.28)));
+  const chromeAllowance = window.innerWidth <= 720 ? 126 : 140;
+  const heightAllowance = Math.max(360, window.innerHeight - panelHeight - chromeAllowance);
+  const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;
   const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
-  const nextScale = Math.max(0.34, Math.min(widthScale, heightScale, 1));
+  const nextScale = Math.max(0.44, Math.min(widthScale, heightScale, 1));
 
   signedInShell.style.setProperty("--fc-mobile-canvas-scale", nextScale.toFixed(3));
-  signedInShell.style.setProperty("--fc-mobile-canvas-width", `${MOBILE_CANVAS_WIDTH}px`);
+  signedInShell.style.setProperty("--fc-mobile-canvas-width", `${mobileCanvasWidth}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-height", `${MOBILE_CANVAS_HEIGHT}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(MOBILE_CANVAS_HEIGHT * nextScale)}px`);
   signedInShell.style.setProperty("--fc-mobile-panel-height", `${panelHeight}px`);

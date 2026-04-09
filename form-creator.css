@@ -2442,21 +2442,21 @@ body[data-page="form-creator"] {
 
 @media (max-width: 1040px) {
   body[data-page="form-creator"] {
-    padding: 92px 10px 24px;
+    padding: 84px 8px 14px;
     overflow: hidden;
   }
 
   .form-creator-studio {
     min-height: auto;
-    height: calc(100dvh - 116px);
+    height: calc(100dvh - 98px);
     overflow: hidden;
   }
 
   .form-creator-canvas {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: var(--fc-mobile-canvas-scaled-height, 420px) minmax(var(--fc-mobile-panel-height, 320px), 1fr);
-    gap: 12px;
+    grid-template-rows: var(--fc-mobile-canvas-scaled-height, 420px) minmax(var(--fc-mobile-panel-height, 272px), 1fr);
+    gap: 8px;
     min-height: auto;
     height: 100%;
     align-items: stretch;
@@ -2485,7 +2485,7 @@ body[data-page="form-creator"] {
     left: auto;
     right: auto;
     width: 100%;
-    height: var(--fc-mobile-panel-height, 320px);
+    height: var(--fc-mobile-panel-height, 272px);
     min-height: 0;
     max-width: 100%;
     max-height: none;
@@ -2497,6 +2497,8 @@ body[data-page="form-creator"] {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+    border-radius: 24px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
   }
 
   .floating-panel-head-draggable {
@@ -2534,7 +2536,7 @@ body[data-page="form-creator"] {
   .form-editor-popover {
     width: 100%;
     max-height: none;
-    margin-top: 10px;
+    margin-top: 8px;
     background: rgba(255, 255, 255, 0.68);
     backdrop-filter: blur(18px);
   }
@@ -2557,17 +2559,63 @@ body[data-page="form-creator"] {
     flex: 0 0 auto;
     min-height: 0;
     overflow: visible;
+    padding: 12px 10px 10px;
+    border-radius: 0 16px 16px 16px;
   }
 
   .form-preview-stage {
     min-height: var(--fc-mobile-canvas-scaled-height, 420px);
   }
 
+  .floating-panel-studio .floating-panel-head {
+    margin: 0 0 4px;
+    padding: 7px 10px 6px;
+    border-radius: 14px;
+  }
+
+  .floating-panel-head h2 {
+    font-size: 15px;
+  }
+
+  .floating-panel-drag-chip {
+    padding: 6px 9px;
+    font-size: 10px;
+  }
+
+  .form-enabled-card {
+    margin: 4px 0 4px;
+    padding: 10px 12px;
+    border-radius: 16px;
+  }
+
+  .form-enabled-title {
+    font-size: 14px;
+  }
+
+  .form-enabled-text {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .studio-tabs {
+    gap: 3px;
+    margin-top: 6px;
+  }
+
+  .studio-tab-button {
+    min-height: 36px;
+    padding: 8px 6px 7px;
+    border-radius: 14px 14px 0 0;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
 }
 
 @media (max-width: 720px) {
   body[data-page="form-creator"] {
-    padding: 88px 8px 16px;
+    padding: 80px 6px 10px;
   }
 
   .form-preview-logo-wrap {
@@ -2600,5 +2648,34 @@ body[data-page="form-creator"] {
   .form-editor-grid,
   .form-preview-controls {
     grid-template-columns: 1fr;
+  }
+
+  .form-creator-studio {
+    height: calc(100dvh - 88px);
+  }
+
+  .floating-panel-studio {
+    border-radius: 22px;
+  }
+
+  .floating-panel-studio .floating-panel-head {
+    padding: 6px 8px 5px;
+  }
+
+  .floating-panel-kicker {
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+
+  .form-enabled-row {
+    gap: 12px;
+  }
+
+  .form-enabled-text {
+    display: none;
+  }
+
+  .studio-tab-panels {
+    padding: 10px 8px 8px;
   }
 }
