@@ -520,6 +520,8 @@ body[data-page="form-creator"] {
   padding: 4px 2px 8px;
   overflow-x: auto;
   scrollbar-width: thin;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .preview-stepper-button {
@@ -537,6 +539,7 @@ body[data-page="form-creator"] {
   gap: var(--fc-step-nav-item-gap, 6px);
   cursor: grab;
   user-select: none;
+  touch-action: none;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -622,11 +625,15 @@ body[data-page="form-creator"] {
 }
 
 .stepper.is-dragging-steps .preview-step-dropzone {
-  flex-basis: 18px;
-  width: 18px;
+  flex-basis: 38px;
+  width: 38px;
   opacity: 0.62;
   border-color: rgba(37, 99, 235, 0.3);
   background: rgba(219, 234, 254, 0.38);
+}
+
+.stepper.is-pointer-dragging-steps .preview-stepper-button {
+  transition: none;
 }
 
 .preview-step-dropzone.is-over {

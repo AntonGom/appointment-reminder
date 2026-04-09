@@ -130,6 +130,8 @@ let activeStudioTab = "add-fields";
 let activeMenuPreviewHoverTarget = "";
 let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
+let stepPointerDragState = null;
+let suppressNextStepperClick = false;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
@@ -911,7 +913,215 @@ function clearDragIndicators() {
   });
 }
 
+function isTouchDragCapableViewport() {
+  return window.matchMedia?.("(pointer: coarse)").matches || window.innerWidth <= MOBILE_STUDIO_BREAKPOINT;
+}
+
+function getReorderablePreviewStepButtons() {
+  if (!previewStepper) {
+    return [];
+  }
+
+  return Array.from(previewStepper.querySelectorAll("[data-preview-step]")).filter(button => {
+    const stepId = button.dataset.previewStep || "";
+    const step = getPreviewSteps().find(entry => entry.id === stepId);
+    return isReorderablePreviewStep(step);
+  });
+}
+
+function getStepDropzoneByIndex(insertIndex) {
+  return previewStepper?.querySelector(`[data-drop-step-index="${insertIndex}"]`) || null;
+}
+
+function showStepDropIndicator(insertIndex) {
+  clearDragIndicators();
+  getStepDropzoneByIndex(insertIndex)?.classList.add("is-over");
+}
+
+function getStepInsertIndexFromTarget(target, clientX = null) {
+  if (!previewStepper || !target) {
+    return null;
+  }
+
+  const dropzone = target.closest?.("[data-drop-step-index]");
+
+  if (dropzone) {
+    return Number(dropzone.dataset.dropStepIndex || "0");
+  }
+
+  const button = target.closest?.("[data-preview-step]");
+
+  if (!button) {
+    return null;
+  }
+
+  const buttons = getReorderablePreviewStepButtons();
+  const buttonIndex = buttons.findIndex(entry => entry.dataset.previewStep === (button.dataset.previewStep || ""));
+
+  if (buttonIndex < 0) {
+    return null;
+  }
+
+  if (typeof clientX !== "number") {
+    return buttonIndex;
+  }
+
+  const rect = button.getBoundingClientRect();
+  const midpoint = rect.left + (rect.width / 2);
+  return clientX < midpoint ? buttonIndex : buttonIndex + 1;
+}
+
+function autoScrollPreviewStepper(clientX = null) {
+  if (!previewStepper) {
+    return;
+  }
+
+  if (typeof clientX !== "number") {
+    const activeButton = previewStepper.querySelector(".preview-stepper-button.is-active");
+    activeButton?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center"
+    });
+    return;
+  }
+
+  const rect = previewStepper.getBoundingClientRect();
+  const edgeThreshold = 56;
+  const scrollAmount = 28;
+
+  if (clientX <= rect.left + edgeThreshold) {
+    previewStepper.scrollBy({ left: -scrollAmount, behavior: "auto" });
+  } else if (clientX >= rect.right - edgeThreshold) {
+    previewStepper.scrollBy({ left: scrollAmount, behavior: "auto" });
+  }
+}
+
+function clearStepPointerDragState({ preserveSuppressClick = false } = {}) {
+  if (stepPointerDragState?.button) {
+    stepPointerDragState.button.classList.remove("is-dragging");
+    if (typeof stepPointerDragState.pointerId === "number") {
+      try {
+        stepPointerDragState.button.releasePointerCapture(stepPointerDragState.pointerId);
+      } catch (error) {
+        // Ignore release failures when capture was never acquired.
+      }
+    }
+  }
+
+  if (!preserveSuppressClick) {
+    suppressNextStepperClick = false;
+  }
+
+  stepPointerDragState = null;
+  previewStepper?.classList.remove("is-dragging-steps", "is-pointer-dragging-steps");
+  clearDragIndicators();
+}
+
+function beginStepPointerDrag() {
+  if (!stepPointerDragState?.button || !previewStepper) {
+    return;
+  }
+
+  stepPointerDragState.dragging = true;
+  previewStepper.classList.add("is-dragging-steps", "is-pointer-dragging-steps");
+  stepPointerDragState.button.classList.add("is-dragging");
+}
+
+function updateStepPointerDrag(clientX) {
+  if (!stepPointerDragState?.stepId || !previewStepper) {
+    return;
+  }
+
+  autoScrollPreviewStepper(clientX);
+  const insertIndex = getStepInsertIndexFromTarget(document.elementFromPoint(clientX, stepPointerDragState.clientY) || previewStepper, clientX);
+
+  if (insertIndex === null) {
+    return;
+  }
+
+  stepPointerDragState.insertIndex = insertIndex;
+  showStepDropIndicator(insertIndex);
+}
+
+function maybeStartStepPointerDrag(event) {
+  if (!isTouchDragCapableViewport() || !previewStepper) {
+    return;
+  }
+
+  const button = event.target.closest?.("[data-preview-step]");
+  const stepId = button?.dataset.previewStep || "";
+  const step = getPreviewSteps().find(entry => entry.id === stepId);
+
+  if (!button || !isReorderablePreviewStep(step)) {
+    return;
+  }
+
+  stepPointerDragState = {
+    pointerId: event.pointerId,
+    stepId,
+    button,
+    startX: event.clientX,
+    startY: event.clientY,
+    clientY: event.clientY,
+    insertIndex: null,
+    dragging: false
+  };
+
+  suppressNextStepperClick = false;
+
+  try {
+    button.setPointerCapture(event.pointerId);
+  } catch (error) {
+    // Some browsers do not support pointer capture in every context.
+  }
+}
+
+function handleStepPointerMove(event) {
+  if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
+    return;
+  }
+
+  stepPointerDragState.clientY = event.clientY;
+  const movedX = Math.abs(event.clientX - stepPointerDragState.startX);
+  const movedY = Math.abs(event.clientY - stepPointerDragState.startY);
+
+  if (!stepPointerDragState.dragging) {
+    if (Math.max(movedX, movedY) < 8) {
+      return;
+    }
+
+    beginStepPointerDrag();
+  }
+
+  event.preventDefault();
+  updateStepPointerDrag(event.clientX);
+}
+
+function finishStepPointerDrop() {
+  if (!stepPointerDragState) {
+    return;
+  }
+
+  const { dragging, stepId, insertIndex } = stepPointerDragState;
+
+  if (dragging && stepId && typeof insertIndex === "number") {
+    reorderStep(stepId, insertIndex);
+    suppressNextStepperClick = true;
+    window.setTimeout(() => {
+      suppressNextStepperClick = false;
+    }, 180);
+  }
+
+  clearStepPointerDragState({ preserveSuppressClick: suppressNextStepperClick });
+}
+
+function cancelStepPointerDrag() {
+  clearStepPointerDragState();
+}
+
 function startDrag(payload, event, draggedElement = null) {
+  cancelStepPointerDrag();
   dragPayload = payload;
 
   if (payload?.kind === "existing-field") {
@@ -940,7 +1150,7 @@ function finishDrag(draggedElement = null) {
   dragFieldId = "";
   clearDragIndicators();
 
-  previewStepper?.classList.remove("is-dragging-steps");
+  previewStepper?.classList.remove("is-dragging-steps", "is-pointer-dragging-steps");
 
   if (draggedElement) {
     draggedElement.classList.remove("is-dragging");
@@ -1651,13 +1861,22 @@ function renderPreview() {
   }
 
   if (previewStepper) {
-    previewStepper.innerHTML = steps.map((step, index) => `
-      <div class="preview-step-dropzone" data-drop-step-index="${index}"></div>
-      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderablePreviewStep(step) ? "true" : "false"}">
+    let reorderableIndex = 0;
+    previewStepper.innerHTML = steps.map((step, index) => {
+      const dropIndex = reorderableIndex;
+      const isReorderable = isReorderablePreviewStep(step);
+      if (isReorderable) {
+        reorderableIndex += 1;
+      }
+
+      return `
+      <div class="preview-step-dropzone" data-drop-step-index="${dropIndex}"></div>
+      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderable ? "true" : "false"}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
         <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
       </button>
-    `).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${steps.filter(isReorderablePreviewStep).length}"></div>`;
+    `;
+    }).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${reorderableIndex}"></div>`;
   }
 
   if (previewStepHost) {
@@ -1689,6 +1908,9 @@ function renderPreview() {
   applyStepNavigationStyles();
   applyPreviewMotionStyles();
   syncMenuPreviewHoverState();
+  window.requestAnimationFrame(() => {
+    autoScrollPreviewStepper();
+  });
 }
 
 function updatePreviewLogo() {
@@ -3768,6 +3990,13 @@ document.querySelectorAll("[data-add-page]").forEach(button => {
 });
 
 previewStepper?.addEventListener("click", event => {
+  if (suppressNextStepperClick) {
+    suppressNextStepperClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
   const labelTarget = event.target.closest('[data-edit-target="step-nav-label"]');
 
   if (labelTarget) {
@@ -3812,43 +4041,38 @@ previewStepper?.addEventListener("dragend", event => {
 });
 
 previewStepper?.addEventListener("dragover", event => {
-  const dropzone = event.target.closest("[data-drop-step-index]");
+  if (!dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
+    return;
+  }
 
-  if (!dropzone || !dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
+  const insertIndex = getStepInsertIndexFromTarget(event.target, event.clientX);
+
+  if (insertIndex === null) {
     return;
   }
 
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
-});
-
-previewStepper?.addEventListener("dragenter", event => {
-  const dropzone = event.target.closest("[data-drop-step-index]");
-
-  if (!dropzone || !dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
-    return;
-  }
-
-  clearDragIndicators();
-  dropzone.classList.add("is-over");
+  showStepDropIndicator(insertIndex);
+  autoScrollPreviewStepper(event.clientX);
 });
 
 previewStepper?.addEventListener("dragleave", event => {
-  const dropzone = event.target.closest("[data-drop-step-index]");
-
-  if (!dropzone || !dropzone.contains(event.relatedTarget)) {
-    dropzone?.classList.remove("is-over");
+  if (!previewStepper.contains(event.relatedTarget)) {
+    clearDragIndicators();
   }
 });
 
 previewStepper?.addEventListener("drop", event => {
-  const dropzone = event.target.closest("[data-drop-step-index]");
-
-  if (!dropzone || !dragPayload) {
+  if (!dragPayload) {
     return;
   }
 
-  const insertIndex = Number(dropzone.dataset.dropStepIndex || "0");
+  const insertIndex = getStepInsertIndexFromTarget(event.target, event.clientX);
+
+  if (insertIndex === null) {
+    return;
+  }
 
   event.preventDefault();
 
@@ -3861,6 +4085,30 @@ previewStepper?.addEventListener("drop", event => {
   }
 
   finishDrag();
+});
+
+previewStepper?.addEventListener("pointerdown", event => {
+  maybeStartStepPointerDrag(event);
+});
+
+previewStepper?.addEventListener("pointermove", event => {
+  handleStepPointerMove(event);
+});
+
+previewStepper?.addEventListener("pointerup", event => {
+  if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
+    return;
+  }
+
+  finishStepPointerDrop();
+});
+
+previewStepper?.addEventListener("pointercancel", event => {
+  if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
+    return;
+  }
+
+  cancelStepPointerDrag();
 });
 
 previewStepHost?.addEventListener("click", event => {
