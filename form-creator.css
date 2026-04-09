@@ -540,6 +540,7 @@ body[data-page="form-creator"] {
   cursor: grab;
   user-select: none;
   touch-action: pan-y;
+  position: relative;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -555,9 +556,11 @@ body[data-page="form-creator"] {
 }
 
 .preview-stepper-button.is-dragging {
-  opacity: 0.5;
-  transform: scale(0.97);
-  box-shadow: none;
+  opacity: 0.98;
+  transform: translate3d(var(--fc-step-drag-x, 0px), var(--fc-step-drag-y, 0px), 0) scale(1.08) rotate(-2deg);
+  box-shadow: 0 22px 36px rgba(15, 23, 42, 0.24);
+  z-index: 6;
+  pointer-events: none;
 }
 
 .preview-stepper-circle {
@@ -636,10 +639,21 @@ body[data-page="form-creator"] {
   transition: none;
 }
 
+.stepper.is-pointer-dragging-steps .preview-stepper-button:not(.is-dragging) {
+  opacity: 0.62;
+  transform: scale(0.98);
+}
+
 .preview-step-dropzone.is-over {
   opacity: 1;
   border-color: rgba(37, 99, 235, 0.62);
   background: rgba(219, 234, 254, 0.9);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+body.is-step-chip-dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .question-wrap {

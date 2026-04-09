@@ -1015,6 +1015,8 @@ function autoScrollPreviewStepper(clientX = null) {
 function clearStepPointerDragState({ preserveSuppressClick = false } = {}) {
   if (stepPointerDragState?.button) {
     stepPointerDragState.button.classList.remove("is-dragging");
+    stepPointerDragState.button.style.removeProperty("--fc-step-drag-x");
+    stepPointerDragState.button.style.removeProperty("--fc-step-drag-y");
     if (typeof stepPointerDragState.pointerId === "number") {
       try {
         stepPointerDragState.button.releasePointerCapture(stepPointerDragState.pointerId);
@@ -1029,6 +1031,7 @@ function clearStepPointerDragState({ preserveSuppressClick = false } = {}) {
   }
 
   stepPointerDragState = null;
+  document.body.classList.remove("is-step-chip-dragging");
   previewStepper?.classList.remove("is-dragging-steps", "is-pointer-dragging-steps");
   clearDragIndicators();
 }
@@ -1041,12 +1044,20 @@ function beginStepPointerDrag() {
   stepPointerDragState.dragging = true;
   previewStepper.classList.add("is-dragging-steps", "is-pointer-dragging-steps");
   stepPointerDragState.button.classList.add("is-dragging");
+  stepPointerDragState.button.style.setProperty("--fc-step-drag-x", "0px");
+  stepPointerDragState.button.style.setProperty("--fc-step-drag-y", "0px");
+  document.body.classList.add("is-step-chip-dragging");
 }
 
-function updateStepPointerDrag(clientX) {
+function updateStepPointerDrag(clientX, clientY) {
   if (!stepPointerDragState?.stepId || !previewStepper) {
     return;
   }
+
+  const deltaX = clientX - stepPointerDragState.startX;
+  const deltaY = clientY - stepPointerDragState.startY;
+  stepPointerDragState.button?.style.setProperty("--fc-step-drag-x", `${deltaX}px`);
+  stepPointerDragState.button?.style.setProperty("--fc-step-drag-y", `${deltaY}px`);
 
   autoScrollPreviewStepper(clientX);
   const insertIndex = getStepInsertIndexFromPointer(clientX);
@@ -1110,7 +1121,7 @@ function handleStepPointerMove(event) {
   }
 
   event.preventDefault();
-  updateStepPointerDrag(event.clientX);
+  updateStepPointerDrag(event.clientX, event.clientY);
 }
 
 function finishStepPointerDrop() {
