@@ -367,7 +367,7 @@
       height: 100%;
       border-radius: 999px;
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      transition: width 0.22s ease;
+      transition: width var(--step-progress-duration, 0.22s) ease;
     }
 
     .wizard-step {
@@ -499,24 +499,84 @@
       text-align: center;
     }
 
-    .wizard-shell[data-direction="forward"] .wizard-step.active .question-wrap {
-      animation: slideInForward 0.26s ease both;
+    .wizard-shell[data-step-head-motion="lift"] .wizard-head.is-step-motion-head {
+      animation: headLift var(--step-head-duration, 0.22s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
     }
 
-    .wizard-shell[data-direction="backward"] .wizard-step.active .question-wrap {
-      animation: slideInBackward 0.26s ease both;
+    .wizard-shell[data-step-head-motion="fade"] .wizard-head.is-step-motion-head {
+      animation: headFade var(--step-head-duration, 0.22s) ease both;
     }
 
-    .wizard-shell[data-direction="forward"] .wizard-head {
-      animation: headSlideForward 0.3s ease both;
+    .wizard-shell[data-step-head-motion="glide"] .wizard-head.is-step-motion-head {
+      animation: headGlide var(--step-head-duration, 0.22s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
     }
 
-    .wizard-shell[data-direction="backward"] .wizard-head {
-      animation: headSlideBackward 0.3s ease both;
+    .wizard-shell[data-step-head-motion="blur"] .wizard-head.is-step-motion-head {
+      animation: headBlur var(--step-head-duration, 0.22s) ease both;
     }
 
-    .wizard-shell[data-direction] .stepper-button.active {
-      animation: activeStepPop 0.28s ease;
+    .wizard-shell[data-step-motion-style="slide-horizontal"][data-direction="forward"] .wizard-step.active .question-wrap {
+      animation: stepMotionSlideForward var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="slide-horizontal"][data-direction="backward"] .wizard-step.active .question-wrap {
+      animation: stepMotionSlideBackward var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="slide-vertical"][data-direction="forward"] .wizard-step.active .question-wrap {
+      animation: stepMotionSlideUp var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="slide-vertical"][data-direction="backward"] .wizard-step.active .question-wrap {
+      animation: stepMotionSlideDown var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="fade"] .wizard-step.active .question-wrap {
+      animation: stepMotionFade var(--step-motion-duration, 0.28s) ease both;
+    }
+
+    .wizard-shell[data-step-motion-style="scale"] .wizard-step.active .question-wrap {
+      animation: stepMotionScale var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="flip"][data-direction="forward"] .wizard-step.active .question-wrap {
+      animation: stepMotionFlipForward var(--step-motion-duration, 0.28s) cubic-bezier(0.22, 0.78, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="flip"][data-direction="backward"] .wizard-step.active .question-wrap {
+      animation: stepMotionFlipBackward var(--step-motion-duration, 0.28s) cubic-bezier(0.22, 0.78, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="blur"] .wizard-step.active .question-wrap {
+      animation: stepMotionBlur var(--step-motion-duration, 0.28s) ease both;
+    }
+
+    .wizard-shell[data-step-motion-style="drift"][data-direction="forward"] .wizard-step.active .question-wrap {
+      animation: stepMotionDriftForward var(--step-motion-duration, 0.28s) cubic-bezier(0.18, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="drift"][data-direction="backward"] .wizard-step.active .question-wrap {
+      animation: stepMotionDriftBackward var(--step-motion-duration, 0.28s) cubic-bezier(0.18, 0.82, 0.2, 1) both;
+    }
+
+    .wizard-shell[data-step-motion-style="bounce"] .wizard-step.active .question-wrap {
+      animation: stepMotionBounce var(--step-motion-duration, 0.28s) cubic-bezier(0.2, 1.16, 0.32, 1) both;
+    }
+
+    .wizard-shell[data-step-chip-motion="pop"] .stepper-button.active {
+      animation: stepChipPop var(--step-chip-duration, 0.24s) ease both;
+    }
+
+    .wizard-shell[data-step-chip-motion="pulse"] .stepper-button.active {
+      animation: stepChipPulse var(--step-chip-duration, 0.24s) ease both;
+    }
+
+    .wizard-shell[data-step-chip-motion="glow"] .stepper-button.active {
+      animation: stepChipGlow var(--step-chip-duration, 0.24s) ease both;
+    }
+
+    .wizard-shell[data-step-chip-motion="sweep"] .stepper-button.active {
+      animation: stepChipSweep var(--step-chip-duration, 0.24s) ease both;
     }
 
     label {
@@ -1301,7 +1361,7 @@
       }
     }
 
-    @keyframes slideInForward {
+    @keyframes stepMotionSlideForward {
       from {
         opacity: 0;
         transform: translateX(18px) translateY(4px);
@@ -1312,7 +1372,7 @@
       }
     }
 
-    @keyframes headSlideForward {
+    @keyframes headLift {
       from {
         opacity: 0;
         transform: translateY(10px);
@@ -1323,18 +1383,40 @@
       }
     }
 
-    @keyframes headSlideBackward {
+    @keyframes headFade {
       from {
         opacity: 0;
-        transform: translateY(-10px);
       }
       to {
         opacity: 1;
+      }
+    }
+
+    @keyframes headGlide {
+      from {
+        opacity: 0;
+        transform: translateX(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes headBlur {
+      from {
+        opacity: 0;
+        filter: blur(8px);
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        filter: blur(0);
         transform: translateY(0);
       }
     }
 
-    @keyframes activeStepPop {
+    @keyframes stepChipPop {
       0% {
         transform: scale(0.96);
       }
@@ -1346,7 +1428,46 @@
       }
     }
 
-    @keyframes slideInBackward {
+    @keyframes stepChipPulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.06);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes stepChipGlow {
+      0% {
+        box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.14);
+      }
+      100% {
+        box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+      }
+    }
+
+    @keyframes stepChipSweep {
+      0% {
+        background-position: 0% 50%;
+        filter: brightness(1);
+      }
+      50% {
+        background-position: 100% 50%;
+        filter: brightness(1.05);
+      }
+      100% {
+        background-position: 0% 50%;
+        filter: brightness(1);
+      }
+    }
+
+    @keyframes stepMotionSlideBackward {
       from {
         opacity: 0;
         transform: translateX(-18px) translateY(4px);
@@ -1354,6 +1475,120 @@
       to {
         opacity: 1;
         transform: translateX(0) translateY(0);
+      }
+    }
+
+    @keyframes stepMotionSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes stepMotionSlideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes stepMotionFade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes stepMotionScale {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.94);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes stepMotionFlipForward {
+      from {
+        opacity: 0;
+        transform: perspective(900px) rotateY(-18deg) translateX(16px);
+      }
+      to {
+        opacity: 1;
+        transform: perspective(900px) rotateY(0) translateX(0);
+      }
+    }
+
+    @keyframes stepMotionFlipBackward {
+      from {
+        opacity: 0;
+        transform: perspective(900px) rotateY(18deg) translateX(-16px);
+      }
+      to {
+        opacity: 1;
+        transform: perspective(900px) rotateY(0) translateX(0);
+      }
+    }
+
+    @keyframes stepMotionBlur {
+      from {
+        opacity: 0;
+        filter: blur(10px);
+        transform: translateY(10px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes stepMotionDriftForward {
+      from {
+        opacity: 0;
+        transform: translateX(22px) translateY(10px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+      }
+    }
+
+    @keyframes stepMotionDriftBackward {
+      from {
+        opacity: 0;
+        transform: translateX(-22px) translateY(10px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) translateY(0) scale(1);
+      }
+    }
+
+    @keyframes stepMotionBounce {
+      0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.94);
+      }
+      60% {
+        opacity: 1;
+        transform: translateY(-6px) scale(1.01);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
     }
 
@@ -1883,7 +2118,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408ab"></script>
+<script src="app.js?v=20260408ac"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

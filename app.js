@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408ab";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408ac";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -64,6 +64,10 @@ const DEFAULT_STEP_NAV_SHAPE = "rounded";
 const DEFAULT_STEP_NAV_SIZE = "medium";
 const DEFAULT_STEP_NAV_PLACEMENT = "below-title";
 const DEFAULT_STEP_NAV_CLICKABLE = true;
+const DEFAULT_STEP_MOTION_STYLE = "slide-horizontal";
+const DEFAULT_STEP_MOTION_SPEED = "smooth";
+const DEFAULT_STEP_HEAD_MOTION = "lift";
+const DEFAULT_STEP_CHIP_MOTION = "pop";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
 const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
@@ -1487,6 +1491,7 @@ function applyCustomFormPresentation(profile) {
     container.style.setProperty("--field-placeholder", DEFAULT_FIELD_PLACEHOLDER_COLOR);
   }
 
+  applyWizardMotionPresentation(profile);
   updateCustomFormLogo(profile);
 
   document.title = normalizedTitle ? `${normalizedTitle} | Appointment Reminder` : "Appointment Reminder";
@@ -1643,6 +1648,86 @@ function getStepNavigationSurfaceState(profile = activeCustomFormProfile || {}) 
     ...sizeState,
     radius
   };
+}
+
+function retriggerAnimationClass(element, className) {
+  if (!element || !className) {
+    return;
+  }
+
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function getWizardMotionState(profile = activeCustomFormProfile || {}) {
+  const speed = typeof profile?.stepMotionSpeed === "string" && profile.stepMotionSpeed.trim()
+    ? profile.stepMotionSpeed.trim()
+    : DEFAULT_STEP_MOTION_SPEED;
+  const durationState = {
+    quick: {
+      stepDuration: "0.18s",
+      headDuration: "0.16s",
+      chipDuration: "0.18s",
+      progressDuration: "0.16s"
+    },
+    slow: {
+      stepDuration: "0.4s",
+      headDuration: "0.3s",
+      chipDuration: "0.28s",
+      progressDuration: "0.3s"
+    },
+    cinematic: {
+      stepDuration: "0.56s",
+      headDuration: "0.42s",
+      chipDuration: "0.34s",
+      progressDuration: "0.38s"
+    },
+    smooth: {
+      stepDuration: "0.28s",
+      headDuration: "0.22s",
+      chipDuration: "0.24s",
+      progressDuration: "0.22s"
+    }
+  }[speed] || {
+    stepDuration: "0.28s",
+    headDuration: "0.22s",
+    chipDuration: "0.24s",
+    progressDuration: "0.22s"
+  };
+
+  return {
+    style: typeof profile?.stepMotionStyle === "string" && profile.stepMotionStyle.trim()
+      ? profile.stepMotionStyle.trim()
+      : DEFAULT_STEP_MOTION_STYLE,
+    speed,
+    head: typeof profile?.stepHeadMotion === "string" && profile.stepHeadMotion.trim()
+      ? profile.stepHeadMotion.trim()
+      : DEFAULT_STEP_HEAD_MOTION,
+    chip: typeof profile?.stepChipMotion === "string" && profile.stepChipMotion.trim()
+      ? profile.stepChipMotion.trim()
+      : DEFAULT_STEP_CHIP_MOTION,
+    ...durationState
+  };
+}
+
+function applyWizardMotionPresentation(profile = activeCustomFormProfile || {}) {
+  const wizardShell = document.querySelector(".wizard-shell");
+  const motionState = getWizardMotionState(profile);
+
+  if (!wizardShell) {
+    return motionState;
+  }
+
+  wizardShell.dataset.stepMotionStyle = motionState.style;
+  wizardShell.dataset.stepMotionSpeed = motionState.speed;
+  wizardShell.dataset.stepHeadMotion = motionState.head;
+  wizardShell.dataset.stepChipMotion = motionState.chip;
+  wizardShell.style.setProperty("--step-motion-duration", motionState.stepDuration);
+  wizardShell.style.setProperty("--step-head-duration", motionState.headDuration);
+  wizardShell.style.setProperty("--step-chip-duration", motionState.chipDuration);
+  wizardShell.style.setProperty("--step-progress-duration", motionState.progressDuration);
+  return motionState;
 }
 
 function getBuiltInFieldType(fieldId) {
@@ -3372,6 +3457,7 @@ function updateWizardUI() {
   const isOptional = currentStep.dataset.optional === "true";
   const stepNavPlacement = activeCustomFormProfile?.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
   const isWelcomeStep = currentStep.dataset.stepKind === "welcome";
+  const motionState = applyWizardMotionPresentation(activeCustomFormProfile || {});
 
   wizardSteps.forEach((step, index) => {
     step.classList.toggle("active", index === currentStepIndex);
@@ -3391,6 +3477,12 @@ function updateWizardUI() {
   if (wizardHead) {
     wizardHead.classList.toggle("is-nav-above", stepNavPlacement === "above-title");
     wizardHead.classList.toggle("is-nav-hidden", stepNavPlacement === "hidden");
+
+    if (motionState.head !== "none") {
+      retriggerAnimationClass(wizardHead, "is-step-motion-head");
+    } else {
+      wizardHead.classList.remove("is-step-motion-head");
+    }
   }
 
   if (progressWrap) {

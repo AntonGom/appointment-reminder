@@ -34,9 +34,17 @@ import {
   DEFAULT_STEP_NAV_SIZE,
   DEFAULT_STEP_NAV_PLACEMENT,
   DEFAULT_STEP_NAV_CLICKABLE,
+  DEFAULT_STEP_MOTION_STYLE,
+  DEFAULT_STEP_MOTION_SPEED,
+  DEFAULT_STEP_HEAD_MOTION,
+  DEFAULT_STEP_CHIP_MOTION,
   STEP_NAV_SHAPE_OPTIONS,
   STEP_NAV_SIZE_OPTIONS,
   STEP_NAV_PLACEMENT_OPTIONS,
+  STEP_MOTION_STYLE_OPTIONS,
+  STEP_MOTION_SPEED_OPTIONS,
+  STEP_HEAD_MOTION_OPTIONS,
+  STEP_CHIP_MOTION_OPTIONS,
   normalizeCustomFormProfile,
   createCustomField,
   createCustomPage,
@@ -47,7 +55,7 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260408ab";
+} from "./custom-form-profile.js?v=20260408ac";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -75,6 +83,7 @@ const globalBgSolidWrap = document.getElementById("global-bg-solid-wrap");
 const formSurfaceControls = document.getElementById("form-surface-controls");
 const questionSurfaceControls = document.getElementById("question-surface-controls");
 const stepNavigationControls = document.getElementById("step-navigation-controls");
+const motionControls = document.getElementById("motion-controls");
 const welcomeScreenControls = document.getElementById("welcome-screen-controls");
 const thankYouScreenControls = document.getElementById("thank-you-screen-controls");
 const previewShell = document.getElementById("form-preview-shell");
@@ -108,6 +117,7 @@ let currentUser = null;
 let currentFormProfile = normalizeCustomFormProfile({});
 let savedFormProfile = normalizeCustomFormProfile({});
 let selectedPreviewStepId = BASE_REMINDER_STEPS[0]?.id || "phone";
+let previewStepDirection = "forward";
 let dragFieldId = "";
 let editorDragState = null;
 let editorHasCustomPosition = false;
@@ -1691,6 +1701,7 @@ function renderPreview() {
 
   applyBackgroundToPreview();
   applyStepNavigationStyles();
+  applyPreviewMotionStyles();
   syncMenuPreviewHoverState();
 }
 
@@ -2139,6 +2150,154 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
   });
 }
 
+function replayAnimationClass(element, className) {
+  if (!element || !className) {
+    return;
+  }
+
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function getStepMotionState(profile = currentFormProfile) {
+  const speed = profile?.stepMotionSpeed || DEFAULT_STEP_MOTION_SPEED;
+  const durationState = {
+    quick: {
+      stepDuration: "0.18s",
+      headDuration: "0.16s",
+      chipDuration: "0.18s",
+      progressDuration: "0.16s"
+    },
+    slow: {
+      stepDuration: "0.4s",
+      headDuration: "0.3s",
+      chipDuration: "0.28s",
+      progressDuration: "0.3s"
+    },
+    cinematic: {
+      stepDuration: "0.56s",
+      headDuration: "0.42s",
+      chipDuration: "0.34s",
+      progressDuration: "0.38s"
+    },
+    smooth: {
+      stepDuration: "0.28s",
+      headDuration: "0.22s",
+      chipDuration: "0.24s",
+      progressDuration: "0.22s"
+    }
+  }[speed] || {
+    stepDuration: "0.28s",
+    headDuration: "0.22s",
+    chipDuration: "0.24s",
+    progressDuration: "0.22s"
+  };
+
+  return {
+    style: profile?.stepMotionStyle || DEFAULT_STEP_MOTION_STYLE,
+    speed,
+    head: profile?.stepHeadMotion || DEFAULT_STEP_HEAD_MOTION,
+    chip: profile?.stepChipMotion || DEFAULT_STEP_CHIP_MOTION,
+    ...durationState
+  };
+}
+
+function applyPreviewMotionStyles() {
+  if (!previewShell) {
+    return;
+  }
+
+  const motionState = getStepMotionState();
+  previewShell.dataset.stepMotionStyle = motionState.style;
+  previewShell.dataset.stepMotionSpeed = motionState.speed;
+  previewShell.dataset.stepHeadMotion = motionState.head;
+  previewShell.dataset.stepChipMotion = motionState.chip;
+  previewShell.dataset.stepDirection = previewStepDirection;
+  previewShell.style.setProperty("--fc-step-motion-duration", motionState.stepDuration);
+  previewShell.style.setProperty("--fc-step-head-duration", motionState.headDuration);
+  previewShell.style.setProperty("--fc-step-chip-duration", motionState.chipDuration);
+  previewShell.style.setProperty("--fc-step-progress-duration", motionState.progressDuration);
+
+  if (previewWizardHead && motionState.head !== "none") {
+    replayAnimationClass(previewWizardHead, "is-step-motion-head");
+  } else if (previewWizardHead) {
+    previewWizardHead.classList.remove("is-step-motion-head");
+  }
+}
+
+function buildMotionSettingsMarkup(prefix = "inline-step-motion") {
+  return `
+    <div class="form-editor-grid">
+      <label>
+        Question transition
+        <select id="${prefix}-style">
+          ${STEP_MOTION_STYLE_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepMotionStyle || DEFAULT_STEP_MOTION_STYLE) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Motion speed
+        <select id="${prefix}-speed">
+          ${STEP_MOTION_SPEED_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepMotionSpeed || DEFAULT_STEP_MOTION_SPEED) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <div class="form-editor-grid">
+      <label>
+        Header animation
+        <select id="${prefix}-head">
+          ${STEP_HEAD_MOTION_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepHeadMotion || DEFAULT_STEP_HEAD_MOTION) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Active step chip
+        <select id="${prefix}-chip">
+          ${STEP_CHIP_MOTION_OPTIONS.map(option => `<option value="${escapeHtml(option.id)}" ${option.id === (currentFormProfile.stepChipMotion || DEFAULT_STEP_CHIP_MOTION) ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <div class="editor-inline-note">These play when moving between questions in both Form Creator and Send Reminder.</div>
+  `;
+}
+
+function bindMotionSettings(root, prefix = "inline-step-motion") {
+  if (!root) {
+    return;
+  }
+
+  root.querySelector(`#${prefix}-style`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepMotionStyle: event.target.value || DEFAULT_STEP_MOTION_STYLE
+    };
+    refreshPreviewOnly();
+  });
+
+  root.querySelector(`#${prefix}-speed`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepMotionSpeed: event.target.value || DEFAULT_STEP_MOTION_SPEED
+    };
+    refreshPreviewOnly();
+  });
+
+  root.querySelector(`#${prefix}-head`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepHeadMotion: event.target.value || DEFAULT_STEP_HEAD_MOTION
+    };
+    refreshPreviewOnly();
+  });
+
+  root.querySelector(`#${prefix}-chip`)?.addEventListener("change", event => {
+    currentFormProfile = {
+      ...currentFormProfile,
+      stepChipMotion: event.target.value || DEFAULT_STEP_CHIP_MOTION
+    };
+    refreshPreviewOnly();
+  });
+}
+
 function renderFormSettingsTab() {
   const isSurfaceSolid = (currentFormProfile.formSurfaceGradient || DEFAULT_FORM_SURFACE_GRADIENT) === "solid";
 
@@ -2270,6 +2429,11 @@ function renderFormSettingsTab() {
   if (stepNavigationControls) {
     stepNavigationControls.innerHTML = buildStepNavigationSettingsMarkup("inline-step-nav");
     bindStepNavigationSettings(stepNavigationControls, "inline-step-nav");
+  }
+
+  if (motionControls) {
+    motionControls.innerHTML = buildMotionSettingsMarkup("inline-step-motion");
+    bindMotionSettings(motionControls, "inline-step-motion");
   }
 
   if (welcomeScreenControls) {
@@ -3568,6 +3732,7 @@ previewBackButton?.addEventListener("click", () => {
   const index = steps.findIndex(step => step.id === selectedPreviewStepId);
 
   if (index > 0) {
+    previewStepDirection = "backward";
     selectedPreviewStepId = steps[index - 1].id;
     closeEditor();
     renderBuilder();
@@ -3578,6 +3743,7 @@ previewSkipButton?.addEventListener("click", () => {
   const index = steps.findIndex(step => step.id === selectedPreviewStepId);
 
   if (index >= 0 && index < steps.length - 1) {
+    previewStepDirection = "forward";
     selectedPreviewStepId = steps[index + 1].id;
     closeEditor();
     renderBuilder();
@@ -3588,6 +3754,7 @@ previewNextButton?.addEventListener("click", () => {
   const index = steps.findIndex(step => step.id === selectedPreviewStepId);
 
   if (index >= 0 && index < steps.length - 1) {
+    previewStepDirection = "forward";
     selectedPreviewStepId = steps[index + 1].id;
     closeEditor();
     renderBuilder();
@@ -3649,6 +3816,10 @@ previewStepper?.addEventListener("click", event => {
   }
 
   const nextId = button.dataset.previewStep || "";
+  const steps = getPreviewSteps();
+  const currentIndex = steps.findIndex(step => step.id === selectedPreviewStepId);
+  const nextIndex = steps.findIndex(step => step.id === nextId);
+  previewStepDirection = nextIndex < currentIndex ? "backward" : "forward";
   selectedPreviewStepId = nextId;
   closeEditor();
   renderBuilder();

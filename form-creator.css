@@ -292,12 +292,88 @@ body[data-page="form-creator"] {
   animation: previewShellSettle 0.52s cubic-bezier(0.2, 0.82, 0.2, 1);
 }
 
-.fc-preview-shell .wizard-head {
-  animation: previewHeadDrift 0.42s cubic-bezier(0.2, 0.82, 0.2, 1);
+.fc-preview-shell[data-step-head-motion="lift"] .wizard-head.is-step-motion-head {
+  animation: previewHeadLift var(--fc-step-head-duration, 0.22s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
 }
 
-#preview-step-host .question-wrap {
-  animation: previewCardLift 0.34s cubic-bezier(0.2, 0.82, 0.2, 1);
+.fc-preview-shell[data-step-head-motion="fade"] .wizard-head.is-step-motion-head {
+  animation: previewHeadFade var(--fc-step-head-duration, 0.22s) ease both;
+}
+
+.fc-preview-shell[data-step-head-motion="glide"] .wizard-head.is-step-motion-head {
+  animation: previewHeadGlide var(--fc-step-head-duration, 0.22s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-head-motion="blur"] .wizard-head.is-step-motion-head {
+  animation: previewHeadBlur var(--fc-step-head-duration, 0.22s) ease both;
+}
+
+.fc-preview-shell[data-step-motion-style="slide-horizontal"][data-step-direction="forward"] #preview-step-host .question-wrap {
+  animation: previewMotionSlideForward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="slide-horizontal"][data-step-direction="backward"] #preview-step-host .question-wrap {
+  animation: previewMotionSlideBackward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="slide-vertical"][data-step-direction="forward"] #preview-step-host .question-wrap {
+  animation: previewMotionSlideUp var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="slide-vertical"][data-step-direction="backward"] #preview-step-host .question-wrap {
+  animation: previewMotionSlideDown var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="fade"] #preview-step-host .question-wrap {
+  animation: previewMotionFade var(--fc-step-motion-duration, 0.28s) ease both;
+}
+
+.fc-preview-shell[data-step-motion-style="scale"] #preview-step-host .question-wrap {
+  animation: previewMotionScale var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="flip"][data-step-direction="forward"] #preview-step-host .question-wrap {
+  animation: previewMotionFlipForward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.22, 0.78, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="flip"][data-step-direction="backward"] #preview-step-host .question-wrap {
+  animation: previewMotionFlipBackward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.22, 0.78, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="blur"] #preview-step-host .question-wrap {
+  animation: previewMotionBlur var(--fc-step-motion-duration, 0.28s) ease both;
+}
+
+.fc-preview-shell[data-step-motion-style="drift"][data-step-direction="forward"] #preview-step-host .question-wrap {
+  animation: previewMotionDriftForward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.18, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="drift"][data-step-direction="backward"] #preview-step-host .question-wrap {
+  animation: previewMotionDriftBackward var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.18, 0.82, 0.2, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="bounce"] #preview-step-host .question-wrap {
+  animation: previewMotionBounce var(--fc-step-motion-duration, 0.28s) cubic-bezier(0.2, 1.16, 0.32, 1) both;
+}
+
+.fc-preview-shell[data-step-motion-style="none"] #preview-step-host .question-wrap {
+  animation: none;
+}
+
+.fc-preview-shell[data-step-chip-motion="pop"] .preview-stepper-button.is-active {
+  animation: previewChipPop var(--fc-step-chip-duration, 0.24s) ease both;
+}
+
+.fc-preview-shell[data-step-chip-motion="pulse"] .preview-stepper-button.is-active {
+  animation: previewChipPulse var(--fc-step-chip-duration, 0.24s) ease both;
+}
+
+.fc-preview-shell[data-step-chip-motion="glow"] .preview-stepper-button.is-active {
+  animation: previewChipGlow var(--fc-step-chip-duration, 0.24s) ease both;
+}
+
+.fc-preview-shell[data-step-chip-motion="sweep"] .preview-stepper-button.is-active {
+  animation: previewChipSweep var(--fc-step-chip-duration, 0.24s) ease both;
 }
 
 #form-preview-title {
@@ -425,7 +501,7 @@ body[data-page="form-creator"] {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--fc-accent), var(--fc-accent-2));
-  transition: width 0.22s ease;
+  transition: width var(--fc-step-progress-duration, 0.22s) ease;
 }
 
 .stepper {
@@ -885,7 +961,7 @@ body[data-page="form-creator"] {
   }
 }
 
-@keyframes previewHeadDrift {
+@keyframes previewHeadLift {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -896,14 +972,223 @@ body[data-page="form-creator"] {
   }
 }
 
-@keyframes previewCardLift {
+@keyframes previewHeadFade {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes previewHeadGlide {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes previewHeadBlur {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes previewMotionSlideForward {
+  from {
+    opacity: 0;
+    transform: translateX(18px) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes previewMotionSlideBackward {
+  from {
+    opacity: 0;
+    transform: translateX(-18px) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes previewMotionSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes previewMotionSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes previewMotionFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes previewMotionScale {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes previewMotionFlipForward {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(-18deg) translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateY(0) translateX(0);
+  }
+}
+
+@keyframes previewMotionFlipBackward {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(18deg) translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateY(0) translateX(0);
+  }
+}
+
+@keyframes previewMotionBlur {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes previewMotionDriftForward {
+  from {
+    opacity: 0;
+    transform: translateX(22px) translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes previewMotionDriftBackward {
+  from {
+    opacity: 0;
+    transform: translateX(-22px) translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes previewMotionBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes previewChipPop {
+  0% {
+    transform: scale(0.94);
+  }
+  65% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes previewChipPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes previewChipGlow {
+  0% {
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.14);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+@keyframes previewChipSweep {
+  0% {
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: brightness(1.05);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: brightness(1);
   }
 }
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260408ab">
+  <link rel="stylesheet" href="form-creator.css?v=20260408ac">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -195,6 +195,20 @@
               </div>
             </details>
 
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Motion</span>
+                  <span class="settings-accordion-title">Step Transitions</span>
+                  <span class="floating-panel-copy">Choose how each question enters, how the header moves, and how the active step chip reacts.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div id="motion-controls" class="inline-settings-grid"></div>
+              </div>
+            </details>
+
             <details class="settings-accordion" data-preview-hover="welcome" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
@@ -290,6 +304,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260408ab"></script>
+  <script type="module" src="form-creator.js?v=20260408ac"></script>
 </body>
 </html>

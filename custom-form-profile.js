@@ -38,6 +38,10 @@ export const DEFAULT_STEP_NAV_SHAPE = "rounded";
 export const DEFAULT_STEP_NAV_SIZE = "medium";
 export const DEFAULT_STEP_NAV_PLACEMENT = "below-title";
 export const DEFAULT_STEP_NAV_CLICKABLE = true;
+export const DEFAULT_STEP_MOTION_STYLE = "slide-horizontal";
+export const DEFAULT_STEP_MOTION_SPEED = "smooth";
+export const DEFAULT_STEP_HEAD_MOTION = "lift";
+export const DEFAULT_STEP_CHIP_MOTION = "pop";
 export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address", "notes"];
 
 export const BASE_REMINDER_STEPS = [
@@ -265,6 +269,41 @@ export const STEP_NAV_PLACEMENT_OPTIONS = [
   { id: "below-title", label: "Below title" },
   { id: "above-title", label: "Above title" },
   { id: "hidden", label: "Hidden" }
+];
+
+export const STEP_MOTION_STYLE_OPTIONS = [
+  { id: "slide-horizontal", label: "Slide Horizontal" },
+  { id: "slide-vertical", label: "Slide Vertical" },
+  { id: "fade", label: "Fade" },
+  { id: "scale", label: "Scale In" },
+  { id: "flip", label: "Flip" },
+  { id: "blur", label: "Blur In" },
+  { id: "drift", label: "Luxury Drift" },
+  { id: "bounce", label: "Bounce" },
+  { id: "none", label: "None" }
+];
+
+export const STEP_MOTION_SPEED_OPTIONS = [
+  { id: "quick", label: "Quick" },
+  { id: "smooth", label: "Smooth" },
+  { id: "slow", label: "Slow" },
+  { id: "cinematic", label: "Cinematic" }
+];
+
+export const STEP_HEAD_MOTION_OPTIONS = [
+  { id: "lift", label: "Lift" },
+  { id: "fade", label: "Fade" },
+  { id: "glide", label: "Glide" },
+  { id: "blur", label: "Blur" },
+  { id: "none", label: "None" }
+];
+
+export const STEP_CHIP_MOTION_OPTIONS = [
+  { id: "pop", label: "Pop" },
+  { id: "pulse", label: "Pulse" },
+  { id: "glow", label: "Glow" },
+  { id: "sweep", label: "Sweep" },
+  { id: "none", label: "None" }
 ];
 
 function safeString(value) {
@@ -511,6 +550,10 @@ export function normalizeCustomFormProfile(rawProfile) {
     stepNavSize: pickOption(profile.stepNavSize, DEFAULT_STEP_NAV_SIZE, STEP_NAV_SIZE_OPTIONS),
     stepNavPlacement: pickOption(profile.stepNavPlacement, DEFAULT_STEP_NAV_PLACEMENT, STEP_NAV_PLACEMENT_OPTIONS),
     stepNavClickable: profile.stepNavClickable !== false,
+    stepMotionStyle: pickOption(profile.stepMotionStyle, DEFAULT_STEP_MOTION_STYLE, STEP_MOTION_STYLE_OPTIONS),
+    stepMotionSpeed: pickOption(profile.stepMotionSpeed, DEFAULT_STEP_MOTION_SPEED, STEP_MOTION_SPEED_OPTIONS),
+    stepHeadMotion: pickOption(profile.stepHeadMotion, DEFAULT_STEP_HEAD_MOTION, STEP_HEAD_MOTION_OPTIONS),
+    stepChipMotion: pickOption(profile.stepChipMotion, DEFAULT_STEP_CHIP_MOTION, STEP_CHIP_MOTION_OPTIONS),
     formTitleFontSize: clampNumber(profile.formTitleFontSize, DEFAULT_FORM_TITLE_FONT_SIZE, 10, 28),
     formTitleBold: profile.formTitleBold !== false,
     stepOverrides,
