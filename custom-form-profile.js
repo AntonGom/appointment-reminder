@@ -157,6 +157,14 @@ export const CUSTOM_FIELD_TYPES = [
     helpText: "Use this when the business needs more detailed information."
   },
   {
+    id: "select",
+    label: "Dropdown",
+    shortLabel: "Select",
+    icon: "Dd",
+    placeholder: "Choose an option",
+    helpText: "Use this when the business wants clients to pick from preset options."
+  },
+  {
     id: "email",
     label: "Email",
     shortLabel: "Email",
@@ -282,6 +290,19 @@ function normalizeImageUrl(value) {
   return safeString(value).slice(0, 500);
 }
 
+export function normalizeSelectFieldOptions(rawOptions) {
+  const values = Array.isArray(rawOptions)
+    ? rawOptions
+    : typeof rawOptions === "string"
+      ? rawOptions.split(/\r?\n/g)
+      : [];
+
+  return values
+    .map(option => safeString(option).slice(0, 60))
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
 function normalizeTypography(rawTypography = {}) {
   return {
     titleFontSize: clampNumber(rawTypography.titleFontSize, DEFAULT_STEP_TITLE_FONT_SIZE, 20, 60),
@@ -347,6 +368,7 @@ export function createCustomField(type = "text") {
     placeholder: meta.placeholder,
     helpText: meta.helpText,
     imageUrl: "",
+    options: [],
     required: false,
     rememberClientAnswer: false,
     ...normalizeTypography()
@@ -392,6 +414,7 @@ function normalizeCustomField(rawField, index) {
     placeholder: placeholder.slice(0, 120),
     helpText: safeString(rawField?.helpText).slice(0, 240),
     imageUrl: normalizeImageUrl(rawField?.imageUrl || fallbackField.imageUrl || ""),
+    options: meta.id === "select" ? normalizeSelectFieldOptions(rawField?.options) : [],
     required: Boolean(rawField?.required),
     rememberClientAnswer: isContentBlockType(meta.id) ? false : rawField?.rememberClientAnswer === true,
     icon: meta.icon,

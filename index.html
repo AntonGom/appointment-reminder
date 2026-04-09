@@ -542,7 +542,8 @@
     }
 
     input,
-    textarea {
+    textarea,
+    select {
       width: 100%;
       padding: 16px 17px;
       border-radius: 16px;
@@ -567,8 +568,13 @@
       -webkit-appearance: none;
     }
 
+    select {
+      min-height: 52px;
+    }
+
     input:focus,
-    textarea:focus {
+    textarea:focus,
+    select:focus {
       border-color: var(--field-focus);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
       transform: translateY(-1px);
@@ -1094,7 +1100,7 @@
       border: 1px solid #cbd5e1;
       border-radius: 18px;
       background: #f8fafc;
-      color: var(--text-soft);
+      color: #334155;
       font-size: 13px;
       line-height: 1.55;
     }
@@ -1104,8 +1110,13 @@
       gap: 10px;
       align-items: flex-start;
       margin: 0;
+      color: #334155;
       font-size: 13px;
       font-weight: 600;
+    }
+
+    .consent-box label span {
+      color: #334155;
     }
 
     .consent-box input[type="checkbox"] {
@@ -1872,7 +1883,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260408aa"></script>
+<script src="app.js?v=20260408ab"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

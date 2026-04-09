@@ -43,10 +43,11 @@ import {
   buildPreviewStepList,
   getInlineFieldsForPage,
   getCustomFieldTypeMeta,
+  normalizeSelectFieldOptions,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260408aa";
+} from "./custom-form-profile.js?v=20260408ab";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -123,7 +124,7 @@ let latestUserSyncInterval = null;
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
 const MOBILE_CANVAS_HEIGHT = 760;
-const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea"].includes(option.id));
+const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea", "select"].includes(option.id));
 const BUILT_IN_STEP_MAP = new Map(BASE_REMINDER_STEPS.map(step => [step.id, step]));
 
 function buildTemplateField(config) {
@@ -1519,10 +1520,20 @@ function buildPreviewFieldControlMarkup(field, options = {}) {
   const fieldLabel = field.label || field.title || "Custom Question";
   const fieldType = field.type || "text";
   const placeholder = escapeHtml(field.placeholder || (fieldType === "textarea" ? "Type your answer" : ""));
+  const selectOptions = normalizeSelectFieldOptions(field.options);
 
   const inputMarkup = fieldType === "textarea"
     ? `<textarea class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" placeholder="${placeholder}"></textarea>`
-    : `<input class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" ${fieldType === "email" ? 'type="email"' : ""} ${fieldType === "date" ? 'type="date"' : ""} ${fieldType === "time" ? 'type="time"' : ""} ${fieldType === "phone" ? 'inputmode="tel"' : ""} placeholder="${fieldType === "date" || fieldType === "time" ? "" : placeholder}">`;
+    : fieldType === "select"
+      ? `
+        <select class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}">
+          <option value="">${escapeHtml(field.placeholder || "Choose an option")}</option>
+          ${selectOptions.length
+            ? selectOptions.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")
+            : `<option value="" disabled>Add dropdown options</option>`}
+        </select>
+      `
+      : `<input class="preview-field-control" data-preview-field-id="${escapeHtml(field.id)}" ${fieldType === "email" ? 'type="email"' : ""} ${fieldType === "date" ? 'type="date"' : ""} ${fieldType === "time" ? 'type="time"' : ""} ${fieldType === "phone" ? 'inputmode="tel"' : ""} placeholder="${fieldType === "date" || fieldType === "time" ? "" : placeholder}">`;
 
   return `
     <div class="preview-field-sortable ${field.isBaseField ? "is-base-field" : ""}" data-sortable-field-id="${escapeHtml(field.id)}" draggable="true">
@@ -2712,6 +2723,13 @@ function openFieldEditor(fieldId) {
       Helper copy
       <textarea id="editor-field-help" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
     </label>
+    ${step.type === "select" ? `
+      <label>
+        Dropdown options
+        <textarea id="editor-field-options" maxlength="1200" placeholder="Option 1&#10;Option 2&#10;Option 3">${escapeHtml(normalizeSelectFieldOptions(step.options).join("\n"))}</textarea>
+      </label>
+      <div class="editor-inline-note">Add one option per line. Clients will pick from these choices in Send Reminder.</div>
+    ` : ""}
     ${shouldShowRememberToggle ? `
       <label class="toggle-row">
         <span>Remember this answer for future visits and show it in Client Details</span>
@@ -2730,6 +2748,7 @@ function openFieldEditor(fieldId) {
   const typeSelect = document.getElementById("editor-field-type");
   const placeholderInput = document.getElementById("editor-field-placeholder");
   const helpInput = document.getElementById("editor-field-help");
+  const optionsInput = document.getElementById("editor-field-options");
   const rememberInput = document.getElementById("editor-field-remember-answer");
   const deleteButton = document.getElementById("editor-delete-field");
 
@@ -2751,8 +2770,15 @@ function openFieldEditor(fieldId) {
 
           if (updates.type === "date" || updates.type === "time") {
             nextField.placeholder = "";
+          } else if (updates.type === "select") {
+            nextField.placeholder = nextField.placeholder || nextMeta.placeholder;
+            nextField.options = normalizeSelectFieldOptions(nextField.options);
           } else if (!nextField.placeholder) {
             nextField.placeholder = nextMeta.placeholder;
+          }
+
+          if (updates.type !== "select") {
+            nextField.options = [];
           }
 
           return nextField;
@@ -2769,6 +2795,7 @@ function openFieldEditor(fieldId) {
 
   typeSelect?.addEventListener("change", event => {
     patchField({ type: event.target.value });
+    openFieldEditor(fieldId);
   });
 
   placeholderInput?.addEventListener("input", event => {
@@ -2777,6 +2804,10 @@ function openFieldEditor(fieldId) {
 
   helpInput?.addEventListener("input", event => {
     patchField({ helpText: event.target.value.slice(0, 160) });
+  });
+
+  optionsInput?.addEventListener("input", event => {
+    patchField({ options: normalizeSelectFieldOptions(event.target.value) });
   });
 
   rememberInput?.addEventListener("change", event => {

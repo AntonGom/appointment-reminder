@@ -601,7 +601,8 @@ body[data-page="form-creator"] {
 }
 
 .question-wrap input,
-.question-wrap textarea {
+.question-wrap textarea,
+.question-wrap select {
   width: 100%;
   padding: 16px 17px;
   border-radius: 16px;
@@ -615,6 +616,10 @@ body[data-page="form-creator"] {
 .question-wrap textarea::placeholder {
   color: var(--fc-field-placeholder, #6b7280);
   opacity: 1;
+}
+
+.question-wrap select {
+  min-height: 58px;
 }
 
 .question-shell-edit-zone {

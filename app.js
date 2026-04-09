@@ -36,7 +36,7 @@ const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408aa";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260408ab";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -1842,9 +1842,24 @@ function buildWizardFieldControlMarkup(field, options = {}) {
   const groupClassName = options.isBuiltIn
     ? "wizard-field-group is-built-in"
     : "wizard-field-group";
+  const selectOptions = Array.isArray(field?.options)
+    ? field.options
+        .map(option => String(option || "").trim().slice(0, 60))
+        .filter(Boolean)
+        .slice(0, 20)
+    : [];
   const inputMarkup = type === "textarea"
     ? `<textarea id="${field.id}" placeholder="${placeholder.replace(/"/g, "&quot;")}"></textarea>`
-    : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${(type === "date" || type === "time" ? "" : placeholder).replace(/"/g, "&quot;")}">`;
+    : type === "select"
+      ? `
+        <select id="${field.id}">
+          <option value="">${escapeHtml(placeholder || "Choose an option")}</option>
+          ${selectOptions.length
+            ? selectOptions.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join("")
+            : `<option value="" disabled>Add dropdown options in Form Creator</option>`}
+        </select>
+      `
+      : `<input id="${field.id}" ${type === "email" ? 'type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false"' : ""} ${type === "date" ? 'type="date"' : ""} ${type === "time" ? 'type="time"' : ""} ${type === "phone" ? 'inputmode="tel" autocomplete="tel"' : ""} placeholder="${(type === "date" || type === "time" ? "" : placeholder).replace(/"/g, "&quot;")}">`;
   const mapMarkup = options.includeMapPreview
     ? `
       <div id="map-preview" class="map-preview" aria-live="polite">
