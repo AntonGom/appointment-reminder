@@ -609,7 +609,7 @@ export function buildPreviewStepList(profile) {
     label: page.title,
     placeholder: "",
     helpText: "",
-    icon: "#"
+    icon: ""
   }));
   const legacyFieldPages = topLevelCustomFields.map(field => ({
       id: field.id,
