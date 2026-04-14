@@ -120,25 +120,52 @@
     }
 
     .status-banner {
-      padding: 15px 18px;
-      border-radius: 18px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 2400;
+      width: min(560px, calc(100vw - 32px));
+      padding: 18px 20px;
+      border-radius: 22px;
       font-size: 16px;
       font-weight: 700;
       line-height: 1.5;
+      text-align: center;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
+      backdrop-filter: blur(20px);
+      pointer-events: none;
+    }
+
+    .status-banner.loading::before {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      animation: spin 0.85s linear infinite;
+      opacity: 0.8;
+      flex: 0 0 18px;
     }
 
     .status-banner.success {
-      background: var(--success-bg);
+      background: rgba(220, 252, 231, 0.94);
       color: var(--success);
     }
 
     .status-banner.error {
-      background: var(--error-bg);
+      background: rgba(254, 226, 226, 0.96);
       color: var(--error);
     }
 
     .status-banner.info {
-      background: var(--info-bg);
+      background: rgba(219, 234, 254, 0.95);
       color: var(--info);
     }
 
@@ -541,6 +568,36 @@
       width: 100%;
       height: 100%;
       display: block;
+    }
+
+    .button-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button-spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(37, 99, 235, 0.2);
+      border-top-color: currentColor;
+      animation: spin 0.85s linear infinite;
+    }
+
+    .button-with-icon.is-busy .button-glyph {
+      display: none;
+    }
+
+    .button-with-icon.is-busy .button-spinner {
+      display: inline-block;
+    }
+
+    .button-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .client-form-grid {
@@ -1517,7 +1574,7 @@
       </div>
     </section>
 
-    <div id="status-banner" class="status-banner" hidden></div>
+    <div id="status-banner" class="status-banner" role="status" aria-live="polite" hidden></div>
 
     <div class="grid">
       <section class="panel">
@@ -1593,7 +1650,19 @@
                       <input id="import-clients-input" type="file" accept=".json,.csv,application/json,text/csv" hidden>
                       <button id="export-clients-json-button" class="secondary-button" type="button">Export JSON</button>
                       <button id="export-clients-csv-button" class="secondary-button" type="button">Export CSV</button>
-                      <button id="import-clients-button" class="secondary-button" type="button">Import</button>
+                      <button id="import-clients-button" class="secondary-button button-with-icon" type="button">
+                        <span class="button-icon" aria-hidden="true">
+                          <span class="button-glyph">
+                            <svg viewBox="0 0 24 24" fill="none" focusable="false">
+                              <path d="M12 3.5V14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                              <path d="M7.5 10L12 14.5L16.5 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                              <path d="M4.5 18.5H19.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            </svg>
+                          </span>
+                          <span class="button-spinner" aria-hidden="true"></span>
+                        </span>
+                        <span class="button-label" data-button-label>Import</span>
+                      </button>
                     </div>
                     <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
                     <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
@@ -1697,6 +1766,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="account.js?v=20260414a"></script>
+  <script type="module" src="account.js?v=20260414b"></script>
 </body>
 </html>

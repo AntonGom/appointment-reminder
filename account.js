@@ -59,6 +59,7 @@ let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
 let currentAuthUserId = "";
+let statusBannerTimer = 0;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 const CLIENT_EXPORT_COLUMNS = [
@@ -85,9 +86,14 @@ function setAuthFormsEnabled(enabled) {
   });
 }
 
-function setStatus(message, type = "info") {
+function setStatus(message, type = "info", options = {}) {
   if (!statusBanner) {
     return;
+  }
+
+  if (statusBannerTimer) {
+    window.clearTimeout(statusBannerTimer);
+    statusBannerTimer = 0;
   }
 
   if (!message) {
@@ -99,7 +105,16 @@ function setStatus(message, type = "info") {
 
   statusBanner.hidden = false;
   statusBanner.textContent = message;
-  statusBanner.className = `status-banner ${type}`;
+  statusBanner.className = `status-banner ${type}${options.loading ? " loading" : ""}`;
+
+  if (type === "success" || type === "error") {
+    statusBannerTimer = window.setTimeout(() => {
+      statusBanner.hidden = true;
+      statusBanner.textContent = "";
+      statusBanner.className = "status-banner";
+      statusBannerTimer = 0;
+    }, type === "error" ? 4600 : 3200);
+  }
 }
 
 function setClientFormStatus(message, type = "info") {
@@ -188,11 +203,21 @@ function setButtonBusy(button, isBusy, busyText) {
     return;
   }
 
+  const labelNode = button.querySelector("[data-button-label]");
+
   if (!button.dataset.defaultText) {
-    button.dataset.defaultText = button.textContent;
+    button.dataset.defaultText = labelNode ? labelNode.textContent : button.textContent;
   }
 
   button.disabled = isBusy;
+  button.classList.toggle("is-busy", Boolean(isBusy));
+  button.setAttribute("aria-busy", isBusy ? "true" : "false");
+
+  if (labelNode) {
+    labelNode.textContent = isBusy ? busyText : button.dataset.defaultText;
+    return;
+  }
+
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
 }
 
@@ -2867,7 +2892,7 @@ async function handleImportClientsFile(event) {
   }
 
   setButtonBusy(importClientsButton, true, "Importing...");
-  setStatus("Importing client data...", "info");
+  setStatus("Importing client data...", "info", { loading: true });
 
   try {
     const fileText = await file.text();
