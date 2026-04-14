@@ -74,6 +74,22 @@ const CLIENT_EXPORT_COLUMNS = [
   "created_at",
   "updated_at"
 ];
+const IMPORT_FIELD_ALIASES = {
+  importId: ["id", "client_id"],
+  clientName: ["client_name", "name", "full_name", "client"],
+  clientEmail: ["client_email", "email", "email_address"],
+  clientPhone: ["client_phone", "phone", "phone_number", "mobile", "mobile_phone"],
+  serviceAddress: ["service_address", "address", "property_address", "listing_address", "home_address"],
+  notes: ["notes", "additional_details", "client_notes", "internal_notes"],
+  profileCustomAnswers: ["profile_custom_answers"]
+};
+const IMPORT_IGNORED_FIELD_KEYS = new Set([
+  "created_at",
+  "updated_at",
+  "owner_id",
+  "format",
+  "exported_at"
+]);
 
 function setAuthFormsEnabled(enabled) {
   [signUpForm, signInForm].forEach(form => {
@@ -409,9 +425,103 @@ function parseCsvRecords(text) {
 
 function normalizeImportHeader(header) {
   return String(header || "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildNormalizedImportValueMap(rawRecord) {
+  if (!rawRecord || typeof rawRecord !== "object") {
+    return {};
+  }
+
+  return Object.entries(rawRecord).reduce((map, [rawKey, rawValue]) => {
+    if (String(rawKey || "").startsWith("__")) {
+      return map;
+    }
+
+    const normalizedKey = normalizeImportHeader(rawKey);
+
+    if (!normalizedKey || Object.prototype.hasOwnProperty.call(map, normalizedKey)) {
+      return map;
+    }
+
+    map[normalizedKey] = rawValue;
+    return map;
+  }, {});
+}
+
+function hasImportedField(valueMap, aliases = []) {
+  return aliases.some(alias => Object.prototype.hasOwnProperty.call(valueMap, alias));
+}
+
+function getImportedFieldValue(valueMap, aliases = []) {
+  const match = aliases.find(alias => Object.prototype.hasOwnProperty.call(valueMap, alias));
+  return match ? valueMap[match] : "";
+}
+
+function serializeImportedAnswerValue(value) {
+  if (value == null) {
+    return "";
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map(entry => serializeImportedAnswerValue(entry))
+      .filter(Boolean)
+      .join(", ")
+      .trim();
+  }
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  return String(value).trim();
+}
+
+function formatImportedFieldLabel(rawLabel, normalizedKey) {
+  const sourceLabel = String(rawLabel || normalizedKey || "").trim();
+
+  if (!sourceLabel) {
+    return "Saved detail";
+  }
+
+  const words = sourceLabel
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ");
+
+  const acronymWords = new Set(["id", "url", "mls", "hoa", "api", "sms", "zip"]);
+
+  return words
+    .map(word => {
+      const normalizedWord = String(word || "").trim().toLowerCase();
+
+      if (!normalizedWord) {
+        return "";
+      }
+
+      if (acronymWords.has(normalizedWord)) {
+        return normalizedWord.toUpperCase();
+      }
+
+      return normalizedWord.charAt(0).toUpperCase() + normalizedWord.slice(1);
+    })
+    .filter(Boolean)
+    .join(" ");
 }
 
 function parseImportedClientJson(text) {
@@ -432,17 +542,24 @@ function parseImportedClientCsv(text) {
     throw new Error("That CSV file does not have any client rows yet.");
   }
 
-  const headers = rows[0].map(normalizeImportHeader);
+  const rawHeaders = rows[0].map(header => String(header || "").trim());
+  const headers = rawHeaders.map(normalizeImportHeader);
 
   return rows.slice(1).map(row => {
-    return headers.reduce((record, header, index) => {
+    const labelMap = {};
+
+    const record = headers.reduce((accumulator, header, index) => {
       if (!header) {
-        return record;
+        return accumulator;
       }
 
-      record[header] = row[index] ?? "";
-      return record;
+      accumulator[header] = row[index] ?? "";
+      labelMap[header] = rawHeaders[index] || header;
+      return accumulator;
     }, {});
+
+    record.__import_labels = labelMap;
+    return record;
   });
 }
 
@@ -462,44 +579,124 @@ function parseImportedProfileAnswers(value) {
   }
 }
 
+function buildImportedProfileAnswers(rawRecord, valueMap, consumedKeys) {
+  const labelMap = rawRecord?.__import_labels && typeof rawRecord.__import_labels === "object"
+    ? rawRecord.__import_labels
+    : {};
+  const importedAnswers = {
+    ...parseImportedProfileAnswers(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.profileCustomAnswers))
+  };
+  const timestamp = new Date().toISOString();
+
+  Object.entries(rawRecord || {}).forEach(([rawKey, rawValue]) => {
+    if (String(rawKey || "").startsWith("__")) {
+      return;
+    }
+
+    const normalizedKey = normalizeImportHeader(rawKey);
+
+    if (
+      !normalizedKey
+      || consumedKeys.has(normalizedKey)
+      || IMPORT_IGNORED_FIELD_KEYS.has(normalizedKey)
+    ) {
+      return;
+    }
+
+    const displayValue = serializeImportedAnswerValue(rawValue).slice(0, 1200);
+
+    if (!displayValue) {
+      return;
+    }
+
+    const fieldId = `imported_custom_${normalizedKey}`;
+    importedAnswers[fieldId] = {
+      field_id: fieldId,
+      label: formatImportedFieldLabel(labelMap[normalizedKey] || rawKey, normalizedKey),
+      type: "text",
+      raw_value: displayValue,
+      display_value: displayValue,
+      updated_at: timestamp
+    };
+  });
+
+  return importedAnswers;
+}
+
 function normalizeImportedClientRecord(rawRecord, ownerId) {
   if (!rawRecord || typeof rawRecord !== "object") {
     return null;
   }
 
-  const importId = String(rawRecord.id || rawRecord.client_id || "").trim();
-  const clientName = String(rawRecord.client_name || rawRecord.name || "").trim().slice(0, 30);
-  const clientEmail = String(rawRecord.client_email || rawRecord.email || "").trim();
-  const clientPhone = normalizePhone(rawRecord.client_phone || rawRecord.phone || "");
-  const serviceAddress = String(rawRecord.service_address || rawRecord.address || "").trim().slice(0, 160);
-  const notes = String(rawRecord.notes || rawRecord.additional_details || "").trim().slice(0, 1200);
+  const valueMap = buildNormalizedImportValueMap(rawRecord);
+  const importId = String(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.importId) || "").trim();
+  const hasClientName = hasImportedField(valueMap, IMPORT_FIELD_ALIASES.clientName);
+  const hasClientEmail = hasImportedField(valueMap, IMPORT_FIELD_ALIASES.clientEmail);
+  const hasClientPhone = hasImportedField(valueMap, IMPORT_FIELD_ALIASES.clientPhone);
+  const hasServiceAddress = hasImportedField(valueMap, IMPORT_FIELD_ALIASES.serviceAddress);
+  const hasNotes = hasImportedField(valueMap, IMPORT_FIELD_ALIASES.notes);
+  const clientName = String(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.clientName) || "").trim().slice(0, 30);
+  const clientEmail = String(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.clientEmail) || "").trim();
+  const clientPhone = normalizePhone(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.clientPhone) || "");
+  const serviceAddress = String(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.serviceAddress) || "").trim().slice(0, 160);
+  const notes = String(getImportedFieldValue(valueMap, IMPORT_FIELD_ALIASES.notes) || "").trim().slice(0, 1200);
+  const consumedKeys = new Set([
+    ...IMPORT_FIELD_ALIASES.importId,
+    ...IMPORT_FIELD_ALIASES.clientName,
+    ...IMPORT_FIELD_ALIASES.clientEmail,
+    ...IMPORT_FIELD_ALIASES.clientPhone,
+    ...IMPORT_FIELD_ALIASES.serviceAddress,
+    ...IMPORT_FIELD_ALIASES.notes,
+    ...IMPORT_FIELD_ALIASES.profileCustomAnswers
+  ]);
+  const profileCustomAnswers = buildImportedProfileAnswers(rawRecord, valueMap, consumedKeys);
+  const hasRecognizedIdentity = Boolean(clientName || clientEmail || clientPhone);
 
-  if (!clientName && !clientEmail && !clientPhone) {
+  if (!importId && !hasRecognizedIdentity && !Object.keys(profileCustomAnswers).length) {
     return null;
   }
 
-  if (clientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(clientEmail)) {
+  if (hasClientEmail && clientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(clientEmail)) {
     return null;
   }
 
-  const profileCustomAnswers = parseImportedProfileAnswers(rawRecord.profile_custom_answers);
   const payload = {
     owner_id: ownerId,
-    client_name: clientName,
-    client_email: clientEmail,
-    client_phone: clientPhone,
-    service_address: serviceAddress,
-    notes,
     updated_at: new Date().toISOString()
   };
+
+  if (hasClientName) {
+    payload.client_name = clientName;
+  }
+
+  if (hasClientEmail) {
+    payload.client_email = clientEmail;
+  }
+
+  if (hasClientPhone) {
+    payload.client_phone = clientPhone;
+  }
+
+  if (hasServiceAddress) {
+    payload.service_address = serviceAddress;
+  }
+
+  if (hasNotes) {
+    payload.notes = notes;
+  }
 
   if (Object.keys(profileCustomAnswers).length) {
     payload.profile_custom_answers = profileCustomAnswers;
   }
 
+  if (Object.keys(payload).length <= 2) {
+    return null;
+  }
+
   return {
     importId,
-    payload
+    payload,
+    canInsert: hasRecognizedIdentity
   };
 }
 
@@ -2959,10 +3156,33 @@ async function handleImportClientsFile(event) {
       throw new Error("No valid clients were found in that file.");
     }
 
-    const existingClientIds = new Set((savedClients || []).map(client => String(client?.id || "").trim()).filter(Boolean));
-    const updateRecords = normalizedRecords.filter(record => record.importId && existingClientIds.has(record.importId));
+    const existingClientsById = new Map(
+      (savedClients || [])
+        .map(client => [String(client?.id || "").trim(), client])
+        .filter(([clientId]) => Boolean(clientId))
+    );
+    const existingClientIds = new Set(existingClientsById.keys());
+    const updateRecords = normalizedRecords
+      .filter(record => record.importId && existingClientIds.has(record.importId))
+      .map(record => {
+        const existingClient = existingClientsById.get(record.importId);
+        const nextPayload = { ...record.payload };
+        const importedProfileAnswers = normalizeProfileCustomAnswers(record.payload.profile_custom_answers);
+
+        if (Object.keys(importedProfileAnswers).length) {
+          nextPayload.profile_custom_answers = {
+            ...normalizeProfileCustomAnswers(existingClient?.profile_custom_answers),
+            ...importedProfileAnswers
+          };
+        }
+
+        return {
+          importId: record.importId,
+          payload: nextPayload
+        };
+      });
     const insertRecords = normalizedRecords
-      .filter(record => !record.importId || !existingClientIds.has(record.importId))
+      .filter(record => record.canInsert && (!record.importId || !existingClientIds.has(record.importId)))
       .map(record => record.payload);
 
     for (const record of updateRecords) {
