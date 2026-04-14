@@ -1309,8 +1309,7 @@ function applySavedClientPrefill() {
       name: client.name || "",
       email: client.email || "",
       phone: client.phone || "",
-      address: client.address || "",
-      notes: client.notes || ""
+      address: client.address || ""
     };
 
     Object.entries(mappedFields).forEach(([fieldId, value]) => {

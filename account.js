@@ -46,6 +46,7 @@ const exportClientsJsonButton = document.getElementById("export-clients-json-but
 const exportClientsCsvButton = document.getElementById("export-clients-csv-button");
 const importClientsButton = document.getElementById("import-clients-button");
 const importClientsInput = document.getElementById("import-clients-input");
+const clientsMoreActionsMenu = document.getElementById("clients-more-actions-menu");
 
 let supabase = null;
 let appConfig = null;
@@ -133,6 +134,12 @@ function setClientFormStatus(message, type = "info") {
   clientFormStatus.textContent = message;
   clientFormStatus.className = `inline-status ${type}`;
   clientFormStatus.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeClientsMoreActionsMenu() {
+  if (clientsMoreActionsMenu?.open) {
+    clientsMoreActionsMenu.open = false;
+  }
 }
 
 function openClientModal() {
@@ -1726,6 +1733,34 @@ function renderRememberedClientAnswers(client) {
   `;
 }
 
+function renderSavedClientProfile(client) {
+  const serviceLocation = String(client?.service_address || "").trim();
+  const clientNotes = String(client?.notes || "").trim();
+  const notesMarkup = clientNotes
+    ? escapeHtml(clientNotes).replace(/\n/g, "<br>")
+    : "No internal client notes saved yet.";
+
+  return `
+    <div class="expanded-client-block expanded-client-block-plain">
+      <div class="expanded-client-label">Saved Client Profile</div>
+      <div class="client-profile-list">
+        <div class="client-profile-item">
+          <div class="client-memory-label">Service Location</div>
+          <div class="client-profile-value${serviceLocation ? "" : " is-empty"}">
+            ${escapeHtml(serviceLocation || "Not saved yet.")}
+          </div>
+        </div>
+        <div class="client-profile-item">
+          <div class="client-memory-label">Client Notes</div>
+          <div class="client-profile-value${clientNotes ? "" : " is-empty"}">
+            ${notesMarkup}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderAppointmentAnswerHistory(client) {
   const appointmentGroups = getAppointmentsWithCustomAnswers(client);
 
@@ -1741,7 +1776,17 @@ function renderAppointmentAnswerHistory(client) {
           const dateLabel = formatAppointmentDate(appointment.service_date);
           const timeLabel = formatAppointmentTime(appointment.service_time);
           const headerLabel = [dateLabel, timeLabel].filter(Boolean).join(" at ") || "Saved appointment";
-          const subLabel = String(appointment.service_location || appointment.notes || "").trim();
+          const detailParts = [];
+
+          if (String(appointment.service_location || "").trim()) {
+            detailParts.push(`Location: ${String(appointment.service_location || "").trim()}`);
+          }
+
+          if (String(appointment.notes || "").trim()) {
+            detailParts.push(`Reminder note: ${String(appointment.notes || "").trim()}`);
+          }
+
+          const subLabel = detailParts.join(" | ");
 
           return `
             <div class="client-answer-group">
@@ -1818,6 +1863,7 @@ function getLatestReminderStatusAt(client, targetStatus) {
 function renderExpandedClientDetails(client) {
   return `
     <div class="expanded-client-panel">
+      ${renderSavedClientProfile(client)}
       ${renderRememberedClientAnswers(client)}
       ${renderAppointmentAnswerHistory(client)}
       <div class="expanded-client-block expanded-client-block-plain expanded-reminder-activity-shell">
@@ -2158,8 +2204,8 @@ function setClientEditMode(client = null) {
 
   if (clientModalCopy) {
     clientModalCopy.textContent = editingClientId
-      ? "Update the saved contact details below."
-      : "Enter the client details you want saved to this account.";
+      ? "Update the saved contact details and private client notes below."
+      : "Enter the client details and any private notes you want saved to this account.";
   }
 
   if (saveClientButton) {
@@ -2820,6 +2866,7 @@ async function handleSeedClients() {
 }
 
 function handleExportClientsJson() {
+  closeClientsMoreActionsMenu();
   const records = buildClientExportRecords();
 
   if (!records.length) {
@@ -2845,6 +2892,7 @@ function handleExportClientsJson() {
 }
 
 function handleExportClientsCsv() {
+  closeClientsMoreActionsMenu();
   const records = buildClientExportRecords();
 
   if (!records.length) {
@@ -2868,6 +2916,8 @@ async function handleImportClientsFile(event) {
   if (!file) {
     return;
   }
+
+  closeClientsMoreActionsMenu();
 
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before importing clients.", "error");
@@ -2964,7 +3014,6 @@ function useClientInReminder(clientId) {
       email: client.client_email || "",
       phone: client.client_phone ? formatPhone(client.client_phone) : "",
       address: client.service_address || "",
-      notes: client.notes || "",
       profileCustomAnswers: normalizeProfileCustomAnswers(client.profile_custom_answers)
     })
   );
@@ -3260,6 +3309,14 @@ async function initAccountPage() {
       closeClientDetailModal();
     } else if (event.key === "Escape" && statusHelpModal && !statusHelpModal.hidden) {
       closeStatusHelpModal();
+    } else if (event.key === "Escape" && clientsMoreActionsMenu?.open) {
+      closeClientsMoreActionsMenu();
+    }
+  });
+
+  document.addEventListener("click", event => {
+    if (clientsMoreActionsMenu?.open && !clientsMoreActionsMenu.contains(event.target)) {
+      closeClientsMoreActionsMenu();
     }
   });
 
