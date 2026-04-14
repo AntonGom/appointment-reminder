@@ -42,6 +42,10 @@ const clientsSortSelect = document.getElementById("clients-sort");
 const clientsList = document.getElementById("clients-list");
 const seedClientsButton = document.getElementById("seed-clients-button");
 const contactsCard = document.getElementById("contacts-card");
+const exportClientsJsonButton = document.getElementById("export-clients-json-button");
+const exportClientsCsvButton = document.getElementById("export-clients-csv-button");
+const importClientsButton = document.getElementById("import-clients-button");
+const importClientsInput = document.getElementById("import-clients-input");
 
 let supabase = null;
 let appConfig = null;
@@ -57,6 +61,17 @@ let isLoadingClients = false;
 let currentAuthUserId = "";
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
+const CLIENT_EXPORT_COLUMNS = [
+  "id",
+  "client_name",
+  "client_email",
+  "client_phone",
+  "service_address",
+  "notes",
+  "profile_custom_answers",
+  "created_at",
+  "updated_at"
+];
 
 function setAuthFormsEnabled(enabled) {
   [signUpForm, signInForm].forEach(form => {
@@ -248,6 +263,254 @@ function normalizeProfileCustomAnswers(value) {
 
     return accumulator;
   }, {});
+}
+
+function buildClientExportRecords() {
+  return (savedClients || []).map(client => ({
+    id: String(client?.id || "").trim(),
+    client_name: String(client?.client_name || "").trim(),
+    client_email: String(client?.client_email || "").trim(),
+    client_phone: String(client?.client_phone || "").trim(),
+    service_address: String(client?.service_address || "").trim(),
+    notes: String(client?.notes || "").trim(),
+    profile_custom_answers: normalizeProfileCustomAnswers(client?.profile_custom_answers),
+    created_at: String(client?.created_at || "").trim(),
+    updated_at: String(client?.updated_at || "").trim()
+  }));
+}
+
+function downloadTextFile(filename, text, mimeType = "text/plain;charset=utf-8") {
+  const blob = new Blob([text], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 500);
+}
+
+function buildExportFilename(extension) {
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  return `client-data-${dateStamp}.${extension}`;
+}
+
+function toCsvCell(value) {
+  const stringValue = String(value ?? "");
+  if (!/[",\r\n]/.test(stringValue)) {
+    return stringValue;
+  }
+
+  return `"${stringValue.replace(/"/g, "\"\"")}"`;
+}
+
+function serializeClientsToCsv(records) {
+  const header = CLIENT_EXPORT_COLUMNS.join(",");
+  const rows = (records || []).map(record => {
+    return CLIENT_EXPORT_COLUMNS.map(column => {
+      const rawValue = column === "profile_custom_answers"
+        ? JSON.stringify(record?.[column] || {})
+        : record?.[column] ?? "";
+      return toCsvCell(rawValue);
+    }).join(",");
+  });
+
+  return [header, ...rows].join("\n");
+}
+
+function parseCsvRecords(text) {
+  const rows = [];
+  let currentField = "";
+  let currentRow = [];
+  let insideQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (insideQuotes) {
+      if (char === "\"" && nextChar === "\"") {
+        currentField += "\"";
+        index += 1;
+      } else if (char === "\"") {
+        insideQuotes = false;
+      } else {
+        currentField += char;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      insideQuotes = true;
+      continue;
+    }
+
+    if (char === ",") {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if (char === "\r") {
+      continue;
+    }
+
+    if (char === "\n") {
+      currentRow.push(currentField);
+      rows.push(currentRow);
+      currentRow = [];
+      currentField = "";
+      continue;
+    }
+
+    currentField += char;
+  }
+
+  if (currentField.length || currentRow.length) {
+    currentRow.push(currentField);
+    rows.push(currentRow);
+  }
+
+  return rows.filter(row => row.some(cell => String(cell || "").trim()));
+}
+
+function normalizeImportHeader(header) {
+  return String(header || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function parseImportedClientJson(text) {
+  const parsed = JSON.parse(text);
+  const records = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.clients) ? parsed.clients : null;
+
+  if (!records) {
+    throw new Error("That JSON file does not look like a client export.");
+  }
+
+  return records;
+}
+
+function parseImportedClientCsv(text) {
+  const rows = parseCsvRecords(text);
+
+  if (rows.length < 2) {
+    throw new Error("That CSV file does not have any client rows yet.");
+  }
+
+  const headers = rows[0].map(normalizeImportHeader);
+
+  return rows.slice(1).map(row => {
+    return headers.reduce((record, header, index) => {
+      if (!header) {
+        return record;
+      }
+
+      record[header] = row[index] ?? "";
+      return record;
+    }, {});
+  });
+}
+
+function parseImportedProfileAnswers(value) {
+  if (!value) {
+    return {};
+  }
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return normalizeProfileCustomAnswers(value);
+  }
+
+  try {
+    return normalizeProfileCustomAnswers(JSON.parse(String(value || "").trim()));
+  } catch (_error) {
+    return {};
+  }
+}
+
+function normalizeImportedClientRecord(rawRecord, ownerId) {
+  if (!rawRecord || typeof rawRecord !== "object") {
+    return null;
+  }
+
+  const importId = String(rawRecord.id || rawRecord.client_id || "").trim();
+  const clientName = String(rawRecord.client_name || rawRecord.name || "").trim().slice(0, 30);
+  const clientEmail = String(rawRecord.client_email || rawRecord.email || "").trim();
+  const clientPhone = normalizePhone(rawRecord.client_phone || rawRecord.phone || "");
+  const serviceAddress = String(rawRecord.service_address || rawRecord.address || "").trim().slice(0, 160);
+  const notes = String(rawRecord.notes || rawRecord.additional_details || "").trim().slice(0, 1200);
+
+  if (!clientName && !clientEmail && !clientPhone) {
+    return null;
+  }
+
+  if (clientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(clientEmail)) {
+    return null;
+  }
+
+  const profileCustomAnswers = parseImportedProfileAnswers(rawRecord.profile_custom_answers);
+  const payload = {
+    owner_id: ownerId,
+    client_name: clientName,
+    client_email: clientEmail,
+    client_phone: clientPhone,
+    service_address: serviceAddress,
+    notes,
+    updated_at: new Date().toISOString()
+  };
+
+  if (Object.keys(profileCustomAnswers).length) {
+    payload.profile_custom_answers = profileCustomAnswers;
+  }
+
+  return {
+    importId,
+    payload
+  };
+}
+
+async function persistImportedClientUpdate(clientId, ownerId, payload) {
+  let { error } = await supabase
+    .from("clients")
+    .update(payload)
+    .eq("id", clientId)
+    .eq("owner_id", ownerId);
+
+  if (error && isMissingColumnError(error, "profile_custom_answers")) {
+    const { profile_custom_answers, ...fallbackPayload } = payload;
+    ({ error } = await supabase
+      .from("clients")
+      .update(fallbackPayload)
+      .eq("id", clientId)
+      .eq("owner_id", ownerId));
+  }
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function persistImportedClientInserts(rows) {
+  if (!rows.length) {
+    return;
+  }
+
+  let { error } = await supabase
+    .from("clients")
+    .insert(rows);
+
+  if (error && isMissingColumnError(error, "profile_custom_answers")) {
+    const fallbackRows = rows.map(({ profile_custom_answers, ...row }) => row);
+    ({ error } = await supabase
+      .from("clients")
+      .insert(fallbackRows));
+  }
+
+  if (error) {
+    throw error;
+  }
 }
 
 function getTierKey(user) {
@@ -2531,6 +2794,136 @@ async function handleSeedClients() {
   }
 }
 
+function handleExportClientsJson() {
+  const records = buildClientExportRecords();
+
+  if (!records.length) {
+    setStatus("Save at least one client before exporting client data.", "info");
+    return;
+  }
+
+  downloadTextFile(
+    buildExportFilename("json"),
+    JSON.stringify(
+      {
+        format: "appointment-reminder-clients-v1",
+        exported_at: new Date().toISOString(),
+        clients: records
+      },
+      null,
+      2
+    ),
+    "application/json;charset=utf-8"
+  );
+
+  setStatus(`Exported ${records.length} client${records.length === 1 ? "" : "s"} as JSON.`, "success");
+}
+
+function handleExportClientsCsv() {
+  const records = buildClientExportRecords();
+
+  if (!records.length) {
+    setStatus("Save at least one client before exporting client data.", "info");
+    return;
+  }
+
+  downloadTextFile(
+    buildExportFilename("csv"),
+    serializeClientsToCsv(records),
+    "text/csv;charset=utf-8"
+  );
+
+  setStatus(`Exported ${records.length} client${records.length === 1 ? "" : "s"} as CSV.`, "success");
+}
+
+async function handleImportClientsFile(event) {
+  const fileInput = event.currentTarget;
+  const file = fileInput?.files?.[0] || null;
+
+  if (!file) {
+    return;
+  }
+
+  if (!supabase) {
+    setStatus("Add your Supabase keys in Vercel before importing clients.", "error");
+    fileInput.value = "";
+    return;
+  }
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    setStatus("Please sign in before importing client data.", "error");
+    fileInput.value = "";
+    return;
+  }
+
+  if (!isBronzeUser(user)) {
+    setStatus("Bronze is required to import client data.", "error");
+    fileInput.value = "";
+    return;
+  }
+
+  setButtonBusy(importClientsButton, true, "Importing...");
+  setStatus("Importing client data...", "info");
+
+  try {
+    const fileText = await file.text();
+    const extension = String(file.name.split(".").pop() || "").trim().toLowerCase();
+    const rawRecords = extension === "csv"
+      ? parseImportedClientCsv(fileText)
+      : parseImportedClientJson(fileText);
+
+    const normalizedRecords = rawRecords
+      .map(record => normalizeImportedClientRecord(record, user.id))
+      .filter(Boolean);
+
+    if (!normalizedRecords.length) {
+      throw new Error("No valid clients were found in that file.");
+    }
+
+    const existingClientIds = new Set((savedClients || []).map(client => String(client?.id || "").trim()).filter(Boolean));
+    const updateRecords = normalizedRecords.filter(record => record.importId && existingClientIds.has(record.importId));
+    const insertRecords = normalizedRecords
+      .filter(record => !record.importId || !existingClientIds.has(record.importId))
+      .map(record => record.payload);
+
+    for (const record of updateRecords) {
+      await persistImportedClientUpdate(record.importId, user.id, record.payload);
+    }
+
+    await persistImportedClientInserts(insertRecords);
+    await loadSavedClients();
+
+    const importedCount = updateRecords.length + insertRecords.length;
+    const skippedCount = rawRecords.length - importedCount;
+    const summary = [
+      `Imported ${importedCount} client${importedCount === 1 ? "" : "s"}`
+    ];
+
+    if (updateRecords.length) {
+      summary.push(`${updateRecords.length} updated`);
+    }
+
+    if (insertRecords.length) {
+      summary.push(`${insertRecords.length} added`);
+    }
+
+    if (skippedCount > 0) {
+      summary.push(`${skippedCount} skipped`);
+    }
+
+    setStatus(`${summary.join(" - ")}.`, "success");
+  } catch (error) {
+    setStatus(error.message || "Unable to import client data.", "error");
+  } finally {
+    setButtonBusy(importClientsButton, false);
+    fileInput.value = "";
+  }
+}
+
 function useClientInReminder(clientId) {
   const client = savedClients.find(entry => entry.id === clientId);
 
@@ -2876,6 +3269,24 @@ async function initAccountPage() {
 
   if (seedClientsButton) {
     seedClientsButton.addEventListener("click", handleSeedClients);
+  }
+
+  if (exportClientsJsonButton) {
+    exportClientsJsonButton.addEventListener("click", handleExportClientsJson);
+  }
+
+  if (exportClientsCsvButton) {
+    exportClientsCsvButton.addEventListener("click", handleExportClientsCsv);
+  }
+
+  if (importClientsButton && importClientsInput) {
+    importClientsButton.addEventListener("click", () => {
+      importClientsInput.click();
+    });
+  }
+
+  if (importClientsInput) {
+    importClientsInput.addEventListener("change", handleImportClientsFile);
   }
 
   if (closeClientDetailButton) {

@@ -505,6 +505,18 @@
       min-width: 150px;
     }
 
+    .data-transfer-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .data-transfer-actions button {
+      min-width: 126px;
+    }
+
     .qa-seed-button {
       min-width: 190px !important;
     }
@@ -1416,6 +1428,10 @@
         width: 100%;
       }
 
+      .data-transfer-actions {
+        width: 100%;
+      }
+
       .section-actions button {
         width: 100%;
       }
@@ -1573,6 +1589,12 @@
                   </div>
                   <div class="section-actions">
                     <div id="contacts-count-badge" class="count-badge">0 contacts</div>
+                    <div class="data-transfer-actions">
+                      <input id="import-clients-input" type="file" accept=".json,.csv,application/json,text/csv" hidden>
+                      <button id="export-clients-json-button" class="secondary-button" type="button">Export JSON</button>
+                      <button id="export-clients-csv-button" class="secondary-button" type="button">Export CSV</button>
+                      <button id="import-clients-button" class="secondary-button" type="button">Import</button>
+                    </div>
                     <button id="seed-clients-button" class="secondary-button qa-seed-button" type="button" hidden>Add 10 Test Contacts</button>
                     <button id="open-add-client-button" class="primary-button button-with-icon" type="button">
                       <span class="button-icon" aria-hidden="true">
@@ -1675,6 +1697,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="account.js?v=20260408a"></script>
+  <script type="module" src="account.js?v=20260414a"></script>
 </body>
 </html>
