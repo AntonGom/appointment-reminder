@@ -55,7 +55,13 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260409d";
+} from "./custom-form-profile.js?v=20260416a";
+
+const OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS = new Set(["notes"]);
+
+function canToggleBuiltInRememberField(fieldId) {
+  return OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS.has(String(fieldId || "").trim());
+}
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -2976,8 +2982,9 @@ function openFieldEditor(fieldId) {
   const isCustomField = Boolean(customField);
   const isContentBlock = Boolean(customField && isContentBlockField(customField));
   const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(fieldId);
-  const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn;
-  const rememberToggleChecked = isCustomField
+  const canToggleBuiltInRemember = isBuiltInStep && canToggleBuiltInRememberField(fieldId);
+  const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn || canToggleBuiltInRemember;
+  const rememberToggleChecked = isCustomField || canToggleBuiltInRemember
     ? step?.rememberClientAnswer === true
     : isAutoRememberedBuiltIn;
   const rememberToggleDisabled = isAutoRememberedBuiltIn;
@@ -3115,7 +3122,9 @@ function openFieldEditor(fieldId) {
       </label>
       <div class="editor-inline-note">${isAutoRememberedBuiltIn
         ? "This built-in client field is already remembered automatically."
-        : "Turn this on if this custom answer should be saved on the client profile for future appointments."}</div>
+        : canToggleBuiltInRemember
+          ? "Turn this on only if this built-in answer should be saved to the client profile for future visits."
+          : "Turn this on if this custom answer should be saved on the client profile for future appointments."}</div>
       ` : ""}
     ${(isCustomField || isBuiltInStep) ? `<button id="editor-delete-field" class="delete-field-button" type="button">${isBuiltInStep ? "Remove this field from the form" : "Delete this question"}</button>` : ""}
   `)) {
@@ -3189,7 +3198,7 @@ function openFieldEditor(fieldId) {
   });
 
   rememberInput?.addEventListener("change", event => {
-    if (!isCustomField) {
+    if (!isCustomField && !canToggleBuiltInRemember) {
       return;
     }
 
@@ -3379,8 +3388,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
     const isCustomField = getCustomFields().some(entry => entry.id === step.id);
     const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(step.id);
-    const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn;
-    const rememberToggleChecked = isCustomField
+    const canToggleBuiltInRemember = isBuiltInStep && canToggleBuiltInRememberField(step.id);
+    const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn || canToggleBuiltInRemember;
+    const rememberToggleChecked = isCustomField || canToggleBuiltInRemember
       ? step?.rememberClientAnswer === true
       : isAutoRememberedBuiltIn;
     const rememberToggleDisabled = isAutoRememberedBuiltIn;
@@ -3415,7 +3425,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
         </label>
         <div class="editor-inline-note">${isAutoRememberedBuiltIn
           ? "This built-in client field is already remembered automatically."
-          : "Turn this on if this answer should be saved on the client profile for future appointments."}</div>
+          : canToggleBuiltInRemember
+            ? "Turn this on only if this built-in answer should be saved to the client profile for future visits."
+            : "Turn this on if this answer should be saved on the client profile for future appointments."}</div>
       ` : ""}
     `)) {
       return;
@@ -3461,7 +3473,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     });
 
     labelRememberInput?.addEventListener("change", event => {
-      if (!isCustomField) {
+      if (!isCustomField && !canToggleBuiltInRemember) {
         return;
       }
 

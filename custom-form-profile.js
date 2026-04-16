@@ -42,7 +42,7 @@ export const DEFAULT_STEP_MOTION_STYLE = "slide-horizontal";
 export const DEFAULT_STEP_MOTION_SPEED = "smooth";
 export const DEFAULT_STEP_HEAD_MOTION = "lift";
 export const DEFAULT_STEP_CHIP_MOTION = "pop";
-export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address", "notes"];
+export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address"];
 
 export const BASE_REMINDER_STEPS = [
   {
