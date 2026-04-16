@@ -29,7 +29,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-family: var(--font-sans, "Segoe UI", sans-serif);
       background:
         radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 30%),
         radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 24%),
@@ -89,8 +89,10 @@
 
     h1 {
       margin: 16px 0 12px;
+      font-family: var(--font-display, Georgia, serif);
       font-size: clamp(34px, 5vw, 52px);
-      line-height: 1;
+      line-height: 0.93;
+      font-weight: 700;
       letter-spacing: -0.04em;
       color: var(--text-main);
     }

@@ -28,12 +28,14 @@
 }
 
 body[data-page="form-creator"] {
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
   margin: 0;
   min-height: 100vh;
   background: var(--fc-page-background,
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%),
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 28%),
+    radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.08), transparent 14%),
     radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 140px),
     linear-gradient(160deg, var(--fc-bg-top) 0%, var(--fc-bg-bottom) 100%)
   );
   padding: 28px 18px 42px;
@@ -107,9 +109,12 @@ body[data-page="form-creator"] {
 .signed-out-card h1,
 #preview-step-title {
   margin: 0 0 12px;
+  font-family: var(--font-display, Georgia, serif);
   color: var(--fc-form-text-main, var(--fc-text-main));
   font-size: 36px;
-  line-height: 1.05;
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
 }
 
 .signed-out-card p {
@@ -157,14 +162,16 @@ body[data-page="form-creator"] {
   --bg-bottom: var(--fc-bg-bottom);
   position: relative;
   overflow: hidden;
-  background: var(--fc-form-surface-background, var(--fc-card));
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.82), transparent 24%),
+    var(--fc-form-surface-background, var(--fc-card));
   color: var(--fc-form-text-main, var(--fc-text-main));
   width: var(--fc-form-shell-width, min(560px, calc(100vw - 660px)));
   min-width: var(--fc-form-shell-min-width, 360px);
   padding: var(--fc-form-shell-padding, 28px);
   border-radius: var(--fc-form-shell-radius, 28px);
   border: var(--fc-form-shell-border, 1px solid var(--fc-card-border));
-  box-shadow: var(--fc-form-shell-shadow, 0 26px 60px rgba(15, 23, 42, 0.22));
+  box-shadow: var(--fc-form-shell-shadow, 0 28px 70px rgba(15, 23, 42, 0.22));
   backdrop-filter: var(--fc-form-shell-backdrop, blur(12px));
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -1409,7 +1416,9 @@ body.is-step-chip-dragging {
   max-height: min(900px, calc(100vh - 118px));
   padding: 14px 14px 18px;
   border: 1px solid rgba(255, 255, 255, 0.32);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(242, 247, 255, 0.58));
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(242, 247, 255, 0.58));
   box-shadow:
     0 28px 60px rgba(15, 23, 42, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
