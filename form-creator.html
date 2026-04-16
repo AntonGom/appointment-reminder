@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260326j">
-  <link rel="stylesheet" href="form-creator.css?v=20260409g">
+  <link rel="stylesheet" href="form-creator.css?v=20260416b">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -88,6 +88,10 @@
           </label>
         </div>
 
+        <div class="form-creator-toolbar-actions form-creator-toolbar-actions-persistent">
+          <button id="save-form-button" class="primary-button" type="button">Save Form</button>
+        </div>
+
         <div class="studio-tabs" role="tablist" aria-label="Form Creator sections">
           <button class="studio-tab-button is-active" type="button" role="tab" aria-selected="true" data-studio-tab="add-fields">Add Fields</button>
           <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="form-settings">Form Settings</button>
@@ -149,7 +153,6 @@
 
           <section class="studio-tab-panel" role="tabpanel" data-studio-panel="form-settings" hidden>
             <div class="form-creator-toolbar-actions">
-              <button id="save-form-button" class="primary-button" type="button">Save Form</button>
               <button id="reset-form-button" class="secondary-button" type="button">Reset</button>
             </div>
 

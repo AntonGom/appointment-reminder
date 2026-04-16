@@ -1694,6 +1694,10 @@ body.is-step-chip-dragging {
   gap: 10px;
 }
 
+.form-creator-toolbar-actions-persistent {
+  margin: 0 0 8px;
+}
+
 .floating-panel-section {
   display: grid;
   gap: 10px;
@@ -2619,6 +2623,10 @@ body.is-step-chip-dragging {
     margin: 4px 0 4px;
     padding: 10px 12px;
     border-radius: 16px;
+  }
+
+  .form-creator-toolbar-actions-persistent {
+    margin-bottom: 6px;
   }
 
   .form-enabled-title {
