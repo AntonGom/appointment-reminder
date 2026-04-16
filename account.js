@@ -63,6 +63,7 @@ let currentAuthUserId = "";
 let statusBannerTimer = 0;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
+const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const CLIENT_EXPORT_COLUMNS = [
   "id",
   "client_name",
@@ -279,6 +280,7 @@ function normalizeCustomAnswerEntry(rawAnswer, fallbackFieldId = "") {
     type: String(rawAnswer?.type || "text").trim(),
     page_id: String(rawAnswer?.page_id || "").trim(),
     page_title: String(rawAnswer?.page_title || "").trim(),
+    value: rawValue || displayValue,
     raw_value: rawValue,
     display_value: displayValue,
     source_appointment_id: String(rawAnswer?.source_appointment_id || "").trim(),
@@ -614,6 +616,7 @@ function buildImportedProfileAnswers(rawRecord, valueMap, consumedKeys) {
       field_id: fieldId,
       label: formatImportedFieldLabel(labelMap[normalizedKey] || rawKey, normalizedKey),
       type: "text",
+      value: displayValue,
       raw_value: displayValue,
       display_value: displayValue,
       updated_at: timestamp
@@ -3226,19 +3229,30 @@ function useClientInReminder(clientId) {
     return;
   }
 
-  window.sessionStorage.setItem(
-    REMINDER_PREFILL_KEY,
-    JSON.stringify({
-      id: client.id || "",
-      name: client.client_name || "",
-      email: client.client_email || "",
-      phone: client.client_phone ? formatPhone(client.client_phone) : "",
-      address: client.service_address || "",
-      profileCustomAnswers: normalizeProfileCustomAnswers(client.profile_custom_answers)
-    })
-  );
+  const prefillPayload = JSON.stringify({
+    id: client.id || "",
+    name: client.client_name || "",
+    email: client.client_email || "",
+    phone: client.client_phone ? formatPhone(client.client_phone) : "",
+    address: client.service_address || "",
+    profileCustomAnswers: normalizeProfileCustomAnswers(client.profile_custom_answers)
+  });
 
-  window.location.href = "index.html";
+  try {
+    window.sessionStorage.setItem(REMINDER_PREFILL_KEY, prefillPayload);
+  } catch (error) {
+    console.warn("Unable to save reminder prefill to session storage.", error);
+  }
+
+  try {
+    window.localStorage.setItem(REMINDER_PREFILL_KEY, prefillPayload);
+  } catch (error) {
+    console.warn("Unable to save reminder prefill to local storage.", error);
+  }
+
+  const redirectUrl = new URL("index.html", window.location.href);
+  redirectUrl.searchParams.set(REMINDER_PREFILL_QUERY_PARAM, String(client.id || "").trim());
+  window.location.href = redirectUrl.toString();
 }
 
 async function deleteClient(clientId) {

@@ -215,8 +215,9 @@
       align-items: stretch;
       gap: var(--step-nav-gap-size, 8px);
       margin-top: 16px;
-      padding: 4px 2px 8px;
+      padding: 4px 6px 8px;
       overflow-x: auto;
+      scroll-padding-inline: 10px;
       scrollbar-width: thin;
       scrollbar-color: rgba(37, 99, 235, 0.4) transparent;
     }
@@ -1779,7 +1780,8 @@
       }
 
       h2 {
-        font-size: 30px;
+        font-size: 28px;
+        line-height: 1.08;
       }
 
       .question-wrap {
@@ -1807,11 +1809,13 @@
       }
 
       .stepper {
-        gap: var(--step-nav-gap-size, 8px);
+        gap: 6px;
+        margin-top: 12px;
+        padding: 4px 8px 8px;
       }
 
       .stepper-button {
-        min-height: var(--step-nav-min-height, 64px);
+        min-height: var(--step-nav-min-height, 60px);
         border-radius: var(--step-nav-radius, 16px);
       }
 
@@ -1886,6 +1890,106 @@
 
       .bronze-grid {
         grid-template-columns: 1fr;
+      }
+
+      .review-stack {
+        gap: 14px;
+      }
+
+      .question-wrap.review-wrap {
+        padding: 14px;
+        border-radius: 20px;
+      }
+
+      .review-panel {
+        padding: 13px;
+        border-radius: 16px;
+      }
+
+      .wizard-step[data-field="review"] h2 {
+        font-size: 24px;
+        line-height: 1.08;
+      }
+
+      .wizard-step[data-field="review"] .progress-wrap {
+        margin-top: 14px;
+      }
+
+      .wizard-step[data-field="review"] .stepper {
+        margin-top: 10px;
+        padding: 4px 10px 8px;
+      }
+
+      .wizard-step[data-field="review"] .stepper-button {
+        flex-basis: 76px;
+        width: 76px;
+        min-height: 56px;
+        padding: 8px 6px;
+        gap: 4px;
+      }
+
+      .wizard-step[data-field="review"] .stepper-circle {
+        width: 25px;
+        height: 25px;
+        font-size: 10px;
+      }
+
+      .wizard-step[data-field="review"] .stepper-label {
+        font-size: 9px;
+      }
+
+      .bronze-panel {
+        padding: 14px;
+        border-radius: 16px;
+        gap: 12px;
+      }
+
+      .bronze-panel-head h3 {
+        margin-bottom: 6px;
+        font-size: 18px;
+      }
+
+      .bronze-panel-head p {
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .bronze-option-group {
+        padding: 12px;
+        border-radius: 14px;
+      }
+
+      .bronze-option-group h4 {
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      .bronze-checks {
+        gap: 8px;
+      }
+
+      .bronze-checks label {
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .consent-box {
+        padding: 13px;
+        border-radius: 16px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .consent-box label {
+        gap: 8px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .consent-box input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
       }
     }
   </style>
@@ -2114,7 +2218,7 @@
   </div>
 </div>
 
-<script src="app.js?v=20260416a"></script>
+<script src="app.js?v=20260416d"></script>
 <script src="nav.js?v=20260331c"></script>
 
 </body>

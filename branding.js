@@ -2180,9 +2180,7 @@ async function persistBrandingToggleState(enabled) {
   }
 
   const thisSaveToken = ++brandingToggleSaveToken;
-  const baseBranding = Object.keys(currentSavedBranding || {}).length
-    ? currentSavedBranding
-    : getDraftBranding();
+  const baseBranding = getDraftBranding();
   const normalizedForStorage = normalizeBrandingProfile(
     {
       ...baseBranding,

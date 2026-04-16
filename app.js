@@ -34,7 +34,9 @@ const STRICT_LINK_PATTERN = /(https?:\/\/|www\.)/i;
 const DOMAIN_PATTERN = /(^|\s)[a-z0-9-]+\.(com|net|org|io|co|info|biz|me|us|ly|app|gg|tv|xyz)(\/|\s|$)/i;
 const ADDRESS_PREVIEW_MIN_LENGTH = 6;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
+const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
+const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
 const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260416a";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
@@ -106,6 +108,9 @@ let wizardControlsInitialized = false;
 let requiredFieldAttemptIds = new Set();
 let pendingClientProfilePrefillAnswers = {};
 let latestSignedInUserSyncInFlight = false;
+let liveFormFieldValueCache = new Map();
+let pendingReminderClientPrefill = null;
+let lastCustomFormSyncSignature = "";
 
 const BUILT_IN_FORM_STEP_DEFAULTS = {
   phone: {
@@ -342,6 +347,7 @@ async function initAccountTierState() {
     renderBronzeFeatures();
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);
+    await hydrateReminderPrefillFromSelectedClient();
     if (session?.user) {
       await syncLatestSignedInUser({ silent: true });
     }
@@ -393,6 +399,387 @@ function getAllFormFieldIds() {
 
 function getCustomFieldConfig(fieldId) {
   return customFormFieldLookup.get(fieldId) || null;
+}
+
+function getFormControlValue(element) {
+  if (!element) {
+    return "";
+  }
+
+  if (element instanceof HTMLInputElement && element.type === "checkbox") {
+    return element.checked ? "true" : "";
+  }
+
+  return typeof element.value === "string" ? element.value : "";
+}
+
+function setCachedFieldValue(fieldId, value) {
+  const normalizedFieldId = String(fieldId || "").trim();
+
+  if (!normalizedFieldId) {
+    return;
+  }
+
+  liveFormFieldValueCache.set(normalizedFieldId, String(value ?? ""));
+}
+
+function cacheFormControlValue(element) {
+  const fieldId = String(element?.id || "").trim();
+
+  if (!fieldId) {
+    return;
+  }
+
+  setCachedFieldValue(fieldId, getFormControlValue(element));
+}
+
+function snapshotWizardFieldValues() {
+  document.querySelectorAll(".wizard-step input[id], .wizard-step textarea[id], .wizard-step select[id]").forEach(element => {
+    cacheFormControlValue(element);
+  });
+}
+
+function restoreWizardFieldValuesFromCache() {
+  document.querySelectorAll(".wizard-step input[id], .wizard-step textarea[id], .wizard-step select[id]").forEach(element => {
+    const fieldId = String(element.id || "").trim();
+
+    if (!fieldId || !liveFormFieldValueCache.has(fieldId)) {
+      return;
+    }
+
+    const cachedValue = liveFormFieldValueCache.get(fieldId) || "";
+
+    if (element instanceof HTMLInputElement && element.type === "checkbox") {
+      element.checked = cachedValue === "true";
+      return;
+    }
+
+    if (element.value !== cachedValue) {
+      element.value = cachedValue;
+    }
+
+    if (isPhoneLikeField(fieldId)) {
+      element.value = formatPhoneNumber(element.value);
+    }
+  });
+}
+
+function getDirectFieldValue(fieldId) {
+  const element = document.getElementById(fieldId);
+  return element && typeof element.value === "string" ? element.value.trim() : "";
+}
+
+function getCachedFieldValue(fieldId) {
+  return String(liveFormFieldValueCache.get(String(fieldId || "").trim()) || "").trim();
+}
+
+function getFieldSearchText(field) {
+  return [
+    field?.id,
+    field?.label,
+    field?.title,
+    field?.navLabel,
+    field?.helpText,
+    field?.copy
+  ]
+    .map(value => String(value || "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getRenderedFieldCandidates() {
+  const candidates = [];
+
+  document.querySelectorAll(".wizard-step input[id], .wizard-step textarea[id], .wizard-step select[id]").forEach(element => {
+    const stepElement = element.closest(".wizard-step");
+    const stepField = String(stepElement?.dataset?.field || "").trim();
+
+    if (!stepField || ["consent", "review", "welcome", "thankyou"].includes(stepField)) {
+      return;
+    }
+
+    const rawValue = getFormControlValue(element).trim();
+
+    if (!rawValue) {
+      return;
+    }
+
+    const fieldGroup = element.closest(".wizard-field-group");
+    const labelText = fieldGroup?.querySelector("label")?.textContent || "";
+    const helpText = fieldGroup?.querySelector(".field-note")?.textContent || "";
+    const elementType = element.tagName === "TEXTAREA"
+      ? "textarea"
+      : element.tagName === "SELECT"
+        ? "select"
+        : String(element.getAttribute("type") || getCustomFieldConfig(element.id)?.type || "text").trim().toLowerCase();
+
+    candidates.push({
+      id: String(element.id || "").trim(),
+      type: elementType,
+      stepField,
+      label: String(labelText || "").trim(),
+      helpText: String(helpText || "").trim(),
+      stepTitle: String(stepElement?.dataset?.title || "").trim(),
+      stepNav: String(stepElement?.dataset?.nav || "").trim(),
+      stepCopy: String(stepElement?.dataset?.copy || "").trim(),
+      value: rawValue
+    });
+  });
+
+  return candidates;
+}
+
+function getRenderedFieldSearchText(candidate) {
+  return [
+    candidate?.id,
+    candidate?.label,
+    candidate?.helpText,
+    candidate?.stepField,
+    candidate?.stepTitle,
+    candidate?.stepNav,
+    candidate?.stepCopy
+  ]
+    .map(value => String(value || "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function scoreRenderedFieldKeywords(candidate, keywords = []) {
+  const haystack = getRenderedFieldSearchText(candidate);
+
+  return keywords.reduce((score, keyword) => {
+    return haystack.includes(keyword) ? score + 1 : score;
+  }, 0);
+}
+
+function getRenderedFieldValueFallback(fieldId) {
+  let bestValue = "";
+  let bestScore = 0;
+
+  getRenderedFieldCandidates().forEach(candidate => {
+    let score = 0;
+
+    if (candidate.id === fieldId) {
+      score += 200;
+    }
+
+    if (candidate.stepField === fieldId) {
+      score += 180;
+    }
+
+    if (fieldId === "phone") {
+      score += candidate.type === "phone" || candidate.type === "tel" ? 90 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["phone", "mobile", "cell"]) * 16;
+    } else if (fieldId === "email") {
+      score += candidate.type === "email" ? 90 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["email", "e-mail"]) * 16;
+    } else if (fieldId === "date") {
+      score += candidate.type === "date" ? 90 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["date", "service date", "appointment date"]) * 16;
+    } else if (fieldId === "time") {
+      score += candidate.type === "time" ? 90 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["time", "service time", "appointment time"]) * 16;
+    } else if (fieldId === "name") {
+      score += candidate.type === "text" ? 12 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["name", "client name", "customer name"]) * 18;
+    } else if (fieldId === "address") {
+      score += ["text", "textarea"].includes(candidate.type) ? 12 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["address", "location", "service location", "property", "job site"]) * 18;
+    } else if (fieldId === "businessContact") {
+      score += ["text", "email", "phone", "tel"].includes(candidate.type) ? 12 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["business contact", "contact", "reach us", "reschedule", "business phone", "business email"]) * 18;
+    } else if (fieldId === "notes") {
+      score += candidate.type === "textarea" ? 24 : 0;
+      score += scoreRenderedFieldKeywords(candidate, ["additional details", "details", "notes", "instructions", "message"]) * 18;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestValue = candidate.value;
+    }
+  });
+
+  return bestValue;
+}
+
+function getRenderedPrefillTargets() {
+  return Array.from(document.querySelectorAll(".wizard-step input[id], .wizard-step textarea[id], .wizard-step select[id]")).map(element => {
+    const stepElement = element.closest(".wizard-step");
+    const fieldGroup = element.closest(".wizard-field-group");
+
+    return {
+      element,
+      id: String(element.id || "").trim(),
+      type: element.tagName === "TEXTAREA"
+        ? "textarea"
+        : element.tagName === "SELECT"
+          ? "select"
+          : String(element.getAttribute("type") || getCustomFieldConfig(element.id)?.type || "text").trim().toLowerCase(),
+      stepField: String(stepElement?.dataset?.field || "").trim(),
+      label: String(fieldGroup?.querySelector("label")?.textContent || "").trim(),
+      helpText: String(fieldGroup?.querySelector(".field-note")?.textContent || "").trim(),
+      stepTitle: String(stepElement?.dataset?.title || "").trim(),
+      stepNav: String(stepElement?.dataset?.nav || "").trim(),
+      stepCopy: String(stepElement?.dataset?.copy || "").trim()
+    };
+  }).filter(target => target.id && !["consent", "review", "welcome", "thankyou"].includes(target.stepField));
+}
+
+function scoreRenderedPrefillTarget(fieldId, target) {
+  let score = 0;
+
+  if (target.id === fieldId) {
+    score += 240;
+  }
+
+  if (target.stepField === fieldId) {
+    score += 210;
+  }
+
+  if (fieldId === "phone") {
+    score += target.type === "phone" || target.type === "tel" ? 90 : 0;
+    score += scoreRenderedFieldKeywords(target, ["phone", "mobile", "cell"]) * 16;
+  } else if (fieldId === "email") {
+    score += target.type === "email" ? 90 : 0;
+    score += scoreRenderedFieldKeywords(target, ["email", "e-mail"]) * 16;
+  } else if (fieldId === "date") {
+    score += target.type === "date" ? 90 : 0;
+    score += scoreRenderedFieldKeywords(target, ["date", "service date", "appointment date"]) * 16;
+  } else if (fieldId === "time") {
+    score += target.type === "time" ? 90 : 0;
+    score += scoreRenderedFieldKeywords(target, ["time", "service time", "appointment time"]) * 16;
+  } else if (fieldId === "name") {
+    score += target.type === "text" ? 12 : 0;
+    score += scoreRenderedFieldKeywords(target, ["name", "client name", "customer name"]) * 18;
+  } else if (fieldId === "address") {
+    score += ["text", "textarea"].includes(target.type) ? 12 : 0;
+    score += scoreRenderedFieldKeywords(target, ["address", "location", "service location", "property", "job site"]) * 18;
+  } else if (fieldId === "businessContact") {
+    score += ["text", "email", "phone", "tel"].includes(target.type) ? 12 : 0;
+    score += scoreRenderedFieldKeywords(target, ["business contact", "contact", "reach us", "reschedule", "business phone", "business email"]) * 18;
+  } else if (fieldId === "notes") {
+    score += target.type === "textarea" ? 24 : 0;
+    score += scoreRenderedFieldKeywords(target, ["additional details", "details", "notes", "instructions", "message"]) * 18;
+  }
+
+  return score;
+}
+
+function applySinglePrefillFieldValue(fieldId, value) {
+  const normalizedValue = String(value || "").trim();
+
+  if (!fieldId || !normalizedValue) {
+    return;
+  }
+
+  setCachedFieldValue(fieldId, normalizedValue);
+
+  const exactElement = document.getElementById(fieldId);
+
+  if (exactElement && !getFormControlValue(exactElement).trim()) {
+    exactElement.value = isPhoneLikeField(fieldId) ? formatPhoneNumber(normalizedValue) : normalizedValue;
+    cacheFormControlValue(exactElement);
+  }
+
+  let bestTarget = null;
+  let bestScore = 0;
+
+  getRenderedPrefillTargets().forEach(target => {
+    if (target.id === fieldId) {
+      return;
+    }
+
+    const score = scoreRenderedPrefillTarget(fieldId, target);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestTarget = target;
+    }
+  });
+
+  if (!bestTarget || bestScore < 48 || getFormControlValue(bestTarget.element).trim()) {
+    return;
+  }
+
+  bestTarget.element.value = isPhoneLikeField(fieldId) || bestTarget.type === "phone" || bestTarget.type === "tel"
+    ? formatPhoneNumber(normalizedValue)
+    : normalizedValue;
+  cacheFormControlValue(bestTarget.element);
+}
+
+function scoreFieldKeywords(field, keywords = []) {
+  const haystack = getFieldSearchText(field);
+
+  return keywords.reduce((score, keyword) => {
+    return haystack.includes(keyword) ? score + 1 : score;
+  }, 0);
+}
+
+function getSemanticFieldFallbackValue(fieldId) {
+  const renderedFallback = getRenderedFieldValueFallback(fieldId);
+
+  if (renderedFallback) {
+    return renderedFallback;
+  }
+
+  const scoreField = {
+    phone(field) {
+      return (field.type === "phone" ? 120 : 0)
+        + (scoreFieldKeywords(field, ["phone", "mobile", "cell"]) * 16);
+    },
+    email(field) {
+      return (field.type === "email" ? 120 : 0)
+        + (scoreFieldKeywords(field, ["email", "e-mail"]) * 16);
+    },
+    date(field) {
+      return (field.type === "date" ? 120 : 0)
+        + (scoreFieldKeywords(field, ["date", "service date", "appointment date"]) * 14);
+    },
+    time(field) {
+      return (field.type === "time" ? 120 : 0)
+        + (scoreFieldKeywords(field, ["time", "service time", "appointment time"]) * 14);
+    },
+    name(field) {
+      return (field.type === "text" ? 18 : 0)
+        + (scoreFieldKeywords(field, ["name", "client name", "customer name"]) * 20);
+    },
+    address(field) {
+      return ((field.type === "text" || field.type === "textarea") ? 18 : 0)
+        + (scoreFieldKeywords(field, ["address", "location", "service location", "job site", "property"]) * 18);
+    },
+    businessContact(field) {
+      return ((field.type === "text" || field.type === "email" || field.type === "phone") ? 18 : 0)
+        + (scoreFieldKeywords(field, ["business contact", "contact", "reach us", "reschedule", "business phone", "business email"]) * 18);
+    },
+    notes(field) {
+      return (field.type === "textarea" ? 36 : 0)
+        + (scoreFieldKeywords(field, ["additional details", "details", "notes", "instructions", "message"]) * 18);
+    }
+  }[fieldId];
+
+  if (typeof scoreField !== "function") {
+    return "";
+  }
+
+  let bestMatch = "";
+  let bestScore = 0;
+
+  activeCustomFormFields.forEach(field => {
+    const value = getDirectFieldValue(field.id) || getCachedFieldValue(field.id);
+
+    if (!value) {
+      return;
+    }
+
+    const score = scoreField(field);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = value;
+    }
+  });
+
+  return bestMatch;
 }
 
 function isPhoneLikeField(fieldId) {
@@ -472,10 +859,103 @@ function normalizeClientProfileAnswerMap(value) {
       ...rawAnswer,
       field_id: normalizedFieldId,
       display_value: displayValue,
-      raw_value: String(rawAnswer?.raw_value ?? rawAnswer?.value ?? displayValue).trim()
+      raw_value: String(rawAnswer?.raw_value ?? rawAnswer?.value ?? displayValue).trim(),
+      value: String(rawAnswer?.value ?? rawAnswer?.raw_value ?? displayValue).trim()
     };
     return accumulator;
   }, {});
+}
+
+function normalizeReminderPrefillPayload(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const id = String(value?.id || "").trim();
+  const name = String(value?.name || "").trim();
+  const email = String(value?.email || "").trim();
+  const phone = String(value?.phone || "").trim();
+  const address = String(value?.address || "").trim();
+  const profileCustomAnswers = normalizeClientProfileAnswerMap(value?.profileCustomAnswers);
+
+  if (!id && !name && !email && !phone && !address && !Object.keys(profileCustomAnswers).length) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    email,
+    phone,
+    address,
+    profileCustomAnswers
+  };
+}
+
+function getStoredReminderPrefillPayload() {
+  const storageCandidates = [
+    window.sessionStorage,
+    window.localStorage
+  ];
+
+  for (const storage of storageCandidates) {
+    try {
+      const rawValue = storage.getItem(REMINDER_PREFILL_KEY);
+
+      if (!rawValue) {
+        continue;
+      }
+
+      const parsed = normalizeReminderPrefillPayload(JSON.parse(rawValue));
+
+      if (parsed) {
+        return parsed;
+      }
+    } catch (error) {
+      console.warn("Unable to read saved reminder prefill.", error);
+    }
+  }
+
+  return null;
+}
+
+function clearStoredReminderPrefill() {
+  try {
+    window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+  } catch (error) {
+    console.warn("Unable to clear reminder session prefill.", error);
+  }
+
+  try {
+    window.localStorage.removeItem(REMINDER_PREFILL_KEY);
+  } catch (error) {
+    console.warn("Unable to clear reminder local prefill.", error);
+  }
+}
+
+function getReminderPrefillClientIdFromUrl() {
+  try {
+    return String(new URLSearchParams(window.location.search).get(REMINDER_PREFILL_QUERY_PARAM) || "").trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function clearReminderPrefillClientIdFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has(REMINDER_PREFILL_QUERY_PARAM)) {
+      return;
+    }
+
+    url.searchParams.delete(REMINDER_PREFILL_QUERY_PARAM);
+    const nextSearch = url.searchParams.toString();
+    const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ""}${url.hash || ""}`;
+    window.history.replaceState({}, document.title, nextUrl);
+  } catch (error) {
+    console.warn("Unable to clear reminder prefill query param.", error);
+  }
 }
 
 function getFieldPageTitle(field, fallbackStep) {
@@ -563,6 +1043,7 @@ function applyPendingClientProfilePrefill() {
     const fieldType = String(rawAnswer?.type || getCustomFieldConfig(normalizedFieldId)?.type || "").trim().toLowerCase();
 
     element.value = fieldType === "phone" ? formatPhoneNumber(nextValue) : nextValue;
+    cacheFormControlValue(element);
   });
 
   pendingClientProfilePrefillAnswers = remainingAnswers;
@@ -845,8 +1326,8 @@ function buildManualReviewMessageFromFrame(frameDocument) {
     .filter(Boolean);
   const contactPrompt = getEditableFrameText(frameDocument.querySelector('[data-review-edit="contact"]'));
   const closing = getEditableFrameText(frameDocument.querySelector('[data-review-edit="closing"]')) || "Thank you.";
-  const summaryItems = Array.from(frameDocument.querySelectorAll('[data-preview-area="summary"] td[height]')).map(cell => {
-    const parts = Array.from(cell.querySelectorAll("div")).map(getEditableFrameText).filter(Boolean);
+  const summaryItems = Array.from(frameDocument.querySelectorAll('[data-preview-area="summary"] > *')).map(cell => {
+    const parts = Array.from(cell.querySelectorAll("div, span")).map(getEditableFrameText).filter(Boolean);
     return {
       label: parts[0] || "",
       value: parts[1] || ""
@@ -1260,8 +1741,20 @@ function updateReviewPreview() {
 }
 
 function getFieldValue(id) {
-  const element = document.getElementById(id);
-  return element ? element.value.trim() : "";
+  const directValue = getDirectFieldValue(id);
+
+  if (directValue) {
+    setCachedFieldValue(id, directValue);
+    return directValue;
+  }
+
+  const cachedValue = getCachedFieldValue(id);
+
+  if (cachedValue) {
+    return cachedValue;
+  }
+
+  return getSemanticFieldFallbackValue(id);
 }
 
 function normalizePhoneDigits(value) {
@@ -1289,43 +1782,53 @@ function syncPhoneFieldFormatting() {
   }
 
   phoneInput.value = formatPhoneNumber(phoneInput.value);
+  cacheFormControlValue(phoneInput);
+}
+
+function applyReminderClientPrefillPayload(prefillPayload) {
+  const normalizedPayload = normalizeReminderPrefillPayload(prefillPayload);
+
+  if (!normalizedPayload) {
+    return false;
+  }
+
+  pendingReminderClientPrefill = normalizedPayload;
+  linkedPrefillClientId = normalizedPayload.id || linkedPrefillClientId;
+  pendingClientProfilePrefillAnswers = {
+    ...pendingClientProfilePrefillAnswers,
+    ...normalizedPayload.profileCustomAnswers
+  };
+
+  const mappedFields = {
+    name: normalizedPayload.name,
+    email: normalizedPayload.email,
+    phone: normalizedPayload.phone,
+    address: normalizedPayload.address
+  };
+
+  Object.entries(mappedFields).forEach(([fieldId, value]) => {
+    applySinglePrefillFieldValue(fieldId, value);
+  });
+
+  applyPendingClientProfilePrefill();
+  refreshFormState();
+  return true;
 }
 
 function applySavedClientPrefill() {
   try {
-    const rawValue = window.sessionStorage.getItem(REMINDER_PREFILL_KEY);
+    const storedPayload = getStoredReminderPrefillPayload();
 
-    if (!rawValue) {
+    if (!storedPayload) {
       return;
     }
 
-    const client = JSON.parse(rawValue);
-    linkedPrefillClientId = String(client?.id || "").trim();
-    pendingClientProfilePrefillAnswers = client?.profileCustomAnswers && typeof client.profileCustomAnswers === "object"
-      ? { ...client.profileCustomAnswers }
-      : {};
-
-    const mappedFields = {
-      name: client.name || "",
-      email: client.email || "",
-      phone: client.phone || "",
-      address: client.address || ""
-    };
-
-    Object.entries(mappedFields).forEach(([fieldId, value]) => {
-      const element = document.getElementById(fieldId);
-
-      if (element && typeof value === "string") {
-        element.value = value;
-      }
-    });
-
-    applyPendingClientProfilePrefill();
-
-    window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+    applyReminderClientPrefillPayload(storedPayload);
+    clearStoredReminderPrefill();
   } catch (error) {
     pendingClientProfilePrefillAnswers = {};
-    window.sessionStorage.removeItem(REMINDER_PREFILL_KEY);
+    pendingReminderClientPrefill = null;
+    clearStoredReminderPrefill();
     console.warn("Saved client prefill failed", error);
   }
 }
@@ -1364,12 +1867,63 @@ async function syncLatestSignedInUser(options = {}) {
     renderBronzeFeatures();
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);
+    await hydrateReminderPrefillFromSelectedClient();
   } catch (error) {
     if (!silent) {
       console.warn("Unable to refresh latest signed-in user.", error);
     }
   } finally {
     latestSignedInUserSyncInFlight = false;
+  }
+}
+
+async function hydrateReminderPrefillFromSelectedClient() {
+  const queryClientId = getReminderPrefillClientIdFromUrl();
+  const pendingClientId = String(pendingReminderClientPrefill?.id || linkedPrefillClientId || "").trim();
+  const clientId = queryClientId || pendingClientId;
+
+  if (!appSupabase || !currentSignedInUser?.id || !clientId) {
+    return;
+  }
+
+  try {
+    let { data, error } = await appSupabase
+      .from("clients")
+      .select("id, client_name, client_email, client_phone, service_address, profile_custom_answers")
+      .eq("id", clientId)
+      .eq("owner_id", currentSignedInUser.id)
+      .maybeSingle();
+
+    if (error && isSupabaseMissingColumnError(error, "profile_custom_answers")) {
+      ({ data, error } = await appSupabase
+        .from("clients")
+        .select("id, client_name, client_email, client_phone, service_address")
+        .eq("id", clientId)
+        .eq("owner_id", currentSignedInUser.id)
+        .maybeSingle());
+    }
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      return;
+    }
+
+    applyReminderClientPrefillPayload({
+      id: data.id || clientId,
+      name: data.client_name || "",
+      email: data.client_email || "",
+      phone: data.client_phone ? formatPhoneNumber(data.client_phone) : "",
+      address: data.service_address || "",
+      profileCustomAnswers: normalizeClientProfileAnswerMap(data.profile_custom_answers)
+    });
+    clearStoredReminderPrefill();
+  } catch (error) {
+    console.warn("Unable to hydrate selected client prefill.", error);
+  } finally {
+    clearReminderPrefillClientIdFromUrl();
   }
 }
 
@@ -1988,6 +2542,7 @@ function buildCustomWizardStepMarkup(step) {
 }
 
 function renderCustomWizardSteps() {
+  snapshotWizardFieldValues();
   document.querySelectorAll(".custom-wizard-step").forEach(step => step.remove());
 
   const reviewStep = document.querySelector('.wizard-step[data-field="consent"]');
@@ -1997,6 +2552,7 @@ function renderCustomWizardSteps() {
     applyBuiltInStepOverrides();
     bindBaseFieldListeners();
     bindCustomFieldInputListeners();
+    restoreWizardFieldValuesFromCache();
     return;
   }
 
@@ -2021,6 +2577,105 @@ function renderCustomWizardSteps() {
   applyBuiltInStepOverrides();
   bindBaseFieldListeners();
   bindCustomFieldInputListeners();
+  restoreWizardFieldValuesFromCache();
+}
+
+function getCurrentWizardStepSnapshot() {
+  const currentStep = wizardSteps[currentStepIndex];
+
+  if (!currentStep) {
+    return null;
+  }
+
+  return {
+    index: currentStepIndex,
+    field: String(currentStep.dataset.field || "").trim(),
+    stepKind: String(currentStep.dataset.stepKind || "").trim(),
+    title: String(currentStep.dataset.title || "").trim()
+  };
+}
+
+function persistWizardStepSnapshot(snapshot = getCurrentWizardStepSnapshot()) {
+  try {
+    if (!snapshot) {
+      window.sessionStorage.removeItem(WIZARD_STEP_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.warn("Unable to persist wizard step snapshot.", error);
+  }
+}
+
+function readPersistedWizardStepSnapshot() {
+  try {
+    const rawValue = window.sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue);
+
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return {
+      index: Number.isFinite(Number(parsed.index)) ? Number(parsed.index) : 0,
+      field: String(parsed.field || "").trim(),
+      stepKind: String(parsed.stepKind || "").trim(),
+      title: String(parsed.title || "").trim()
+    };
+  } catch (error) {
+    console.warn("Unable to read persisted wizard step snapshot.", error);
+    return null;
+  }
+}
+
+function buildCustomFormSyncSignature(user = currentSignedInUser) {
+  const userId = String(user?.id || "");
+  const profile = user?.user_metadata?.custom_form_profile ?? null;
+
+  try {
+    return `${userId}::${JSON.stringify(profile)}`;
+  } catch (error) {
+    console.warn("Unable to serialize custom form profile signature.", error);
+    return `${userId}::${profile ? "profile-present" : "profile-empty"}`;
+  }
+}
+
+function getRestoredWizardStepIndex(snapshot) {
+  const visibleSteps = Array.from(document.querySelectorAll(".wizard-step")).filter(step => !step.hidden);
+
+  if (!visibleSteps.length) {
+    return 0;
+  }
+
+  if (!snapshot) {
+    return Math.min(currentStepIndex, visibleSteps.length - 1);
+  }
+
+  let restoredIndex = -1;
+
+  if (snapshot.field) {
+    restoredIndex = visibleSteps.findIndex(step => String(step.dataset.field || "").trim() === snapshot.field);
+  }
+
+  if (restoredIndex < 0 && snapshot.stepKind) {
+    restoredIndex = visibleSteps.findIndex(step => String(step.dataset.stepKind || "").trim() === snapshot.stepKind);
+  }
+
+  if (restoredIndex < 0 && snapshot.title) {
+    restoredIndex = visibleSteps.findIndex(step => String(step.dataset.title || "").trim() === snapshot.title);
+  }
+
+  if (restoredIndex >= 0) {
+    return restoredIndex;
+  }
+
+  return Math.min(snapshot.index || 0, visibleSteps.length - 1);
 }
 
 function bindCustomFieldInputListeners() {
@@ -2036,6 +2691,7 @@ function bindCustomFieldInputListeners() {
         element.value = formatPhoneNumber(element.value);
       }
 
+      cacheFormControlValue(element);
       refreshFormState();
     };
 
@@ -2045,8 +2701,18 @@ function bindCustomFieldInputListeners() {
   });
 }
 
-async function syncCustomFormFromUser(user = currentSignedInUser) {
+async function syncCustomFormFromUser(user = currentSignedInUser, options = {}) {
+  const { force = false } = options;
   const profile = user?.user_metadata?.custom_form_profile;
+  const nextCustomFormSyncSignature = buildCustomFormSyncSignature(user);
+  const currentStepSnapshot = getCurrentWizardStepSnapshot() || readPersistedWizardStepSnapshot();
+
+  if (!force && nextCustomFormSyncSignature === lastCustomFormSyncSignature) {
+    applyPendingClientProfilePrefill();
+    applyReminderClientPrefillPayload(pendingReminderClientPrefill);
+    refreshFormState();
+    return;
+  }
 
   if (!profile) {
     activeCustomFormProfile = null;
@@ -2055,9 +2721,11 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     hideThankYouScreen();
     renderCustomWizardSteps();
     applyPendingClientProfilePrefill();
+    applyReminderClientPrefillPayload(pendingReminderClientPrefill);
     applyCustomFormPresentation(null);
-    currentStepIndex = 0;
+    currentStepIndex = getRestoredWizardStepIndex(currentStepSnapshot);
     requiredFieldAttemptIds.clear();
+    lastCustomFormSyncSignature = nextCustomFormSyncSignature;
     initWizard();
     refreshFormState();
     return;
@@ -2074,9 +2742,11 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
       hideThankYouScreen();
       renderCustomWizardSteps();
       applyPendingClientProfilePrefill();
+      applyReminderClientPrefillPayload(pendingReminderClientPrefill);
       applyCustomFormPresentation(null);
-      currentStepIndex = 0;
+      currentStepIndex = getRestoredWizardStepIndex(currentStepSnapshot);
       requiredFieldAttemptIds.clear();
+      lastCustomFormSyncSignature = nextCustomFormSyncSignature;
       initWizard();
       refreshFormState();
       return;
@@ -2089,9 +2759,11 @@ async function syncCustomFormFromUser(user = currentSignedInUser) {
     renderCustomWizardSteps();
     bindCustomFieldInputListeners();
     applyPendingClientProfilePrefill();
+    applyReminderClientPrefillPayload(pendingReminderClientPrefill);
     applyCustomFormPresentation(activeCustomFormProfile);
-    currentStepIndex = 0;
+    currentStepIndex = getRestoredWizardStepIndex(currentStepSnapshot);
     requiredFieldAttemptIds.clear();
+    lastCustomFormSyncSignature = nextCustomFormSyncSignature;
     initWizard();
     refreshFormState();
   } catch (error) {
@@ -3490,6 +4162,7 @@ function setStep(index, direction) {
 
   currentStepIndex = index;
   visitedSteps[currentStepIndex] = true;
+  persistWizardStepSnapshot();
   updateWizardUI();
 }
 
@@ -3522,6 +4195,7 @@ function moveToNextStep() {
 function initWizard() {
   wizardSteps = Array.from(document.querySelectorAll(".wizard-step")).filter(step => !step.hidden);
   visitedSteps = wizardSteps.map((_, index) => index === 0);
+  currentStepIndex = getRestoredWizardStepIndex(readPersistedWizardStepSnapshot());
   currentStepIndex = Math.min(currentStepIndex, Math.max(wizardSteps.length - 1, 0));
 
   if (!wizardSteps.length) {
@@ -3565,6 +4239,7 @@ function initWizard() {
 
   renderStepNavigation();
   updateWizardUI();
+  persistWizardStepSnapshot();
 }
 
 function bindBaseFieldListeners() {
@@ -3589,6 +4264,7 @@ function bindBaseFieldListeners() {
         });
       }
 
+      cacheFormControlValue(element);
       refreshFormState();
     };
 

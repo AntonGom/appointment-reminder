@@ -2899,7 +2899,7 @@ function applyMobileStudioScale() {
 
   const widthPadding = window.innerWidth <= 720 ? 10 : 18;
   const mobileCanvasWidth = window.innerWidth <= 720 ? 520 : MOBILE_CANVAS_WIDTH;
-  const panelHeight = Math.max(200, Math.min(270, Math.round(window.innerHeight * 0.25)));
+  const panelHeight = Math.max(184, Math.min(216, Math.round(window.innerHeight * 0.21)));
   const chromeAllowance = window.innerWidth <= 720 ? 118 : 132;
   const heightAllowance = Math.max(360, window.innerHeight - panelHeight - chromeAllowance);
   const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;

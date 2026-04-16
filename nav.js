@@ -329,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
   accountMenu.appendChild(accountChip);
   accountMenu.appendChild(accountDropdown);
   statusCluster.appendChild(accountMenu);
-  document.body.appendChild(envBadge);
+  statusCluster.appendChild(envBadge);
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
   document.body.appendChild(nav);

@@ -12,7 +12,9 @@
   right: 16px;
   z-index: 1001;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
   max-width: calc(100vw - 92px);
@@ -56,12 +58,11 @@
 }
 
 .env-badge {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 995;
-  min-width: 84px;
-  padding: 10px 14px;
+  position: static;
+  z-index: auto;
+  flex: 0 0 auto;
+  min-width: 74px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(15, 23, 42, 0.88);
@@ -364,16 +365,14 @@
     top: 12px;
     right: 12px;
     gap: 8px;
-    max-width: calc(100vw - 76px);
+    max-width: calc(100vw - 84px);
   }
 
   .env-badge {
-    right: 12px;
-    bottom: 12px;
-    min-width: 76px;
-    padding: 9px 12px;
+    min-width: 66px;
+    padding: 8px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .account-chip {

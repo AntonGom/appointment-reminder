@@ -283,13 +283,18 @@ body[data-page="branding"] .section-card {
 .branding-switch {
   position: relative;
   flex: 0 0 auto;
+  width: 62px;
+  height: 36px;
 }
 
 .branding-switch input {
   position: absolute;
   inset: 0;
   opacity: 0;
-  pointer-events: none;
+  z-index: 2;
+  margin: 0;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .branding-switch-ui {
@@ -301,6 +306,7 @@ body[data-page="branding"] .section-card {
   background: #dbe7ff;
   border: 1px solid rgba(37, 99, 235, 0.18);
   transition: background 0.18s ease, border-color 0.18s ease;
+  pointer-events: none;
 }
 
 .branding-switch-ui::after {
