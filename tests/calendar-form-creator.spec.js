@@ -393,6 +393,17 @@ async function closeFormEditorIfOpen(page) {
   }
 }
 
+async function ensureStudioAccordionOpen(page, title) {
+  const accordion = page.locator("details.settings-accordion", {
+    has: page.locator(".settings-accordion-title", { hasText: title })
+  }).first();
+  await expect(accordion).toBeVisible();
+
+  if ((await accordion.getAttribute("open")) === null) {
+    await accordion.locator("summary").click();
+  }
+}
+
 test.describe("Calendar and Form Creator", () => {
   test("calendar renders saved appointments and switches between week and month views", async ({ page }) => {
     const seed = createSupabaseSeed({
@@ -556,6 +567,11 @@ test.describe("Form Creator mobile UX", () => {
 
     const fieldTypesToAdd = ["text", "textarea", "select", "content-text", "content-divider", "text", "textarea"];
     for (const fieldType of fieldTypesToAdd) {
+      if (fieldType.startsWith("content-")) {
+        await ensureStudioAccordionOpen(page, "Add Personality");
+      } else {
+        await ensureStudioAccordionOpen(page, "Add Custom Inputs");
+      }
       await page.locator(`[data-add-type="${fieldType}"]`).click();
       await expect(page.locator("#form-editor-popover")).toBeVisible();
       await closeFormEditorIfOpen(page);

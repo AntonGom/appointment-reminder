@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="form-creator.css?v=20260417c">
+  <link rel="stylesheet" href="form-creator.css?v=20260417d">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -70,7 +70,7 @@
         <div id="form-studio-panel-handle" class="floating-panel-head floating-panel-head-draggable">
           <div class="floating-panel-head-main">
             <span class="floating-panel-kicker">Form Studio</span>
-            <h2>Shape your form</h2>
+            <h2>Builder</h2>
             <div id="form-studio-scroll-hint" class="studio-scroll-hint" hidden>
               <span class="studio-scroll-hint-icon" aria-hidden="true">↓</span>
               <span>Scroll for more</span>
@@ -100,6 +100,15 @@
           <button id="reset-form-button" class="secondary-button" type="button">Reset to Saved</button>
         </div>
 
+        <section id="studio-context-card" class="studio-context-card" aria-live="polite">
+          <div class="studio-context-copy">
+            <span id="studio-context-kicker" class="studio-context-kicker">Selected</span>
+            <strong id="studio-context-title" class="studio-context-title">Client Phone Number</strong>
+            <p id="studio-context-meta" class="studio-context-meta">Built-in reminder page</p>
+          </div>
+          <button id="studio-context-action" class="studio-context-action" type="button">Edit selected</button>
+        </section>
+
         <section class="studio-mobile-height-row" aria-label="Form Studio height">
           <div class="studio-mobile-height-topline">
             <span class="studio-mobile-height-label">Menu height</span>
@@ -113,62 +122,86 @@
         </section>
 
         <div class="studio-tabs" role="tablist" aria-label="Form Creator sections">
-          <button class="studio-tab-button is-active" type="button" role="tab" aria-selected="true" data-studio-tab="add-fields">Add Fields</button>
-          <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="form-settings">Form Settings</button>
+          <button class="studio-tab-button is-active" type="button" role="tab" aria-selected="true" data-studio-tab="add-fields">Add</button>
+          <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="form-settings">Design</button>
           <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="templates">Templates</button>
-          <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="global-settings">Global Settings</button>
+          <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="global-settings">Page</button>
         </div>
 
         <div class="studio-tab-panels">
           <section class="studio-tab-panel is-active" role="tabpanel" data-studio-panel="add-fields">
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Core Fields</span>
-                <p class="floating-panel-copy">Restore the real reminder fields here so they keep their built-in behavior in Send Reminder.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Built-In Pages</span>
+                  <span class="settings-accordion-title">Restore The Essentials</span>
+                  <span class="floating-panel-copy">Bring back the standard reminder pages with their built-in behavior already mapped.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div class="floating-tool-dock" aria-label="Restore core reminder fields">
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Restore client name"><span class="floating-tool-icon">Nm</span><span class="floating-tool-label">Name</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Restore client email"><span class="floating-tool-icon">Em</span><span class="floating-tool-label">Email</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Restore client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Restore date of service"><span class="floating-tool-icon">Dt</span><span class="floating-tool-label">Date</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Restore time of service"><span class="floating-tool-icon">Tm</span><span class="floating-tool-label">Time</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Restore service location"><span class="floating-tool-icon">Loc</span><span class="floating-tool-label">Location</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Restore business contact"><span class="floating-tool-icon">Biz</span><span class="floating-tool-label">Contact</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Restore additional details"><span class="floating-tool-icon">Note</span><span class="floating-tool-label">Details</span></button>
+                </div>
               </div>
-              <div class="floating-tool-dock" aria-label="Restore core reminder fields">
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Restore client name"><span class="floating-tool-icon">N</span><span class="floating-tool-label">Name</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Restore client email"><span class="floating-tool-icon">@</span><span class="floating-tool-label">Email</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Restore client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Restore date of service"><span class="floating-tool-icon">D</span><span class="floating-tool-label">Date</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Restore time of service"><span class="floating-tool-icon">T</span><span class="floating-tool-label">Time</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Restore service location"><span class="floating-tool-icon">L</span><span class="floating-tool-label">Location</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Restore business contact"><span class="floating-tool-icon">Co</span><span class="floating-tool-label">Contact</span></button>
-                <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Restore additional details"><span class="floating-tool-icon">De</span><span class="floating-tool-label">Details</span></button>
-              </div>
-            </section>
+            </details>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Custom Questions</span>
-                <p class="floating-panel-copy">Add business-specific fields to the page you are currently editing.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Questions</span>
+                  <span class="settings-accordion-title">Add Custom Inputs</span>
+                  <span class="floating-panel-copy">Drop extra questions onto the page you are editing right now.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div class="floating-tool-dock" aria-label="Add custom question tools to current page">
+                  <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Txt</span><span class="floating-tool-label">Short Text</span></button>
+                  <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Lng</span><span class="floating-tool-label">Long Text</span></button>
+                  <button class="floating-tool" type="button" draggable="true" data-add-type="select" title="Add dropdown field"><span class="floating-tool-icon">Menu</span><span class="floating-tool-label">Dropdown</span></button>
+                  <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
+                </div>
               </div>
-              <div class="floating-tool-dock" aria-label="Add custom question tools to current page">
-                <button class="floating-tool" type="button" draggable="true" data-add-type="text" title="Add short answer"><span class="floating-tool-icon">Aa</span><span class="floating-tool-label">Short Text</span></button>
-                <button class="floating-tool" type="button" draggable="true" data-add-type="textarea" title="Add long answer"><span class="floating-tool-icon">Tx</span><span class="floating-tool-label">Long Text</span></button>
-                <button class="floating-tool" type="button" draggable="true" data-add-type="select" title="Add dropdown field"><span class="floating-tool-icon">Dd</span><span class="floating-tool-label">Dropdown</span></button>
-                <button class="floating-tool floating-tool-page" type="button" draggable="true" data-add-page="blank" title="Add a blank page"><span class="floating-tool-icon">+</span><span class="floating-tool-label">Blank Page</span></button>
-              </div>
-            </section>
+            </details>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Content Blocks</span>
-                <p class="floating-panel-copy">Drop in richer content so the form feels more like a branded page and less like a plain questionnaire.</p>
+            <details class="settings-accordion">
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Sections</span>
+                  <span class="settings-accordion-title">Add Personality</span>
+                  <span class="floating-panel-copy">Use text and divider blocks to make the experience feel more branded and less generic.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div class="floating-tool-dock" aria-label="Add content blocks to current page">
+                  <button class="floating-tool" type="button" draggable="true" data-add-type="content-text" title="Add text block"><span class="floating-tool-icon">Text</span><span class="floating-tool-label">Text Block</span></button>
+                  <button class="floating-tool" type="button" draggable="true" data-add-type="content-divider" title="Add divider"><span class="floating-tool-icon">Div</span><span class="floating-tool-label">Divider</span></button>
+                </div>
               </div>
-              <div class="floating-tool-dock" aria-label="Add content blocks to current page">
-                <button class="floating-tool" type="button" draggable="true" data-add-type="content-text" title="Add text block"><span class="floating-tool-icon">Tb</span><span class="floating-tool-label">Text Block</span></button>
-                <button class="floating-tool" type="button" draggable="true" data-add-type="content-divider" title="Add divider"><span class="floating-tool-icon">Dv</span><span class="floating-tool-label">Divider</span></button>
-              </div>
-            </section>
+            </details>
 
-            <section class="floating-panel-section">
-              <div class="floating-panel-section-head">
-                <span class="floating-panel-kicker">Fields On This Page</span>
-                <p class="floating-panel-copy">Click a field or block to edit it. Drag custom items to reorder them on this page.</p>
+            <details class="settings-accordion" open>
+              <summary class="settings-accordion-summary">
+                <span class="settings-accordion-copy">
+                  <span class="floating-panel-kicker">Selected Page</span>
+                  <span class="settings-accordion-title">Edit What Is On This Step</span>
+                  <span class="floating-panel-copy">Tap a field to edit it, or drag the grip to reorder it on the page.</span>
+                </span>
+                <span class="settings-accordion-chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-accordion-body">
+                <div id="field-rail-list" class="form-field-rail-list"></div>
               </div>
-              <div id="field-rail-list" class="form-field-rail-list"></div>
-            </section>
+            </details>
           </section>
 
           <section class="studio-tab-panel" role="tabpanel" data-studio-panel="form-settings" hidden>
@@ -261,7 +294,7 @@
             <section class="floating-panel-section floating-panel-templates">
               <div class="floating-panel-section-head">
                 <span class="floating-panel-kicker">Templates</span>
-                <p class="floating-panel-copy">Load a preset for real appointment-based businesses.</p>
+                <p class="floating-panel-copy">Start from a business-ready reminder form.</p>
               </div>
               <div id="template-list" class="form-template-list"></div>
             </section>
@@ -271,7 +304,7 @@
             <section class="floating-panel-section" data-preview-hover="background">
               <div class="floating-panel-section-head">
                 <span class="floating-panel-kicker">Page Background</span>
-                <p class="floating-panel-copy">These colors change the entire page behind the form, not the form itself.</p>
+                <p class="floating-panel-copy">Change the page behind the form, not the form surface itself.</p>
               </div>
               <div class="global-settings-card">
                 <label>
@@ -307,9 +340,10 @@
           <div class="form-editor-head">
             <button id="form-editor-back" class="form-editor-back-button" type="button" aria-label="Back to Form Studio">
               <span aria-hidden="true">←</span>
-              <span>Back</span>
+              <span>Builder</span>
             </button>
             <div class="form-editor-head-copy">
+              <span class="form-editor-kicker">Inspector</span>
               <strong id="form-editor-title">Question settings</strong>
               <p id="form-editor-copy">Change the selected question.</p>
             </div>
@@ -323,6 +357,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260417c"></script>
+  <script type="module" src="form-creator.js?v=20260417d"></script>
 </body>
 </html>

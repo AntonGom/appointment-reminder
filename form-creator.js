@@ -119,6 +119,11 @@ const editorCopy = document.getElementById("form-editor-copy");
 const editorBody = document.getElementById("form-editor-body");
 const editorBackButton = document.getElementById("form-editor-back");
 const editorCloseButton = document.getElementById("form-editor-close");
+const studioContextCard = document.getElementById("studio-context-card");
+const studioContextKicker = document.getElementById("studio-context-kicker");
+const studioContextTitle = document.getElementById("studio-context-title");
+const studioContextMeta = document.getElementById("studio-context-meta");
+const studioContextAction = document.getElementById("studio-context-action");
 
 let supabase = null;
 let appConfig = null;
@@ -1682,6 +1687,111 @@ function syncStudioEditorState() {
   });
 }
 
+function getStudioContextDescriptor(step) {
+  if (!step) {
+    return {
+      kicker: "Selected",
+      title: "Nothing selected",
+      meta: "Click a page, field, or style area to edit it.",
+      actionLabel: "",
+      actionMode: ""
+    };
+  }
+
+  if (step.type === "welcome") {
+    return {
+      kicker: "Selected",
+      title: step.title || "Welcome screen",
+      meta: "Intro screen before the form begins.",
+      actionLabel: "Edit screen",
+      actionMode: "edit-selected"
+    };
+  }
+
+  if (step.type === "thankyou") {
+    return {
+      kicker: "Selected",
+      title: step.title || "Thank-you screen",
+      meta: "Finish screen shown after the review step.",
+      actionLabel: "Edit screen",
+      actionMode: "edit-selected"
+    };
+  }
+
+  if (step.type === "review") {
+    return {
+      kicker: "Selected",
+      title: step.title || "Review and Send",
+      meta: "Final review step before the reminder is sent.",
+      actionLabel: "Edit step row",
+      actionMode: "edit-selected"
+    };
+  }
+
+  const pageFields = getCurrentPageFields();
+  const itemCount = pageFields.length;
+  const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"} on this page`;
+  const isCustomPage = getCustomPages().some(page => page.id === step.id);
+
+  return {
+    kicker: isCustomPage ? "Custom page" : "Reminder page",
+    title: step.title || step.label || "Current page",
+    meta: itemLabel,
+    actionLabel: isCustomPage ? "Edit page" : "Edit page",
+    actionMode: "edit-selected"
+  };
+}
+
+function updateStudioContextCard() {
+  if (!studioContextCard || !studioContextKicker || !studioContextTitle || !studioContextMeta || !studioContextAction || !editorPopover) {
+    return;
+  }
+
+  const isEditorOpen = !editorPopover.hidden;
+  const descriptor = isEditorOpen
+    ? {
+        kicker: "Inspector",
+        title: editorTitle?.textContent || "Editing",
+        meta: editorCopy?.textContent || "Adjust the selected part of your form here.",
+        actionLabel: "Back to builder",
+        actionMode: "close-editor"
+      }
+    : getStudioContextDescriptor(getSelectedPreviewStep());
+
+  studioContextCard.classList.toggle("is-inspector", isEditorOpen);
+  studioContextKicker.textContent = descriptor.kicker;
+  studioContextTitle.textContent = descriptor.title;
+  studioContextMeta.textContent = descriptor.meta;
+  studioContextAction.textContent = descriptor.actionLabel || "Edit selected";
+  studioContextAction.hidden = !descriptor.actionLabel;
+  studioContextAction.dataset.actionMode = descriptor.actionMode || "";
+}
+
+function openSelectedStudioInspector() {
+  const selectedStep = getSelectedPreviewStep();
+
+  if (!selectedStep) {
+    return;
+  }
+
+  if (selectedStep.type === "welcome" || selectedStep.type === "thankyou") {
+    openSelectedStepTextEditor("step-title");
+    return;
+  }
+
+  if (selectedStep.type === "review") {
+    openStepNavigationEditor();
+    return;
+  }
+
+  if (getCustomPages().some(page => page.id === selectedStep.id)) {
+    openCustomPageEditor(selectedStep);
+    return;
+  }
+
+  openSelectedStepTextEditor("step-title");
+}
+
 function showEditorView(title, copy, markup) {
   if (!editorPopover || !editorBody || !editorTitle || !editorCopy) {
     return false;
@@ -1693,6 +1803,7 @@ function showEditorView(title, copy, markup) {
   editorBody.innerHTML = markup;
   editorPopover.scrollTop = 0;
   syncStudioEditorState();
+  updateStudioContextCard();
   return true;
 }
 
@@ -3150,6 +3261,7 @@ function renderBuilder() {
   renderFieldRail();
   renderFormTemplates();
   renderPreview();
+  updateStudioContextCard();
   applyMobileStudioScale();
   syncStudioEditorState();
 }
@@ -3162,6 +3274,7 @@ function closeEditor() {
   editorPopover.hidden = true;
   editorBody.innerHTML = "";
   syncStudioEditorState();
+  updateStudioContextCard();
 }
 
 function resetEditorPosition() {
@@ -3353,6 +3466,7 @@ function openTypographyEditor(config) {
 }
 
 function openFieldEditor(fieldId) {
+  setActiveStudioTab("add-fields");
   const step = getEditableStep(fieldId);
   const customField = getCustomFields().find(entry => entry.id === fieldId) || null;
   const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
@@ -3612,6 +3726,7 @@ function safeShortLabel(value) {
 }
 
 function openPageTitleEditor() {
+  setActiveStudioTab("global-settings");
   openTypographyEditor({
     title: "Page title",
     copy: "Edit the page title text and how strongly it appears above the form.",
@@ -3633,6 +3748,7 @@ function openPageTitleEditor() {
 }
 
 function openStepNavigationEditor() {
+  setActiveStudioTab("form-settings");
   if (!editorPopover || !editorBody) {
     return;
   }
@@ -3652,6 +3768,7 @@ function openStepNavigationEditor() {
 }
 
 function openCustomPageEditor(step) {
+  setActiveStudioTab("add-fields");
   if (!step || !editorPopover || !editorBody) {
     return;
   }
@@ -3710,6 +3827,14 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
 
   if (!step) {
     return;
+  }
+
+  if (target === "step-nav-label") {
+    setActiveStudioTab("form-settings");
+  } else if (isSpecialPreviewScreen(step)) {
+    setActiveStudioTab("form-settings");
+  } else {
+    setActiveStudioTab("add-fields");
   }
 
   if (isSpecialPreviewScreen(step)) {
@@ -3940,6 +4065,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
 }
 
 function openFormShellEditor() {
+  setActiveStudioTab("form-settings");
   if (!editorPopover || !editorBody) {
     return;
   }
@@ -4075,6 +4201,7 @@ function openFormShellEditor() {
 }
 
 function openQuestionShellEditor() {
+  setActiveStudioTab("form-settings");
   if (!editorPopover || !editorBody) {
     return;
   }
@@ -4124,6 +4251,7 @@ function openQuestionShellEditor() {
 }
 
 function openPageEditor() {
+  setActiveStudioTab("global-settings");
   if (!editorPopover || !editorBody) {
     return;
   }
@@ -4334,6 +4462,18 @@ statusBanner?.addEventListener("click", () => {
 });
 saveFormButton?.addEventListener("click", saveFormProfile);
 resetFormButton?.addEventListener("click", resetToSaved);
+studioContextAction?.addEventListener("click", () => {
+  const actionMode = studioContextAction.dataset.actionMode || "";
+
+  if (actionMode === "close-editor") {
+    closeEditor();
+    return;
+  }
+
+  if (actionMode === "edit-selected") {
+    openSelectedStudioInspector();
+  }
+});
 formEnabledToggle?.addEventListener("change", async event => {
   currentFormProfile = {
     ...currentFormProfile,
