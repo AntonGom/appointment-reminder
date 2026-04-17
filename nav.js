@@ -101,6 +101,98 @@ document.addEventListener("DOMContentLoaded", () => {
     accountChip.setAttribute("aria-expanded", "false");
   }
 
+  function initScrollableAccountPageNavs() {
+    const navs = [...document.querySelectorAll(".account-page-nav")];
+
+    if (!navs.length) {
+      return;
+    }
+
+    navs.forEach(navElement => {
+      if (!(navElement instanceof HTMLElement) || navElement.dataset.scrollHintReady === "true") {
+        return;
+      }
+
+      navElement.dataset.scrollHintReady = "true";
+
+      let shell = navElement.parentElement?.classList.contains("account-page-nav-shell")
+        ? navElement.parentElement
+        : null;
+
+      if (!shell) {
+        shell = document.createElement("div");
+        shell.className = "account-page-nav-shell";
+        navElement.parentNode?.insertBefore(shell, navElement);
+        shell.appendChild(navElement);
+      }
+
+      const hint = document.createElement("p");
+      hint.className = "account-page-nav-hint";
+      hint.innerHTML = `
+        <span class="account-page-nav-hint-icon" aria-hidden="true">↔</span>
+        <span>Swipe to see more pages</span>
+      `;
+      shell.appendChild(hint);
+
+      const updateScrollState = () => {
+        const maxScrollLeft = Math.max(0, navElement.scrollWidth - navElement.clientWidth);
+        const canScroll = maxScrollLeft > 14;
+        const isAtStart = navElement.scrollLeft <= 10;
+        const isAtEnd = navElement.scrollLeft >= maxScrollLeft - 10;
+
+        shell.classList.toggle("is-scrollable", canScroll);
+        shell.classList.toggle("can-scroll-left", canScroll && !isAtStart);
+        shell.classList.toggle("can-scroll-right", canScroll && !isAtEnd);
+
+        if (!canScroll) {
+          shell.classList.remove("is-discovered");
+        }
+
+        hint.hidden = !canScroll;
+      };
+
+      const markDiscovered = () => {
+        if (shell.classList.contains("is-scrollable")) {
+          shell.classList.add("is-discovered");
+        }
+      };
+
+      navElement.addEventListener("scroll", () => {
+        markDiscovered();
+        updateScrollState();
+      }, { passive: true });
+
+      navElement.addEventListener("pointerdown", markDiscovered, { passive: true });
+      navElement.addEventListener("touchstart", markDiscovered, { passive: true });
+      navElement.addEventListener("wheel", markDiscovered, { passive: true });
+
+      if (typeof ResizeObserver === "function") {
+        const resizeObserver = new ResizeObserver(() => {
+          updateScrollState();
+        });
+        resizeObserver.observe(navElement);
+      }
+
+      if (typeof MutationObserver === "function") {
+        const mutationObserver = new MutationObserver(() => {
+          window.requestAnimationFrame(updateScrollState);
+        });
+        mutationObserver.observe(navElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["hidden", "class", "style"]
+        });
+      }
+
+      window.addEventListener("resize", updateScrollState);
+      window.requestAnimationFrame(() => {
+        updateScrollState();
+        window.setTimeout(updateScrollState, 220);
+      });
+    });
+  }
+
   function openAccountMenu() {
     accountMenu.classList.add("open");
     accountDropdown.hidden = false;
@@ -324,6 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadEnvironmentBadge();
   loadAccountChip();
   closeAccountMenu();
+  initScrollableAccountPageNavs();
 
   document.body.appendChild(statusCluster);
   accountMenu.appendChild(accountChip);
