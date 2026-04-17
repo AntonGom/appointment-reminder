@@ -1085,6 +1085,7 @@ function renderPreview() {
   });
 
   if (previewFrame) {
+    clearPreviewFrameContentWatchers();
     previewFrame.srcdoc = previewHtml;
     schedulePreviewFrameResize();
   }
@@ -1188,6 +1189,90 @@ function schedulePreviewFrameResize() {
   previewHeightSyncTimer = window.setTimeout(() => {
     syncPreviewFrameHeight();
   }, 50);
+}
+
+function clearPreviewFrameContentWatchers() {
+  if (!previewFrame) {
+    return;
+  }
+
+  const cleanup = previewFrame.__brandingPreviewCleanup;
+
+  if (typeof cleanup === "function") {
+    cleanup();
+  }
+
+  previewFrame.__brandingPreviewCleanup = null;
+}
+
+function bindPreviewFrameContentWatchers() {
+  if (!previewFrame) {
+    return;
+  }
+
+  const frameDocument = previewFrame.contentDocument;
+  const frameWindow = previewFrame.contentWindow;
+
+  if (!frameDocument || !frameWindow) {
+    return;
+  }
+
+  clearPreviewFrameContentWatchers();
+
+  const cleanupCallbacks = [];
+
+  if (typeof frameWindow.ResizeObserver === "function") {
+    const resizeObserver = new frameWindow.ResizeObserver(() => {
+      schedulePreviewFrameResize();
+    });
+    const resizeTargets = [
+      frameDocument.documentElement,
+      frameDocument.body,
+      frameDocument.body?.lastElementChild
+    ].filter(Boolean);
+
+    resizeTargets.forEach(target => {
+      resizeObserver.observe(target);
+    });
+
+    cleanupCallbacks.push(() => {
+      resizeObserver.disconnect();
+    });
+  }
+
+  frameDocument.querySelectorAll("img").forEach(image => {
+    if (image.complete) {
+      return;
+    }
+
+    const handleLoad = () => {
+      schedulePreviewFrameResize();
+    };
+
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleLoad, { once: true });
+
+    cleanupCallbacks.push(() => {
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleLoad);
+    });
+  });
+
+  if (frameDocument.fonts?.ready) {
+    frameDocument.fonts.ready.then(() => {
+      schedulePreviewFrameResize();
+    }).catch(() => {});
+  }
+
+  previewFrame.__brandingPreviewCleanup = () => {
+    cleanupCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.warn("Unable to clean up branding preview watcher.", error);
+      }
+    });
+  };
 }
 
 function setQaEmailStatus(message, type = "info") {
@@ -2648,6 +2733,7 @@ function wireFormInputs() {
 
   if (previewFrame) {
     previewFrame.addEventListener("load", () => {
+      bindPreviewFrameContentWatchers();
       schedulePreviewFrameResize();
       window.setTimeout(() => {
         syncPreviewFrameHeight();
@@ -2747,6 +2833,7 @@ function wireFormInputs() {
 
   if (previewFrame) {
     previewFrame.addEventListener("load", () => {
+      bindPreviewFrameContentWatchers();
       wirePreviewFrameInteractions();
       applyPreviewHighlight(currentPreviewFocusField);
     });

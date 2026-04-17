@@ -1076,7 +1076,13 @@
       max-width: 100%;
       margin: 0 auto;
       min-height: var(--bronze-preview-height);
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable both-edges;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(37, 99, 235, 0.38) rgba(226, 232, 240, 0.38);
+      border-radius: 20px;
     }
 
     .bronze-preview-stage {
@@ -1098,9 +1104,37 @@
       transform-origin: top left;
     }
 
+    .bronze-preview-shell::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .bronze-preview-shell::-webkit-scrollbar-track {
+      background: rgba(226, 232, 240, 0.42);
+      border-radius: 999px;
+    }
+
+    .bronze-preview-shell::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.68), rgba(37, 99, 235, 0.44));
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.66);
+    }
+
     .bronze-preview-shell.is-disabled {
       opacity: 0.9;
       filter: saturate(0.95);
+    }
+
+    .bronze-preview-shell.is-scrollable::after {
+      content: "";
+      position: sticky;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: block;
+      height: 28px;
+      margin-top: -28px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(248, 250, 252, 0.96));
+      pointer-events: none;
     }
 
     .bronze-preview-tip {

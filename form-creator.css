@@ -2526,13 +2526,13 @@ body.is-step-chip-dragging {
     top: auto;
     left: auto;
     right: auto;
-    width: min(100%, 392px);
+    width: min(100%, 368px);
     height: var(--fc-mobile-panel-height, 248px);
     min-height: 0;
     max-width: 100%;
     max-height: none;
-    margin: 2px auto 0;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(242, 247, 255, 0.5));
+    margin: 12px auto 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(242, 247, 255, 0.34));
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -2540,8 +2540,10 @@ body.is-step-chip-dragging {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
-    border-radius: 22px;
-    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    border-radius: 20px;
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(18px) saturate(145%);
   }
 
   .floating-panel-head-draggable {
@@ -2606,7 +2608,7 @@ body.is-step-chip-dragging {
     flex: 0 0 auto;
     min-height: 0;
     overflow: visible;
-    padding: 12px 10px 10px;
+    padding: 8px 7px 7px;
     border-radius: 0 16px 16px 16px;
   }
 
@@ -2616,22 +2618,22 @@ body.is-step-chip-dragging {
 
   .floating-panel-studio .floating-panel-head {
     margin: 0 0 2px;
-    padding: 6px 9px 5px;
+    padding: 4px 7px 3px;
     border-radius: 14px;
   }
 
   .floating-panel-head h2 {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .floating-panel-drag-chip {
-    padding: 6px 9px;
-    font-size: 10px;
+    padding: 5px 8px;
+    font-size: 9px;
   }
 
   .form-enabled-card {
     margin: 2px 0 3px;
-    padding: 8px 10px;
+    padding: 6px 8px;
     border-radius: 14px;
   }
 
@@ -2651,14 +2653,14 @@ body.is-step-chip-dragging {
 
   .studio-tabs {
     gap: 3px;
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
   .studio-tab-button {
-    min-height: 36px;
-    padding: 8px 6px 7px;
+    min-height: 34px;
+    padding: 7px 6px 6px;
     border-radius: 14px 14px 0 0;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.04em;
   }
 
@@ -2706,13 +2708,13 @@ body.is-step-chip-dragging {
   }
 
   .floating-panel-studio {
-    width: min(100%, 364px);
-    margin-top: 8px;
-    border-radius: 20px;
+    width: min(100%, 344px);
+    margin-top: 12px;
+    border-radius: 18px;
   }
 
   .floating-panel-studio .floating-panel-head {
-    padding: 5px 7px 4px;
+    padding: 4px 6px 3px;
   }
 
   .floating-panel-kicker {
@@ -2729,6 +2731,6 @@ body.is-step-chip-dragging {
   }
 
   .studio-tab-panels {
-    padding: 10px 8px 8px;
+    padding: 8px 7px 7px;
   }
 }

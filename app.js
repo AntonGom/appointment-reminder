@@ -1480,6 +1480,84 @@ function scheduleBronzePreviewScaleBurst() {
   });
 }
 
+function clearBronzePreviewContentWatchers(frame) {
+  if (!frame) {
+    return;
+  }
+
+  const cleanup = frame.__bronzePreviewCleanup;
+
+  if (typeof cleanup === "function") {
+    cleanup();
+  }
+
+  frame.__bronzePreviewCleanup = null;
+}
+
+function bindBronzePreviewContentWatchers(frame, frameDocument, frameWindow, currentToken) {
+  if (!frame || !frameDocument || !frameWindow) {
+    return;
+  }
+
+  clearBronzePreviewContentWatchers(frame);
+
+  const cleanupCallbacks = [];
+  const scheduleIfCurrent = () => {
+    if (currentToken !== bronzePreviewRenderToken) {
+      return;
+    }
+
+    scheduleBronzePreviewScaleBurst();
+  };
+
+  if (typeof frameWindow.ResizeObserver === "function") {
+    const resizeObserver = new frameWindow.ResizeObserver(() => {
+      scheduleIfCurrent();
+    });
+    const resizeTargets = [
+      frameDocument.documentElement,
+      frameDocument.body,
+      frameDocument.body?.lastElementChild
+    ].filter(Boolean);
+
+    resizeTargets.forEach(target => {
+      resizeObserver.observe(target);
+    });
+
+    cleanupCallbacks.push(() => {
+      resizeObserver.disconnect();
+    });
+  }
+
+  frameDocument.querySelectorAll("img").forEach(image => {
+    if (image.complete) {
+      return;
+    }
+
+    const handleLoad = () => {
+      scheduleIfCurrent();
+    };
+
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleLoad, { once: true });
+
+    cleanupCallbacks.push(() => {
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleLoad);
+    });
+  });
+
+  frame.__bronzePreviewCleanup = () => {
+    cleanupCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.warn("Unable to clean up bronze preview watcher.", error);
+      }
+    });
+  };
+}
+
 function refreshBronzePreviewObservers() {
   if (typeof ResizeObserver === "undefined") {
     return;
@@ -1548,12 +1626,15 @@ function syncBronzePreviewScale() {
     ? Math.min(widthScale, heightScale, BRONZE_REVIEW_MAX_SCALE_MOBILE, 1)
     : Math.min(widthScale, heightScale, BRONZE_REVIEW_MAX_SCALE_DESKTOP, 1);
   const scaledHeight = Math.max(Math.ceil(contentHeight * scale), minPreviewHeight);
+  const visibleHeight = Math.min(scaledHeight, maxPreviewHeight);
 
   frame.style.width = `${BRONZE_REVIEW_PREVIEW_WIDTH}px`;
   frame.style.height = `${contentHeight}px`;
   frame.style.transform = `scale(${scale})`;
   stage.style.height = `${scaledHeight}px`;
-  shell.style.height = `${scaledHeight}px`;
+  shell.style.height = `${visibleHeight}px`;
+  shell.style.maxHeight = `${maxPreviewHeight}px`;
+  shell.classList.toggle("is-scrollable", scaledHeight > visibleHeight + 6);
   shell.style.setProperty("--bronze-preview-scale", String(scale));
   shell.style.setProperty("--bronze-preview-height", `${scaledHeight}px`);
 }
@@ -1564,6 +1645,8 @@ async function renderBronzeReviewPreview(message) {
   if (!frame) {
     return;
   }
+
+  clearBronzePreviewContentWatchers(frame);
 
   const currentToken = ++bronzePreviewRenderToken;
   const module = await getBrandingTemplateModule();
@@ -1616,6 +1699,8 @@ async function renderBronzeReviewPreview(message) {
         contentRoot.style.minWidth = "640px";
         contentRoot.style.background = "transparent";
       }
+
+      bindBronzePreviewContentWatchers(frame, frameDocument, frameWindow, currentToken);
 
       frameDocument.querySelectorAll("[data-review-edit]").forEach(element => {
         element.setAttribute("contenteditable", "true");

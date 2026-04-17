@@ -2234,3 +2234,75 @@ body.branding-modal-open {
     font-size: 11px;
   }
 }
+
+@media (max-width: 760px) {
+  .branding-preview-card {
+    order: 1;
+  }
+
+  .branding-gallery-card {
+    order: 2;
+    padding: 16px;
+    max-height: none;
+  }
+
+  .branding-gallery-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .branding-gallery-head h2 {
+    margin: 0 0 4px;
+    font-size: 22px;
+  }
+
+  .branding-gallery-head .branding-copy {
+    max-width: 24ch;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .signature-gallery {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(210px, 74vw);
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 10px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .signature-gallery::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .signature-gallery::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.36);
+    border-radius: 999px;
+  }
+
+  .signature-gallery::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(96, 165, 250, 0.9), rgba(37, 99, 235, 0.88));
+  }
+
+  .signature-card {
+    scroll-snap-align: start;
+  }
+
+  .template-thumb-line {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .branding-preview-frame {
+    height: 560px;
+  }
+}

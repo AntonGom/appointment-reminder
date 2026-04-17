@@ -189,6 +189,11 @@ h1 {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 18px;
+  scrollbar-width: none;
+}
+
+.account-page-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .account-page-link {
@@ -1359,7 +1364,7 @@ button.calendar-week-mobile-day {
   .panel-content,
   .section-card,
   .sidebar-card {
-    padding: 22px;
+    padding: 20px;
   }
 
   h1 {
@@ -1370,8 +1375,52 @@ button.calendar-week-mobile-day {
     font-size: 17px;
   }
 
+  .account-page-nav {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    margin: 0 -2px 16px;
+    padding: 2px 2px 10px;
+    scroll-snap-type: x proximity;
+  }
+
   .account-page-link {
-    width: 100%;
+    width: auto;
+    min-width: max-content;
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  .summary-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(188px, 82%);
+    overflow-x: auto;
+    padding: 0 2px 6px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .summary-grid::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .summary-grid::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.38);
+    border-radius: 999px;
+  }
+
+  .summary-grid::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(96, 165, 250, 0.9), rgba(37, 99, 235, 0.88));
+  }
+
+  .summary-card {
+    min-height: 0;
+    scroll-snap-align: start;
   }
 
   .calendar-toolbar-actions {
@@ -1572,7 +1621,7 @@ button.calendar-week-mobile-day {
   }
 
   .calendar-week-mobile-agenda {
-    padding: 12px;
+    padding: 12px 10px;
     border-radius: 18px;
   }
 
@@ -1602,5 +1651,10 @@ button.calendar-week-mobile-day {
   .appointment-row-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .appointment-row {
+    padding: 14px;
+    border-radius: 16px;
   }
 }
