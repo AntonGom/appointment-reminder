@@ -524,6 +524,17 @@ async function runBranding(page, baseUrl) {
   await page.goto(`${baseUrl}/branding.html`, { waitUntil: "domcontentloaded" });
   await waitForSettled(page, 1000);
   await capture(page, "start");
+  const heroArea = page.frameLocator("#branding-preview-frame").locator('[data-preview-area="hero"]').first();
+  if (await heroArea.count()) {
+    await heroArea.click();
+    await page.waitForTimeout(260);
+    await capture(page, "editor");
+    const closeEditorButton = page.locator("#branding-editor-close");
+    if (await closeEditorButton.count()) {
+      await closeEditorButton.click();
+      await page.waitForTimeout(180);
+    }
+  }
   const templateStrip = page.locator("#template-grid");
   if (await templateStrip.count()) {
     await templateStrip.evaluate(element => {
@@ -544,6 +555,12 @@ async function runFormCreator(page, baseUrl) {
   await page.goto(`${baseUrl}/form-creator.html`, { waitUntil: "domcontentloaded" });
   await waitForSettled(page, 1000);
   await capture(page, "start");
+  const expandedStudioButton = page.locator('[data-mobile-studio-size="expanded"]').first();
+  if (await expandedStudioButton.count()) {
+    await expandedStudioButton.click();
+    await page.waitForTimeout(200);
+    await capture(page, "expanded");
+  }
   const questionCard = page.locator('.question-wrap[data-preview-step-id]').first();
   if (await questionCard.count()) {
     await questionCard.click();

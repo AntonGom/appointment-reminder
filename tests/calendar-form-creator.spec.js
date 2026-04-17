@@ -450,3 +450,34 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#form-enabled-toggle")).not.toBeChecked();
   });
 });
+
+test.describe("Form Creator mobile UX", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true
+  });
+
+  test("opening a question on mobile keeps the editor readable and reachable", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/form-creator.html");
+
+    const studioPanel = page.locator("#form-studio-panel");
+    await expect(studioPanel).toBeVisible();
+    await expect(page.locator("#form-studio-mobile-resize")).toBeVisible();
+
+    await page.locator('.question-wrap[data-preview-step-id]').first().tap();
+
+    const editor = page.locator("#form-editor-popover");
+    await expect(editor).toBeVisible();
+    await expect(editor.getByText("Question settings")).toBeVisible();
+    await expect(editor.getByText("Question title")).toBeVisible();
+    await expect(editor.getByText("Field type")).toBeVisible();
+    await expect(editor.getByText("Placeholder")).toBeVisible();
+
+    const editorBox = await editor.boundingBox();
+    expect(editorBox).not.toBeNull();
+    expect(editorBox.width).toBeGreaterThan(250);
+    expect(editorBox.height).toBeGreaterThan(320);
+  });
+});

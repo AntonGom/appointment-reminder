@@ -2694,6 +2694,7 @@ body.is-step-chip-dragging {
   }
 
   .floating-panel-studio.is-editor-open .form-editor-popover {
+    min-height: calc(var(--fc-mobile-panel-height, 288px) - 54px);
     overflow: visible;
   }
 

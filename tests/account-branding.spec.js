@@ -625,3 +625,45 @@ test.describe("Branding and Client Details", () => {
     expect(state.tables.client_reminder_history.map(entry => entry.id)).toEqual(["history_two"]);
   });
 });
+
+test.describe("Branding mobile UX", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true
+  });
+
+  test("tapping the preview opens a readable branding editor on mobile", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          branding_profile: {
+            brandingEnabled: true,
+            businessName: "Clip House",
+            templateStyle: "signature",
+            headerColor: "#123456",
+            accentColor: "#123456",
+            contactEmail: "owner@example.com"
+          }
+        }
+      })
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/branding.html");
+
+    const heroArea = page.frameLocator("#branding-preview-frame").locator('[data-preview-area="hero"]').first();
+    await expect(heroArea).toBeVisible();
+    await heroArea.click();
+
+    const editorCard = page.locator(".branding-editor-card");
+    await expect(editorCard).toBeVisible();
+    await expect(page.locator("#branding-header-color")).toBeVisible();
+    await expect(page.locator("#branding-hero-text-color")).toBeVisible();
+
+    const editorBox = await editorCard.boundingBox();
+    expect(editorBox).not.toBeNull();
+    expect(editorBox.width).toBeGreaterThan(250);
+    expect(editorBox.height).toBeGreaterThan(300);
+  });
+});
