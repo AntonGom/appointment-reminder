@@ -1405,6 +1405,8 @@ body.is-step-chip-dragging {
 }
 
 .floating-panel-studio {
+  --fc-scroll-top-shadow: transparent;
+  --fc-scroll-bottom-shadow: transparent;
   top: var(--fc-studio-top, 102px);
   right: var(--fc-studio-right, 22px);
   left: var(--fc-studio-left, auto);
@@ -1420,9 +1422,19 @@ body.is-step-chip-dragging {
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 22%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(242, 247, 255, 0.58));
   box-shadow:
+    inset 0 12px 16px -14px var(--fc-scroll-top-shadow),
+    inset 0 -18px 20px -18px var(--fc-scroll-bottom-shadow),
     0 28px 60px rgba(15, 23, 42, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(24px) saturate(155%);
+}
+
+.floating-panel-studio.can-scroll-up {
+  --fc-scroll-top-shadow: rgba(96, 165, 250, 0.42);
+}
+
+.floating-panel-studio.can-scroll-down {
+  --fc-scroll-bottom-shadow: rgba(96, 165, 250, 0.48);
 }
 
 .floating-panel-left {
@@ -1486,6 +1498,48 @@ body.is-step-chip-dragging {
   height: 4px;
   border-radius: 999px;
   background: rgba(100, 116, 139, 0.86);
+}
+
+.studio-scroll-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 5px;
+  padding: 0;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.studio-scroll-hint[hidden] {
+  display: none !important;
+}
+
+.studio-scroll-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.1));
+  color: #2563eb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.floating-panel-studio.can-scroll-down:not(.is-scroll-discovered) .studio-scroll-hint {
+  animation: studioScrollHintPulse 1.8s ease-in-out infinite;
+}
+
+.floating-panel-studio.is-scroll-discovered .studio-scroll-hint {
+  opacity: 0.64;
+  transform: translateY(-1px);
+  animation: none;
 }
 
 .floating-panel-right,
@@ -2526,12 +2580,12 @@ body.is-step-chip-dragging {
     top: auto;
     left: auto;
     right: auto;
-    width: min(100%, 368px);
+    width: min(100%, 338px);
     height: var(--fc-mobile-panel-height, 248px);
     min-height: 0;
     max-width: 100%;
     max-height: none;
-    margin: 12px auto 0;
+    margin: 10px auto 0;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(242, 247, 255, 0.34));
     display: flex;
     flex-direction: column;
@@ -2544,6 +2598,11 @@ body.is-step-chip-dragging {
     border-color: rgba(255, 255, 255, 0.28);
     box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
     backdrop-filter: blur(18px) saturate(145%);
+  }
+
+  .studio-scroll-hint {
+    margin-top: 4px;
+    font-size: 9px;
   }
 
   .floating-panel-head-draggable {
@@ -2608,7 +2667,7 @@ body.is-step-chip-dragging {
     flex: 0 0 auto;
     min-height: 0;
     overflow: visible;
-    padding: 8px 7px 7px;
+    padding: 6px 6px 6px;
     border-radius: 0 16px 16px 16px;
   }
 
@@ -2618,23 +2677,23 @@ body.is-step-chip-dragging {
 
   .floating-panel-studio .floating-panel-head {
     margin: 0 0 2px;
-    padding: 4px 7px 3px;
+    padding: 3px 6px 2px;
     border-radius: 14px;
   }
 
   .floating-panel-head h2 {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .floating-panel-drag-chip {
-    padding: 5px 8px;
-    font-size: 9px;
+    padding: 4px 7px;
+    font-size: 8px;
   }
 
   .form-enabled-card {
     margin: 2px 0 3px;
-    padding: 6px 8px;
-    border-radius: 14px;
+    padding: 4px 7px;
+    border-radius: 12px;
   }
 
   .form-creator-toolbar-actions-persistent {
@@ -2642,7 +2701,7 @@ body.is-step-chip-dragging {
   }
 
   .form-enabled-title {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .form-enabled-text {
@@ -2652,15 +2711,15 @@ body.is-step-chip-dragging {
   }
 
   .studio-tabs {
-    gap: 3px;
-    margin-top: 4px;
+    gap: 2px;
+    margin-top: 2px;
   }
 
   .studio-tab-button {
-    min-height: 34px;
-    padding: 7px 6px 6px;
+    min-height: 31px;
+    padding: 6px 5px 5px;
     border-radius: 14px 14px 0 0;
-    font-size: 9px;
+    font-size: 8px;
     letter-spacing: 0.04em;
   }
 
@@ -2708,22 +2767,26 @@ body.is-step-chip-dragging {
   }
 
   .floating-panel-studio {
-    width: min(100%, 344px);
-    margin-top: 12px;
-    border-radius: 18px;
+    width: min(100%, 326px);
+    margin-top: 10px;
+    border-radius: 17px;
+  }
+
+  .studio-scroll-hint {
+    font-size: 8px;
   }
 
   .floating-panel-studio .floating-panel-head {
-    padding: 4px 6px 3px;
+    padding: 3px 5px 2px;
   }
 
   .floating-panel-kicker {
-    margin-bottom: 6px;
-    font-size: 10px;
+    margin-bottom: 4px;
+    font-size: 9px;
   }
 
   .form-enabled-row {
-    gap: 12px;
+    gap: 10px;
   }
 
   .form-enabled-text {
@@ -2731,6 +2794,19 @@ body.is-step-chip-dragging {
   }
 
   .studio-tab-panels {
-    padding: 8px 7px 7px;
+    padding: 6px 6px 6px;
+  }
+}
+
+@keyframes studioScrollHintPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(2px);
   }
 }

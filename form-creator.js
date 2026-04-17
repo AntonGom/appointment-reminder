@@ -72,6 +72,7 @@ const formPreviewStage = document.getElementById("form-preview-stage");
 const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
+const studioScrollHint = document.getElementById("form-studio-scroll-hint");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
@@ -130,6 +131,7 @@ let editorHasCustomPosition = false;
 let studioPanelDragState = null;
 let studioPanelResizeState = null;
 let studioPanelHasCustomFrame = false;
+let studioPanelScrollDiscovered = false;
 let dragPayload = null;
 let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
@@ -1333,6 +1335,31 @@ function setActiveStudioTab(tabId = activeStudioTab) {
     panel.hidden = !isActive;
     panel.classList.toggle("is-active", isActive);
   });
+
+  requestAnimationFrame(() => {
+    updateStudioPanelOverflowState();
+  });
+}
+
+function updateStudioPanelOverflowState() {
+  if (!studioPanel) {
+    return;
+  }
+
+  const isMobileStudio = window.innerWidth <= MOBILE_STUDIO_BREAKPOINT;
+  const maxScrollTop = Math.max(0, studioPanel.scrollHeight - studioPanel.clientHeight);
+  const canScroll = isMobileStudio && maxScrollTop > 14;
+  const isAtTop = studioPanel.scrollTop <= 8;
+  const isAtBottom = studioPanel.scrollTop >= maxScrollTop - 8;
+
+  studioPanel.classList.toggle("is-scrollable", canScroll);
+  studioPanel.classList.toggle("can-scroll-up", canScroll && !isAtTop);
+  studioPanel.classList.toggle("can-scroll-down", canScroll && !isAtBottom);
+  studioPanel.classList.toggle("is-scroll-discovered", canScroll && studioPanelScrollDiscovered);
+
+  if (studioScrollHint) {
+    studioScrollHint.hidden = !canScroll;
+  }
 }
 
 function syncStudioEditorState() {
@@ -1348,6 +1375,10 @@ function syncStudioEditorState() {
       studioPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
+
+  requestAnimationFrame(() => {
+    updateStudioPanelOverflowState();
+  });
 }
 
 function showEditorView(title, copy, markup) {
@@ -2899,8 +2930,8 @@ function applyMobileStudioScale() {
 
   const widthPadding = window.innerWidth <= 720 ? 10 : 18;
   const mobileCanvasWidth = window.innerWidth <= 720 ? 520 : MOBILE_CANVAS_WIDTH;
-  const panelHeight = Math.max(138, Math.min(166, Math.round(window.innerHeight * 0.155)));
-  const chromeAllowance = window.innerWidth <= 720 ? 104 : 122;
+  const panelHeight = Math.max(124, Math.min(146, Math.round(window.innerHeight * 0.135)));
+  const chromeAllowance = window.innerWidth <= 720 ? 96 : 118;
   const heightAllowance = Math.max(360, window.innerHeight - panelHeight - chromeAllowance);
   const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;
   const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
@@ -4446,6 +4477,16 @@ if (studioPanelResizeHandle && studioPanel) {
   studioPanelResizeHandle.addEventListener("pointercancel", stopStudioPanelResizing);
 }
 
+if (studioPanel) {
+  studioPanel.addEventListener("scroll", () => {
+    if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT && studioPanel.scrollTop > 18) {
+      studioPanelScrollDiscovered = true;
+    }
+
+    updateStudioPanelOverflowState();
+  }, { passive: true });
+}
+
 window.addEventListener("resize", () => {
   applyMobileStudioScale();
 
@@ -4472,6 +4513,8 @@ window.addEventListener("resize", () => {
     const rect = editorPopover.getBoundingClientRect();
     setEditorPosition(rect.left, rect.top);
   }
+
+  updateStudioPanelOverflowState();
 });
 
 renderBuilder();
