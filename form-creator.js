@@ -121,6 +121,7 @@ const editorBackButton = document.getElementById("form-editor-back");
 const editorCloseButton = document.getElementById("form-editor-close");
 const studioContextCard = document.getElementById("studio-context-card");
 const studioContextKicker = document.getElementById("studio-context-kicker");
+const studioContextChip = document.getElementById("studio-context-chip");
 const studioContextTitle = document.getElementById("studio-context-title");
 const studioContextMeta = document.getElementById("studio-context-meta");
 const studioContextAction = document.getElementById("studio-context-action");
@@ -1691,6 +1692,7 @@ function getStudioContextDescriptor(step) {
   if (!step) {
     return {
       kicker: "Selected",
+      chipLabel: "",
       title: "Nothing selected",
       meta: "Click a page, field, or style area to edit it.",
       actionLabel: "",
@@ -1701,6 +1703,7 @@ function getStudioContextDescriptor(step) {
   if (step.type === "welcome") {
     return {
       kicker: "Selected",
+      chipLabel: "Welcome",
       title: step.title || "Welcome screen",
       meta: "Intro screen before the form begins.",
       actionLabel: "Edit screen",
@@ -1711,6 +1714,7 @@ function getStudioContextDescriptor(step) {
   if (step.type === "thankyou") {
     return {
       kicker: "Selected",
+      chipLabel: "Finish",
       title: step.title || "Thank-you screen",
       meta: "Finish screen shown after the review step.",
       actionLabel: "Edit screen",
@@ -1721,6 +1725,7 @@ function getStudioContextDescriptor(step) {
   if (step.type === "review") {
     return {
       kicker: "Selected",
+      chipLabel: "Review",
       title: step.title || "Review and Send",
       meta: "Final review step before the reminder is sent.",
       actionLabel: "Edit step row",
@@ -1735,6 +1740,7 @@ function getStudioContextDescriptor(step) {
 
   return {
     kicker: isCustomPage ? "Custom page" : "Reminder page",
+    chipLabel: isCustomPage ? "Custom" : "Mapped",
     title: step.title || step.label || "Current page",
     meta: itemLabel,
     actionLabel: isCustomPage ? "Edit page" : "Edit page",
@@ -1743,7 +1749,7 @@ function getStudioContextDescriptor(step) {
 }
 
 function updateStudioContextCard() {
-  if (!studioContextCard || !studioContextKicker || !studioContextTitle || !studioContextMeta || !studioContextAction || !editorPopover) {
+  if (!studioContextCard || !studioContextKicker || !studioContextChip || !studioContextTitle || !studioContextMeta || !studioContextAction || !editorPopover) {
     return;
   }
 
@@ -1751,6 +1757,7 @@ function updateStudioContextCard() {
   const descriptor = isEditorOpen
     ? {
         kicker: "Inspector",
+        chipLabel: "Editing",
         title: editorTitle?.textContent || "Editing",
         meta: editorCopy?.textContent || "Adjust the selected part of your form here.",
         actionLabel: "Back to builder",
@@ -1760,6 +1767,8 @@ function updateStudioContextCard() {
 
   studioContextCard.classList.toggle("is-inspector", isEditorOpen);
   studioContextKicker.textContent = descriptor.kicker;
+  studioContextChip.textContent = descriptor.chipLabel || "";
+  studioContextChip.hidden = !descriptor.chipLabel;
   studioContextTitle.textContent = descriptor.title;
   studioContextMeta.textContent = descriptor.meta;
   studioContextAction.textContent = descriptor.actionLabel || "Edit selected";
@@ -2460,9 +2469,12 @@ function renderFieldRail() {
 
   fieldRailList.innerHTML = fields.map(field => {
     const meta = getCustomFieldTypeMeta(field.type);
-    const fieldMeta = isContentBlockField(field)
+    const isContentBlock = isContentBlockField(field);
+    const kindLabel = field.isBaseField ? "Built-in" : isContentBlock ? "Content" : "Custom";
+    const kindTone = field.isBaseField ? "built-in" : isContentBlock ? "content" : "custom";
+    const fieldMeta = isContentBlock
       ? `${escapeHtml(meta.label)} block`
-      : `${escapeHtml(meta.label)}${field.required ? " - required" : ""}`;
+      : `${escapeHtml(meta.label)}`;
     return `
       <button
         class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
@@ -2472,10 +2484,13 @@ function renderFieldRail() {
       >
         <span class="field-rail-icon">${escapeHtml(meta.icon)}</span>
         <span class="field-rail-body">
+          <span class="field-rail-tags">
+            <span class="field-rail-tag is-${kindTone}">${kindLabel}</span>
+            ${field.required ? `<span class="field-rail-tag is-required">Required</span>` : ""}
+          </span>
           <span class="field-rail-title">${escapeHtml(field.label || field.title || "Field")}</span>
           <span class="field-rail-meta">${fieldMeta}</span>
         </span>
-        ${field.required ? `<span class="field-rail-required">Req</span>` : ""}
         <span class="field-rail-grip" data-field-rail-grip aria-hidden="true">
           <span></span><span></span><span></span>
         </span>

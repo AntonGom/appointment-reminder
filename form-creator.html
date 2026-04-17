@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="form-creator.css?v=20260417d">
+  <link rel="stylesheet" href="form-creator.css?v=20260417e">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -102,7 +102,10 @@
 
         <section id="studio-context-card" class="studio-context-card" aria-live="polite">
           <div class="studio-context-copy">
-            <span id="studio-context-kicker" class="studio-context-kicker">Selected</span>
+            <div class="studio-context-topline">
+              <span id="studio-context-kicker" class="studio-context-kicker">Selected</span>
+              <span id="studio-context-chip" class="studio-context-chip">Reminder page</span>
+            </div>
             <strong id="studio-context-title" class="studio-context-title">Client Phone Number</strong>
             <p id="studio-context-meta" class="studio-context-meta">Built-in reminder page</p>
           </div>
@@ -130,7 +133,7 @@
 
         <div class="studio-tab-panels">
           <section class="studio-tab-panel is-active" role="tabpanel" data-studio-panel="add-fields">
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-accordion-tone="slate" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Built-In Pages</span>
@@ -153,7 +156,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-accordion-tone="blue" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Questions</span>
@@ -172,7 +175,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion">
+            <details class="settings-accordion" data-accordion-tone="violet">
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Sections</span>
@@ -189,7 +192,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" open>
+            <details class="settings-accordion" data-accordion-tone="emerald" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Selected Page</span>
@@ -205,7 +208,7 @@
           </section>
 
           <section class="studio-tab-panel" role="tabpanel" data-studio-panel="form-settings" hidden>
-            <details class="settings-accordion" data-preview-hover="shell" open>
+            <details class="settings-accordion" data-accordion-tone="slate" data-preview-hover="shell" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Form Shell</span>
@@ -219,7 +222,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" data-preview-hover="question" open>
+            <details class="settings-accordion" data-accordion-tone="blue" data-preview-hover="question" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Question Card</span>
@@ -233,7 +236,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" data-preview-hover="steps" open>
+            <details class="settings-accordion" data-accordion-tone="indigo" data-preview-hover="steps" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Step Boxes</span>
@@ -247,7 +250,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" data-preview-hover="motion" open>
+            <details class="settings-accordion" data-accordion-tone="violet" data-preview-hover="motion" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">Motion</span>
@@ -261,7 +264,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" data-preview-hover="welcome" open>
+            <details class="settings-accordion" data-accordion-tone="amber" data-preview-hover="welcome" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">First Impression</span>
@@ -275,7 +278,7 @@
               </div>
             </details>
 
-            <details class="settings-accordion" data-preview-hover="thankyou" open>
+            <details class="settings-accordion" data-accordion-tone="emerald" data-preview-hover="thankyou" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
                   <span class="floating-panel-kicker">After Send</span>
@@ -357,6 +360,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260417d"></script>
+  <script type="module" src="form-creator.js?v=20260417e"></script>
 </body>
 </html>
