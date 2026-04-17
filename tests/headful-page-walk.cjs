@@ -544,6 +544,12 @@ async function runFormCreator(page, baseUrl) {
   await page.goto(`${baseUrl}/form-creator.html`, { waitUntil: "domcontentloaded" });
   await waitForSettled(page, 1000);
   await capture(page, "start");
+  const questionCard = page.locator('.question-wrap[data-preview-step-id]').first();
+  if (await questionCard.count()) {
+    await questionCard.click();
+    await page.waitForTimeout(260);
+    await capture(page, "editor");
+  }
   const templatesTab = page.getByRole("button", { name: "Templates" });
   if (await templatesTab.count()) {
     await templatesTab.click();

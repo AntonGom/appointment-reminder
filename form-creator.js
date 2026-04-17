@@ -72,10 +72,12 @@ const formPreviewStage = document.getElementById("form-preview-stage");
 const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
+const studioMobileResizeHandle = document.getElementById("form-studio-mobile-resize");
 const studioScrollHint = document.getElementById("form-studio-scroll-hint");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
+const mobileStudioSizeButtons = Array.from(document.querySelectorAll("[data-mobile-studio-size]"));
 const fieldRailList = document.getElementById("field-rail-list");
 const templateList = document.getElementById("template-list");
 const studioTabButtons = Array.from(document.querySelectorAll("[data-studio-tab]"));
@@ -130,6 +132,7 @@ let editorDragState = null;
 let editorHasCustomPosition = false;
 let studioPanelDragState = null;
 let studioPanelResizeState = null;
+let studioPanelMobileResizeState = null;
 let studioPanelHasCustomFrame = false;
 let studioPanelScrollDiscovered = false;
 let dragPayload = null;
@@ -144,8 +147,57 @@ let suppressNextStepperClick = false;
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
 const MOBILE_CANVAS_HEIGHT = 760;
+const MOBILE_STUDIO_SIZE_STORAGE_KEY = "form_creator_mobile_studio_size";
+const MOBILE_STUDIO_HEIGHT_STORAGE_KEY = "form_creator_mobile_studio_height";
+let mobileStudioSize = "balanced";
+let mobileStudioHeightOverride = null;
 const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea", "select"].includes(option.id));
 const BUILT_IN_STEP_MAP = new Map(BASE_REMINDER_STEPS.map(step => [step.id, step]));
+
+function readStoredStudioValue(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function writeStoredStudioValue(key, value) {
+  try {
+    if (value == null || value === "") {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(key, String(value));
+    }
+  } catch (_error) {
+  }
+}
+
+function normalizeMobileStudioSize(value) {
+  return ["compact", "balanced", "expanded"].includes(String(value || "").trim()) ? String(value).trim() : "balanced";
+}
+
+function syncMobileStudioSizeButtons() {
+  mobileStudioSizeButtons.forEach(button => {
+    const isActive = !mobileStudioHeightOverride && button.dataset.mobileStudioSize === mobileStudioSize;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function setMobileStudioSize(nextSize) {
+  mobileStudioSize = normalizeMobileStudioSize(nextSize);
+  mobileStudioHeightOverride = null;
+  writeStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY, mobileStudioSize);
+  writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, "");
+  syncMobileStudioSizeButtons();
+  applyMobileStudioScale();
+  updateStudioPanelOverflowState();
+}
+
+function clampMobileStudioHeight(height, minHeight, maxHeight) {
+  return Math.min(Math.max(minHeight, Math.round(height)), Math.max(minHeight, maxHeight));
+}
 
 function buildTemplateField(config) {
   const base = createCustomField(config.type || "text");
@@ -1370,8 +1422,13 @@ function syncStudioEditorState() {
   const isEditorOpen = !editorPopover.hidden;
   studioPanel.classList.toggle("is-editor-open", isEditorOpen);
 
+  if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+    applyMobileStudioScale();
+  }
+
   if (isEditorOpen && window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
     requestAnimationFrame(() => {
+      studioPanel.scrollTop = 0;
       studioPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
@@ -2930,21 +2987,44 @@ function applyMobileStudioScale() {
 
   const isNarrowPhone = window.innerWidth <= 720;
   const widthPadding = isNarrowPhone ? 10 : 18;
-  const mobileCanvasWidth = isNarrowPhone ? 520 : MOBILE_CANVAS_WIDTH;
-  const panelHeight = isNarrowPhone
-    ? Math.max(232, Math.min(320, Math.round(window.innerHeight * 0.32)))
-    : Math.max(220, Math.min(290, Math.round(window.innerHeight * 0.28)));
-  const chromeAllowance = isNarrowPhone ? 92 : 112;
-  const heightAllowance = Math.max(320, window.innerHeight - panelHeight - chromeAllowance);
+  const mobileCanvasWidth = isNarrowPhone ? 540 : MOBILE_CANVAS_WIDTH;
+  const minPanelHeight = isNarrowPhone ? 238 : 228;
+  const maxPanelHeight = isNarrowPhone ? Math.min(520, Math.round(window.innerHeight * 0.64)) : Math.min(500, Math.round(window.innerHeight * 0.58));
+  const presetHeightMap = isNarrowPhone
+    ? {
+        compact: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.34))),
+        balanced: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.45))),
+        expanded: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.56)))
+      }
+    : {
+        compact: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.3))),
+        balanced: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.4))),
+        expanded: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.5)))
+      };
+  const isEditorOpen = !editorPopover?.hidden;
+  let panelHeight = mobileStudioHeightOverride != null
+    ? clampMobileStudioHeight(mobileStudioHeightOverride, minPanelHeight, maxPanelHeight)
+    : presetHeightMap[mobileStudioSize] || presetHeightMap.balanced;
+
+  if (isEditorOpen) {
+    panelHeight = Math.max(panelHeight, isNarrowPhone ? 380 : 360);
+  }
+
+  const chromeAllowance = isNarrowPhone ? 84 : 102;
+  const heightAllowance = Math.max(296, window.innerHeight - panelHeight - chromeAllowance);
   const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;
   const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
-  const nextScale = Math.max(0.44, Math.min(widthScale, heightScale, 1));
+  const previewScaleBias = isEditorOpen
+    ? (isNarrowPhone ? 0.82 : 0.87)
+    : (isNarrowPhone ? 0.87 : 0.91);
+  const nextScale = Math.max(0.4, Math.min(widthScale, heightScale, 1) * previewScaleBias);
 
   signedInShell.style.setProperty("--fc-mobile-canvas-scale", nextScale.toFixed(3));
   signedInShell.style.setProperty("--fc-mobile-canvas-width", `${mobileCanvasWidth}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-height", `${MOBILE_CANVAS_HEIGHT}px`);
   signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(MOBILE_CANVAS_HEIGHT * nextScale)}px`);
   signedInShell.style.setProperty("--fc-mobile-panel-height", `${panelHeight}px`);
+  syncMobileStudioSizeButtons();
 }
 
 function openTypographyEditor(config) {
@@ -4488,6 +4568,68 @@ if (studioPanel) {
 
     updateStudioPanelOverflowState();
   }, { passive: true });
+}
+
+mobileStudioSize = normalizeMobileStudioSize(readStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY));
+const storedMobileStudioHeight = Number(readStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY));
+mobileStudioHeightOverride = Number.isFinite(storedMobileStudioHeight) && storedMobileStudioHeight > 0
+  ? storedMobileStudioHeight
+  : null;
+syncMobileStudioSizeButtons();
+
+mobileStudioSizeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    setMobileStudioSize(button.dataset.mobileStudioSize || "balanced");
+  });
+});
+
+if (studioMobileResizeHandle && studioPanel) {
+  studioMobileResizeHandle.addEventListener("pointerdown", event => {
+    if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+      return;
+    }
+
+    const rect = studioPanel.getBoundingClientRect();
+    studioPanelMobileResizeState = {
+      startY: event.clientY,
+      startHeight: rect.height,
+      pointerId: event.pointerId
+    };
+    studioMobileResizeHandle.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+
+  studioMobileResizeHandle.addEventListener("pointermove", event => {
+    if (!studioPanelMobileResizeState || studioPanelMobileResizeState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const isNarrowPhone = window.innerWidth <= 720;
+    const minHeight = isNarrowPhone ? 238 : 228;
+    const maxHeight = isNarrowPhone ? Math.min(520, Math.round(window.innerHeight * 0.64)) : Math.min(500, Math.round(window.innerHeight * 0.58));
+    const nextHeight = clampMobileStudioHeight(
+      studioPanelMobileResizeState.startHeight - (event.clientY - studioPanelMobileResizeState.startY),
+      minHeight,
+      maxHeight
+    );
+
+    mobileStudioHeightOverride = nextHeight;
+    writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, nextHeight);
+    applyMobileStudioScale();
+    updateStudioPanelOverflowState();
+  });
+
+  const stopMobileStudioResizing = event => {
+    if (!studioPanelMobileResizeState || studioPanelMobileResizeState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    studioMobileResizeHandle.releasePointerCapture?.(event.pointerId);
+    studioPanelMobileResizeState = null;
+  };
+
+  studioMobileResizeHandle.addEventListener("pointerup", stopMobileStudioResizing);
+  studioMobileResizeHandle.addEventListener("pointercancel", stopMobileStudioResizing);
 }
 
 window.addEventListener("resize", () => {
