@@ -2928,11 +2928,14 @@ function applyMobileStudioScale() {
     return;
   }
 
-  const widthPadding = window.innerWidth <= 720 ? 10 : 18;
-  const mobileCanvasWidth = window.innerWidth <= 720 ? 520 : MOBILE_CANVAS_WIDTH;
-  const panelHeight = Math.max(124, Math.min(146, Math.round(window.innerHeight * 0.135)));
-  const chromeAllowance = window.innerWidth <= 720 ? 96 : 118;
-  const heightAllowance = Math.max(360, window.innerHeight - panelHeight - chromeAllowance);
+  const isNarrowPhone = window.innerWidth <= 720;
+  const widthPadding = isNarrowPhone ? 10 : 18;
+  const mobileCanvasWidth = isNarrowPhone ? 520 : MOBILE_CANVAS_WIDTH;
+  const panelHeight = isNarrowPhone
+    ? Math.max(232, Math.min(320, Math.round(window.innerHeight * 0.32)))
+    : Math.max(220, Math.min(290, Math.round(window.innerHeight * 0.28)));
+  const chromeAllowance = isNarrowPhone ? 92 : 112;
+  const heightAllowance = Math.max(320, window.innerHeight - panelHeight - chromeAllowance);
   const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;
   const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
   const nextScale = Math.max(0.44, Math.min(widthScale, heightScale, 1));

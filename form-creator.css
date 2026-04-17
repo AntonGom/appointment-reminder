@@ -2551,7 +2551,7 @@ body.is-step-chip-dragging {
   .form-creator-canvas {
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: var(--fc-mobile-canvas-scaled-height, 420px) minmax(var(--fc-mobile-panel-height, 272px), 1fr);
+    grid-template-rows: var(--fc-mobile-canvas-scaled-height, 420px) minmax(var(--fc-mobile-panel-height, 288px), 1fr);
     gap: 14px;
     min-height: auto;
     height: 100%;
@@ -2581,7 +2581,7 @@ body.is-step-chip-dragging {
     left: auto;
     right: auto;
     width: min(100%, 338px);
-    height: var(--fc-mobile-panel-height, 248px);
+    height: var(--fc-mobile-panel-height, 288px);
     min-height: 0;
     max-width: 100%;
     max-height: none;
