@@ -1961,7 +1961,7 @@ body.is-step-chip-dragging {
 
 .field-rail-card {
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 14px 14px 14px 12px;
@@ -1969,11 +1969,12 @@ body.is-step-chip-dragging {
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(248, 250, 252, 0.9);
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  touch-action: pan-y;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 .field-rail-card.is-built-in {
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
 }
 
 .field-rail-card:hover,
@@ -1984,7 +1985,28 @@ body.is-step-chip-dragging {
 }
 
 .field-rail-card.is-dragging {
-  opacity: 0.45;
+  opacity: 0.88;
+  transform: translate3d(var(--fc-field-rail-drag-x, 0px), var(--fc-field-rail-drag-y, 0px), 0) scale(1.02);
+  box-shadow: 0 22px 36px rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.38);
+  z-index: 2;
+}
+
+.field-rail-card.is-drop-before::before,
+.field-rail-card.is-drop-after::after {
+  content: "";
+  grid-column: 1 / -1;
+  height: 0;
+  border-top: 3px solid rgba(37, 99, 235, 0.92);
+  border-radius: 999px;
+}
+
+.field-rail-card.is-drop-before::before {
+  margin-top: -7px;
+}
+
+.field-rail-card.is-drop-after::after {
+  margin-bottom: -7px;
 }
 
 .field-rail-icon {
@@ -2032,6 +2054,26 @@ body.is-step-chip-dragging {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.field-rail-grip {
+  display: inline-grid;
+  gap: 3px;
+  align-items: center;
+  justify-items: center;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: rgba(226, 232, 240, 0.72);
+  color: #64748b;
+  cursor: grab;
+  touch-action: none;
+}
+
+.field-rail-grip span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .floating-tool-dock {
@@ -2455,6 +2497,11 @@ body.is-step-chip-dragging {
   gap: 10px;
 }
 
+.step-nav-editor-item-controls {
+  display: grid;
+  gap: 8px;
+}
+
 .step-nav-editor-chip {
   display: inline-flex;
   align-items: center;
@@ -2469,6 +2516,18 @@ body.is-step-chip-dragging {
   font-weight: 800;
   text-align: center;
   line-height: 1.2;
+}
+
+.step-nav-editor-delete {
+  justify-self: start;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.34);
+  background: rgba(254, 226, 226, 0.82);
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .toggle-row {

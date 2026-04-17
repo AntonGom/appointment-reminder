@@ -341,6 +341,58 @@ async function stubModulePages(page, seedState) {
   });
 }
 
+async function pointerDrag(page, fromLocator, toLocator, options = {}) {
+  const {
+    startAt = "center",
+    endAt = "center",
+    nudge = 10,
+    steps = 14
+  } = options;
+
+  await fromLocator.scrollIntoViewIfNeeded();
+  await toLocator.scrollIntoViewIfNeeded();
+
+  const fromBox = await fromLocator.boundingBox();
+  const toBox = await toLocator.boundingBox();
+
+  expect(fromBox).not.toBeNull();
+  expect(toBox).not.toBeNull();
+
+  const pointFor = (box, placement) => {
+    if (placement === "top") {
+      return { x: box.x + (box.width / 2), y: box.y + Math.min(16, box.height * 0.25) };
+    }
+    if (placement === "bottom") {
+      return { x: box.x + (box.width / 2), y: box.y + box.height - Math.min(16, box.height * 0.25) };
+    }
+    if (placement === "left") {
+      return { x: box.x + Math.min(16, box.width * 0.25), y: box.y + (box.height / 2) };
+    }
+    if (placement === "right") {
+      return { x: box.x + box.width - Math.min(16, box.width * 0.25), y: box.y + (box.height / 2) };
+    }
+
+    return { x: box.x + (box.width / 2), y: box.y + (box.height / 2) };
+  };
+
+  const startPoint = pointFor(fromBox, startAt);
+  const endPoint = pointFor(toBox, endAt);
+
+  await page.mouse.move(startPoint.x, startPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(startPoint.x + 1, startPoint.y + nudge, { steps: 3 });
+  await page.mouse.move(endPoint.x, endPoint.y, { steps });
+  await page.mouse.up();
+}
+
+async function closeFormEditorIfOpen(page) {
+  const editor = page.locator("#form-editor-popover");
+  if (await editor.isVisible()) {
+    await page.locator("#form-editor-close").click();
+    await expect(editor).toBeHidden();
+  }
+}
+
 test.describe("Calendar and Form Creator", () => {
   test("calendar renders saved appointments and switches between week and month views", async ({ page }) => {
     const seed = createSupabaseSeed({
@@ -479,5 +531,68 @@ test.describe("Form Creator mobile UX", () => {
     expect(editorBox).not.toBeNull();
     expect(editorBox.width).toBeGreaterThan(250);
     expect(editorBox.height).toBeGreaterThan(320);
+  });
+
+  test("mobile exploratory workflow handles page add/delete, seven-question pages, and drag reordering", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/form-creator.html");
+
+    await expect(page.locator("#form-studio-panel")).toBeVisible();
+    await page.locator('[data-mobile-studio-size="expanded"]').click();
+
+    const stepButtons = page.locator("#preview-stepper [data-preview-step]");
+    const initialStepCount = await stepButtons.count();
+
+    const blankPageButton = page.locator('[data-add-page="blank"]');
+    await blankPageButton.click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await closeFormEditorIfOpen(page);
+
+    await blankPageButton.click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await closeFormEditorIfOpen(page);
+
+    await expect(stepButtons).toHaveCount(initialStepCount + 2);
+
+    const fieldTypesToAdd = ["text", "textarea", "select", "content-text", "content-divider", "text", "textarea"];
+    for (const fieldType of fieldTypesToAdd) {
+      await page.locator(`[data-add-type="${fieldType}"]`).click();
+      await expect(page.locator("#form-editor-popover")).toBeVisible();
+      await closeFormEditorIfOpen(page);
+    }
+
+    const fieldCards = page.locator("#field-rail-list .field-rail-card");
+    await expect(fieldCards).toHaveCount(7);
+
+    const dividerCard = fieldCards.filter({ has: page.locator(".field-rail-title", { hasText: "Divider" }) }).first();
+    await expect(dividerCard).toBeVisible();
+    await pointerDrag(
+      page,
+      dividerCard.locator("[data-field-rail-grip]"),
+      fieldCards.first().locator("[data-field-rail-grip]"),
+      { startAt: "center", endAt: "top" }
+    );
+
+    await expect(page.locator("#field-rail-list .field-rail-card .field-rail-title").first()).toContainText("Divider");
+
+    await fieldCards.first().click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await expect(page.locator("#form-editor-title")).toContainText("Divider block");
+    await page.locator("#editor-delete-field").click();
+    await expect(fieldCards).toHaveCount(6);
+
+    const timeChip = page.locator('#preview-stepper [data-preview-step="time"]').first();
+    const phoneChip = page.locator('#preview-stepper [data-preview-step="phone"]').first();
+    await pointerDrag(page, timeChip, phoneChip, { startAt: "center", endAt: "left" });
+    await expect(page.locator("#preview-stepper .preview-stepper-label").first()).toContainText("Time");
+
+    await page.waitForTimeout(250);
+    await page.locator("#preview-step-title").click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await expect(page.locator("#form-editor-title")).toContainText("Custom page");
+    await page.locator("#editor-delete-page").click();
+
+    await expect(stepButtons).toHaveCount(initialStepCount + 1);
+    await expect(page.locator("#status-banner")).toContainText("removed from your form");
   });
 });

@@ -143,6 +143,8 @@ let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
 let stepPointerDragState = null;
 let suppressNextStepperClick = false;
+let fieldRailPointerDragState = null;
+let suppressNextFieldRailClick = false;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
@@ -967,9 +969,57 @@ function addBlankPage(insertIndex = null) {
   setStatus("Blank page added. Click inside the page to start building it.", "info");
 }
 
+function removeCustomPage(stepId) {
+  const page = getCustomPages().find(entry => entry.id === stepId);
+
+  if (!page) {
+    return false;
+  }
+
+  const removedFieldIds = new Set(
+    getCustomFields()
+      .filter(entry => entry.id === stepId || entry.pageId === stepId)
+      .map(entry => entry.id)
+  );
+  const nextPageFieldOrder = Object.fromEntries(
+    Object.entries(currentFormProfile.pageFieldOrder || {})
+      .filter(([pageId]) => pageId !== stepId)
+      .map(([pageId, ids]) => [
+        pageId,
+        Array.isArray(ids) ? ids.filter(id => !removedFieldIds.has(id)) : []
+      ])
+  );
+  const nextStepOrder = (Array.isArray(currentFormProfile.stepOrder) ? currentFormProfile.stepOrder : getCurrentStepOrder())
+    .filter(id => id !== stepId);
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    customPages: getCustomPages().filter(entry => entry.id !== stepId),
+    fields: getCustomFields().filter(entry => entry.id !== stepId && entry.pageId !== stepId),
+    stepOrder: [...new Set(nextStepOrder)],
+    pageFieldOrder: nextPageFieldOrder
+  };
+
+  if (selectedPreviewStepId === stepId || !buildPreviewStepList(currentFormProfile).some(step => step.id === selectedPreviewStepId)) {
+    const nextPreviewSteps = buildPreviewStepList(currentFormProfile);
+    selectedPreviewStepId = nextPreviewSteps.find(isReorderablePreviewStep)?.id
+      || nextPreviewSteps[0]?.id
+      || BASE_REMINDER_STEPS[0]?.id
+      || "phone";
+  }
+
+  closeEditor();
+  renderBuilder();
+  setStatus(`${page.title || "Custom page"} removed from your form.`, "success");
+  return true;
+}
+
 function clearDragIndicators() {
   document.querySelectorAll(".preview-field-dropzone.is-over, .preview-step-dropzone.is-over").forEach(zone => {
     zone.classList.remove("is-over");
+  });
+  document.querySelectorAll(".field-rail-card.is-drop-before, .field-rail-card.is-drop-after").forEach(card => {
+    card.classList.remove("is-drop-before", "is-drop-after");
   });
 }
 
@@ -1206,8 +1256,202 @@ function cancelStepPointerDrag() {
   clearStepPointerDragState();
 }
 
+function getFieldRailCards() {
+  if (!fieldRailList) {
+    return [];
+  }
+
+  return Array.from(fieldRailList.querySelectorAll("[data-field-id]"));
+}
+
+function getFieldRailInsertStateFromPointer(clientY) {
+  const cards = getFieldRailCards();
+
+  if (!cards.length || typeof clientY !== "number") {
+    return {
+      insertIndex: 0,
+      targetCard: cards[0] || null,
+      placement: "before"
+    };
+  }
+
+  for (let index = 0; index < cards.length; index += 1) {
+    const rect = cards[index].getBoundingClientRect();
+    const midpoint = rect.top + (rect.height / 2);
+
+    if (clientY < midpoint) {
+      return {
+        insertIndex: index,
+        targetCard: cards[index],
+        placement: "before"
+      };
+    }
+  }
+
+  return {
+    insertIndex: cards.length,
+    targetCard: cards[cards.length - 1] || null,
+    placement: "after"
+  };
+}
+
+function autoScrollFieldRailList(clientY = null) {
+  if (!fieldRailList || typeof clientY !== "number") {
+    return;
+  }
+
+  const rect = fieldRailList.getBoundingClientRect();
+  const edgeThreshold = 44;
+  const scrollAmount = 24;
+
+  if (clientY <= rect.top + edgeThreshold) {
+    fieldRailList.scrollBy({ top: -scrollAmount, behavior: "auto" });
+  } else if (clientY >= rect.bottom - edgeThreshold) {
+    fieldRailList.scrollBy({ top: scrollAmount, behavior: "auto" });
+  }
+}
+
+function showFieldRailDropIndicator(targetCard, placement = "before") {
+  clearDragIndicators();
+
+  if (!targetCard) {
+    return;
+  }
+
+  targetCard.classList.add(placement === "after" ? "is-drop-after" : "is-drop-before");
+}
+
+function clearFieldRailPointerDragState({ preserveSuppressClick = false } = {}) {
+  if (fieldRailPointerDragState?.card) {
+    fieldRailPointerDragState.card.classList.remove("is-dragging");
+    fieldRailPointerDragState.card.style.removeProperty("--fc-field-rail-drag-x");
+    fieldRailPointerDragState.card.style.removeProperty("--fc-field-rail-drag-y");
+    if (typeof fieldRailPointerDragState.pointerId === "number") {
+      try {
+        fieldRailPointerDragState.card.releasePointerCapture(fieldRailPointerDragState.pointerId);
+      } catch (_error) {
+        // Ignore release failures when capture was never acquired.
+      }
+    }
+  }
+
+  if (!preserveSuppressClick) {
+    suppressNextFieldRailClick = false;
+  }
+
+  fieldRailPointerDragState = null;
+  document.body.classList.remove("is-field-rail-dragging");
+  clearDragIndicators();
+}
+
+function beginFieldRailPointerDrag() {
+  if (!fieldRailPointerDragState?.card) {
+    return;
+  }
+
+  fieldRailPointerDragState.dragging = true;
+  fieldRailPointerDragState.card.classList.add("is-dragging");
+  fieldRailPointerDragState.card.style.setProperty("--fc-field-rail-drag-x", "0px");
+  fieldRailPointerDragState.card.style.setProperty("--fc-field-rail-drag-y", "0px");
+  document.body.classList.add("is-field-rail-dragging");
+}
+
+function updateFieldRailPointerDrag(clientX, clientY) {
+  if (!fieldRailPointerDragState?.fieldId) {
+    return;
+  }
+
+  const deltaX = clientX - fieldRailPointerDragState.startX;
+  const deltaY = clientY - fieldRailPointerDragState.startY;
+  fieldRailPointerDragState.card?.style.setProperty("--fc-field-rail-drag-x", `${deltaX}px`);
+  fieldRailPointerDragState.card?.style.setProperty("--fc-field-rail-drag-y", `${deltaY}px`);
+  autoScrollFieldRailList(clientY);
+
+  const insertState = getFieldRailInsertStateFromPointer(clientY);
+  fieldRailPointerDragState.insertIndex = insertState.insertIndex;
+  fieldRailPointerDragState.targetCard = insertState.targetCard;
+  fieldRailPointerDragState.placement = insertState.placement;
+  showFieldRailDropIndicator(insertState.targetCard, insertState.placement);
+}
+
+function maybeStartFieldRailPointerDrag(event) {
+  if (!fieldRailList || event.button !== 0) {
+    return;
+  }
+
+  const grip = event.target.closest?.("[data-field-rail-grip]");
+  const card = grip?.closest?.("[data-field-id]");
+  const fieldId = card?.dataset.fieldId || "";
+
+  if (!grip || !card || !fieldId) {
+    return;
+  }
+
+  fieldRailPointerDragState = {
+    pointerId: event.pointerId,
+    fieldId,
+    card,
+    startX: event.clientX,
+    startY: event.clientY,
+    insertIndex: null,
+    targetCard: null,
+    placement: "before",
+    dragging: false
+  };
+  suppressNextFieldRailClick = false;
+
+  try {
+    card.setPointerCapture(event.pointerId);
+  } catch (_error) {
+    // Some browsers do not support pointer capture in every context.
+  }
+}
+
+function handleFieldRailPointerMove(event) {
+  if (!fieldRailPointerDragState || event.pointerId !== fieldRailPointerDragState.pointerId) {
+    return;
+  }
+
+  const movedX = Math.abs(event.clientX - fieldRailPointerDragState.startX);
+  const movedY = Math.abs(event.clientY - fieldRailPointerDragState.startY);
+
+  if (!fieldRailPointerDragState.dragging) {
+    if (Math.max(movedX, movedY) < 8) {
+      return;
+    }
+
+    beginFieldRailPointerDrag();
+  }
+
+  event.preventDefault();
+  updateFieldRailPointerDrag(event.clientX, event.clientY);
+}
+
+function finishFieldRailPointerDrop() {
+  if (!fieldRailPointerDragState) {
+    return;
+  }
+
+  const { dragging, fieldId, insertIndex } = fieldRailPointerDragState;
+
+  if (dragging && fieldId && typeof insertIndex === "number") {
+    reorderCurrentPageField(fieldId, insertIndex);
+    suppressNextFieldRailClick = true;
+    window.setTimeout(() => {
+      suppressNextFieldRailClick = false;
+    }, 180);
+  }
+
+  clearFieldRailPointerDragState({ preserveSuppressClick: suppressNextFieldRailClick });
+}
+
+function cancelFieldRailPointerDrag() {
+  clearFieldRailPointerDragState();
+}
+
 function startDrag(payload, event, draggedElement = null) {
   cancelStepPointerDrag();
+  cancelFieldRailPointerDrag();
   dragPayload = payload;
 
   if (payload?.kind === "existing-field") {
@@ -2121,6 +2365,9 @@ function renderFieldRail() {
           <span class="field-rail-meta">${fieldMeta}</span>
         </span>
         ${field.required ? `<span class="field-rail-required">Req</span>` : ""}
+        <span class="field-rail-grip" data-field-rail-grip aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
       </button>
     `;
   }).join("");
@@ -2129,6 +2376,11 @@ function renderFieldRail() {
     const fieldId = card.dataset.fieldId || "";
 
     card.addEventListener("click", () => {
+      if (suppressNextFieldRailClick) {
+        suppressNextFieldRailClick = false;
+        return;
+      }
+
       closeEditor();
       openFieldEditor(fieldId);
     });
@@ -2360,13 +2612,18 @@ function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
     </div>
     <div class="step-nav-editor-list">
       ${editableSteps.map(step => `
-        <label class="step-nav-editor-item">
+        <div class="step-nav-editor-item">
           <span
             class="step-nav-editor-chip"
             style="--chip-bg:${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)};--chip-text:${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)};--chip-radius:${escapeHtml(stepSurfaceState.radius)};"
           >${escapeHtml(step.navLabel || step.title || step.label || "Step")}</span>
-          <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
-        </label>
+          <div class="step-nav-editor-item-controls">
+            <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+            ${getCustomPages().some(page => page.id === step.id)
+              ? `<button class="step-nav-editor-delete" type="button" data-step-delete-page="${escapeHtml(step.id)}">Delete page</button>`
+              : ""}
+          </div>
+        </div>
       `).join("")}
     </div>
   `;
@@ -2474,6 +2731,12 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
       }
 
       renderPreview();
+    });
+  });
+
+  root.querySelectorAll("[data-step-delete-page]").forEach(button => {
+    button.addEventListener("click", () => {
+      removeCustomPage(button.dataset.stepDeletePage || "");
     });
   });
 }
@@ -3388,6 +3651,60 @@ function openStepNavigationEditor() {
   bindStepNavigationSettings(editorBody, "editor-step-nav");
 }
 
+function openCustomPageEditor(step) {
+  if (!step || !editorPopover || !editorBody) {
+    return;
+  }
+
+  if (!showEditorView(
+    "Custom page",
+    "Rename this page, tune its step chip label, or remove it from your form.",
+    `
+      <label>
+        Page title
+        <input id="editor-page-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
+      </label>
+      <label>
+        Step chip label
+        <input id="editor-page-nav-label" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+      </label>
+      <label>
+        Supporting copy
+        <textarea id="editor-page-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
+      </label>
+      <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
+    `
+  )) {
+    return;
+  }
+
+  const titleInput = document.getElementById("editor-page-title");
+  const navLabelInput = document.getElementById("editor-page-nav-label");
+  const copyInput = document.getElementById("editor-page-copy");
+  const deleteButton = document.getElementById("editor-delete-page");
+
+  const patchPage = updates => {
+    patchStepConfig(step.id, updates);
+    renderBuilder();
+  };
+
+  titleInput?.addEventListener("input", event => {
+    patchPage({ title: event.target.value.slice(0, 60) || "Custom Page" });
+  });
+
+  navLabelInput?.addEventListener("input", event => {
+    patchPage({ navLabel: safeShortLabel(event.target.value) });
+  });
+
+  copyInput?.addEventListener("input", event => {
+    patchPage({ copy: event.target.value.slice(0, 180) });
+  });
+
+  deleteButton?.addEventListener("click", () => {
+    removeCustomPage(step.id);
+  });
+}
+
 function openSelectedStepTextEditor(target, fieldIdOverride = "") {
   const step = fieldIdOverride ? getEditableStep(fieldIdOverride) : getSelectedPreviewStep();
 
@@ -3449,6 +3766,11 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
 
   if (target === "step-nav-label") {
     openStepNavigationEditor();
+    return;
+  }
+
+  if (getCustomPages().some(page => page.id === step.id) && (target === "step-title" || target === "step-copy")) {
+    openCustomPageEditor(step);
     return;
   }
 
@@ -4223,24 +4545,33 @@ previewStepper?.addEventListener("pointerdown", event => {
   maybeStartStepPointerDrag(event);
 });
 
+fieldRailList?.addEventListener("pointerdown", event => {
+  maybeStartFieldRailPointerDrag(event);
+});
+
 window.addEventListener("pointermove", event => {
   handleStepPointerMove(event);
+  handleFieldRailPointerMove(event);
 });
 
 window.addEventListener("pointerup", event => {
-  if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
-    return;
+  if (stepPointerDragState && event.pointerId === stepPointerDragState.pointerId) {
+    finishStepPointerDrop();
   }
 
-  finishStepPointerDrop();
+  if (fieldRailPointerDragState && event.pointerId === fieldRailPointerDragState.pointerId) {
+    finishFieldRailPointerDrop();
+  }
 });
 
 window.addEventListener("pointercancel", event => {
-  if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
-    return;
+  if (stepPointerDragState && event.pointerId === stepPointerDragState.pointerId) {
+    cancelStepPointerDrag();
   }
 
-  cancelStepPointerDrag();
+  if (fieldRailPointerDragState && event.pointerId === fieldRailPointerDragState.pointerId) {
+    cancelFieldRailPointerDrag();
+  }
 });
 
 previewStepHost?.addEventListener("click", event => {
