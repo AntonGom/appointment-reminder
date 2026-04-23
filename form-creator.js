@@ -73,7 +73,6 @@ const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
 const studioMobileResizeHandle = document.getElementById("form-studio-mobile-resize");
-const studioMobileResizeArrow = document.getElementById("form-studio-mobile-resize-arrow");
 const studioScrollHint = document.getElementById("form-studio-scroll-hint");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
@@ -279,10 +278,6 @@ function updateMobileStudioHandleState() {
   studioMobileResizeHandle.classList.toggle("is-collapsed", isCollapsed);
   studioMobileResizeHandle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
   studioMobileResizeHandle.setAttribute("aria-label", isCollapsed ? "Expand form studio" : "Collapse form studio");
-
-  if (studioMobileResizeArrow) {
-    studioMobileResizeArrow.textContent = isCollapsed ? "↑" : "↓";
-  }
 }
 
 function toggleMobileStudioCollapsed() {
@@ -373,6 +368,24 @@ function expandPeekedMobileStudioForEditor() {
   mobileStudioResumeState = mobileStudioHeightOverride != null
     ? { kind: "override", height: mobileStudioHeightOverride }
     : { kind: "preset", size: mobileStudioSize };
+
+  if (mobileStudioExpandedState?.kind === "override" && Number.isFinite(mobileStudioExpandedState.height)) {
+    mobileStudioHeightOverride = clampMobileStudioHeight(mobileStudioExpandedState.height, minPanelHeight, maxPanelHeight);
+    writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, mobileStudioHeightOverride);
+    syncMobileStudioSizeButtons();
+    applyMobileStudioScale();
+    return;
+  }
+
+  if (mobileStudioExpandedState?.kind === "preset" && mobileStudioExpandedState.size && mobileStudioExpandedState.size !== "peek") {
+    mobileStudioSize = normalizeMobileStudioSize(mobileStudioExpandedState.size);
+    mobileStudioHeightOverride = null;
+    writeStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY, mobileStudioSize);
+    writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, "");
+    syncMobileStudioSizeButtons();
+    applyMobileStudioScale();
+    return;
+  }
 
   mobileStudioHeightOverride = isNarrowPhone ? presetHeightMap.expanded : presetHeightMap.balanced;
   writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, mobileStudioHeightOverride);
@@ -1997,7 +2010,7 @@ function openSelectedStudioInspector() {
   }
 
   if (selectedStep.type === "welcome" || selectedStep.type === "thankyou") {
-    openSelectedStepTextEditor("step-title");
+    openCustomPageEditor(selectedStep);
     return;
   }
 
@@ -2518,9 +2531,30 @@ function removeBuilderField(fieldId) {
 
 function removeBuilderPage(stepId) {
   const step = getEditableStep(stepId);
+  const stepType = String(step?.type || step?.id || "").trim().toLowerCase();
 
-  if (!step || ["review", "welcome", "thankyou"].includes(step.id) || ["review", "welcome", "thankyou"].includes(String(step.type || "").trim())) {
+  if (!step || stepType === "review") {
     return false;
+  }
+
+  if (stepType === "welcome" || stepType === "thankyou") {
+    currentFormProfile = {
+      ...currentFormProfile,
+      [stepType === "thankyou" ? "thankYouScreenEnabled" : "welcomeScreenEnabled"]: false
+    };
+
+    if (selectedPreviewStepId === step.id || !buildPreviewStepList(currentFormProfile).some(entry => entry.id === selectedPreviewStepId)) {
+      const nextPreviewSteps = buildPreviewStepList(currentFormProfile);
+      selectedPreviewStepId = nextPreviewSteps.find(isReorderablePreviewStep)?.id
+        || nextPreviewSteps[0]?.id
+        || BASE_REMINDER_STEPS[0]?.id
+        || "phone";
+    }
+
+    closeEditor();
+    renderBuilder();
+    setStatus(`${stepType === "thankyou" ? "Finish" : "Start"} screen removed from your form.`, "success");
+    return true;
   }
 
   if (getCustomPages().some(page => page.id === stepId)) {
@@ -3683,11 +3717,6 @@ function applyMobileStudioScale() {
   let panelHeight = mobileStudioHeightOverride != null
     ? clampMobileStudioHeight(mobileStudioHeightOverride, minPanelHeight, maxPanelHeight)
     : presetHeightMap[mobileStudioSize] || presetHeightMap.balanced;
-  const minimumEditorHeight = isNarrowPhone ? presetHeightMap.expanded : presetHeightMap.balanced;
-
-  if (isEditorOpen) {
-    panelHeight = Math.max(panelHeight, minimumEditorHeight);
-  }
 
   const chromeAllowance = isNarrowPhone ? 154 : 144;
   const heightAllowance = Math.max(232, window.innerHeight - panelHeight - chromeAllowance);
@@ -4059,6 +4088,72 @@ function openStepNavigationEditor() {
 function openCustomPageEditor(step) {
   setActiveStudioTab("add-fields");
   if (!step || !editorPopover || !editorBody) {
+    return;
+  }
+
+  if (isSpecialPreviewScreen(step)) {
+    const isThankYou = step.type === "thankyou";
+    const screenLabel = isThankYou ? "Finish screen" : "Start screen";
+    const prefix = isThankYou ? "thankYou" : "welcome";
+
+    if (!showEditorView(
+      "Page settings",
+      `Edit the ${screenLabel.toLowerCase()} text, button label, or remove it from your form entirely.`,
+      `
+        <div class="page-editor-section" data-preview-hover="${escapeHtml(step.type)}">
+          <strong class="page-editor-section-title">${escapeHtml(screenLabel)}</strong>
+          <div class="page-editor-chip-preview">${escapeHtml(screenLabel)}</div>
+          <div class="editor-inline-note">This screen does not hold question fields. It is an optional screen shown ${isThankYou ? "after" : "before"} the question pages.</div>
+        </div>
+        <label>
+          Screen title
+          <input id="editor-page-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
+        </label>
+        <label>
+          Supporting copy
+          <textarea id="editor-page-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
+        </label>
+        <label>
+          Button text
+          <input id="editor-page-button" type="text" value="${escapeHtml(step.buttonText || "")}" maxlength="32">
+        </label>
+        <div class="page-editor-danger-zone">
+          <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
+          <div class="page-editor-danger-note">This hides the ${escapeHtml(screenLabel.toLowerCase())}. You can restore it later from Form Settings.</div>
+        </div>
+      `
+    )) {
+      return;
+    }
+
+    const titleInput = document.getElementById("editor-page-title");
+    const copyInput = document.getElementById("editor-page-copy");
+    const buttonInput = document.getElementById("editor-page-button");
+    const deleteButton = document.getElementById("editor-delete-page");
+
+    const patchScreen = updates => {
+      currentFormProfile = {
+        ...currentFormProfile,
+        ...updates
+      };
+      renderBuilder();
+    };
+
+    titleInput?.addEventListener("input", event => {
+      patchScreen({ [`${prefix}Title`]: event.target.value.slice(0, 60) });
+    });
+
+    copyInput?.addEventListener("input", event => {
+      patchScreen({ [`${prefix}Copy`]: event.target.value.slice(0, 180) });
+    });
+
+    buttonInput?.addEventListener("input", event => {
+      patchScreen({ [`${prefix}ButtonText`]: event.target.value.slice(0, 32) });
+    });
+
+    deleteButton?.addEventListener("click", () => {
+      removeBuilderPage(step.id);
+    });
     return;
   }
 
