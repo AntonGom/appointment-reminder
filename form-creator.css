@@ -1486,6 +1486,10 @@ body.is-field-rail-dragging {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
+.floating-panel-studio.can-scroll-up .floating-panel-head {
+  border-bottom-color: rgba(148, 163, 184, 0.1);
+}
+
 .floating-panel-drag-dots {
   display: grid;
   grid-template-columns: repeat(2, 4px);
@@ -1634,6 +1638,10 @@ body.is-field-rail-dragging {
   gap: 14px;
 }
 
+.studio-tab-panel.is-animating-in {
+  animation: studioPanelSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .studio-tab-panel[hidden] {
   display: none;
 }
@@ -1647,13 +1655,14 @@ body.is-field-rail-dragging {
 
 .floating-panel-studio .floating-panel-head {
   position: sticky;
-  top: -2px;
-  z-index: 5;
-  margin: 0 0 4px;
-  padding: 0;
+  top: 0;
+  z-index: 12;
+  margin: -6px -6px 8px;
+  padding: 10px 10px 10px;
   border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+  background: linear-gradient(180deg, rgba(251, 253, 255, 0.48) 0%, rgba(246, 249, 255, 0.22) 58%, rgba(246, 249, 255, 0) 100%);
+  backdrop-filter: blur(20px) saturate(145%);
   box-shadow: none;
 }
 
@@ -2545,6 +2554,10 @@ body.is-field-rail-dragging {
   scrollbar-color: rgba(37, 99, 235, 0.5) rgba(148, 163, 184, 0.08);
 }
 
+.form-editor-popover.is-transition-in {
+  animation: studioInspectorSlideIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .floating-panel-studio.is-editor-open .form-editor-popover {
   flex: 1 1 auto;
   min-height: 0;
@@ -3048,19 +3061,34 @@ body.is-field-rail-dragging {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: -1px auto 5px;
+    gap: 8px;
+    margin: -2px auto 4px;
     width: 100%;
-    min-height: 18px;
+    min-height: 34px;
+    padding: 6px 0 4px;
     touch-action: none;
     cursor: ns-resize;
   }
 
-  .studio-mobile-resize-handle span {
-    width: 54px;
-    height: 5px;
+  .studio-mobile-resize-handle-bar {
+    width: 68px;
+    height: 6px;
     border-radius: 999px;
     background: linear-gradient(180deg, rgba(148, 163, 184, 0.72), rgba(148, 163, 184, 0.42));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  }
+
+  .studio-mobile-resize-handle-arrow {
+    color: #476178;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+
+  .studio-mobile-resize-handle.is-collapsed .studio-mobile-resize-handle-arrow {
+    transform: translateY(-1px);
+    color: var(--fc-accent);
   }
 
   .studio-scroll-hint {
@@ -3137,10 +3165,12 @@ body.is-field-rail-dragging {
   }
 
   .floating-panel-studio.is-mobile-collapsed .studio-mobile-resize-handle {
-    margin: -1px auto 2px;
+    margin: -2px auto 0;
+    min-height: 38px;
+    padding-bottom: 2px;
   }
 
-  .floating-panel-studio.is-mobile-collapsed .studio-mobile-resize-handle span {
+  .floating-panel-studio.is-mobile-collapsed .studio-mobile-resize-handle-bar {
     width: 64px;
     height: 6px;
     background: linear-gradient(180deg, rgba(59, 130, 246, 0.78), rgba(37, 99, 235, 0.56));
@@ -3275,8 +3305,8 @@ body.is-field-rail-dragging {
   }
 
   .floating-panel-studio .floating-panel-head {
-    margin: 0 0 2px;
-    padding: 0;
+    margin: -6px -6px 6px;
+    padding: 8px 8px 9px;
     border-radius: 0;
   }
 
@@ -3286,8 +3316,7 @@ body.is-field-rail-dragging {
   }
 
   .floating-panel-drag-chip {
-    padding: 2px 6px;
-    font-size: 8px;
+    display: none;
   }
 
   .form-enabled-card {
@@ -3448,7 +3477,8 @@ body.is-field-rail-dragging {
   }
 
   .studio-mobile-resize-handle {
-    margin-bottom: 2px;
+    min-height: 36px;
+    margin-bottom: 1px;
   }
 
   .studio-scroll-hint {
@@ -3456,7 +3486,7 @@ body.is-field-rail-dragging {
   }
 
   .floating-panel-studio .floating-panel-head {
-    padding: 0;
+    padding: 7px 8px 8px;
   }
 
   .floating-panel-title {
@@ -3629,4 +3659,49 @@ body.is-field-rail-dragging {
     opacity: 1;
     transform: translateY(2px);
   }
+}
+
+@keyframes studioPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes studioInspectorSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes studioBuilderReturn {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.floating-panel-studio.is-view-returning .form-enabled-card,
+.floating-panel-studio.is-view-returning .form-creator-toolbar-actions-persistent,
+.floating-panel-studio.is-view-returning .studio-context-card,
+.floating-panel-studio.is-view-returning .studio-mobile-height-row,
+.floating-panel-studio.is-view-returning .studio-tabs,
+.floating-panel-studio.is-view-returning .studio-tab-panels {
+  animation: studioBuilderReturn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }

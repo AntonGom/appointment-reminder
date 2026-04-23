@@ -73,6 +73,7 @@ const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
 const studioMobileResizeHandle = document.getElementById("form-studio-mobile-resize");
+const studioMobileResizeArrow = document.getElementById("form-studio-mobile-resize-arrow");
 const studioScrollHint = document.getElementById("form-studio-scroll-hint");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
@@ -154,6 +155,9 @@ let suppressNextFieldRailClick = false;
 let previewFieldTapIntent = { fieldId: "", at: 0 };
 let previewFieldDirectEditIntent = { fieldId: "", expiresAt: 0 };
 let mobileStudioResumeState = null;
+let mobileStudioExpandedState = { kind: "preset", size: "balanced" };
+let suppressNextMobileStudioHandleClick = false;
+let studioViewAnimationTimer = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
@@ -161,6 +165,7 @@ const MOBILE_CANVAS_HEIGHT = 760;
 const MOBILE_STUDIO_SIZE_STORAGE_KEY = "form_creator_mobile_studio_size";
 const MOBILE_STUDIO_HEIGHT_STORAGE_KEY = "form_creator_mobile_studio_height";
 const PREVIEW_FIELD_DIRECT_EDIT_MS = 500;
+const STUDIO_VIEW_TRANSITION_MS = 220;
 let mobileStudioSize = "balanced";
 let mobileStudioHeightOverride = null;
 const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea", "select"].includes(option.id));
@@ -191,19 +196,19 @@ function normalizeMobileStudioSize(value) {
 
 function getMobileStudioMetrics() {
   const isNarrowPhone = window.innerWidth <= 720;
-  const minPanelHeight = isNarrowPhone ? 20 : 24;
+  const minPanelHeight = isNarrowPhone ? 40 : 42;
   const maxPanelHeight = isNarrowPhone
     ? Math.min(640, Math.round(window.innerHeight * 0.74))
     : Math.min(620, Math.round(window.innerHeight * 0.68));
   const presetHeightMap = isNarrowPhone
     ? {
-        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, 20)),
+        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, minPanelHeight)),
         compact: Math.max(250, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.34))),
         balanced: Math.max(340, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.46))),
         expanded: Math.max(430, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.62)))
       }
     : {
-        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, 24)),
+        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, minPanelHeight)),
         compact: Math.max(260, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.3))),
         balanced: Math.max(350, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.42))),
         expanded: Math.max(430, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.56)))
@@ -214,7 +219,7 @@ function getMobileStudioMetrics() {
     minPanelHeight,
     maxPanelHeight,
     presetHeightMap,
-    collapseSnapThreshold: presetHeightMap.peek + 72
+    collapseSnapThreshold: presetHeightMap.peek + 56
   };
 }
 
@@ -229,6 +234,104 @@ function getEffectiveMobileStudioHeight() {
     : (presetHeightMap[mobileStudioSize] || presetHeightMap.balanced);
 }
 
+function rememberExpandedMobileStudioState(nextState = null) {
+  if (nextState) {
+    mobileStudioExpandedState = nextState;
+    return;
+  }
+
+  if (mobileStudioHeightOverride != null) {
+    mobileStudioExpandedState = {
+      kind: "override",
+      height: mobileStudioHeightOverride
+    };
+    return;
+  }
+
+  if (mobileStudioSize !== "peek") {
+    mobileStudioExpandedState = {
+      kind: "preset",
+      size: mobileStudioSize
+    };
+  }
+}
+
+function isMobileStudioCollapsed() {
+  if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+    return false;
+  }
+
+  const effectiveHeight = getEffectiveMobileStudioHeight();
+  if (effectiveHeight == null) {
+    return false;
+  }
+
+  const { collapseSnapThreshold } = getMobileStudioMetrics();
+  return effectiveHeight <= collapseSnapThreshold;
+}
+
+function updateMobileStudioHandleState() {
+  if (!studioMobileResizeHandle) {
+    return;
+  }
+
+  const isCollapsed = isMobileStudioCollapsed();
+  studioMobileResizeHandle.classList.toggle("is-collapsed", isCollapsed);
+  studioMobileResizeHandle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+  studioMobileResizeHandle.setAttribute("aria-label", isCollapsed ? "Expand form studio" : "Collapse form studio");
+
+  if (studioMobileResizeArrow) {
+    studioMobileResizeArrow.textContent = isCollapsed ? "↑" : "↓";
+  }
+}
+
+function toggleMobileStudioCollapsed() {
+  if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT || !studioPanel) {
+    return;
+  }
+
+  if (editorPopover && !editorPopover.hidden) {
+    return;
+  }
+
+  if (isMobileStudioCollapsed()) {
+    if (mobileStudioExpandedState?.kind === "override" && Number.isFinite(mobileStudioExpandedState.height)) {
+      mobileStudioHeightOverride = mobileStudioExpandedState.height;
+      writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, mobileStudioHeightOverride);
+      syncMobileStudioSizeButtons();
+      applyMobileStudioScale();
+      updateStudioPanelOverflowState();
+      return;
+    }
+
+    setMobileStudioSize(mobileStudioExpandedState?.size || "balanced");
+    return;
+  }
+
+  rememberExpandedMobileStudioState();
+  setMobileStudioSize("peek");
+}
+
+function triggerStudioViewAnimation(className) {
+  if (!studioPanel) {
+    return;
+  }
+
+  if (studioViewAnimationTimer) {
+    window.clearTimeout(studioViewAnimationTimer);
+    studioViewAnimationTimer = null;
+  }
+
+  studioPanel.classList.remove("is-view-entering", "is-view-returning");
+  void studioPanel.offsetWidth;
+  studioPanel.classList.add(className);
+
+  studioViewAnimationTimer = window.setTimeout(() => {
+    studioPanel.classList.remove(className);
+    studioViewAnimationTimer = null;
+  }, STUDIO_VIEW_TRANSITION_MS + 40);
+}
+
 function syncMobileStudioSizeButtons() {
   mobileStudioSizeButtons.forEach(button => {
     const isActive = !mobileStudioHeightOverride && button.dataset.mobileStudioSize === mobileStudioSize;
@@ -241,6 +344,9 @@ function setMobileStudioSize(nextSize) {
   mobileStudioSize = normalizeMobileStudioSize(nextSize);
   mobileStudioHeightOverride = null;
   mobileStudioResumeState = null;
+  if (mobileStudioSize !== "peek") {
+    rememberExpandedMobileStudioState({ kind: "preset", size: mobileStudioSize });
+  }
   writeStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY, mobileStudioSize);
   writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, "");
   syncMobileStudioSizeButtons();
@@ -1734,6 +1840,16 @@ function setActiveStudioTab(tabId = activeStudioTab) {
     panel.classList.toggle("is-active", isActive);
   });
 
+  const activePanel = studioTabPanels.find(panel => panel.dataset.studioPanel === activeStudioTab && !panel.hidden);
+  if (activePanel) {
+    activePanel.classList.remove("is-animating-in");
+    void activePanel.offsetWidth;
+    activePanel.classList.add("is-animating-in");
+    window.setTimeout(() => {
+      activePanel.classList.remove("is-animating-in");
+    }, STUDIO_VIEW_TRANSITION_MS);
+  }
+
   requestAnimationFrame(() => {
     updateStudioPanelOverflowState();
   });
@@ -1758,6 +1874,8 @@ function updateStudioPanelOverflowState() {
   if (studioScrollHint) {
     studioScrollHint.hidden = !canScroll;
   }
+
+  updateMobileStudioHandleState();
 }
 
 function syncStudioEditorState() {
@@ -1898,13 +2016,21 @@ function showEditorView(title, copy, markup) {
 
   expandPeekedMobileStudioForEditor();
   editorPopover.hidden = false;
+  editorPopover.classList.remove("is-transition-out", "is-transition-in");
   editorTitle.textContent = title;
   editorCopy.textContent = copy;
   editorBody.innerHTML = markup;
   editorPopover.scrollTop = 0;
+  requestAnimationFrame(() => {
+    editorPopover.classList.add("is-transition-in");
+  });
+  window.setTimeout(() => {
+    editorPopover.classList.remove("is-transition-in");
+  }, STUDIO_VIEW_TRANSITION_MS);
   bindPreviewHoverTargets(editorBody);
   syncStudioEditorState();
   updateStudioContextCard();
+  triggerStudioViewAnimation("is-view-entering");
   return true;
 }
 
@@ -3449,11 +3575,15 @@ function closeEditor() {
     return;
   }
 
+  editorPopover.classList.remove("is-transition-in");
+  editorPopover.classList.add("is-transition-out");
   editorPopover.hidden = true;
+  editorPopover.classList.remove("is-transition-out");
   editorBody.innerHTML = "";
   restoreMobileStudioAfterEditor();
   syncStudioEditorState();
   updateStudioContextCard();
+  triggerStudioViewAnimation("is-view-returning");
 }
 
 function resetEditorPosition() {
@@ -5375,7 +5505,8 @@ if (studioMobileResizeHandle && studioPanel) {
     studioPanelMobileResizeState = {
       startY: event.clientY,
       startHeight: rect.height,
-      pointerId: event.pointerId
+      pointerId: event.pointerId,
+      didDrag: false
     };
     studioPanel.classList.add("is-mobile-resizing");
     studioMobileResizeHandle.setPointerCapture?.(event.pointerId);
@@ -5388,14 +5519,23 @@ if (studioMobileResizeHandle && studioPanel) {
     }
 
     const { minPanelHeight, maxPanelHeight, collapseSnapThreshold } = getMobileStudioMetrics();
+    const deltaY = event.clientY - studioPanelMobileResizeState.startY;
+    if (Math.abs(deltaY) > 8) {
+      studioPanelMobileResizeState.didDrag = true;
+    }
     let nextHeight = clampMobileStudioHeight(
-      studioPanelMobileResizeState.startHeight - (event.clientY - studioPanelMobileResizeState.startY),
+      studioPanelMobileResizeState.startHeight - deltaY,
       minPanelHeight,
       maxPanelHeight
     );
 
     if (nextHeight <= collapseSnapThreshold) {
       nextHeight = minPanelHeight;
+    } else {
+      rememberExpandedMobileStudioState({
+        kind: "override",
+        height: nextHeight
+      });
     }
 
     mobileStudioHeightOverride = nextHeight;
@@ -5410,9 +5550,11 @@ if (studioMobileResizeHandle && studioPanel) {
       return;
     }
 
+    const didDrag = Boolean(studioPanelMobileResizeState.didDrag);
     studioMobileResizeHandle.releasePointerCapture?.(event.pointerId);
     studioPanelMobileResizeState = null;
     studioPanel.classList.remove("is-mobile-resizing");
+    suppressNextMobileStudioHandleClick = didDrag;
 
     const effectiveHeight = getEffectiveMobileStudioHeight();
 
@@ -5432,6 +5574,31 @@ if (studioMobileResizeHandle && studioPanel) {
 
   studioMobileResizeHandle.addEventListener("pointerup", stopMobileStudioResizing);
   studioMobileResizeHandle.addEventListener("pointercancel", stopMobileStudioResizing);
+  studioMobileResizeHandle.addEventListener("click", event => {
+    if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+      return;
+    }
+
+    event.preventDefault();
+    if (suppressNextMobileStudioHandleClick) {
+      suppressNextMobileStudioHandleClick = false;
+      return;
+    }
+
+    toggleMobileStudioCollapsed();
+  });
+  studioMobileResizeHandle.addEventListener("keydown", event => {
+    if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+      return;
+    }
+
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    toggleMobileStudioCollapsed();
+  });
 }
 
 window.addEventListener("resize", () => {
