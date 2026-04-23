@@ -526,6 +526,53 @@ body[data-page="branding"] .section-card {
   padding-right: 6px;
 }
 
+.signature-gallery.is-loading {
+  overflow: hidden;
+}
+
+.signature-card-skeleton {
+  display: grid;
+  gap: 12px;
+  min-height: 224px;
+  padding: 20px;
+  border-radius: 32px;
+  border: 1px solid rgba(217, 226, 238, 0.92);
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.94), transparent 24%),
+    linear-gradient(145deg, rgba(255,255,255,0.96), rgba(246,248,252,0.98));
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.template-thumb-window-skeleton {
+  display: block;
+  min-height: 132px;
+  border-radius: 24px;
+}
+
+.template-thumb-line-skeleton {
+  display: block;
+  width: 76%;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.template-thumb-line-skeleton-title {
+  width: 48%;
+  height: 16px;
+}
+
+.template-thumb-chip-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.template-thumb-chip-skeleton {
+  width: 68px;
+  height: 28px;
+  border-radius: 999px;
+}
+
 .signature-card {
   position: relative;
   width: 100%;
@@ -1203,6 +1250,60 @@ body[data-branding-motion="float"] .signature-card-aura {
   transition: height 0.18s ease;
 }
 
+.branding-preview-stage.is-loading .branding-preview-frame {
+  opacity: 0;
+}
+
+.branding-preview-skeleton {
+  position: absolute;
+  inset: 16px;
+  display: grid;
+  gap: 14px;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.branding-preview-stage.is-loading .branding-preview-skeleton {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.branding-preview-skeleton-hero,
+.branding-preview-skeleton-details {
+  display: block;
+  border-radius: 28px;
+}
+
+.branding-preview-skeleton-hero {
+  min-height: 196px;
+}
+
+.branding-preview-skeleton-card-row,
+.branding-preview-skeleton-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.branding-preview-skeleton-card {
+  display: block;
+  min-height: 102px;
+  border-radius: 22px;
+}
+
+.branding-preview-skeleton-details {
+  min-height: 86px;
+}
+
+.branding-preview-skeleton-button {
+  display: block;
+  min-height: 42px;
+  border-radius: 999px;
+}
+
 .branding-qa-card {
   margin-top: 18px;
 }
@@ -1767,6 +1868,11 @@ body.branding-modal-open {
     height: 640px;
   }
 
+  .branding-preview-skeleton-card-row,
+  .branding-preview-skeleton-buttons {
+    grid-template-columns: 1fr;
+  }
+
   .qa-email-frame,
   .qa-email-source {
     min-height: 620px;
@@ -2304,5 +2410,9 @@ body.branding-modal-open {
 
   .branding-preview-frame {
     height: 560px;
+  }
+
+  .branding-preview-skeleton {
+    inset: 12px;
   }
 }

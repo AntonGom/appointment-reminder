@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="account-sections.css?v=20260331b">
-  <link rel="stylesheet" href="branding.css?v=20260403b">
+  <link rel="stylesheet" href="account-sections.css?v=20260423a">
+  <link rel="stylesheet" href="branding.css?v=20260423a">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -54,7 +54,38 @@
                     <p class="branding-copy">Swap templates here without leaving the preview.</p>
                   </div>
                 </div>
-                <div id="template-grid" class="signature-gallery"></div>
+                <div id="template-grid" class="signature-gallery is-loading">
+                  <div class="signature-card-skeleton">
+                    <span class="template-thumb-window-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton template-thumb-line-skeleton-title skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-chip-row">
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                    </span>
+                  </div>
+                  <div class="signature-card-skeleton">
+                    <span class="template-thumb-window-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton template-thumb-line-skeleton-title skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-chip-row">
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                    </span>
+                  </div>
+                  <div class="signature-card-skeleton">
+                    <span class="template-thumb-window-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton template-thumb-line-skeleton-title skeleton-shimmer"></span>
+                    <span class="template-thumb-line-skeleton skeleton-shimmer"></span>
+                    <span class="template-thumb-chip-row">
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                      <span class="template-thumb-chip-skeleton skeleton-shimmer"></span>
+                    </span>
+                  </div>
+                </div>
               </section>
 
               <section id="branding-editor-modal" class="branding-editor-modal" hidden role="dialog" aria-modal="true" aria-labelledby="branding-editor-title">
@@ -461,7 +492,21 @@
                       <span id="branding-preview-email">you@example.com</span>
                     </div>
                   </div>
-                  <div id="branding-preview-stage" class="branding-preview-stage">
+                  <div id="branding-preview-stage" class="branding-preview-stage is-loading">
+                    <div class="branding-preview-skeleton" aria-hidden="true">
+                      <div class="branding-preview-skeleton-hero skeleton-shimmer"></div>
+                      <div class="branding-preview-skeleton-card-row">
+                        <span class="branding-preview-skeleton-card skeleton-shimmer"></span>
+                        <span class="branding-preview-skeleton-card skeleton-shimmer"></span>
+                        <span class="branding-preview-skeleton-card skeleton-shimmer"></span>
+                      </div>
+                      <div class="branding-preview-skeleton-details skeleton-shimmer"></div>
+                      <div class="branding-preview-skeleton-buttons">
+                        <span class="branding-preview-skeleton-button skeleton-shimmer"></span>
+                        <span class="branding-preview-skeleton-button skeleton-shimmer"></span>
+                        <span class="branding-preview-skeleton-button skeleton-shimmer"></span>
+                      </div>
+                    </div>
                     <iframe id="branding-preview-frame" class="branding-preview-frame" title="Branded email preview"></iframe>
                   </div>
                 </div>
@@ -527,6 +572,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="branding.js?v=20260403c"></script>
+  <script type="module" src="branding.js?v=20260423a"></script>
 </body>
 </html>

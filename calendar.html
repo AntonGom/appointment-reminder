@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="account-sections.css?v=20260401d">
+  <link rel="stylesheet" href="account-sections.css?v=20260423a">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -73,8 +73,26 @@
 
             <div id="appointments-setup-notice" class="notice" hidden>Appointments setup is still needed. Run the new SQL file in Supabase to turn this calendar on.</div>
 
-            <div id="calendar-loading" class="loading-card" hidden>
+            <div id="calendar-loading" class="loading-card loading-card-skeleton" hidden>
               <div class="loading-spinner" aria-hidden="true"></div>
+              <div class="calendar-loading-skeleton" aria-hidden="true">
+                <div class="skeleton-line skeleton-line-title skeleton-shimmer"></div>
+                <div class="skeleton-line skeleton-line-copy skeleton-shimmer"></div>
+                <div class="calendar-loading-stats">
+                  <span class="skeleton-pill skeleton-shimmer"></span>
+                  <span class="skeleton-pill skeleton-shimmer"></span>
+                  <span class="skeleton-pill skeleton-shimmer"></span>
+                </div>
+                <div class="calendar-loading-grid">
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                  <span class="skeleton-calendar-cell skeleton-shimmer"></span>
+                </div>
+              </div>
               <p class="loading-title">Loading appointments...</p>
               <p class="loading-copy">Pulling your saved appointments and building the calendar.</p>
             </div>
@@ -176,6 +194,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="calendar.js?v=20260403a"></script>
+  <script type="module" src="calendar.js?v=20260423a"></script>
 </body>
 </html>

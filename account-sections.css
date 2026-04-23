@@ -1241,9 +1241,91 @@ h1 {
   animation: spin 0.85s linear infinite;
 }
 
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.9), rgba(241, 245, 249, 0.92));
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.68) 50%, rgba(255, 255, 255, 0) 100%);
+  animation: skeletonSweep 1.45s ease-in-out infinite;
+}
+
+.skeleton-line,
+.skeleton-pill,
+.skeleton-calendar-cell {
+  border-radius: 999px;
+}
+
+.skeleton-line {
+  height: 12px;
+}
+
+.skeleton-line-title {
+  width: 44%;
+  height: 16px;
+}
+
+.skeleton-line-copy {
+  width: 72%;
+}
+
+.skeleton-pill {
+  display: block;
+  min-height: 56px;
+  border-radius: 18px;
+}
+
+.skeleton-calendar-cell {
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+}
+
+.loading-card-skeleton {
+  align-items: stretch;
+  justify-items: stretch;
+  gap: 18px;
+  text-align: left;
+}
+
+.calendar-loading-skeleton {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-loading-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes skeletonSweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
   }
 }
 

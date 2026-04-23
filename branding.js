@@ -511,6 +511,7 @@ let currentSavedBranding = {};
 let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
+let previewHasRenderedOnce = false;
 let currentPreviewFocusField = "";
 let currentEditorGroup = "hero";
 let previewRandomNonce = 0;
@@ -1083,6 +1084,10 @@ function renderPreview() {
     previewMode: true,
     randomSeed
   });
+
+  if (previewStage && !previewHasRenderedOnce) {
+    previewStage.classList.add("is-loading");
+  }
 
   if (previewFrame) {
     clearPreviewFrameContentWatchers();
@@ -2335,6 +2340,7 @@ function renderTemplateCards() {
     return;
   }
 
+  templateGrid.classList.remove("is-loading");
   templateGrid.innerHTML = BRANDING_TEMPLATE_OPTIONS.map(option => {
     const showcase = TEMPLATE_SHOWCASES[option.id] || TEMPLATE_SHOWCASES.signature;
     const preset = TEMPLATE_STYLE_PRESETS[option.id] || TEMPLATE_STYLE_PRESETS.signature;
@@ -2733,6 +2739,8 @@ function wireFormInputs() {
 
   if (previewFrame) {
     previewFrame.addEventListener("load", () => {
+      previewHasRenderedOnce = true;
+      previewStage?.classList.remove("is-loading");
       bindPreviewFrameContentWatchers();
       schedulePreviewFrameResize();
       window.setTimeout(() => {

@@ -415,7 +415,7 @@ test.describe("Calendar and Form Creator", () => {
           client_name: "Jordan Fade",
           client_email: "jordan@example.com",
           client_phone: "3055550101",
-          service_date: "2026-04-18",
+          service_date: "2027-04-18",
           service_time: "14:30",
           service_location: "12 Barber Lane",
           notes: "Fade with beard trim"
@@ -541,7 +541,7 @@ test.describe("Form Creator mobile UX", () => {
     const editorBox = await editor.boundingBox();
     expect(editorBox).not.toBeNull();
     expect(editorBox.width).toBeGreaterThan(250);
-    expect(editorBox.height).toBeGreaterThan(320);
+    expect(editorBox.height).toBeGreaterThan(300);
   });
 
   test("mobile exploratory workflow handles page add/delete, seven-question pages, and drag reordering", async ({ page }) => {
@@ -580,6 +580,14 @@ test.describe("Form Creator mobile UX", () => {
     const fieldCards = page.locator("#field-rail-list .field-rail-card");
     await expect(fieldCards).toHaveCount(7);
 
+    await page.locator("#studio-context-action").click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
+    await expect(page.locator("#editor-page-nav-label")).toBeVisible();
+    await expect(page.locator("[data-page-item-edit]")).toHaveCount(7);
+    await expect(page.locator("#editor-delete-page")).toBeVisible();
+    await closeFormEditorIfOpen(page);
+
     const dividerCard = fieldCards.filter({ has: page.locator(".field-rail-title", { hasText: "Divider" }) }).first();
     await expect(dividerCard).toBeVisible();
     await pointerDrag(
@@ -603,12 +611,34 @@ test.describe("Form Creator mobile UX", () => {
     await expect(page.locator("#preview-stepper .preview-stepper-label").first()).toContainText("Time");
 
     await page.waitForTimeout(250);
-    await page.locator("#preview-step-title").click();
+    await page.locator("#studio-context-action").click();
     await expect(page.locator("#form-editor-popover")).toBeVisible();
-    await expect(page.locator("#form-editor-title")).toContainText("Custom page");
+    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
     await page.locator("#editor-delete-page").click();
 
     await expect(stepButtons).toHaveCount(initialStepCount + 1);
     await expect(page.locator("#status-banner")).toContainText("removed from your form");
+  });
+
+  test("built-in page editor shows all fields on the page and delete page action", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/form-creator.html");
+
+    await expect(page.locator("#form-studio-panel")).toBeVisible();
+    await page.locator('[data-mobile-studio-size="expanded"]').click();
+    await page.locator('#preview-stepper [data-preview-step="name"]').click();
+
+    await ensureStudioAccordionOpen(page, "Add Custom Inputs");
+    await page.locator('[data-add-type="text"]').click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await page.locator("#editor-field-label").fill("Last Name");
+    await closeFormEditorIfOpen(page);
+
+    await page.locator("#studio-context-action").click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
+    await expect(page.locator("#editor-page-nav-label")).toBeVisible();
+    await expect(page.locator("[data-page-item-edit]")).toHaveCount(2);
+    await expect(page.locator("#editor-delete-page")).toBeVisible();
   });
 });

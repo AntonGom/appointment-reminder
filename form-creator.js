@@ -151,12 +151,16 @@ let stepPointerDragState = null;
 let suppressNextStepperClick = false;
 let fieldRailPointerDragState = null;
 let suppressNextFieldRailClick = false;
+let previewFieldTapIntent = { fieldId: "", at: 0 };
+let previewFieldDirectEditIntent = { fieldId: "", expiresAt: 0 };
+let mobileStudioResumeState = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
 const MOBILE_CANVAS_HEIGHT = 760;
 const MOBILE_STUDIO_SIZE_STORAGE_KEY = "form_creator_mobile_studio_size";
 const MOBILE_STUDIO_HEIGHT_STORAGE_KEY = "form_creator_mobile_studio_height";
+const PREVIEW_FIELD_DIRECT_EDIT_MS = 500;
 let mobileStudioSize = "balanced";
 let mobileStudioHeightOverride = null;
 const BUILDER_CUSTOM_FIELD_TYPES = CUSTOM_FIELD_TYPES.filter(option => ["text", "textarea", "select"].includes(option.id));
@@ -182,7 +186,47 @@ function writeStoredStudioValue(key, value) {
 }
 
 function normalizeMobileStudioSize(value) {
-  return ["compact", "balanced", "expanded"].includes(String(value || "").trim()) ? String(value).trim() : "balanced";
+  return ["peek", "compact", "balanced", "expanded"].includes(String(value || "").trim()) ? String(value).trim() : "balanced";
+}
+
+function getMobileStudioMetrics() {
+  const isNarrowPhone = window.innerWidth <= 720;
+  const minPanelHeight = isNarrowPhone ? 20 : 24;
+  const maxPanelHeight = isNarrowPhone
+    ? Math.min(640, Math.round(window.innerHeight * 0.74))
+    : Math.min(620, Math.round(window.innerHeight * 0.68));
+  const presetHeightMap = isNarrowPhone
+    ? {
+        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, 20)),
+        compact: Math.max(250, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.34))),
+        balanced: Math.max(340, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.46))),
+        expanded: Math.max(430, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.62)))
+      }
+    : {
+        peek: Math.max(minPanelHeight, Math.min(maxPanelHeight, 24)),
+        compact: Math.max(260, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.3))),
+        balanced: Math.max(350, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.42))),
+        expanded: Math.max(430, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.56)))
+      };
+
+  return {
+    isNarrowPhone,
+    minPanelHeight,
+    maxPanelHeight,
+    presetHeightMap,
+    collapseSnapThreshold: presetHeightMap.peek + 72
+  };
+}
+
+function getEffectiveMobileStudioHeight() {
+  if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+    return null;
+  }
+
+  const { minPanelHeight, maxPanelHeight, presetHeightMap } = getMobileStudioMetrics();
+  return mobileStudioHeightOverride != null
+    ? clampMobileStudioHeight(mobileStudioHeightOverride, minPanelHeight, maxPanelHeight)
+    : (presetHeightMap[mobileStudioSize] || presetHeightMap.balanced);
 }
 
 function syncMobileStudioSizeButtons() {
@@ -196,11 +240,58 @@ function syncMobileStudioSizeButtons() {
 function setMobileStudioSize(nextSize) {
   mobileStudioSize = normalizeMobileStudioSize(nextSize);
   mobileStudioHeightOverride = null;
+  mobileStudioResumeState = null;
   writeStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY, mobileStudioSize);
   writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, "");
   syncMobileStudioSizeButtons();
   applyMobileStudioScale();
   updateStudioPanelOverflowState();
+}
+
+function expandPeekedMobileStudioForEditor() {
+  if (window.innerWidth > MOBILE_STUDIO_BREAKPOINT) {
+    return;
+  }
+
+  const { isNarrowPhone, minPanelHeight, maxPanelHeight, presetHeightMap, collapseSnapThreshold } = getMobileStudioMetrics();
+  const effectiveHeight = mobileStudioHeightOverride != null
+    ? clampMobileStudioHeight(mobileStudioHeightOverride, minPanelHeight, maxPanelHeight)
+    : (presetHeightMap[mobileStudioSize] || presetHeightMap.balanced);
+  const isPeekPreset = mobileStudioHeightOverride == null && mobileStudioSize === "peek";
+  const isCollapsedOverride = mobileStudioHeightOverride != null && effectiveHeight <= collapseSnapThreshold;
+
+  if (!(isPeekPreset || isCollapsedOverride) || mobileStudioResumeState) {
+    return;
+  }
+
+  mobileStudioResumeState = mobileStudioHeightOverride != null
+    ? { kind: "override", height: mobileStudioHeightOverride }
+    : { kind: "preset", size: mobileStudioSize };
+
+  mobileStudioHeightOverride = isNarrowPhone ? presetHeightMap.expanded : presetHeightMap.balanced;
+  writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, mobileStudioHeightOverride);
+  syncMobileStudioSizeButtons();
+  applyMobileStudioScale();
+}
+
+function restoreMobileStudioAfterEditor() {
+  if (!mobileStudioResumeState) {
+    return;
+  }
+
+  if (mobileStudioResumeState.kind === "override") {
+    mobileStudioHeightOverride = mobileStudioResumeState.height;
+    writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, mobileStudioHeightOverride);
+  } else {
+    mobileStudioSize = normalizeMobileStudioSize(mobileStudioResumeState.size);
+    mobileStudioHeightOverride = null;
+    writeStoredStudioValue(MOBILE_STUDIO_SIZE_STORAGE_KEY, mobileStudioSize);
+    writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, "");
+  }
+
+  mobileStudioResumeState = null;
+  syncMobileStudioSizeButtons();
+  applyMobileStudioScale();
 }
 
 function clampMobileStudioHeight(height, minHeight, maxHeight) {
@@ -772,8 +863,8 @@ function getCurrentPageId() {
   return selectedPreviewStepId;
 }
 
-function getCurrentPageFields() {
-  const page = getEditableStep(getCurrentPageId());
+function getPageFieldsForStep(stepId) {
+  const page = getEditableStep(stepId);
 
   if (!page || ["review", "welcome", "thankyou"].includes(page.id) || ["review", "welcome", "thankyou"].includes(String(page.type || "").trim())) {
     return [];
@@ -822,6 +913,10 @@ function getCurrentPageFields() {
   });
 
   return orderedFields;
+}
+
+function getCurrentPageFields() {
+  return getPageFieldsForStep(getCurrentPageId());
 }
 
 function isCustomStep(stepId) {
@@ -1405,6 +1500,7 @@ function maybeStartFieldRailPointerDrag(event) {
     dragging: false
   };
   suppressNextFieldRailClick = false;
+  event.preventDefault();
 
   try {
     card.setPointerCapture(event.pointerId);
@@ -1679,7 +1775,6 @@ function syncStudioEditorState() {
   if (isEditorOpen && window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
     requestAnimationFrame(() => {
       studioPanel.scrollTop = 0;
-      studioPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -1733,7 +1828,7 @@ function getStudioContextDescriptor(step) {
     };
   }
 
-  const pageFields = getCurrentPageFields();
+  const pageFields = getPageFieldsForStep(step.id);
   const itemCount = pageFields.length;
   const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"} on this page`;
   const isCustomPage = getCustomPages().some(page => page.id === step.id);
@@ -1793,12 +1888,7 @@ function openSelectedStudioInspector() {
     return;
   }
 
-  if (getCustomPages().some(page => page.id === selectedStep.id)) {
-    openCustomPageEditor(selectedStep);
-    return;
-  }
-
-  openSelectedStepTextEditor("step-title");
+  openCustomPageEditor(selectedStep);
 }
 
 function showEditorView(title, copy, markup) {
@@ -1806,11 +1896,13 @@ function showEditorView(title, copy, markup) {
     return false;
   }
 
+  expandPeekedMobileStudioForEditor();
   editorPopover.hidden = false;
   editorTitle.textContent = title;
   editorCopy.textContent = copy;
   editorBody.innerHTML = markup;
   editorPopover.scrollTop = 0;
+  bindPreviewHoverTargets(editorBody);
   syncStudioEditorState();
   updateStudioContextCard();
   return true;
@@ -1994,6 +2086,26 @@ function setMenuPreviewHoverTarget(target = "") {
   syncMenuPreviewHoverState();
 }
 
+function bindPreviewHoverTargets(root = document) {
+  if (!root || typeof root.querySelectorAll !== "function") {
+    return;
+  }
+
+  root.querySelectorAll("[data-preview-hover]").forEach(element => {
+    if (element.dataset.previewHoverBound === "true") {
+      return;
+    }
+
+    element.dataset.previewHoverBound = "true";
+    element.addEventListener("mouseenter", () => {
+      setMenuPreviewHoverTarget(element.dataset.previewHover || "");
+    });
+    element.addEventListener("mouseleave", () => {
+      setMenuPreviewHoverTarget("");
+    });
+  });
+}
+
 function refreshPreviewOnly() {
   renderPreview();
   applyMobileStudioScale();
@@ -2119,7 +2231,7 @@ function applyStepNavigationStyles() {
   previewStepper.style.setProperty("--fc-step-nav-circle-size", stepSurfaceState.circleSize);
   previewStepper.style.setProperty("--fc-step-nav-circle-font-size", stepSurfaceState.circleFontSize);
   previewStepper.style.setProperty("--fc-step-nav-radius", stepSurfaceState.radius);
-  previewStepper.classList.add("is-group-editable");
+  previewStepper.classList.remove("is-group-editable");
 
   if (previewWizardHead) {
     previewWizardHead.classList.toggle("is-nav-above", stepNavPlacement === "above-title");
@@ -2235,6 +2347,109 @@ function buildPreviewFieldControlMarkup(field, options = {}) {
       </div>
     </div>
   `;
+}
+
+function getBuiltInFieldSemanticName(fieldId) {
+  const builtInStep = BUILT_IN_STEP_MAP.get(String(fieldId || "").trim());
+  return builtInStep?.title || builtInStep?.label || "core reminder field";
+}
+
+function getBuiltInFieldSemanticNote(fieldId) {
+  const semanticName = getBuiltInFieldSemanticName(fieldId);
+  return `This still fills ${semanticName} everywhere else in Send Reminder, client memory, and reminder emails. If you need a new meaning, add a custom question instead of repurposing this core field.`;
+}
+
+function removeBuilderField(fieldId) {
+  const step = getEditableStep(fieldId);
+  const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
+
+  if (!step) {
+    return;
+  }
+
+  if (isBuiltInStep) {
+    patchStepConfig(fieldId, { hidden: true });
+    const remainingFields = getInlineFieldsForPage(currentFormProfile, fieldId);
+    const previewSteps = getPreviewSteps();
+
+    if (!remainingFields.length && !previewSteps.some(entry => entry.id === fieldId)) {
+      selectedPreviewStepId = previewSteps[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+    }
+  } else {
+    currentFormProfile = {
+      ...currentFormProfile,
+      fields: getCustomFields().filter(entry => entry.id !== fieldId && entry.pageId !== fieldId)
+    };
+
+    if (!getPreviewSteps().some(entry => entry.id === selectedPreviewStepId)) {
+      selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+    }
+  }
+
+  closeEditor();
+  renderBuilder();
+}
+
+function removeBuilderPage(stepId) {
+  const step = getEditableStep(stepId);
+
+  if (!step || ["review", "welcome", "thankyou"].includes(step.id) || ["review", "welcome", "thankyou"].includes(String(step.type || "").trim())) {
+    return false;
+  }
+
+  if (getCustomPages().some(page => page.id === stepId)) {
+    return removeCustomPage(stepId);
+  }
+
+  const pageFieldIds = new Set(getPageFieldsForStep(stepId).map(field => field.id));
+  const nextStepOrder = (Array.isArray(currentFormProfile.stepOrder) ? currentFormProfile.stepOrder : getCurrentStepOrder())
+    .filter(id => id !== stepId);
+  const nextPageFieldOrder = Object.fromEntries(
+    Object.entries(currentFormProfile.pageFieldOrder || {})
+      .filter(([pageId]) => pageId !== stepId)
+      .map(([pageId, ids]) => [
+        pageId,
+        Array.isArray(ids) ? ids.filter(id => !pageFieldIds.has(id)) : []
+      ])
+  );
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    fields: getCustomFields().filter(entry => entry.id !== stepId && entry.pageId !== stepId),
+    stepOrder: [...new Set(nextStepOrder)],
+    pageFieldOrder: nextPageFieldOrder,
+    stepOverrides: {
+      ...(currentFormProfile.stepOverrides || {}),
+      [stepId]: {
+        ...(currentFormProfile.stepOverrides?.[stepId] || {}),
+        hidden: true
+      }
+    }
+  };
+
+  if (selectedPreviewStepId === stepId || !buildPreviewStepList(currentFormProfile).some(entry => entry.id === selectedPreviewStepId)) {
+    const nextPreviewSteps = buildPreviewStepList(currentFormProfile);
+    selectedPreviewStepId = nextPreviewSteps.find(isReorderablePreviewStep)?.id
+      || nextPreviewSteps[0]?.id
+      || BASE_REMINDER_STEPS[0]?.id
+      || "phone";
+  }
+
+  closeEditor();
+  renderBuilder();
+  setStatus(`${step.title || step.label || "Page"} removed from your form.`, "success");
+  return true;
+}
+
+function consumePreviewFieldDirectEdit(fieldId) {
+  const canUse = previewFieldDirectEditIntent.fieldId === fieldId && Date.now() <= previewFieldDirectEditIntent.expiresAt;
+
+  if (canUse) {
+    previewFieldDirectEditIntent = { fieldId: "", expiresAt: 0 };
+    previewFieldTapIntent = { fieldId: "", at: 0 };
+  }
+
+  return canUse;
 }
 
 function buildPreviewFieldMarkup(step) {
@@ -2357,7 +2572,7 @@ function renderPreview() {
       <div class="preview-step-dropzone" data-drop-step-index="${dropIndex}"></div>
       <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="false">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
-        <span class="preview-stepper-label" data-edit-target="step-nav-label">${escapeHtml(step.navLabel)}</span>
+        <span class="preview-stepper-label">${escapeHtml(step.navLabel)}</span>
       </button>
     `;
     }).join("") + `<div class="preview-step-dropzone" data-drop-step-index="${reorderableIndex}"></div>`;
@@ -2479,7 +2694,7 @@ function renderFieldRail() {
       <button
         class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
         type="button"
-        draggable="true"
+        draggable="${window.innerWidth > MOBILE_STUDIO_BREAKPOINT ? "true" : "false"}"
         data-field-id="${escapeHtml(field.id)}"
       >
         <span class="field-rail-icon">${escapeHtml(meta.icon)}</span>
@@ -2512,6 +2727,10 @@ function renderFieldRail() {
     });
 
     card.addEventListener("dragstart", event => {
+      if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+        event.preventDefault();
+        return;
+      }
       dragFieldId = fieldId;
       dragPayload = { kind: "existing-field", fieldId };
       card.classList.add("is-dragging");
@@ -2690,9 +2909,6 @@ function renderGlobalSettingsTab() {
 }
 
 function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
-  const editableSteps = getPreviewSteps().filter(isReorderablePreviewStep);
-  const stepSurfaceState = getStepNavigationSurfaceState();
-
   return `
     <div class="form-editor-grid">
       <label>
@@ -2736,21 +2952,8 @@ function buildStepNavigationSettingsMarkup(prefix = "inline-step-nav") {
         <input id="${prefix}-active-text" type="color" value="${escapeHtml(currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR)}">
       </label>
     </div>
-    <div class="step-nav-editor-list">
-      ${editableSteps.map(step => `
-        <div class="step-nav-editor-item">
-          <span
-            class="step-nav-editor-chip"
-            style="--chip-bg:${escapeHtml(currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND)};--chip-text:${escapeHtml(currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR)};--chip-radius:${escapeHtml(stepSurfaceState.radius)};"
-          >${escapeHtml(step.navLabel || step.title || step.label || "Step")}</span>
-          <div class="step-nav-editor-item-controls">
-            <input data-step-nav-text-input type="text" data-step-id="${escapeHtml(step.id)}" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
-            ${getCustomPages().some(page => page.id === step.id)
-              ? `<button class="step-nav-editor-delete" type="button" data-step-delete-page="${escapeHtml(step.id)}">Delete page</button>`
-              : ""}
-          </div>
-        </div>
-      `).join("")}
+    <div class="editor-inline-note" data-preview-hover="steps">
+      Edit each step chip name from that page's <strong>Edit page</strong> menu. This section is now only for styling the whole step row.
     </div>
   `;
 }
@@ -2759,18 +2962,6 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
   if (!root) {
     return;
   }
-
-  const syncStepNavEditorChips = () => {
-    const stepSurfaceState = getStepNavigationSurfaceState();
-
-    root.querySelectorAll(".step-nav-editor-chip").forEach(chip => {
-      chip.style.setProperty("--chip-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
-      chip.style.setProperty("--chip-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
-      chip.style.setProperty("--chip-radius", stepSurfaceState.radius);
-    });
-  };
-
-  syncStepNavEditorChips();
 
   root.querySelector(`#${prefix}-placement`)?.addEventListener("change", event => {
     currentFormProfile = {
@@ -2785,7 +2976,6 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
       ...currentFormProfile,
       stepNavShape: event.target.value || DEFAULT_STEP_NAV_SHAPE
     };
-    syncStepNavEditorChips();
     renderPreview();
   });
 
@@ -2810,7 +3000,6 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
       ...currentFormProfile,
       stepNavBackgroundColor: event.target.value
     };
-    syncStepNavEditorChips();
     renderPreview();
   });
 
@@ -2819,7 +3008,6 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
       ...currentFormProfile,
       stepNavTextColor: event.target.value
     };
-    syncStepNavEditorChips();
     renderPreview();
   });
 
@@ -2839,32 +3027,7 @@ function bindStepNavigationSettings(root, prefix = "inline-step-nav") {
     renderPreview();
   });
 
-  root.querySelectorAll("[data-step-nav-text-input]").forEach(input => {
-    input.addEventListener("input", event => {
-      const stepId = event.target.dataset.stepId || "";
-
-      if (!stepId) {
-        return;
-      }
-
-      patchStepConfig(stepId, {
-        navLabel: safeShortLabel(event.target.value)
-      });
-
-      const previewChip = event.target.closest(".step-nav-editor-item")?.querySelector(".step-nav-editor-chip");
-      if (previewChip) {
-        previewChip.textContent = safeShortLabel(event.target.value);
-      }
-
-      renderPreview();
-    });
-  });
-
-  root.querySelectorAll("[data-step-delete-page]").forEach(button => {
-    button.addEventListener("click", () => {
-      removeCustomPage(button.dataset.stepDeletePage || "");
-    });
-  });
+  bindPreviewHoverTargets(root);
 }
 
 function replayAnimationClass(element, className) {
@@ -3288,6 +3451,7 @@ function closeEditor() {
 
   editorPopover.hidden = true;
   editorBody.innerHTML = "";
+  restoreMobileStudioAfterEditor();
   syncStudioEditorState();
   updateStudioContextCard();
 }
@@ -3373,48 +3537,45 @@ function applyMobileStudioScale() {
     signedInShell.style.removeProperty("--fc-mobile-canvas-height");
     signedInShell.style.removeProperty("--fc-mobile-canvas-scaled-height");
     signedInShell.style.removeProperty("--fc-mobile-panel-height");
+    studioPanel?.classList.remove("is-mobile-collapsed", "is-mobile-resizing");
     return;
   }
 
-  const isNarrowPhone = window.innerWidth <= 720;
+  const { isNarrowPhone, minPanelHeight, maxPanelHeight, presetHeightMap, collapseSnapThreshold } = getMobileStudioMetrics();
+  const previewCanvasHeight = Math.max(
+    MOBILE_CANVAS_HEIGHT,
+    Math.ceil(previewShell?.scrollHeight || 0),
+    Math.ceil(previewShell?.offsetHeight || 0)
+  );
   const widthPadding = isNarrowPhone ? 10 : 18;
   const mobileCanvasWidth = isNarrowPhone ? 540 : MOBILE_CANVAS_WIDTH;
-  const minPanelHeight = isNarrowPhone ? 238 : 228;
-  const maxPanelHeight = isNarrowPhone ? Math.min(520, Math.round(window.innerHeight * 0.64)) : Math.min(500, Math.round(window.innerHeight * 0.58));
-  const presetHeightMap = isNarrowPhone
-    ? {
-        compact: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.34))),
-        balanced: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.45))),
-        expanded: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.56)))
-      }
-    : {
-        compact: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.3))),
-        balanced: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.4))),
-        expanded: Math.max(minPanelHeight, Math.min(maxPanelHeight, Math.round(window.innerHeight * 0.5)))
-      };
-  const isEditorOpen = !editorPopover?.hidden;
+  const isEditorOpen = Boolean(editorPopover && !editorPopover.hidden);
   let panelHeight = mobileStudioHeightOverride != null
     ? clampMobileStudioHeight(mobileStudioHeightOverride, minPanelHeight, maxPanelHeight)
     : presetHeightMap[mobileStudioSize] || presetHeightMap.balanced;
+  const minimumEditorHeight = isNarrowPhone ? presetHeightMap.expanded : presetHeightMap.balanced;
 
   if (isEditorOpen) {
-    panelHeight = Math.max(panelHeight, isNarrowPhone ? 380 : 360);
+    panelHeight = Math.max(panelHeight, minimumEditorHeight);
   }
 
-  const chromeAllowance = isNarrowPhone ? 84 : 102;
-  const heightAllowance = Math.max(296, window.innerHeight - panelHeight - chromeAllowance);
+  const chromeAllowance = isNarrowPhone ? 154 : 144;
+  const heightAllowance = Math.max(232, window.innerHeight - panelHeight - chromeAllowance);
   const widthScale = (window.innerWidth - widthPadding) / mobileCanvasWidth;
-  const heightScale = heightAllowance / MOBILE_CANVAS_HEIGHT;
-  const previewScaleBias = isEditorOpen
-    ? (isNarrowPhone ? 0.82 : 0.87)
-    : (isNarrowPhone ? 0.87 : 0.91);
-  const nextScale = Math.max(0.4, Math.min(widthScale, heightScale, 1) * previewScaleBias);
+  const heightScale = heightAllowance / previewCanvasHeight;
+  const previewScaleBias = isNarrowPhone ? 0.89 : 0.92;
+  const minimumScale = previewCanvasHeight > MOBILE_CANVAS_HEIGHT
+    ? (isNarrowPhone ? 0.24 : 0.3)
+    : 0.4;
+  const nextScale = Math.max(minimumScale, Math.min(widthScale, heightScale, 1) * previewScaleBias);
+  const isCollapsed = Boolean(studioPanel) && !isEditorOpen && panelHeight <= collapseSnapThreshold;
 
   signedInShell.style.setProperty("--fc-mobile-canvas-scale", nextScale.toFixed(3));
   signedInShell.style.setProperty("--fc-mobile-canvas-width", `${mobileCanvasWidth}px`);
-  signedInShell.style.setProperty("--fc-mobile-canvas-height", `${MOBILE_CANVAS_HEIGHT}px`);
-  signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(MOBILE_CANVAS_HEIGHT * nextScale)}px`);
+  signedInShell.style.setProperty("--fc-mobile-canvas-height", `${previewCanvasHeight}px`);
+  signedInShell.style.setProperty("--fc-mobile-canvas-scaled-height", `${Math.ceil(previewCanvasHeight * nextScale)}px`);
   signedInShell.style.setProperty("--fc-mobile-panel-height", `${panelHeight}px`);
+  studioPanel?.classList.toggle("is-mobile-collapsed", isCollapsed);
   syncMobileStudioSizeButtons();
 }
 
@@ -3588,7 +3749,9 @@ function openFieldEditor(fieldId) {
     return;
   }
 
-  if (!showEditorView("Question settings", "Rename this question and control how it appears in Send Reminder.", `
+  if (!showEditorView("Question settings", isBuiltInStep
+    ? getBuiltInFieldSemanticNote(fieldId)
+    : "Rename this question and control how it appears in Send Reminder.", `
     <label>
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
@@ -3712,26 +3875,7 @@ function openFieldEditor(fieldId) {
   });
 
   deleteButton?.addEventListener("click", () => {
-    if (isBuiltInStep) {
-      patchStepConfig(fieldId, { hidden: true });
-      const remainingFields = getInlineFieldsForPage(currentFormProfile, fieldId);
-      const previewSteps = getPreviewSteps();
-      if (!remainingFields.length && !previewSteps.some(entry => entry.id === fieldId)) {
-        selectedPreviewStepId = previewSteps[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
-      }
-    } else {
-      currentFormProfile = {
-        ...currentFormProfile,
-        fields: getCustomFields().filter(entry => entry.id !== fieldId && entry.pageId !== fieldId)
-      };
-
-      if (!getPreviewSteps().some(entry => entry.id === selectedPreviewStepId)) {
-        selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
-      }
-    }
-
-    closeEditor();
-    renderBuilder();
+    removeBuilderField(fieldId);
   });
 }
 
@@ -3788,23 +3932,66 @@ function openCustomPageEditor(step) {
     return;
   }
 
-  if (!showEditorView(
-    "Custom page",
-    "Rename this page, tune its step chip label, or remove it from your form.",
+  const isCustomPage = getCustomPages().some(page => page.id === step.id);
+  const mergedFields = [
+    ...getPageFieldsForStep(step.id),
+    ...(step.id === getCurrentPageId() ? getCurrentPageFields() : [])
+  ];
+  const pageFields = Array.from(new Map(mergedFields.map(field => [field.id, field])).values());
+  const pageItemCount = pageFields.length;
+  const pageItemsMarkup = pageFields.length
+    ? `
+      <div class="page-editor-item-list ${pageFields.length > 3 ? "is-scrollable" : ""}">
+        ${pageFields.map(field => {
+          const meta = getCustomFieldTypeMeta(field.type);
+          const kindLabel = field.isBaseField ? "Page field" : (isContentBlockField(field) ? "Content block" : "Question");
+          const deleteLabel = field.isBaseField ? "Remove" : "Delete";
+          return `
+            <div class="page-editor-item-card ${field.isBaseField ? "is-base-field" : ""}">
+              <div class="page-editor-item-copy">
+                <span class="page-editor-item-kind">${escapeHtml(kindLabel)}</span>
+                <strong class="page-editor-item-title">${escapeHtml(field.label || field.title || "Field")}</strong>
+                <span class="page-editor-item-meta">${escapeHtml(meta.label)}${field.required ? " • Required" : ""}</span>
+              </div>
+              <div class="page-editor-item-actions">
+                <button class="page-editor-item-button" type="button" data-page-item-edit="${escapeHtml(field.id)}">Edit</button>
+                <button class="page-editor-item-button is-danger" type="button" data-page-item-delete="${escapeHtml(field.id)}">${deleteLabel}</button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
     `
+    : `<div class="editor-inline-note">There is nothing on this page yet. Add fields from the Builder tab and they will appear here.</div>`;
+
+  if (!showEditorView(
+    "Page settings",
+    "Edit the page text, the step chip, every item on this page, or remove the whole page from your form.",
+    `
+      <div class="page-editor-section" data-preview-hover="steps">
+        <strong class="page-editor-section-title">Step chip</strong>
+        <div class="page-editor-chip-preview">${escapeHtml(step.navLabel || step.label || step.title || "Step")}</div>
+        <label>
+          Step chip label
+          <input id="editor-page-nav-label" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+        </label>
+      </div>
+      <div class="page-editor-section">
+        <strong class="page-editor-section-title">Items on this page (${pageItemCount})</strong>
+        ${pageItemsMarkup}
+      </div>
       <label>
         Page title
         <input id="editor-page-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
       </label>
       <label>
-        Step chip label
-        <input id="editor-page-nav-label" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
-      </label>
-      <label>
         Supporting copy
         <textarea id="editor-page-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
       </label>
-      <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
+      <div class="page-editor-danger-zone">
+        <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
+        <div class="page-editor-danger-note">${isCustomPage ? "This removes the whole custom page and everything on it." : "This removes the whole built-in page from the form. You can restore it later from Built-In Pages."}</div>
+      </div>
     `
   )) {
     return;
@@ -3814,6 +4001,7 @@ function openCustomPageEditor(step) {
   const navLabelInput = document.getElementById("editor-page-nav-label");
   const copyInput = document.getElementById("editor-page-copy");
   const deleteButton = document.getElementById("editor-delete-page");
+  const chipPreview = editorBody.querySelector(".page-editor-chip-preview");
 
   const patchPage = updates => {
     patchStepConfig(step.id, updates);
@@ -3825,15 +4013,36 @@ function openCustomPageEditor(step) {
   });
 
   navLabelInput?.addEventListener("input", event => {
-    patchPage({ navLabel: safeShortLabel(event.target.value) });
+    const nextLabel = safeShortLabel(event.target.value);
+    patchPage({ navLabel: nextLabel });
+    if (chipPreview) {
+      chipPreview.textContent = nextLabel || step.navLabel || step.label || step.title || "Step";
+    }
   });
 
   copyInput?.addEventListener("input", event => {
     patchPage({ copy: event.target.value.slice(0, 180) });
   });
 
+  editorBody.querySelectorAll("[data-page-item-edit]").forEach(button => {
+    button.addEventListener("click", () => {
+      openFieldEditor(button.dataset.pageItemEdit || "");
+    });
+  });
+
+  editorBody.querySelectorAll("[data-page-item-delete]").forEach(button => {
+    button.addEventListener("click", () => {
+      const fieldId = button.dataset.pageItemDelete || "";
+      removeBuilderField(fieldId);
+      const refreshedStep = getEditableStep(step.id);
+      if (refreshedStep) {
+        openCustomPageEditor(refreshedStep);
+      }
+    });
+  });
+
   deleteButton?.addEventListener("click", () => {
-    removeCustomPage(step.id);
+    removeBuilderPage(step.id);
   });
 }
 
@@ -3917,7 +4126,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
   if (target === "step-title") {
     openTypographyEditor({
       title: "Step title",
-      copy: "Edit the large question title for this step.",
+      copy: step.builtIn
+        ? `Edit the large question title for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
+        : "Edit the large question title for this step.",
       text: step.title,
       fontSize: step.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
       bold: step.titleBold !== false,
@@ -3938,7 +4149,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
   if (target === "step-copy") {
     openTypographyEditor({
       title: "Step copy",
-      copy: "Edit the supporting sentence below the question title.",
+      copy: step.builtIn
+        ? `Edit the supporting sentence for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
+        : "Edit the supporting sentence below the question title.",
       text: step.copy || "",
       fontSize: step.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
       bold: Boolean(step.copyBold),
@@ -3972,6 +4185,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     const rememberToggleDisabled = isAutoRememberedBuiltIn;
 
     if (!showEditorView("Field label", "Edit the question label, whether it is required, and whether the answer should be remembered later.", `
+      ${isBuiltInStep ? `<div class="editor-inline-note">${escapeHtml(getBuiltInFieldSemanticNote(step.id))}</div>` : ""}
       <label>
         Label text
         <textarea id="editor-label-text" maxlength="60">${escapeHtml(step.label || "")}</textarea>
@@ -4005,6 +4219,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
             ? "Turn this on only if this built-in answer should be saved to the client profile for future visits."
             : "Turn this on if this answer should be saved on the client profile for future appointments."}</div>
       ` : ""}
+      ${(isCustomField || isBuiltInStep) ? `<button id="editor-label-delete-field" class="delete-field-button" type="button">${isBuiltInStep ? "Remove this field from the form" : "Delete this question"}</button>` : ""}
     `)) {
       return;
     }
@@ -4015,6 +4230,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     const labelBoldInput = document.getElementById("editor-label-bold");
     const labelRequiredInput = document.getElementById("editor-label-required");
     const labelRememberInput = document.getElementById("editor-label-remember");
+    const labelDeleteButton = document.getElementById("editor-label-delete-field");
 
     const applyLabelPatch = patch => {
       patchStepConfig(step.id, patch);
@@ -4054,6 +4270,9 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       }
 
       applyLabelPatch({ rememberClientAnswer: Boolean(event.target.checked) });
+    });
+    labelDeleteButton?.addEventListener("click", () => {
+      removeBuilderField(step.id);
     });
     return;
   }
@@ -4626,13 +4845,6 @@ previewStepper?.addEventListener("click", event => {
     return;
   }
 
-  const labelTarget = event.target.closest('[data-edit-target="step-nav-label"]');
-
-  if (labelTarget) {
-    openStepNavigationEditor();
-    return;
-  }
-
   const button = event.target.closest("[data-preview-step]");
 
   if (!button) {
@@ -4700,8 +4912,40 @@ previewStepper?.addEventListener("pointerdown", event => {
   maybeStartStepPointerDrag(event);
 });
 
+previewStepper?.addEventListener("contextmenu", event => {
+  if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+    event.preventDefault();
+  }
+});
+
 fieldRailList?.addEventListener("pointerdown", event => {
   maybeStartFieldRailPointerDrag(event);
+});
+
+fieldRailList?.addEventListener("contextmenu", event => {
+  if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+    event.preventDefault();
+  }
+});
+
+previewStepHost?.addEventListener("contextmenu", event => {
+  if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT && event.target.closest?.("[data-sortable-field-id], .preview-stepper-button, .preview-field-dropzone")) {
+    event.preventDefault();
+  }
+});
+
+templateList?.addEventListener("contextmenu", event => {
+  if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+    event.preventDefault();
+  }
+});
+
+document.querySelectorAll("[data-add-type], [data-add-step], [data-add-page]").forEach(button => {
+  button.addEventListener("contextmenu", event => {
+    if (window.innerWidth <= MOBILE_STUDIO_BREAKPOINT) {
+      event.preventDefault();
+    }
+  });
 });
 
 window.addEventListener("pointermove", event => {
@@ -4751,6 +4995,20 @@ previewStepHost?.addEventListener("click", event => {
     return;
   }
 
+  const previewFieldControl = event.target.closest(".preview-field-control");
+
+  if (previewFieldControl) {
+    const fieldId = previewFieldControl.dataset.previewFieldId || "";
+
+    if (fieldId && consumePreviewFieldDirectEdit(fieldId)) {
+      return;
+    }
+
+    if (fieldId) {
+      return;
+    }
+  }
+
   const clickedFieldId = event.target.closest("[data-preview-field-id]")?.dataset.previewFieldId
     || event.target.closest("[data-preview-field-group]")?.dataset.previewFieldGroup
     || "";
@@ -4770,6 +5028,34 @@ previewStepHost?.addEventListener("click", event => {
     openFieldEditor(selectedPreviewStepId);
   }
 });
+previewStepHost?.addEventListener("pointerdown", event => {
+  const previewFieldControl = event.target.closest(".preview-field-control");
+
+  if (!previewFieldControl) {
+    return;
+  }
+
+  const fieldId = previewFieldControl.dataset.previewFieldId || "";
+
+  if (!fieldId) {
+    return;
+  }
+
+  const now = Date.now();
+  const isSecondTap = previewFieldTapIntent.fieldId === fieldId && now - previewFieldTapIntent.at <= PREVIEW_FIELD_DIRECT_EDIT_MS;
+
+  if (isSecondTap) {
+    previewFieldDirectEditIntent = { fieldId, expiresAt: now + PREVIEW_FIELD_DIRECT_EDIT_MS };
+    previewFieldTapIntent = { fieldId: "", at: 0 };
+    return;
+  }
+
+  previewFieldTapIntent = { fieldId, at: now };
+  previewFieldDirectEditIntent = { fieldId: "", expiresAt: 0 };
+  event.preventDefault();
+  event.stopPropagation();
+  openFieldEditor(fieldId);
+}, true);
 previewStepHost?.addEventListener("mouseover", event => {
   const zone = event.target.closest("[data-question-shell-zone]");
   if (!zone) {
@@ -4874,8 +5160,26 @@ previewShellZones.forEach(zone => {
 });
 
 previewTitle?.addEventListener("click", openPageTitleEditor);
-previewStepTitle?.addEventListener("click", () => openSelectedStepTextEditor("step-title"));
-previewStepCopy?.addEventListener("click", () => openSelectedStepTextEditor("step-copy"));
+previewStepTitle?.addEventListener("click", () => {
+  const selectedStep = getSelectedPreviewStep();
+
+  if (selectedStep && !isSpecialPreviewScreen(selectedStep) && selectedStep.type !== "review") {
+    openCustomPageEditor(selectedStep);
+    return;
+  }
+
+  openSelectedStepTextEditor("step-title");
+});
+previewStepCopy?.addEventListener("click", () => {
+  const selectedStep = getSelectedPreviewStep();
+
+  if (selectedStep && !isSpecialPreviewScreen(selectedStep) && selectedStep.type !== "review") {
+    openCustomPageEditor(selectedStep);
+    return;
+  }
+
+  openSelectedStepTextEditor("step-copy");
+});
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
@@ -4883,15 +5187,7 @@ document.addEventListener("keydown", event => {
   }
 });
 
-document.querySelectorAll("[data-preview-hover]").forEach(element => {
-  element.addEventListener("mouseenter", () => {
-    setMenuPreviewHoverTarget(element.dataset.previewHover || "");
-  });
-
-  element.addEventListener("mouseleave", () => {
-    setMenuPreviewHoverTarget("");
-  });
-});
+bindPreviewHoverTargets(document);
 
 if (editorHead) {
   editorHead.addEventListener("pointerdown", event => {
@@ -5081,6 +5377,7 @@ if (studioMobileResizeHandle && studioPanel) {
       startHeight: rect.height,
       pointerId: event.pointerId
     };
+    studioPanel.classList.add("is-mobile-resizing");
     studioMobileResizeHandle.setPointerCapture?.(event.pointerId);
     event.preventDefault();
   });
@@ -5090,16 +5387,19 @@ if (studioMobileResizeHandle && studioPanel) {
       return;
     }
 
-    const isNarrowPhone = window.innerWidth <= 720;
-    const minHeight = isNarrowPhone ? 238 : 228;
-    const maxHeight = isNarrowPhone ? Math.min(520, Math.round(window.innerHeight * 0.64)) : Math.min(500, Math.round(window.innerHeight * 0.58));
-    const nextHeight = clampMobileStudioHeight(
+    const { minPanelHeight, maxPanelHeight, collapseSnapThreshold } = getMobileStudioMetrics();
+    let nextHeight = clampMobileStudioHeight(
       studioPanelMobileResizeState.startHeight - (event.clientY - studioPanelMobileResizeState.startY),
-      minHeight,
-      maxHeight
+      minPanelHeight,
+      maxPanelHeight
     );
 
+    if (nextHeight <= collapseSnapThreshold) {
+      nextHeight = minPanelHeight;
+    }
+
     mobileStudioHeightOverride = nextHeight;
+    mobileStudioResumeState = null;
     writeStoredStudioValue(MOBILE_STUDIO_HEIGHT_STORAGE_KEY, nextHeight);
     applyMobileStudioScale();
     updateStudioPanelOverflowState();
@@ -5112,6 +5412,22 @@ if (studioMobileResizeHandle && studioPanel) {
 
     studioMobileResizeHandle.releasePointerCapture?.(event.pointerId);
     studioPanelMobileResizeState = null;
+    studioPanel.classList.remove("is-mobile-resizing");
+
+    const effectiveHeight = getEffectiveMobileStudioHeight();
+
+    if (effectiveHeight != null) {
+      const { collapseSnapThreshold } = getMobileStudioMetrics();
+
+      if (effectiveHeight <= collapseSnapThreshold) {
+        setMobileStudioSize("peek");
+        updateStudioPanelOverflowState();
+        return;
+      }
+    }
+
+    applyMobileStudioScale();
+    updateStudioPanelOverflowState();
   };
 
   studioMobileResizeHandle.addEventListener("pointerup", stopMobileStudioResizing);

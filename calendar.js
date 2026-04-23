@@ -91,8 +91,9 @@ function setLoadingState(isLoading) {
     calendarLoading.hidden = !isLoading;
   }
 
-  if (calendarLayout && isLoading) {
-    calendarLayout.hidden = true;
+  if (calendarLayout) {
+    calendarLayout.hidden = isLoading;
+    calendarLayout.setAttribute("aria-busy", isLoading ? "true" : "false");
   }
 }
 

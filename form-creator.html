@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="form-creator.css?v=20260417e">
+  <link rel="stylesheet" href="form-creator.css?v=20260423g">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -69,8 +69,7 @@
         </div>
         <div id="form-studio-panel-handle" class="floating-panel-head floating-panel-head-draggable">
           <div class="floating-panel-head-main">
-            <span class="floating-panel-kicker">Form Studio</span>
-            <h2>Builder</h2>
+            <h2 class="floating-panel-title">Form Studio</h2>
             <div id="form-studio-scroll-hint" class="studio-scroll-hint" hidden>
               <span class="studio-scroll-hint-icon" aria-hidden="true">↓</span>
               <span>Scroll for more</span>
@@ -118,6 +117,7 @@
             <span class="studio-mobile-height-copy">Tap a size or drag the top handle.</span>
           </div>
           <div class="studio-mobile-height-buttons" role="group" aria-label="Mobile menu height">
+            <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="peek">Peek</button>
             <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="compact">Compact</button>
             <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="balanced">Balanced</button>
             <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="expanded">Expanded</button>
@@ -343,7 +343,7 @@
           <div class="form-editor-head">
             <button id="form-editor-back" class="form-editor-back-button" type="button" aria-label="Back to Form Studio">
               <span aria-hidden="true">←</span>
-              <span>Builder</span>
+              <span>Back</span>
             </button>
             <div class="form-editor-head-copy">
               <span class="form-editor-kicker">Inspector</span>
@@ -360,6 +360,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260417e"></script>
+  <script type="module" src="form-creator.js?v=20260423g"></script>
 </body>
 </html>
