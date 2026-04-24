@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260417a">
-  <link rel="stylesheet" href="form-creator.css?v=20260423i">
+  <link rel="stylesheet" href="form-creator.css?v=20260423j">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -111,19 +111,6 @@
           <button id="studio-context-action" class="studio-context-action" type="button">Edit selected</button>
         </section>
 
-        <section class="studio-mobile-height-row" aria-label="Form Studio height">
-          <div class="studio-mobile-height-topline">
-            <span class="studio-mobile-height-label">Menu height</span>
-            <span class="studio-mobile-height-copy">Tap a size or drag the top handle.</span>
-          </div>
-          <div class="studio-mobile-height-buttons" role="group" aria-label="Mobile menu height">
-            <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="peek">Peek</button>
-            <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="compact">Compact</button>
-            <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="balanced">Balanced</button>
-            <button class="studio-mobile-height-button" type="button" data-mobile-studio-size="expanded">Expanded</button>
-          </div>
-        </section>
-
         <div class="studio-tabs" role="tablist" aria-label="Form Creator sections">
           <button class="studio-tab-button is-active" type="button" role="tab" aria-selected="true" data-studio-tab="add-fields">Add</button>
           <button class="studio-tab-button" type="button" role="tab" aria-selected="false" data-studio-tab="form-settings">Design</button>
@@ -136,22 +123,22 @@
             <details class="settings-accordion" data-accordion-tone="slate" open>
               <summary class="settings-accordion-summary">
                 <span class="settings-accordion-copy">
-                  <span class="floating-panel-kicker">Built-In Pages</span>
-                  <span class="settings-accordion-title">Restore The Essentials</span>
-                  <span class="floating-panel-copy">Bring back the standard reminder pages with their built-in behavior already mapped.</span>
+                  <span class="floating-panel-kicker">Mapped Fields</span>
+                  <span class="settings-accordion-title">Add The Essentials</span>
+                  <span class="floating-panel-copy">Drop reminder-ready fields onto the page you are editing right now.</span>
                 </span>
                 <span class="settings-accordion-chevron" aria-hidden="true"></span>
               </summary>
               <div class="settings-accordion-body">
-                <div class="floating-tool-dock" aria-label="Restore core reminder fields">
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Restore client name"><span class="floating-tool-icon">Nm</span><span class="floating-tool-label">Name</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Restore client email"><span class="floating-tool-icon">Em</span><span class="floating-tool-label">Email</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Restore client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Restore date of service"><span class="floating-tool-icon">Dt</span><span class="floating-tool-label">Date</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Restore time of service"><span class="floating-tool-icon">Tm</span><span class="floating-tool-label">Time</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Restore service location"><span class="floating-tool-icon">Loc</span><span class="floating-tool-label">Location</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Restore business contact"><span class="floating-tool-icon">Biz</span><span class="floating-tool-label">Contact</span></button>
-                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Restore additional details"><span class="floating-tool-icon">Note</span><span class="floating-tool-label">Details</span></button>
+                <div class="floating-tool-dock" aria-label="Add mapped reminder fields to the current page">
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="name" title="Add client name"><span class="floating-tool-icon">Nm</span><span class="floating-tool-label">Name</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="email" title="Add client email"><span class="floating-tool-icon">Em</span><span class="floating-tool-label">Email</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="phone" title="Add client phone"><span class="floating-tool-icon">Ph</span><span class="floating-tool-label">Phone</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="date" title="Add date of service"><span class="floating-tool-icon">Dt</span><span class="floating-tool-label">Date</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="time" title="Add time of service"><span class="floating-tool-icon">Tm</span><span class="floating-tool-label">Time</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="address" title="Add service location"><span class="floating-tool-icon">Loc</span><span class="floating-tool-label">Location</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="businessContact" title="Add business contact"><span class="floating-tool-icon">Biz</span><span class="floating-tool-label">Contact</span></button>
+                  <button class="floating-tool floating-tool-system" type="button" draggable="true" data-add-step="notes" title="Add additional details"><span class="floating-tool-icon">Note</span><span class="floating-tool-label">Details</span></button>
                 </div>
               </div>
             </details>
@@ -360,6 +347,6 @@
   </div>
 
   <script src="nav.js?v=20260331c"></script>
-  <script type="module" src="form-creator.js?v=20260423i"></script>
+  <script type="module" src="form-creator.js?v=20260423j"></script>
 </body>
 </html>

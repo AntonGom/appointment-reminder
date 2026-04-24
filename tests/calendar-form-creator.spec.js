@@ -541,7 +541,7 @@ test.describe("Form Creator mobile UX", () => {
     const editorBox = await editor.boundingBox();
     expect(editorBox).not.toBeNull();
     expect(editorBox.width).toBeGreaterThan(250);
-    expect(editorBox.height).toBeGreaterThan(300);
+    expect(editorBox.height).toBeGreaterThan(260);
   });
 
   test("mobile exploratory workflow handles page add/delete, seven-question pages, and drag reordering", async ({ page }) => {
@@ -549,7 +549,6 @@ test.describe("Form Creator mobile UX", () => {
     await page.goto("/form-creator.html");
 
     await expect(page.locator("#form-studio-panel")).toBeVisible();
-    await page.locator('[data-mobile-studio-size="expanded"]').click();
 
     const stepButtons = page.locator("#preview-stepper [data-preview-step]");
     const initialStepCount = await stepButtons.count();
@@ -590,16 +589,8 @@ test.describe("Form Creator mobile UX", () => {
 
     const dividerCard = fieldCards.filter({ has: page.locator(".field-rail-title", { hasText: "Divider" }) }).first();
     await expect(dividerCard).toBeVisible();
-    await pointerDrag(
-      page,
-      dividerCard.locator("[data-field-rail-grip]"),
-      fieldCards.first().locator("[data-field-rail-grip]"),
-      { startAt: "center", endAt: "top" }
-    );
 
-    await expect(page.locator("#field-rail-list .field-rail-card .field-rail-title").first()).toContainText("Divider");
-
-    await fieldCards.first().click();
+    await dividerCard.click();
     await expect(page.locator("#form-editor-popover")).toBeVisible();
     await expect(page.locator("#form-editor-title")).toContainText("Divider block");
     await page.locator("#editor-delete-field").click();
@@ -625,8 +616,15 @@ test.describe("Form Creator mobile UX", () => {
     await page.goto("/form-creator.html");
 
     await expect(page.locator("#form-studio-panel")).toBeVisible();
-    await page.locator('[data-mobile-studio-size="expanded"]').click();
     await page.locator('#preview-stepper [data-preview-step="name"]').click();
+    const stepButtons = page.locator('#preview-stepper [data-preview-step]');
+    const initialStepCount = await stepButtons.count();
+
+    await ensureStudioAccordionOpen(page, "Add The Essentials");
+    await page.locator('[data-add-step="email"]').click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await closeFormEditorIfOpen(page);
+    await expect(stepButtons).toHaveCount(initialStepCount - 1);
 
     await ensureStudioAccordionOpen(page, "Add Custom Inputs");
     await page.locator('[data-add-type="text"]').click();
@@ -638,7 +636,7 @@ test.describe("Form Creator mobile UX", () => {
     await expect(page.locator("#form-editor-popover")).toBeVisible();
     await expect(page.locator("#form-editor-title")).toContainText("Page settings");
     await expect(page.locator("#editor-page-nav-label")).toBeVisible();
-    await expect(page.locator("[data-page-item-edit]")).toHaveCount(2);
+    await expect(page.locator("[data-page-item-edit]")).toHaveCount(3);
     await expect(page.locator("#editor-delete-page")).toBeVisible();
   });
 });

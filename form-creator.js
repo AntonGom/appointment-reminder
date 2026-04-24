@@ -157,6 +157,7 @@ let mobileStudioResumeState = null;
 let mobileStudioExpandedState = { kind: "preset", size: "balanced" };
 let suppressNextMobileStudioHandleClick = false;
 let studioViewAnimationTimer = null;
+let editorTransitionTimer = null;
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
@@ -423,6 +424,7 @@ function buildTemplateField(config) {
   return {
     ...base,
     id: config.id,
+    semanticId: config.semanticId || base.semanticId || "",
     type: config.type || base.type,
     title: config.title || config.label || base.title,
     copy: config.copy || config.helpText || "",
@@ -1122,6 +1124,132 @@ function insertFieldIntoCurrentPage(type, insertIndex = null) {
   openFieldEditor(nextField.id);
 }
 
+function buildEssentialField(stepId) {
+  const baseStep = BUILT_IN_STEP_MAP.get(stepId);
+
+  if (!baseStep) {
+    return null;
+  }
+
+  const override = currentFormProfile.stepOverrides?.[stepId] || {};
+  const nextField = createCustomField(baseStep.type);
+  const label = override.label || baseStep.label || nextField.label;
+  const navLabel = safeShortLabel(override.navLabel || baseStep.navLabel || label || nextField.navLabel);
+  const placeholder = typeof override.placeholder === "string"
+    ? override.placeholder
+    : (typeof baseStep.placeholder === "string" ? baseStep.placeholder : nextField.placeholder);
+  const helpText = override.helpText || baseStep.helpText || nextField.helpText || "";
+  const copy = override.copy || baseStep.copy || nextField.copy || "";
+
+  return {
+    ...nextField,
+    semanticId: stepId,
+    type: baseStep.type || nextField.type,
+    title: override.title || baseStep.title || label || nextField.title,
+    copy,
+    label,
+    navLabel,
+    placeholder,
+    helpText,
+    required: override.required === true,
+    rememberClientAnswer: override.rememberClientAnswer === true
+      || (override.rememberClientAnswer == null && isDefaultRememberedClientField(stepId))
+  };
+}
+
+function getEssentialFields(stepId) {
+  return getCustomFields().filter(field => String(field.semanticId || "").trim() === String(stepId || "").trim());
+}
+
+function insertEssentialFieldIntoCurrentPage(stepId, options = {}) {
+  const baseStep = BUILT_IN_STEP_MAP.get(stepId);
+  const currentPageId = getCurrentPageId();
+
+  if (!baseStep) {
+    return;
+  }
+
+  if (!currentPageId || ["review", "welcome", "thankyou"].includes(currentPageId)) {
+    setStatus("Pick a question page first, then add essentials to that page.", "error");
+    return;
+  }
+
+  if (currentPageId === stepId) {
+    selectedPreviewStepId = stepId;
+    renderBuilder();
+
+    if (options.openEditor) {
+      openFieldEditor(stepId);
+    }
+
+    setStatus(`${baseStep.navLabel} is already the main field on this page.`, "info");
+    return;
+  }
+
+  const existingEssentialFields = getEssentialFields(stepId);
+  const primaryField = existingEssentialFields[0] || null;
+  const duplicateIds = new Set(existingEssentialFields.slice(1).map(field => field.id));
+  const targetField = primaryField
+    ? { ...primaryField, pageId: currentPageId }
+    : { ...buildEssentialField(stepId), pageId: currentPageId };
+
+  if (!targetField) {
+    return;
+  }
+
+  const currentFields = getCurrentPageFields()
+    .filter(field => field.id !== targetField.id && !duplicateIds.has(field.id));
+  const normalizedIndex = typeof options.insertIndex === "number"
+    ? Math.max(0, Math.min(options.insertIndex, currentFields.length))
+    : currentFields.length;
+  const nextCurrentOrder = [...currentFields.map(field => field.id)];
+  nextCurrentOrder.splice(normalizedIndex, 0, targetField.id);
+
+  const nextFields = getCustomFields()
+    .filter(field => !duplicateIds.has(field.id))
+    .map(field => field.id === targetField.id ? targetField : field);
+
+  if (!nextFields.some(field => field.id === targetField.id)) {
+    nextFields.push(targetField);
+  }
+
+  const nextPageFieldOrder = Object.fromEntries(
+    Object.entries(currentFormProfile.pageFieldOrder || {}).map(([pageId, ids]) => [
+      pageId,
+      Array.isArray(ids)
+        ? ids.filter(id => id !== targetField.id && !duplicateIds.has(id))
+        : []
+    ])
+  );
+  nextPageFieldOrder[currentPageId] = [...new Set(nextCurrentOrder.filter(Boolean))];
+
+  currentFormProfile = {
+    ...currentFormProfile,
+    stepOverrides: {
+      ...(currentFormProfile.stepOverrides || {}),
+      [stepId]: {
+        ...(currentFormProfile.stepOverrides?.[stepId] || {}),
+        hidden: true
+      }
+    },
+    fields: nextFields,
+    stepOrder: (Array.isArray(currentFormProfile.stepOrder) ? currentFormProfile.stepOrder : getCurrentStepOrder())
+      .filter(id => id !== stepId),
+    pageFieldOrder: nextPageFieldOrder
+  };
+
+  selectedPreviewStepId = currentPageId;
+  renderBuilder();
+
+  if (options.openEditor) {
+    openFieldEditor(targetField.id);
+  }
+
+  setStatus(primaryField
+    ? `${baseStep.navLabel} moved onto this page.`
+    : `${baseStep.navLabel} added to this page.`, "success");
+}
+
 function restoreBuiltInStep(stepId, options = {}) {
   const baseStep = BUILT_IN_STEP_MAP.get(stepId);
 
@@ -1682,7 +1810,7 @@ function startDrag(payload, event, draggedElement = null) {
   if (previewStepper) {
     previewStepper.classList.toggle(
       "is-dragging-steps",
-      payload?.kind === "step" || payload?.kind === "page-template" || payload?.kind === "built-in-step-template"
+      payload?.kind === "step" || payload?.kind === "page-template"
     );
   }
 
@@ -2025,6 +2153,11 @@ function openSelectedStudioInspector() {
 function showEditorView(title, copy, markup) {
   if (!editorPopover || !editorBody || !editorTitle || !editorCopy) {
     return false;
+  }
+
+  if (editorTransitionTimer) {
+    window.clearTimeout(editorTransitionTimer);
+    editorTransitionTimer = null;
   }
 
   expandPeekedMobileStudioForEditor();
@@ -2489,7 +2622,9 @@ function buildPreviewFieldControlMarkup(field, options = {}) {
 }
 
 function getBuiltInFieldSemanticName(fieldId) {
-  const builtInStep = BUILT_IN_STEP_MAP.get(String(fieldId || "").trim());
+  const normalizedFieldId = String(fieldId || "").trim();
+  const semanticFieldId = String(getCustomFields().find(field => field.id === normalizedFieldId)?.semanticId || "").trim();
+  const builtInStep = BUILT_IN_STEP_MAP.get(normalizedFieldId) || BUILT_IN_STEP_MAP.get(semanticFieldId);
   return builtInStep?.title || builtInStep?.label || "core reminder field";
 }
 
@@ -3609,15 +3744,24 @@ function closeEditor() {
     return;
   }
 
+  if (editorTransitionTimer) {
+    window.clearTimeout(editorTransitionTimer);
+    editorTransitionTimer = null;
+  }
+
   editorPopover.classList.remove("is-transition-in");
   editorPopover.classList.add("is-transition-out");
-  editorPopover.hidden = true;
-  editorPopover.classList.remove("is-transition-out");
-  editorBody.innerHTML = "";
-  restoreMobileStudioAfterEditor();
-  syncStudioEditorState();
-  updateStudioContextCard();
-  triggerStudioViewAnimation("is-view-returning");
+  editorTransitionTimer = window.setTimeout(() => {
+    editorPopover.hidden = true;
+    editorPopover.classList.remove("is-transition-out");
+    editorBody.innerHTML = "";
+    restoreMobileStudioAfterEditor();
+    syncStudioEditorState();
+    updateStudioContextCard();
+    triggerStudioViewAnimation("is-view-returning");
+    setActiveStudioTab(activeStudioTab);
+    editorTransitionTimer = null;
+  }, STUDIO_VIEW_TRANSITION_MS);
 }
 
 function resetEditorPosition() {
@@ -3807,8 +3951,13 @@ function openFieldEditor(fieldId) {
   const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
   const isCustomField = Boolean(customField);
   const isContentBlock = Boolean(customField && isContentBlockField(customField));
+  const semanticFieldId = isBuiltInStep
+    ? fieldId
+    : String(customField?.semanticId || "").trim();
+  const isMappedEssentialField = Boolean(isCustomField && semanticFieldId);
   const isAutoRememberedBuiltIn = isBuiltInStep && isDefaultRememberedClientField(fieldId);
   const canToggleBuiltInRemember = isBuiltInStep && canToggleBuiltInRememberField(fieldId);
+  const usesSemanticMapping = isBuiltInStep || isMappedEssentialField;
   const shouldShowRememberToggle = isCustomField || isAutoRememberedBuiltIn || canToggleBuiltInRemember;
   const rememberToggleChecked = isCustomField || canToggleBuiltInRemember
     ? step?.rememberClientAnswer === true
@@ -3908,14 +4057,14 @@ function openFieldEditor(fieldId) {
     return;
   }
 
-  if (!showEditorView("Question settings", isBuiltInStep
-    ? getBuiltInFieldSemanticNote(fieldId)
+  if (!showEditorView("Question settings", usesSemanticMapping
+    ? getBuiltInFieldSemanticNote(semanticFieldId || fieldId)
     : "Rename this question and control how it appears in Send Reminder.", `
     <label>
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
-    ${isCustomField ? `
+    ${isCustomField && !isMappedEssentialField ? `
       <label>
         Field type
         <select id="editor-field-type">
@@ -4169,14 +4318,19 @@ function openCustomPageEditor(step) {
       <div class="page-editor-item-list ${pageFields.length > 3 ? "is-scrollable" : ""}">
         ${pageFields.map(field => {
           const meta = getCustomFieldTypeMeta(field.type);
-          const kindLabel = field.isBaseField ? "Page field" : (isContentBlockField(field) ? "Content block" : "Question");
+          const kindLabel = field.isBaseField
+            ? "Page field"
+            : field.semanticId
+              ? "Essential field"
+              : (isContentBlockField(field) ? "Content block" : "Question");
           const deleteLabel = field.isBaseField ? "Remove" : "Delete";
+          const mappedLabel = field.semanticId ? ` • Maps to ${getBuiltInFieldSemanticName(field.semanticId)}` : "";
           return `
             <div class="page-editor-item-card ${field.isBaseField ? "is-base-field" : ""}">
               <div class="page-editor-item-copy">
                 <span class="page-editor-item-kind">${escapeHtml(kindLabel)}</span>
                 <strong class="page-editor-item-title">${escapeHtml(field.label || field.title || "Field")}</strong>
-                <span class="page-editor-item-meta">${escapeHtml(meta.label)}${field.required ? " • Required" : ""}</span>
+                <span class="page-editor-item-meta">${escapeHtml(meta.label)}${escapeHtml(mappedLabel)}${field.required ? " • Required" : ""}</span>
               </div>
               <div class="page-editor-item-actions">
                 <button class="page-editor-item-button" type="button" data-page-item-edit="${escapeHtml(field.id)}">Edit</button>
@@ -4215,7 +4369,7 @@ function openCustomPageEditor(step) {
       </label>
       <div class="page-editor-danger-zone">
         <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
-        <div class="page-editor-danger-note">${isCustomPage ? "This removes the whole custom page and everything on it." : "This removes the whole built-in page from the form. You can restore it later from Built-In Pages."}</div>
+        <div class="page-editor-danger-note">${isCustomPage ? "This removes the whole custom page and everything on it." : "This removes the whole built-in page from the form. You can add it back later from Add The Essentials."}</div>
       </div>
     `
   )) {
@@ -5037,11 +5191,11 @@ document.querySelectorAll("[data-add-type]").forEach(button => {
 
 document.querySelectorAll("[data-add-step]").forEach(button => {
   button.addEventListener("click", () => {
-    restoreBuiltInStep(button.dataset.addStep || "", { openEditor: true });
+    insertEssentialFieldIntoCurrentPage(button.dataset.addStep || "", { openEditor: true });
   });
   button.addEventListener("dragstart", event => {
     startDrag({
-      kind: "built-in-step-template",
+      kind: "essential-field-template",
       stepId: button.dataset.addStep || ""
     }, event, button);
   });
@@ -5087,7 +5241,7 @@ previewStepper?.addEventListener("click", event => {
 });
 
 previewStepper?.addEventListener("dragover", event => {
-  if (!dragPayload || !["step", "page-template", "built-in-step-template"].includes(dragPayload.kind)) {
+  if (!dragPayload || !["step", "page-template"].includes(dragPayload.kind)) {
     return;
   }
 
@@ -5124,8 +5278,6 @@ previewStepper?.addEventListener("drop", event => {
 
   if (dragPayload.kind === "step" && dragPayload.stepId) {
     reorderStep(dragPayload.stepId, insertIndex);
-  } else if (dragPayload.kind === "built-in-step-template" && dragPayload.stepId) {
-    restoreBuiltInStep(dragPayload.stepId, { insertIndex });
   } else if (dragPayload.kind === "page-template") {
     addBlankPage(insertIndex);
   }
@@ -5323,7 +5475,7 @@ previewStepHost?.addEventListener("dragend", event => {
 previewStepHost?.addEventListener("dragover", event => {
   const dropzone = event.target.closest("[data-drop-field-index]");
 
-  if (!dropzone || !dragPayload || (dragPayload.kind !== "existing-field" && dragPayload.kind !== "field-template")) {
+  if (!dropzone || !dragPayload || !["existing-field", "field-template", "essential-field-template"].includes(dragPayload.kind)) {
     return;
   }
 
@@ -5334,7 +5486,7 @@ previewStepHost?.addEventListener("dragover", event => {
 previewStepHost?.addEventListener("dragenter", event => {
   const dropzone = event.target.closest("[data-drop-field-index]");
 
-  if (!dropzone || !dragPayload || (dragPayload.kind !== "existing-field" && dragPayload.kind !== "field-template")) {
+  if (!dropzone || !dragPayload || !["existing-field", "field-template", "essential-field-template"].includes(dragPayload.kind)) {
     return;
   }
 
@@ -5364,6 +5516,8 @@ previewStepHost?.addEventListener("drop", event => {
     reorderCurrentPageField(dragPayload.fieldId, insertIndex);
   } else if (dragPayload.kind === "field-template" && dragPayload.fieldType) {
     insertFieldIntoCurrentPage(dragPayload.fieldType, insertIndex);
+  } else if (dragPayload.kind === "essential-field-template" && dragPayload.stepId) {
+    insertEssentialFieldIntoCurrentPage(dragPayload.stepId, { insertIndex });
   }
 
   finishDrag();

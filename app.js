@@ -476,6 +476,7 @@ function getCachedFieldValue(fieldId) {
 function getFieldSearchText(field) {
   return [
     field?.id,
+    field?.semanticId,
     field?.label,
     field?.title,
     field?.navLabel,
@@ -627,6 +628,7 @@ function getRenderedPrefillTargets() {
 
 function scoreRenderedPrefillTarget(fieldId, target) {
   let score = 0;
+  const semanticFieldId = String(getCustomFieldConfig(target.id)?.semanticId || "").trim();
 
   if (target.id === fieldId) {
     score += 240;
@@ -634,6 +636,10 @@ function scoreRenderedPrefillTarget(fieldId, target) {
 
   if (target.stepField === fieldId) {
     score += 210;
+  }
+
+  if (semanticFieldId && semanticFieldId === fieldId) {
+    score += 260;
   }
 
   if (fieldId === "phone") {
@@ -771,7 +777,7 @@ function getSemanticFieldFallbackValue(fieldId) {
       return;
     }
 
-    const score = scoreField(field);
+    const score = scoreField(field) + (String(field.semanticId || "").trim() === fieldId ? 260 : 0);
 
     if (score > bestScore) {
       bestScore = score;

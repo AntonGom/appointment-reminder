@@ -392,6 +392,7 @@ export function createCustomField(type = "text") {
   return {
     id: `custom_${getRandomSuffix()}`,
     pageId: "",
+    semanticId: "",
     type: meta.id,
     title: meta.label,
     copy: meta.helpText,
@@ -430,6 +431,8 @@ function normalizeCustomPage(rawPage, index) {
 function normalizeCustomField(rawField, index) {
   const meta = getCustomFieldTypeMeta(rawField?.type || "text");
   const fallbackField = createCustomField(meta.id);
+  const semanticId = safeString(rawField?.semanticId);
+  const normalizedSemanticId = BASE_REMINDER_STEPS.some(step => step.id === semanticId) ? semanticId : "";
   const label = safeString(rawField?.label) || meta.label;
   const navLabel = safeString(rawField?.navLabel) || label.slice(0, 12) || meta.shortLabel;
   const placeholder = meta.id === "date" || meta.id === "time" || isContentBlockType(meta.id)
@@ -439,6 +442,7 @@ function normalizeCustomField(rawField, index) {
   return {
     id: safeString(rawField?.id) || `custom_${index}_${getRandomSuffix()}`,
     pageId: safeString(rawField?.pageId).slice(0, 60),
+    semanticId: normalizedSemanticId,
     type: meta.id,
     title: (safeString(rawField?.title) || label).slice(0, 60),
     copy: safeString(rawField?.copy).slice(0, 180),
