@@ -1627,7 +1627,8 @@ body.is-field-rail-dragging {
 .floating-panel-studio.is-editor-open .studio-tab-panels,
 .floating-panel-studio.is-editor-open .studio-panel-resize-handle,
 .floating-panel-studio.is-editor-open .form-enabled-card,
-.floating-panel-studio.is-editor-open .form-creator-toolbar-actions-persistent {
+.floating-panel-studio.is-editor-open .form-creator-toolbar-actions-persistent,
+.floating-panel-studio.is-editor-open .floating-panel-head {
   display: none;
 }
 
@@ -2868,11 +2869,11 @@ body.is-field-rail-dragging {
 .page-editor-danger-zone {
   display: grid;
   gap: 8px;
-  position: sticky;
-  bottom: -16px;
-  padding-top: 6px;
-  padding-bottom: 2px;
-  background: linear-gradient(180deg, rgba(247, 250, 255, 0), rgba(247, 250, 255, 0.96) 26%, rgba(247, 250, 255, 0.98));
+  position: static;
+  margin-top: 8px;
+  padding-top: 10px;
+  padding-bottom: 0;
+  background: transparent;
 }
 
 .page-editor-danger-note {
