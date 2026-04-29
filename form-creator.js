@@ -80,8 +80,7 @@ const previewModeKicker = document.getElementById("form-preview-mode-kicker");
 const previewModeTitle = document.getElementById("form-preview-mode-title");
 const previewModeDetail = document.getElementById("form-preview-mode-detail");
 const previewPerspectiveButtons = Array.from(document.querySelectorAll("[data-preview-perspective]"));
-const enterPreviewModeButton = document.getElementById("enter-preview-mode-button");
-const exitPreviewModeButton = document.getElementById("exit-preview-mode-button");
+const previewModeToggles = Array.from(document.querySelectorAll("[data-preview-mode-toggle]"));
 const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
@@ -2475,40 +2474,41 @@ function startLatestUserSyncLoop() {
 
 function syncMenuPreviewHoverState() {
   const isMotionHighlight = activeMenuPreviewHoverTarget === "motion";
+  const shouldHighlight = !previewOnlyMode;
 
   if (previewShell) {
-    previewShell.classList.toggle("is-shell-edit-hover", activeMenuPreviewHoverTarget === "shell");
+    previewShell.classList.toggle("is-shell-edit-hover", shouldHighlight && activeMenuPreviewHoverTarget === "shell");
   }
 
   if (formPreviewStage) {
-    formPreviewStage.classList.toggle("is-background-edit-hover", activeMenuPreviewHoverTarget === "background");
+    formPreviewStage.classList.toggle("is-background-edit-hover", shouldHighlight && activeMenuPreviewHoverTarget === "background");
   }
 
   if (previewProgressWrap) {
-    previewProgressWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps" || isMotionHighlight);
+    previewProgressWrap.classList.toggle("is-menu-highlight", shouldHighlight && (activeMenuPreviewHoverTarget === "steps" || isMotionHighlight));
   }
 
   if (previewStepper) {
-    previewStepper.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "steps" || isMotionHighlight);
+    previewStepper.classList.toggle("is-menu-highlight", shouldHighlight && (activeMenuPreviewHoverTarget === "steps" || isMotionHighlight));
   }
 
   if (previewWizardHead) {
-    previewWizardHead.classList.toggle("is-menu-highlight", isMotionHighlight);
+    previewWizardHead.classList.toggle("is-menu-highlight", shouldHighlight && isMotionHighlight);
   }
 
   const questionWrap = previewStepHost?.querySelector(".question-wrap");
   if (questionWrap) {
-    questionWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "question" || isMotionHighlight);
+    questionWrap.classList.toggle("is-menu-highlight", shouldHighlight && (activeMenuPreviewHoverTarget === "question" || isMotionHighlight));
   }
 
   const welcomeWrap = previewStepHost?.querySelector('[data-preview-area="welcome"]');
   if (welcomeWrap) {
-    welcomeWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "welcome");
+    welcomeWrap.classList.toggle("is-menu-highlight", shouldHighlight && activeMenuPreviewHoverTarget === "welcome");
   }
 
   const thankYouWrap = previewStepHost?.querySelector('[data-preview-area="thankyou"]');
   if (thankYouWrap) {
-    thankYouWrap.classList.toggle("is-menu-highlight", activeMenuPreviewHoverTarget === "thankyou");
+    thankYouWrap.classList.toggle("is-menu-highlight", shouldHighlight && activeMenuPreviewHoverTarget === "thankyou");
   }
 }
 
@@ -2547,13 +2547,13 @@ function refreshPreviewOnly() {
 function getPreviewPerspectiveCopy() {
   if (previewPerspective === "client") {
     return {
-      title: "Client Link View",
+      title: "Client View",
       detail: "Shows the version clients see from a QR code or shared link."
     };
   }
 
   return {
-    title: "Business / Employee View",
+    title: "Business View",
     detail: "Shows the version your team fills out inside Send Reminder."
   };
 }
@@ -2581,20 +2581,20 @@ function syncPreviewModeChrome() {
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 
-  if (enterPreviewModeButton) {
-    enterPreviewModeButton.hidden = previewOnlyMode;
-  }
-
-  if (exitPreviewModeButton) {
-    exitPreviewModeButton.hidden = !previewOnlyMode;
-  }
+  previewModeToggles.forEach(toggle => {
+    toggle.checked = previewOnlyMode;
+  });
 
   signedInShell?.classList.toggle("is-preview-only-mode", previewOnlyMode);
   formCreatorCanvas?.classList.toggle("is-preview-only-mode", previewOnlyMode);
   previewShell?.classList.toggle("is-preview-only-mode", previewOnlyMode);
 
-  if (studioPanel) {
-    studioPanel.hidden = previewOnlyMode;
+  if (previewOnlyMode) {
+    previewShell?.classList.remove("is-shell-edit-hover");
+    formPreviewStage?.classList.remove("is-background-edit-hover");
+    previewStepHost?.querySelectorAll(".is-card-edit-hover").forEach(element => {
+      element.classList.remove("is-card-edit-hover");
+    });
   }
 }
 
@@ -5495,11 +5495,10 @@ previewPerspectiveButtons.forEach(button => {
     setPreviewPerspective(button.dataset.previewPerspective || "staff");
   });
 });
-enterPreviewModeButton?.addEventListener("click", () => {
-  setPreviewOnlyMode(true);
-});
-exitPreviewModeButton?.addEventListener("click", () => {
-  setPreviewOnlyMode(false);
+previewModeToggles.forEach(toggle => {
+  toggle.addEventListener("change", event => {
+    setPreviewOnlyMode(Boolean(event.target.checked));
+  });
 });
 studioContextAction?.addEventListener("click", () => {
   const actionMode = studioContextAction.dataset.actionMode || "";
@@ -6033,6 +6032,10 @@ previewStepHost?.addEventListener("drop", event => {
 
 previewShellZones.forEach(zone => {
   zone.addEventListener("mouseenter", () => {
+    if (previewOnlyMode) {
+      return;
+    }
+
     previewShell?.classList.add("is-shell-edit-hover");
   });
 
@@ -6041,13 +6044,27 @@ previewShellZones.forEach(zone => {
   });
 
   zone.addEventListener("click", event => {
+    if (previewOnlyMode) {
+      return;
+    }
+
     event.stopPropagation();
     openFormShellEditor();
   });
 });
 
-previewTitle?.addEventListener("click", openPageTitleEditor);
+previewTitle?.addEventListener("click", () => {
+  if (previewOnlyMode) {
+    return;
+  }
+
+  openPageTitleEditor();
+});
 previewStepTitle?.addEventListener("click", () => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const selectedStep = getSelectedPreviewStep();
 
   if (selectedStep && !isSpecialPreviewScreen(selectedStep) && selectedStep.type !== "review") {
@@ -6058,6 +6075,10 @@ previewStepTitle?.addEventListener("click", () => {
   openSelectedStepTextEditor("step-title");
 });
 previewStepCopy?.addEventListener("click", () => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const selectedStep = getSelectedPreviewStep();
 
   if (selectedStep && !isSpecialPreviewScreen(selectedStep) && selectedStep.type !== "review") {

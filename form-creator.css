@@ -243,15 +243,68 @@ body[data-page="form-creator"] {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
 }
 
+.preview-mode-toggle {
+  min-height: 44px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 14px;
+  background: rgba(226, 232, 240, 0.9);
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+
+.preview-mode-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preview-mode-switch {
+  width: 46px;
+  height: 28px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.18s ease;
+}
+
+.preview-mode-switch::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.2);
+  transition: transform 0.18s ease;
+}
+
+.preview-mode-toggle input:checked + .preview-mode-switch {
+  background: #2563eb;
+}
+
+.preview-mode-toggle input:checked + .preview-mode-switch::before {
+  transform: translateX(18px);
+}
+
+.form-preview-control-card {
+  display: none;
+}
+
 .form-creator-studio.is-preview-only-mode .form-preview-stage {
   align-items: center;
   padding-right: 0;
 }
 
-.form-creator-studio.is-preview-only-mode .form-preview-mode-toolbar,
-.form-creator-studio.is-preview-only-mode .fc-preview-shell {
-  width: min(720px, calc(100vw - 36px));
-  min-width: min(360px, calc(100vw - 36px));
+.form-creator-studio.is-preview-only-mode .floating-panel-studio {
+  display: none;
 }
 
 .fc-preview-shell.is-preview-only-mode .form-shell-edit-zone,
@@ -262,6 +315,31 @@ body[data-page="form-creator"] {
 
 .fc-preview-shell.is-preview-only-mode [draggable="true"] {
   cursor: default;
+}
+
+.fc-preview-shell.is-preview-only-mode #form-preview-title,
+.fc-preview-shell.is-preview-only-mode #preview-step-title,
+.fc-preview-shell.is-preview-only-mode #preview-step-copy,
+.fc-preview-shell.is-preview-only-mode .preview-field-control,
+.fc-preview-shell.is-preview-only-mode [data-edit-target] {
+  cursor: default;
+}
+
+.fc-preview-shell.is-preview-only-mode #form-preview-title:hover,
+.fc-preview-shell.is-preview-only-mode #preview-step-title:hover,
+.fc-preview-shell.is-preview-only-mode #preview-step-copy:hover,
+.fc-preview-shell.is-preview-only-mode [data-edit-target]:hover {
+  opacity: 1;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.fc-preview-shell.is-preview-only-mode .preview-field-control:hover {
+  outline: none;
+  box-shadow: none;
+  background: #ffffff;
+  border-color: var(--fc-field-border);
 }
 
 .fc-preview-shell {
@@ -1740,6 +1818,7 @@ body.is-field-rail-dragging {
 .floating-panel-studio.is-editor-open .studio-panel-resize-handle,
 .floating-panel-studio.is-editor-open .form-enabled-card,
 .floating-panel-studio.is-editor-open .form-creator-toolbar-actions-persistent,
+.floating-panel-studio.is-editor-open .form-preview-control-card,
 .floating-panel-studio.is-editor-open .floating-panel-head {
   display: none;
 }
@@ -3314,38 +3393,65 @@ body.is-field-rail-dragging {
   }
 
   .form-creator-studio.is-preview-only-mode .form-preview-stage {
-    padding-bottom: 30px;
+    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px));
   }
 
   .form-preview-mode-toolbar {
-    position: absolute;
-    top: 12px;
-    left: 50%;
-    z-index: 4;
-    width: min(560px, calc(100vw - 24px));
-    min-width: 0;
-    transform: translateX(-50%);
-    align-items: stretch;
-    flex-direction: column;
+    display: none;
   }
 
-  .form-preview-mode-actions {
-    justify-content: stretch;
+  .form-preview-control-card {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    margin: 0 10px 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(255, 255, 255, 0.72);
   }
 
-  .form-perspective-toggle {
-    flex: 1 1 auto;
+  .form-preview-control-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
   }
 
-  .form-perspective-button {
+  .form-preview-control-head strong {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .form-preview-control-card .form-perspective-toggle,
+  .preview-mode-toggle-wide {
+    width: 100%;
+  }
+
+  .form-preview-control-card .form-perspective-button {
     flex: 1 1 0;
     white-space: normal;
+  }
+
+  .form-creator-studio.is-preview-only-mode .floating-panel-studio {
+    display: block;
+  }
+
+  .form-creator-studio.is-preview-only-mode .floating-panel-head,
+  .form-creator-studio.is-preview-only-mode .form-enabled-card,
+  .form-creator-studio.is-preview-only-mode .form-creator-toolbar-actions-persistent,
+  .form-creator-studio.is-preview-only-mode .studio-context-card,
+  .form-creator-studio.is-preview-only-mode .studio-tabs,
+  .form-creator-studio.is-preview-only-mode .studio-tab-panels,
+  .form-creator-studio.is-preview-only-mode .form-editor-popover,
+  .form-creator-studio.is-preview-only-mode .studio-panel-resize-handle {
+    display: none !important;
   }
 
   .form-preview-stage::after {
     content: "";
     display: block;
-    height: calc(var(--fc-mobile-canvas-scaled-height, 420px) + 142px);
+    height: calc(var(--fc-mobile-canvas-scaled-height, 420px) + 42px);
   }
 
   .fc-preview-shell {
@@ -3355,7 +3461,7 @@ body.is-field-rail-dragging {
     margin-top: 0;
     padding: 22px 18px;
     position: absolute;
-    top: 142px;
+    top: 24px;
     left: 50%;
     transform: translateX(-50%) scale(var(--fc-mobile-canvas-scale, 0.58));
     transform-origin: top center;
@@ -3401,6 +3507,7 @@ body.is-field-rail-dragging {
 
   .floating-panel-studio.is-mobile-collapsed .form-enabled-card,
   .floating-panel-studio.is-mobile-collapsed .form-creator-toolbar-actions-persistent,
+  .floating-panel-studio.is-mobile-collapsed .form-preview-control-card,
   .floating-panel-studio.is-mobile-collapsed .studio-context-card,
   .floating-panel-studio.is-mobile-collapsed .studio-tabs,
   .floating-panel-studio.is-mobile-collapsed .studio-tab-panels,

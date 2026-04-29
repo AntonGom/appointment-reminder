@@ -547,6 +547,49 @@ test.describe("Calendar and Form Creator", () => {
     await page.reload();
     await expect(page.locator("#form-enabled-toggle")).not.toBeChecked();
   });
+
+  test("form creator preview toggle keeps the form size and removes edit hover styling", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/form-creator.html");
+
+    const toolbar = page.locator("#form-preview-mode-toolbar");
+    await expect(toolbar).toContainText("Business View");
+    await expect(toolbar).toContainText("Client View");
+    await expect(page.locator("body")).not.toContainText("Business / Employee");
+    await expect(page.locator("body")).not.toContainText("Client Link");
+
+    const previewShell = page.locator("#form-preview-shell");
+    const widthBefore = await previewShell.evaluate(element => element.getBoundingClientRect().width);
+
+    await toolbar.locator(".preview-mode-toggle").click();
+    await expect(toolbar.locator("[data-preview-mode-toggle]")).toBeChecked();
+    await expect(page.locator("#signed-in-shell")).toHaveClass(/is-preview-only-mode/);
+
+    const widthAfter = await previewShell.evaluate(element => element.getBoundingClientRect().width);
+    expect(Math.abs(widthAfter - widthBefore)).toBeLessThan(1);
+
+    await page.locator("#preview-step-title").hover();
+    const titleHoverStyle = await page.locator("#preview-step-title").evaluate(element => {
+      const style = window.getComputedStyle(element);
+      return {
+        outlineStyle: style.outlineStyle,
+        boxShadow: style.boxShadow
+      };
+    });
+    expect(titleHoverStyle.outlineStyle).toBe("none");
+    expect(titleHoverStyle.boxShadow).toBe("none");
+
+    await page.locator(".preview-field-control").first().hover();
+    const fieldHoverStyle = await page.locator(".preview-field-control").first().evaluate(element => {
+      const style = window.getComputedStyle(element);
+      return {
+        outlineStyle: style.outlineStyle,
+        boxShadow: style.boxShadow
+      };
+    });
+    expect(fieldHoverStyle.outlineStyle).toBe("none");
+    expect(fieldHoverStyle.boxShadow).toBe("none");
+  });
 });
 
 test.describe("Form Creator mobile UX", () => {
