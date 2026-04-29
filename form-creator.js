@@ -3281,7 +3281,7 @@ function renderPreview() {
       return `
       <div class="preview-step-dropzone" data-drop-step-index="${dropIndex}"></div>
       <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderable ? "true" : "false"}">
-        <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
+        <span class="preview-stepper-circle">${escapeHtml(String(index + 1))}</span>
         <span class="preview-stepper-label">${escapeHtml(step.navLabel)}</span>
       </button>
     `;

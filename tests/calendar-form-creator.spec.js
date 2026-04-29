@@ -512,9 +512,13 @@ test.describe("Calendar and Form Creator", () => {
     await page.goto("/form-creator.html");
 
     await expect(page.locator("#form-preview-title")).toContainText("Appointment Reminder");
+    await expect(page.getByRole("tab", { name: "Background", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Page", exact: true })).toHaveCount(0);
     await page.locator('[data-studio-tab="templates"]').click();
     await page.locator('[data-template-id="barbershop"]').click();
     await expect(page.locator("#status-banner")).toContainText("template loaded");
+    await expect(page.locator('#preview-stepper [data-preview-step="custom_service_request"] .preview-stepper-circle')).toContainText("9");
+    await expect(page.locator('#preview-stepper [data-preview-step="custom_hair_goal"] .preview-stepper-circle')).toContainText("11");
 
     await page.locator("#save-form-button").click();
     await expect(page.locator("#status-banner")).toContainText("Form saved");

@@ -562,11 +562,11 @@ test.describe("Branding and Client Details", () => {
     await page.locator("#open-add-client-button").click();
     await expect(page.locator("#client-modal")).toBeVisible();
 
-    await page.locator("#client-name").fill("Casey Seller");
     await page.locator("#client-email").fill("casey@example.com");
     await page.locator("#client-phone").fill("(305) 555-0199");
     await page.locator("#client-address").fill("44 Listing Lane");
     await page.locator("#client-notes").fill("Prefers afternoon showings.");
+    await page.locator("#client-name").fill("Casey Seller");
     await page.locator("#save-client-button").click();
 
     await expect(page.locator("#status-banner")).toContainText("Contact saved");
@@ -576,6 +576,7 @@ test.describe("Branding and Client Details", () => {
     await expect(page.locator("#client-modal")).toBeVisible();
     await page.locator("#client-address").fill("88 Updated Ave");
     await page.locator("#client-notes").fill("Use side gate for inspections.");
+    await page.locator("#client-name").fill("Casey Seller");
     await page.locator("#save-client-button").click();
 
     await expect(page.locator("#status-banner")).toContainText("Contact updated");
