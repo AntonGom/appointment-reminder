@@ -1308,6 +1308,57 @@ body[data-branding-motion="float"] .signature-card-aura {
   margin-top: 18px;
 }
 
+.branding-qa-details {
+  display: grid;
+  gap: 14px;
+}
+
+.branding-qa-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.branding-qa-summary::-webkit-details-marker {
+  display: none;
+}
+
+.branding-qa-summary span {
+  display: grid;
+  gap: 4px;
+}
+
+.branding-qa-summary strong {
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.branding-qa-summary span span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.branding-qa-summary::after {
+  content: "+";
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.branding-qa-details[open] .branding-qa-summary::after {
+  content: "-";
+}
+
 .branding-qa-head {
   display: flex;
   align-items: flex-start;

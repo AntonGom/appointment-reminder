@@ -4478,7 +4478,6 @@ function openFieldEditor(fieldId) {
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
-    ${buildFieldAudienceSettingsMarkup(step, { isBuiltInStep, semanticFieldId })}
     ${isCustomField && !isMappedEssentialField ? `
       <label>
         Field type
@@ -4507,6 +4506,7 @@ function openFieldEditor(fieldId) {
       </label>
       <div class="editor-inline-note">Add one option per line. Clients will pick from these choices in Send Reminder.</div>
     ` : ""}
+    ${buildFieldAudienceSettingsMarkup(step, { isBuiltInStep, semanticFieldId })}
     ${shouldShowRememberToggle ? `
       <label class="toggle-row">
         <span>Remember this answer for future visits and show it in Client Details</span>
@@ -4749,7 +4749,7 @@ function openCustomPageEditor(step) {
                 <span class="page-editor-item-meta">${escapeHtml(meta.label)}${escapeHtml(mappedLabel)}${field.required ? " • Required" : ""}</span>
               </div>
               <div class="page-editor-item-actions">
-                <button class="page-editor-item-button" type="button" data-page-item-edit="${escapeHtml(field.id)}">Edit</button>
+                <button class="page-editor-item-button" type="button" data-page-item-edit="${escapeHtml(field.id)}">Edit field</button>
                 <button class="page-editor-item-button is-danger" type="button" data-page-item-delete="${escapeHtml(field.id)}">${deleteLabel}</button>
               </div>
             </div>
