@@ -520,6 +520,11 @@
       pointer-events: none;
     }
 
+    .wizard-screen-button[data-wizard-start-button] {
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
     .thank-you-shell {
       position: relative;
       z-index: 1;
@@ -1279,6 +1284,34 @@
       gap: 12px;
     }
 
+    .send-status {
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .send-status[hidden] {
+      display: none !important;
+    }
+
+    .send-status.success {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #15803d;
+    }
+
+    .send-status.error {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
     button {
       width: 100%;
       padding: 15px 16px;
@@ -1391,6 +1424,10 @@
       grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
       margin-top: 18px;
+    }
+
+    .wizard-controls[hidden] {
+      display: none !important;
     }
 
     .wizard-controls.two-buttons {
@@ -2249,6 +2286,7 @@
             <button class="tertiary" onclick="sendLocalText()">Send Text Message From This Device</button>
             <button id="send-email-button" class="primary" onclick="sendBrevoEmail()">Send Automated Email</button>
           </div>
+          <p id="send-status" class="send-status" aria-live="polite" hidden></p>
         </div>
       </div>
     </div>
@@ -2296,7 +2334,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260429a"></script>
+  <script src="app.js?v=20260429b"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

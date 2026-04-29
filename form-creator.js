@@ -944,6 +944,23 @@ function setButtonBusy(button, isBusy, busyText) {
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
 }
 
+function flashButtonConfirmation(button, text = "Saved") {
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent;
+  }
+
+  button.textContent = text;
+  window.setTimeout(() => {
+    if (!button.disabled) {
+      button.textContent = button.dataset.defaultText;
+    }
+  }, 1800);
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -2772,7 +2789,7 @@ function buildPreviewFieldMarkup(step) {
           <div class="screen-preview-content">
             <span class="screen-preview-kicker">${step.type === "thankyou" ? "After send" : "First screen"}</span>
             <div class="screen-preview-copy">${escapeHtml(step.type === "thankyou" ? "This preview matches the optional finish your client sees after a send." : "This preview matches the optional first screen that appears before the questions start.")}</div>
-            <button class="screen-preview-button" type="button" tabindex="-1">${escapeHtml(step.buttonText || (step.type === "thankyou" ? "Create another reminder" : "Start"))}</button>
+            <button class="screen-preview-button" type="button" ${step.type === "welcome" ? "data-preview-start-button" : "tabindex=\"-1\""}>${escapeHtml(step.buttonText || (step.type === "thankyou" ? "Create another reminder" : "Start"))}</button>
           </div>
         </div>
       </div>
@@ -2913,6 +2930,12 @@ function renderPreview() {
       previewNextButton.textContent = "Next";
     }
     previewNextButton.disabled = selectedIndex >= steps.length - 1;
+  }
+
+  const previewControls = previewNextButton?.closest(".form-preview-controls");
+
+  if (previewControls) {
+    previewControls.hidden = selectedStep.type === "welcome";
   }
 
   applyBackgroundToPreview();
@@ -4975,6 +4998,7 @@ async function saveFormProfile(options = {}) {
   if (!silent) {
     setStatus("");
   }
+  let saved = false;
 
   try {
     const normalized = normalizeCustomFormProfile(currentFormProfile);
@@ -4995,6 +5019,7 @@ async function saveFormProfile(options = {}) {
     currentFormProfile = normalizeCustomFormProfile(currentUser?.user_metadata?.custom_form_profile || normalized);
     savedFormProfile = normalizeCustomFormProfile(currentFormProfile);
     renderBuilder();
+    saved = true;
     if (!silent) {
       setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
     }
@@ -5003,6 +5028,9 @@ async function saveFormProfile(options = {}) {
   } finally {
     if (!skipBusy) {
       setButtonBusy(saveFormButton, false);
+      if (saved && !silent) {
+        flashButtonConfirmation(saveFormButton, "Saved");
+      }
     }
   }
 }
@@ -5175,7 +5203,7 @@ previewSkipButton?.addEventListener("click", () => {
     renderBuilder();
   }
 });
-previewNextButton?.addEventListener("click", () => {
+function movePreviewForward() {
   const steps = getPreviewSteps();
   const index = steps.findIndex(step => step.id === selectedPreviewStepId);
 
@@ -5185,7 +5213,9 @@ previewNextButton?.addEventListener("click", () => {
     closeEditor();
     renderBuilder();
   }
-});
+}
+
+previewNextButton?.addEventListener("click", movePreviewForward);
 
 document.querySelectorAll("[data-add-type]").forEach(button => {
   button.addEventListener("click", () => addCustomField(button.dataset.addType || "text"));
@@ -5362,6 +5392,15 @@ window.addEventListener("pointercancel", event => {
 });
 
 previewStepHost?.addEventListener("click", event => {
+  const startButton = event.target.closest("[data-preview-start-button]");
+
+  if (startButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    movePreviewForward();
+    return;
+  }
+
   const questionShellZone = event.target.closest("[data-question-shell-zone]");
 
   if (questionShellZone) {

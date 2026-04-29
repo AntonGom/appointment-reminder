@@ -445,6 +445,61 @@ test.describe("Branding and Client Details", () => {
     await expect(page.locator("#branding-enabled")).not.toBeChecked();
   });
 
+  test("sends a branding test email using the current draft design", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        email: "owner@example.com",
+        user_metadata: {
+          branding_profile: {
+            brandingEnabled: true,
+            businessName: "Pink Paws Grooming",
+            templateStyle: "signature",
+            headerColor: "#ec4899",
+            buttonColor: "#db2777",
+            contactEmail: "hello@pinkpaws.example"
+          }
+        }
+      })
+    });
+    let requestPayload = null;
+
+    await stubModulePages(page, seed);
+    await page.route("**/api/send-email", async route => {
+      requestPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          messageId: "test-message-1",
+          qaEmailDebug: {
+            subject: "Appointment Reminder for 04/05/2026 at 4:00 PM from Pink Paws Grooming",
+            html: "<html><body>Pink Paws Grooming</body></html>",
+            recipient: "owner@example.com",
+            messageId: "test-message-1",
+            sentAt: "2026-04-29T12:00:00.000Z"
+          }
+        })
+      });
+    });
+
+    await page.goto("/branding.html");
+    await expect(page.locator("#branding-business-name")).toHaveValue("Pink Paws Grooming");
+
+    await page.evaluate(() => {
+      const businessName = document.getElementById("branding-business-name");
+      businessName.value = "Pink Paws Grooming Studio";
+      businessName.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.locator("#send-branding-test-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Test email sent to owner@example.com");
+    expect(requestPayload.clientEmail).toBe("owner@example.com");
+    expect(requestPayload.trackingSource).toBe("branding_test_email");
+    expect(requestPayload.brandingProfile.businessName).toBe("Pink Paws Grooming Studio");
+    expect(requestPayload.message).toContain("Hello Ava Johnson,");
+  });
+
   test("saved branding email toggle controls the Send Reminder branded preview", async ({ page }) => {
     const seed = createSupabaseSeed({
       user: createBronzeUser({

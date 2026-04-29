@@ -1328,6 +1328,11 @@ body.is-field-rail-dragging {
   pointer-events: none;
 }
 
+.screen-preview-button[data-preview-start-button] {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 .form-preview-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

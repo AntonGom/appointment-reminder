@@ -15,6 +15,7 @@ const signedInShell = document.getElementById("signed-in-shell");
 const pricePill = document.getElementById("price-pill");
 const brandingForm = document.getElementById("branding-form");
 const saveBrandingButton = document.getElementById("save-branding-button");
+const sendBrandingTestButton = document.getElementById("send-branding-test-button");
 const resetBrandingButton = document.getElementById("reset-branding-button");
 const templateGrid = document.getElementById("template-grid");
 const templateGalleryCard = templateGrid?.closest(".branding-gallery-card") || null;
@@ -672,6 +673,23 @@ function setButtonBusy(button, isBusy, busyText) {
   button.textContent = isBusy ? busyText : button.dataset.defaultText;
 }
 
+function flashButtonConfirmation(button, text = "Saved") {
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent;
+  }
+
+  button.textContent = text;
+  window.setTimeout(() => {
+    if (!button.disabled) {
+      button.textContent = button.dataset.defaultText;
+    }
+  }, 1800);
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -1327,6 +1345,18 @@ function clearLastSentEmailRecord() {
 
   if (qaLastEmailHtml) {
     qaLastEmailHtml.value = "";
+  }
+}
+
+function storeQaLastSentEmailRecord(record) {
+  if (!record) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(QA_LAST_EMAIL_STORAGE_KEY, JSON.stringify(record));
+  } catch (error) {
+    console.warn("Unable to store QA email HTML.", error);
   }
 }
 
@@ -2250,6 +2280,7 @@ async function saveBranding() {
 
   setButtonBusy(saveBrandingButton, true, "Saving branding...");
   setStatus("");
+  let saved = false;
 
   try {
     const metadata = {
@@ -2268,6 +2299,7 @@ async function saveBranding() {
     currentUser = data.user || currentUser;
     currentSavedBranding = { ...normalizedForStorage };
     applyBrandingToForm(currentSavedBranding);
+    saved = true;
     setStatus(
       normalizedForStorage.brandingEnabled === false
         ? "Branding saved. Outgoing emails will use the standard reminder layout until you turn branding back on."
@@ -2278,6 +2310,72 @@ async function saveBranding() {
     setStatus(error.message || "Unable to save branding right now.", "error");
   } finally {
     setButtonBusy(saveBrandingButton, false);
+    if (saved) {
+      flashButtonConfirmation(saveBrandingButton, "Saved");
+    }
+  }
+}
+
+async function sendBrandingTestEmail() {
+  if (!currentUser?.email) {
+    setStatus("Sign in first so we know where to send the test email.", "error");
+    return;
+  }
+
+  const businessName = (getFieldElement(fieldIds.businessName)?.value || "").trim();
+
+  if (!businessName) {
+    setStatus("Add a business name before sending a test email.", "error");
+    getFieldElement(fieldIds.businessName)?.focus();
+    return;
+  }
+
+  const draftBranding = getDraftBranding();
+  const testMessage = buildSampleMessage(draftBranding);
+  const subject = buildReminderEmailSubject(draftBranding, { message: testMessage });
+
+  setButtonBusy(sendBrandingTestButton, true, "Sending test...");
+  setStatus(`Sending a branded test email to ${currentUser.email}...`, "info");
+
+  try {
+    const response = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        clientEmail: currentUser.email,
+        clientName: "Ava Johnson",
+        clientPhone: "",
+        serviceAddress: "1540 Bay Road",
+        businessContact: draftBranding.contactPhone || draftBranding.contactEmail || currentUser.email,
+        serviceDate: "2026-04-05",
+        serviceTime: "16:00",
+        message: testMessage,
+        sendCopy: false,
+        copyEmail: "",
+        brandingProfile: draftBranding,
+        trackingOwnerId: currentUser.id || "",
+        trackingClientId: "",
+        trackingSource: "branding_test_email"
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Unable to send the test email right now.");
+    }
+
+    if (data.qaEmailDebug) {
+      storeQaLastSentEmailRecord(data.qaEmailDebug);
+      loadLastSentEmailHtml({ announce: false });
+    }
+
+    setStatus(`Test email sent to ${currentUser.email}. Subject: ${subject}`, "success");
+  } catch (error) {
+    setStatus(error.message || "Unable to send the test email right now.", "error");
+  } finally {
+    setButtonBusy(sendBrandingTestButton, false);
   }
 }
 
@@ -2871,6 +2969,10 @@ function wireFormInputs() {
 
   if (resetBrandingButton) {
     resetBrandingButton.addEventListener("click", resetBranding);
+  }
+
+  if (sendBrandingTestButton) {
+    sendBrandingTestButton.addEventListener("click", sendBrandingTestEmail);
   }
 
   if (addSocialLinkButton) {

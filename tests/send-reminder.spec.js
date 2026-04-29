@@ -86,6 +86,32 @@ test.describe("Send Reminder", () => {
     await expect(page.locator("#preview")).toBeHidden();
   });
 
+  test("uses the visible welcome screen start button without a duplicate bottom start control", async ({ page }) => {
+    await page.goto("/index.html");
+
+    await setSignedInUser(page, createBronzeUser({
+      user_metadata: {
+        custom_form_profile: {
+          isEnabled: true,
+          welcomeScreenEnabled: true,
+          welcomeTitle: "Welcome to Pink Paws",
+          welcomeCopy: "A quick setup before we send the reminder.",
+          welcomeButtonText: "Start"
+        }
+      }
+    }));
+    await page.evaluate(() => setStep(0));
+
+    await expect(page.locator("#step-title")).toHaveText("Welcome to Pink Paws");
+    await expect(page.locator(".wizard-step.active [data-wizard-start-button]")).toBeVisible();
+    await expect(page.locator("#next-button")).toBeHidden();
+
+    await page.locator(".wizard-step.active [data-wizard-start-button]").click();
+
+    await expect(page.locator("#step-title")).toHaveText("Client Phone Number");
+    await expect(page.locator("#next-button")).toBeVisible();
+  });
+
   test("renders the bronze branded preview with the latest appointment data", async ({ page }) => {
     const consoleErrors = [];
     page.on("console", message => {

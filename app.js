@@ -86,6 +86,7 @@ let visitedSteps = [];
 let lastAddressLookup = "";
 let copyEmailDirty = false;
 let sendEmailResetTimer = null;
+let sendStatusResetTimer = null;
 let sendEmailLockedAfterSuccess = false;
 let safeToLeaveAfterSend = false;
 let suppressBeforeUnload = false;
@@ -1145,7 +1146,7 @@ function buildWelcomeWizardStepMarkup(profile = activeCustomFormProfile || {}) {
       <div class="question-wrap screen-question-wrap">
         <div class="wizard-screen-content">
           <span class="wizard-screen-kicker">Welcome screen</span>
-          <button class="wizard-screen-button" type="button" tabindex="-1">${escapeHtml(cta)}</button>
+          <button class="wizard-screen-button" type="button" data-wizard-start-button>${escapeHtml(cta)}</button>
         </div>
       </div>
     </div>
@@ -3029,6 +3030,7 @@ function refreshFormState() {
     safeToLeaveAfterSend = false;
   }
 
+  setSendStatus("");
   syncCopyEmailOption();
   invalidateBronzeReviewManualMessage();
 
@@ -4304,6 +4306,7 @@ function updateWizardUI() {
       : "Next";
 
   if (wizardControls) {
+    wizardControls.hidden = isWelcomeStep;
     const visibleButtons = [backButton, skipButton, nextButton].filter(button => !button.hidden).length;
     wizardControls.classList.remove("one-button", "two-buttons");
 
@@ -4426,6 +4429,17 @@ function initWizard() {
         }
       });
     });
+
+    const startButton = step.querySelector("[data-wizard-start-button]");
+
+    if (startButton && startButton.dataset.wizardStartBound !== "true") {
+      startButton.dataset.wizardStartBound = "true";
+      startButton.addEventListener("click", () => {
+        if (index === currentStepIndex) {
+          moveToNextStep();
+        }
+      });
+    }
   });
 
   renderStepNavigation();
@@ -4642,6 +4656,34 @@ function setSendEmailButtonState(state) {
   button.textContent = button.dataset.defaultText;
 }
 
+function setSendStatus(message, type = "info", options = {}) {
+  const status = document.getElementById("send-status");
+
+  if (!status) {
+    return;
+  }
+
+  window.clearTimeout(sendStatusResetTimer);
+  sendStatusResetTimer = null;
+
+  if (!message) {
+    status.hidden = true;
+    status.textContent = "";
+    status.className = "send-status";
+    return;
+  }
+
+  status.hidden = false;
+  status.textContent = message;
+  status.className = `send-status ${type}`;
+
+  if (options.autoHide) {
+    sendStatusResetTimer = window.setTimeout(() => {
+      setSendStatus("");
+    }, options.autoHide);
+  }
+}
+
 function getBrevoPayloadOrAlert() {
   return getBrevoPayloadOrAlertInternal(true);
 }
@@ -4688,6 +4730,7 @@ function sendBrevoEmail() {
     return;
   }
 
+  setSendStatus("");
   openEmailModal();
 }
 
@@ -4712,6 +4755,7 @@ async function confirmSendBrevoEmail() {
 
   closeEmailModal();
   setSendEmailButtonState("loading");
+  setSendStatus("Sending email...", "info");
   try {
     const clientId = isBronzeUser() ? await autoSaveBronzeContact() : null;
     const res = await fetch("/api/send-email", {
@@ -4742,14 +4786,25 @@ async function confirmSendBrevoEmail() {
       await persistBronzeClientProfileAnswers(clientId, appointmentId);
       safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
+      setSendStatus(
+        isBronzeUser()
+          ? "Email sent and saved to Client Details."
+          : "Email sent.",
+        "success"
+      );
       showThankYouScreen();
     } else {
       setSendEmailButtonState("idle");
-      alert(data.error || "Error sending email");
+      const message = data.error || "Email could not be sent. Review the details and try again.";
+      setSendStatus(message, "error");
+      alert(message);
     }
   } catch (error) {
+    console.warn("Unable to send automated email.", error);
     setSendEmailButtonState("idle");
-    alert("Error sending email");
+    const message = "Email could not be sent. Check your connection and try again.";
+    setSendStatus(message, "error");
+    alert(message);
   }
 }
 
