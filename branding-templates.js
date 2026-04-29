@@ -458,6 +458,27 @@ function resolveArtShape(artShape, randomSeed = 0) {
   return REAL_ART_SHAPES[Math.abs(seed) % REAL_ART_SHAPES.length];
 }
 
+function buildDetailsListPreview(customFields, branding, detailsTextColor, surfaceStyle) {
+  if (!Array.isArray(customFields) || !customFields.length) {
+    return "";
+  }
+
+  const dividerColor = hexToRgba(detailsTextColor, 0.16);
+  const labelColor = hexToRgba(detailsTextColor, 0.72);
+
+  return `
+    <div data-preview-area="custom-fields" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
+      <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${detailsTextColor};margin:0 0 12px;">Appointment details</div>
+      ${customFields.map((field, index) => `
+        <div style="${index === 0 ? "" : `border-top:1px solid ${dividerColor};padding-top:10px;`}margin:${index === 0 ? 0 : "10px"} 0 0;display:grid;grid-template-columns:minmax(120px, 0.4fr) 1fr;gap:12px;">
+          <div style="font-size:12px;font-weight:800;line-height:1.45;color:${labelColor};">${escapeHtml(field.label)}</div>
+          <div style="font-size:14px;font-weight:700;line-height:1.55;color:${detailsTextColor};">${escapeHtml(field.value).replace(/\n/g, "<br>")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function buildEmailContent({ message, branding, calendarLinks }) {
   const parsed = parseReminderMessage(message);
   const surfaceStyle = buildSurfaceStyle(branding.panelShape);
@@ -486,9 +507,10 @@ function buildEmailContent({ message, branding, calendarLinks }) {
           </div>`).join("")}
       </div>`
     : "";
+  const customFieldsHtml = buildDetailsListPreview(parsed.customFields, branding, detailsTextColor, surfaceStyle);
   const detailsHtml = parsed.details
-    ? `<div data-preview-area="details" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
-        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${detailsTextColor};margin:0 0 8px;">Additional details</div>
+    ? `<div data-preview-area="details" data-details-label="${escapeAttribute(parsed.detailsLabel)}" style="margin:0 0 18px;${surfaceStyle}padding:16px 18px;background:${buildSectionBackground(branding.detailsColor, branding.detailsGradientStyle, 0.5)};border:1px solid ${hexToRgba(branding.detailsColor || branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 12px 22px rgba(15,23,42,0.05);">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${detailsTextColor};margin:0 0 8px;">${escapeHtml(parsed.detailsLabel)}</div>
         <div style="font-size:15px;line-height:1.7;color:${detailsTextColor};">${escapeHtml(parsed.details).replace(/\n/g, "<br>")}</div>
       </div>`
     : "";
@@ -537,6 +559,7 @@ function buildEmailContent({ message, branding, calendarLinks }) {
     greeting,
     intro,
     summaryHtml,
+    customFieldsHtml,
     detailsHtml,
     bodyHtml,
     contactPrompt,
@@ -972,7 +995,8 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const bodyTextColor = branding.bodyTextColor || "#0f172a";
   const bodyBackground = buildSectionBackground(branding.bodyColor || "#ffffff", branding.bodyGradientStyle || "solid", 0.42);
   const summaryHtml = buildProductionSummary(parsed.summary, branding);
-  const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding, includePreviewStyles) : "";
+  const customFieldsHtml = buildProductionCustomFields(parsed.customFields, branding, includePreviewStyles);
+  const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding, includePreviewStyles, { label: parsed.detailsLabel }) : "";
   const hasHeroArt = shouldRenderHeroArt(branding);
   const bodyHtml = parsed.body.length
     ? parsed.body.map((paragraph, index) => `
@@ -1075,6 +1099,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
                 </tr>
               ` : ""}
               ${summaryHtml}
+              ${customFieldsHtml}
               ${detailsHtml}
               ${bodyHtml}
               ${contactPromptHtml}
@@ -1470,17 +1495,65 @@ function buildProductionSummary(summaryItems, branding) {
   `;
 }
 
-function buildProductionDetails(details, branding, includePreviewStyles = false) {
+function buildProductionCustomFields(customFields, branding, includePreviewStyles = false) {
+  if (!Array.isArray(customFields) || !customFields.length) {
+    return "";
+  }
+
   const radius = getSafePanelRadius(branding.panelShape);
   const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
   const detailsTextColor = branding.detailsTextColor || branding.bodyTextColor || "#0f172a";
+  const dividerColor = hexToRgba(detailsTextColor, 0.16);
+  const labelColor = hexToRgba(detailsTextColor, 0.72);
+  const rows = customFields.map((field, index) => {
+    const borderStyle = index === 0 ? "" : `border-top:1px solid ${dividerColor};`;
+    const valueHtml = escapeHtml(field.value).replace(/\n/g, "<br>");
+    const editAttrs = includePreviewStyles
+      ? ` data-review-edit="custom-field-value" data-field-label="${escapeAttribute(field.label)}"`
+      : "";
+
+    return `
+      <tr>
+        <td width="38%" valign="top" style="width:38%;padding:${index === 0 ? 0 : 12}px 12px 0 0;${borderStyle}font-size:12px;font-weight:800;line-height:1.45;${paintTextColor(labelColor)}">
+          ${escapeHtml(field.label)}
+        </td>
+        <td valign="top" style="padding:${index === 0 ? 0 : 12}px 0 0;${borderStyle}font-size:14px;font-weight:700;line-height:1.55;${paintTextColor(detailsTextColor)}">
+          <div${editAttrs}>${valueHtml}</div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
   return `
     <tr>
-      <td data-preview-area="details" style="padding:0 0 18px;">
+      <td data-preview-area="custom-fields" style="padding:0 0 18px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${detailsColor}" style="border:none;${radius}background-color:${detailsColor};">
           <tr>
             <td bgcolor="${detailsColor}" style="padding:16px 18px;background-color:${detailsColor};">
-              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">Additional details</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 12px;">Appointment details</div>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                ${rows}
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `;
+}
+
+function buildProductionDetails(details, branding, includePreviewStyles = false, options = {}) {
+  const radius = getSafePanelRadius(branding.panelShape);
+  const detailsColor = branding.detailsColor || branding.panelColor || branding.secondaryColor || DEFAULT_PANEL;
+  const detailsTextColor = branding.detailsTextColor || branding.bodyTextColor || "#0f172a";
+  const detailsLabel = normalizeDetailsLabel(options.label);
+  return `
+    <tr>
+      <td data-preview-area="details" data-details-label="${escapeAttribute(detailsLabel)}" style="padding:0 0 18px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${detailsColor}" style="border:none;${radius}background-color:${detailsColor};">
+          <tr>
+            <td bgcolor="${detailsColor}" style="padding:16px 18px;background-color:${detailsColor};">
+              <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(detailsTextColor)}margin:0 0 8px;">${escapeHtml(detailsLabel)}</div>
               <div${includePreviewStyles ? ` data-review-edit="details"` : ""} style="font-size:15px;line-height:1.7;${paintTextColor(detailsTextColor)}">${escapeHtml(details).replace(/\n/g, "<br>")}</div>
             </td>
           </tr>
@@ -1911,6 +1984,20 @@ function buildProductionContactLine(branding, color) {
   return pieces.join(separator);
 }
 
+function normalizeDetailsLabel(label) {
+  const cleaned = cleanText(label, 80).replace(/:$/, "").trim();
+
+  if (!cleaned || /^additional details$/i.test(cleaned)) {
+    return "Appointment Notes";
+  }
+
+  return cleaned;
+}
+
+function isReservedReminderLabel(label) {
+  return /^(date|time|location|service location)$/i.test(String(label || "").trim());
+}
+
 function parseReminderMessage(message) {
   const lines = String(message || "")
     .replace(/\r\n/g, "\n")
@@ -1929,17 +2016,42 @@ function parseReminderMessage(message) {
   const greeting = lines.find(line => line) || "Hello,";
   const intro = lines.find(line => /^This is a friendly reminder/i.test(line)) || "";
   const summary = [];
+  const customFields = [];
   const body = [];
   let detailsLines = [];
+  let detailsLabel = "Appointment Notes";
   let captureDetails = false;
+  let currentCustomField = null;
   let contactPrompt = "";
   let closing = "";
+
+  const finishCustomField = () => {
+    if (currentCustomField?.label && currentCustomField.lines.some(Boolean)) {
+      customFields.push({
+        label: currentCustomField.label,
+        value: currentCustomField.lines.join("\n")
+      });
+    }
+
+    currentCustomField = null;
+  };
 
   lines.forEach((line, index) => {
     if (!line) {
       if (captureDetails && detailsLines.length) {
         captureDetails = false;
       }
+      finishCustomField();
+      return;
+    }
+
+    if (captureDetails) {
+      detailsLines.push(line);
+      return;
+    }
+
+    if (currentCustomField) {
+      currentCustomField.lines.push(line);
       return;
     }
 
@@ -1962,9 +2074,14 @@ function parseReminderMessage(message) {
       return;
     }
 
-    if (/^Additional Details:/i.test(line)) {
+    const detailsMatch = line.match(/^(Appointment Notes|Additional Details):\s*(.*)$/i);
+    if (detailsMatch) {
       captureDetails = true;
+      detailsLabel = normalizeDetailsLabel(detailsMatch[1]);
       detailsLines = [];
+      if (detailsMatch[2]) {
+        detailsLines.push(detailsMatch[2].trim());
+      }
       return;
     }
 
@@ -1979,18 +2096,35 @@ function parseReminderMessage(message) {
       return;
     }
 
-    if (captureDetails) {
-      detailsLines.push(line);
+    const inlineFieldMatch = line.match(/^([^:\n]{1,80}):\s+(.+)$/);
+    if (inlineFieldMatch && !isReservedReminderLabel(inlineFieldMatch[1])) {
+      customFields.push({
+        label: cleanText(inlineFieldMatch[1], 80),
+        value: inlineFieldMatch[2].trim()
+      });
+      return;
+    }
+
+    const sectionFieldMatch = line.match(/^([^:\n]{1,80}):\s*$/);
+    if (sectionFieldMatch && !isReservedReminderLabel(sectionFieldMatch[1])) {
+      currentCustomField = {
+        label: cleanText(sectionFieldMatch[1], 80),
+        lines: []
+      };
       return;
     }
 
     body.push(line);
   });
 
+  finishCustomField();
+
   return {
     greeting,
     intro,
     summary,
+    customFields,
+    detailsLabel,
     details: detailsLines.join("\n"),
     body,
     contactPrompt,

@@ -37,8 +37,8 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
-const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260427a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260425a";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260429c";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260429c";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -202,10 +202,10 @@ const BUILT_IN_FORM_STEP_DEFAULTS = {
     required: false
   },
   notes: {
-    title: "Additional Details",
-    navLabel: "Details",
-    copy: "Add any extra details you want the client to see.",
-    label: "Additional Details",
+    title: "Appointment Notes",
+    navLabel: "Notes",
+    copy: "Add appointment notes you want the client to see.",
+    label: "Appointment Notes",
     helpText: "",
     placeholder: "Parking instructions, gate code, or anything else the client should know",
     required: false
@@ -612,7 +612,7 @@ function getRenderedFieldValueFallback(fieldId) {
       score += scoreRenderedFieldKeywords(candidate, ["business contact", "contact", "reach us", "reschedule", "business phone", "business email"]) * 18;
     } else if (fieldId === "notes") {
       score += candidate.type === "textarea" ? 24 : 0;
-      score += scoreRenderedFieldKeywords(candidate, ["additional details", "details", "notes", "instructions", "message"]) * 18;
+      score += scoreRenderedFieldKeywords(candidate, ["appointment notes", "additional details", "details", "notes", "instructions", "message"]) * 18;
     }
 
     if (score > bestScore) {
@@ -686,7 +686,7 @@ function scoreRenderedPrefillTarget(fieldId, target) {
     score += scoreRenderedFieldKeywords(target, ["business contact", "contact", "reach us", "reschedule", "business phone", "business email"]) * 18;
   } else if (fieldId === "notes") {
     score += target.type === "textarea" ? 24 : 0;
-    score += scoreRenderedFieldKeywords(target, ["additional details", "details", "notes", "instructions", "message"]) * 18;
+    score += scoreRenderedFieldKeywords(target, ["appointment notes", "additional details", "details", "notes", "instructions", "message"]) * 18;
   }
 
   return score;
@@ -780,7 +780,7 @@ function getSemanticFieldFallbackValue(fieldId) {
     },
     notes(field) {
       return (field.type === "textarea" ? 36 : 0)
-        + (scoreFieldKeywords(field, ["additional details", "details", "notes", "instructions", "message"]) * 18);
+        + (scoreFieldKeywords(field, ["appointment notes", "additional details", "details", "notes", "instructions", "message"]) * 18);
     }
   }[fieldId];
 
@@ -1333,6 +1333,16 @@ function getCurrentReviewMessage() {
   return getGeneratedReviewMessage();
 }
 
+function getBuiltInFieldLabel(fieldId) {
+  const defaultLabel = BUILT_IN_FORM_STEP_DEFAULTS[fieldId]?.label || "";
+  const overrideLabel = activeCustomFormProfile?.stepOverrides?.[fieldId]?.label;
+  return String(overrideLabel || defaultLabel).trim();
+}
+
+function getAppointmentNotesLabel() {
+  return getBuiltInFieldLabel("notes") || "Appointment Notes";
+}
+
 function getEditableFrameText(element) {
   return String(element?.innerText || element?.textContent || "")
     .replace(/\r\n/g, "\n")
@@ -1347,7 +1357,15 @@ function buildManualReviewMessageFromFrame(frameDocument) {
   const lines = [];
   const greeting = getEditableFrameText(frameDocument.querySelector('[data-review-edit="greeting"]')) || "Hello,";
   const intro = getEditableFrameText(frameDocument.querySelector('[data-review-edit="intro"]'));
+  const customFieldItems = Array.from(frameDocument.querySelectorAll('[data-review-edit="custom-field-value"]'))
+    .map(element => ({
+      label: String(element.dataset.fieldLabel || "").trim(),
+      value: getEditableFrameText(element)
+    }))
+    .filter(item => item.label && item.value);
+  const detailsContainer = frameDocument.querySelector('[data-preview-area="details"]');
   const detailText = getEditableFrameText(frameDocument.querySelector('[data-review-edit="details"]'));
+  const detailLabel = String(detailsContainer?.dataset.detailsLabel || getAppointmentNotesLabel()).trim() || "Appointment Notes";
   const bodyParagraphs = Array.from(frameDocument.querySelectorAll('[data-review-edit="body-paragraph"]'))
     .map(getEditableFrameText)
     .filter(Boolean);
@@ -1374,9 +1392,21 @@ function buildManualReviewMessageFromFrame(frameDocument) {
     }
   });
 
+  customFieldItems.forEach(item => {
+    lines.push("");
+
+    if (item.value.includes("\n")) {
+      lines.push(`${item.label}:`);
+      lines.push(item.value);
+      return;
+    }
+
+    lines.push(`${item.label}: ${item.value}`);
+  });
+
   if (detailText) {
     lines.push("");
-    lines.push("Additional Details:");
+    lines.push(`${detailLabel}:`);
     lines.push(detailText);
   }
 
@@ -3002,7 +3032,7 @@ function generateMessage() {
 
   if (notes) {
     lines.push("");
-    lines.push("Additional Details:");
+    lines.push(`${getAppointmentNotesLabel()}:`);
     lines.push(notes);
   }
 
@@ -4021,7 +4051,7 @@ function validateMessageSafety(options = {}) {
     { label: "Client Phone Number", value: phone, maxLength: FIELD_LIMITS.phone.maxLength },
     { label: FIELD_LIMITS.address.label, value: address, maxLength: FIELD_LIMITS.address.maxLength, allowLink: true },
     { label: FIELD_LIMITS.businessContact.label, value: businessContact, maxLength: FIELD_LIMITS.businessContact.maxLength, allowEmail: true },
-    { label: "Additional Details", value: notes },
+    { label: getAppointmentNotesLabel(), value: notes },
     { label: "Message Preview", value: message }
   ];
 

@@ -157,6 +157,8 @@ test.describe("Send Reminder", () => {
     await expect(previewBody).toContainText("05/08/2026");
     await expect(previewBody).toContainText("10:30 AM");
     await expect(previewBody).toContainText("245 Rosebud Lane, Miami, FL 33131");
+    await expect(previewBody).toContainText("Appointment Notes");
+    await expect(previewBody).toContainText("Please bring Bella's vaccination records.");
     expect(consoleErrors.join("\n")).not.toContain("index is not defined");
   });
 
@@ -310,7 +312,7 @@ test.describe("Send Reminder", () => {
     expect(message).toContain("Date: 04/05/2026");
     expect(message).toContain("Time: 4:00 PM");
     expect(message).toContain("Location: 1540 Bay Road");
-    expect(message).toContain("Additional Details:");
+    expect(message).toContain("Appointment Notes:");
     expect(message).toContain("Please call when you are on the way.");
     expect(message).toContain("If you need to reach us before your appointment, please contact us at (305) 555-0188.");
     expect(subject).toContain("Appointment Reminder for 04/05/2026 at 4:00 PM - Ava Johnson");

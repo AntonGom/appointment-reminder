@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260427a";
+} from "./branding-templates.js?v=20260429c";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -250,16 +250,16 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting the main body copy text."
   },
   [fieldIds.detailsColor]: {
-    iframeAreas: ["details"],
-    note: "Highlighting the additional details card color."
+    iframeAreas: ["details", "custom-fields"],
+    note: "Highlighting the appointment notes and custom details card color."
   },
   [fieldIds.detailsGradientStyle]: {
-    iframeAreas: ["details"],
-    note: "Highlighting how the additional details card blends its background."
+    iframeAreas: ["details", "custom-fields"],
+    note: "Highlighting how the appointment notes and custom details cards blend their background."
   },
   [fieldIds.detailsTextColor]: {
-    iframeAreas: ["details"],
-    note: "Highlighting the text inside the additional details card."
+    iframeAreas: ["details", "custom-fields"],
+    note: "Highlighting the text inside appointment notes and custom details."
   },
   [fieldIds.calendarColor]: {
     iframeAreas: ["calendar"],
@@ -315,7 +315,7 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
     note: "Highlighting the main reminder buttons whose corners change shape."
   },
   [fieldIds.panelShape]: {
-    iframeAreas: ["summary", "details", "calendar"],
+    iframeAreas: ["summary", "details", "custom-fields", "calendar"],
     note: "Highlighting the summary, details, and calendar panels whose corners and shape will change."
   },
   [fieldIds.heroGradientStyle]: {
@@ -387,6 +387,7 @@ const PREVIEW_AREA_TO_FIELD_ID = {
   body: fieldIds.bodyTextColor,
   summary: fieldIds.panelColor,
   details: fieldIds.detailsColor,
+  "custom-fields": fieldIds.detailsColor,
   calendar: fieldIds.calendarColor,
   buttons: fieldIds.buttonStyle,
   footer: fieldIds.footerColor
@@ -473,6 +474,7 @@ const PREVIEW_AREA_TO_EDITOR_GROUP = {
   body: "body",
   summary: "summary",
   details: "details",
+  "custom-fields": "details",
   calendar: "calendar",
   buttons: "buttons",
   footer: "footer"
@@ -501,7 +503,7 @@ const EDITOR_GROUP_COPY = {
   },
   details: {
     title: "Details card controls",
-    copy: "Adjust the color, gradient, and shape of the additional details card."
+    copy: "Adjust the color, gradient, and shape of appointment notes and custom detail cards."
   },
   calendar: {
     title: "Calendar section controls",
@@ -768,7 +770,11 @@ function buildSampleMessage(profile) {
     "Time: 4:00 PM",
     "Location: 1540 Bay Road",
     "",
-    "Additional Details:",
+    "Service Type: Follow-up visit",
+    "",
+    "Client Preference: Text before arrival",
+    "",
+    "Appointment Notes:",
     "Please call when you are on the way.",
     "",
     `If you need to reach us before your appointment, please contact us at ${businessContact}.`,
@@ -1595,7 +1601,7 @@ function getBodyTextColorHint() {
 }
 
 function getDetailsColorHint() {
-  return "Used behind the additional details section.";
+  return "Used behind appointment notes and custom detail sections.";
 }
 
 function getCalendarColorHint() {
@@ -1615,7 +1621,7 @@ function getBodyGradientHint() {
 }
 
 function getDetailsTextColorHint() {
-  return "Changes the text color inside the additional details card.";
+  return "Changes the text color inside appointment notes and custom details.";
 }
 
 function getCalendarTextColorHint() {

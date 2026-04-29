@@ -55,7 +55,7 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260425a";
+} from "./custom-form-profile.js?v=20260429c";
 
 const OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS = new Set(["notes"]);
 

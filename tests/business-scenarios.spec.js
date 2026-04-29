@@ -605,6 +605,9 @@ test.describe("Real-world business scenarios", () => {
 
       await expect(page.locator("#bronze-preview-shell")).toBeVisible();
       await expect(page.locator("#preview-subject")).toContainText(scenario.prefill.name);
+      const brandedPreview = page.frameLocator("#bronze-preview-frame");
+      const customFieldSection = brandedPreview.locator('[data-preview-area="custom-fields"]');
+      const notesSection = brandedPreview.locator('[data-preview-area="details"]');
 
       const message = await page.evaluate(() => getCurrentReviewMessage());
       expect(message).toContain(`Hello ${scenario.prefill.name},`);
@@ -614,6 +617,24 @@ test.describe("Real-world business scenarios", () => {
       scenario.expectedLines.forEach(line => {
         expect(message).toContain(line);
       });
+
+      await expect(customFieldSection).toContainText("Appointment details");
+      for (const line of scenario.expectedLines) {
+        const [label, value] = line.split(/:\s+/, 2);
+
+        if (value) {
+          await expect(customFieldSection).toContainText(label);
+          await expect(customFieldSection).toContainText(value);
+        } else {
+          await expect(customFieldSection).toContainText(line.replace(/:\s*$/, ""));
+        }
+      }
+
+      if (scenario.fieldValues.notes) {
+        expect(message).toContain("Appointment Notes:");
+        await expect(notesSection).toContainText("Appointment Notes");
+        await expect(notesSection).toContainText(scenario.fieldValues.notes);
+      }
     });
   }
 });
