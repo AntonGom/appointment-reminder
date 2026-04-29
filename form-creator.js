@@ -1010,9 +1010,12 @@ function getAllPreviewSteps() {
 }
 
 function getPreviewSteps() {
-  return getAllPreviewSteps()
-    .map(step => getPerspectiveStep(step, previewPerspective))
-    .filter(step => isStepVisibleForPerspective(step, previewPerspective));
+  const steps = getAllPreviewSteps()
+    .map(step => getPerspectiveStep(step, previewPerspective));
+
+  return previewOnlyMode
+    ? steps.filter(step => isStepVisibleForPerspective(step, previewPerspective))
+    : steps;
 }
 
 function getTopLevelCustomFields() {
@@ -1633,7 +1636,7 @@ function updateStepPointerDrag(clientX, clientY) {
 }
 
 function maybeStartStepPointerDrag(event) {
-  if (previewOnlyMode || !previewStepper || event.button !== 0) {
+  if (stepPointerDragState || previewOnlyMode || !previewStepper || event.button !== 0) {
     return;
   }
 
@@ -1644,6 +1647,8 @@ function maybeStartStepPointerDrag(event) {
   if (!button || !isReorderablePreviewStep(step)) {
     return;
   }
+
+  event.preventDefault();
 
   stepPointerDragState = {
     pointerId: event.pointerId,
@@ -1665,8 +1670,58 @@ function maybeStartStepPointerDrag(event) {
   }
 }
 
+function maybeStartStepMouseDrag(event) {
+  if (stepPointerDragState || previewOnlyMode || !previewStepper || event.button !== 0) {
+    return;
+  }
+
+  const button = event.target.closest?.("[data-preview-step]");
+  const stepId = button?.dataset.previewStep || "";
+  const step = getPreviewSteps().find(entry => entry.id === stepId);
+
+  if (!button || !isReorderablePreviewStep(step)) {
+    return;
+  }
+
+  event.preventDefault();
+
+  stepPointerDragState = {
+    pointerId: "mouse",
+    stepId,
+    button,
+    startX: event.clientX,
+    startY: event.clientY,
+    clientY: event.clientY,
+    insertIndex: null,
+    dragging: false
+  };
+
+  suppressNextStepperClick = false;
+}
+
 function handleStepPointerMove(event) {
   if (!stepPointerDragState || event.pointerId !== stepPointerDragState.pointerId) {
+    return;
+  }
+
+  stepPointerDragState.clientY = event.clientY;
+  const movedX = Math.abs(event.clientX - stepPointerDragState.startX);
+  const movedY = Math.abs(event.clientY - stepPointerDragState.startY);
+
+  if (!stepPointerDragState.dragging) {
+    if (Math.max(movedX, movedY) < 8) {
+      return;
+    }
+
+    beginStepPointerDrag();
+  }
+
+  event.preventDefault();
+  updateStepPointerDrag(event.clientX, event.clientY);
+}
+
+function handleStepMouseMove(event) {
+  if (!stepPointerDragState || stepPointerDragState.pointerId !== "mouse") {
     return;
   }
 
@@ -2917,7 +2972,7 @@ function buildFieldAudienceSettingsMarkup(step, options = {}) {
           <input id="editor-field-client-label" type="text" value="${escapeHtml(clientLabel)}" placeholder="${escapeHtml(autoClientLabel)}" maxlength="60" ${visibility === "staff" ? "disabled" : ""}>
         </label>
         <label>
-          Client placeholder
+          Client input hint
           <input id="editor-field-client-placeholder" type="text" value="${escapeHtml(clientPlaceholder)}" placeholder="${escapeHtml(autoClientPlaceholder)}" maxlength="120" ${visibility === "staff" ? "disabled" : ""}>
         </label>
       </div>
@@ -3112,9 +3167,12 @@ function buildPreviewFieldMarkup(step) {
   }
 
   const currentPageFields = getPageFieldsForStep(step.id, { forPreview: true });
+  const fallbackField = !currentPageFields.length && !step.baseFieldHidden && step.type !== "page"
+    ? getVisibleFieldForPerspective({ ...step, isBaseField: true }, previewPerspective)
+    : null;
   const visibleFields = currentPageFields.length
     ? currentPageFields
-    : (step.baseFieldHidden ? [] : [{ ...step, isBaseField: true }]);
+    : (fallbackField ? [fallbackField] : []);
   const fieldMarkup = visibleFields.length
     ? visibleFields.map((field, index) => `
         <div class="preview-field-dropzone" data-drop-field-index="${index}" data-drop-page-id="${escapeHtml(step.id)}">Drop here</div>
@@ -3204,7 +3262,7 @@ function renderPreview() {
 
       return `
       <div class="preview-step-dropzone" data-drop-step-index="${dropIndex}"></div>
-      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="false">
+      <button class="preview-stepper-button ${step.id === selectedStep.id ? "is-active" : ""}" type="button" data-preview-step="${escapeHtml(step.id)}" draggable="${isReorderable ? "true" : "false"}">
         <span class="preview-stepper-circle">${escapeHtml(step.icon || String(index + 1))}</span>
         <span class="preview-stepper-label">${escapeHtml(step.navLabel)}</span>
       </button>
@@ -5663,8 +5721,34 @@ previewStepper?.addEventListener("drop", event => {
   finishDrag();
 });
 
+previewStepper?.addEventListener("dragstart", event => {
+  if (previewOnlyMode) {
+    event.preventDefault();
+    return;
+  }
+
+  const button = event.target.closest?.("[data-preview-step]");
+  const stepId = button?.dataset.previewStep || "";
+  const step = getPreviewSteps().find(entry => entry.id === stepId);
+
+  if (!button || !isReorderablePreviewStep(step)) {
+    event.preventDefault();
+    return;
+  }
+
+  startDrag({ kind: "step", stepId }, event, button);
+});
+
+previewStepper?.addEventListener("dragend", event => {
+  const button = event.target.closest?.("[data-preview-step]");
+  finishDrag(button);
+});
+
 previewStepper?.addEventListener("pointerdown", event => {
   maybeStartStepPointerDrag(event);
+});
+previewStepper?.addEventListener("mousedown", event => {
+  maybeStartStepMouseDrag(event);
 });
 
 previewStepper?.addEventListener("contextmenu", event => {
@@ -5707,6 +5791,9 @@ window.addEventListener("pointermove", event => {
   handleStepPointerMove(event);
   handleFieldRailPointerMove(event);
 });
+window.addEventListener("mousemove", event => {
+  handleStepMouseMove(event);
+});
 
 window.addEventListener("pointerup", event => {
   if (stepPointerDragState && event.pointerId === stepPointerDragState.pointerId) {
@@ -5715,6 +5802,11 @@ window.addEventListener("pointerup", event => {
 
   if (fieldRailPointerDragState && event.pointerId === fieldRailPointerDragState.pointerId) {
     finishFieldRailPointerDrop();
+  }
+});
+window.addEventListener("mouseup", () => {
+  if (stepPointerDragState?.pointerId === "mouse") {
+    finishStepPointerDrop();
   }
 });
 

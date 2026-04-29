@@ -378,11 +378,38 @@ async function pointerDrag(page, fromLocator, toLocator, options = {}) {
   const startPoint = pointFor(fromBox, startAt);
   const endPoint = pointFor(toBox, endAt);
 
-  await page.mouse.move(startPoint.x, startPoint.y);
-  await page.mouse.down();
-  await page.mouse.move(startPoint.x + 1, startPoint.y + nudge, { steps: 3 });
-  await page.mouse.move(endPoint.x, endPoint.y, { steps });
-  await page.mouse.up();
+  await fromLocator.evaluate((element, drag) => {
+    const view = element.ownerDocument.defaultView;
+    const dispatchPointer = (target, type, point, buttons = 1) => {
+      target.dispatchEvent(new view.PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 77,
+        pointerType: "mouse",
+        isPrimary: true,
+        button: 0,
+        buttons,
+        clientX: point.x,
+        clientY: point.y
+      }));
+    };
+
+    dispatchPointer(element, "pointerdown", drag.startPoint, 1);
+    dispatchPointer(view, "pointermove", {
+      x: drag.startPoint.x + 1,
+      y: drag.startPoint.y + drag.nudge
+    }, 1);
+
+    for (let index = 1; index <= drag.steps; index += 1) {
+      const progress = index / drag.steps;
+      dispatchPointer(view, "pointermove", {
+        x: drag.startPoint.x + ((drag.endPoint.x - drag.startPoint.x) * progress),
+        y: drag.startPoint.y + ((drag.endPoint.y - drag.startPoint.y) * progress)
+      }, 1);
+    }
+
+    dispatchPointer(view, "pointerup", drag.endPoint, 0);
+  }, { startPoint, endPoint, nudge, steps });
 }
 
 async function closeFormEditorIfOpen(page) {
