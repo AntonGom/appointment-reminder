@@ -7,7 +7,7 @@ test.describe("Navigation chrome", () => {
     const badge = page.locator(".env-badge");
     await expect(badge).toBeVisible();
     await expect(badge).toContainText("DEV");
-    await expect(badge).toContainText("v20260429.7");
+    await expect(badge).toContainText("v20260429.8");
     await expect(badge).toHaveAttribute("title", /commit testsha/);
   });
 });

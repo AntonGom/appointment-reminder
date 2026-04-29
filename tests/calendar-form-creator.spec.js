@@ -548,6 +548,26 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#form-enabled-toggle")).not.toBeChecked();
   });
 
+  test("deleted built-in essentials can be added back from the toolbar", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/form-creator.html");
+
+    await expect(page.locator('#preview-stepper [data-preview-step="phone"]')).toBeVisible();
+    await page.locator('.question-wrap[data-preview-step-id="phone"]').click();
+    await expect(page.locator("#form-editor-popover")).toBeVisible();
+    await page.locator("#editor-delete-field").click();
+
+    await expect(page.locator('#preview-stepper [data-preview-step="phone"]')).toHaveCount(0);
+    await expect(page.locator("#preview-step-title")).not.toContainText("Phone");
+
+    await ensureStudioAccordionOpen(page, "Add The Essentials");
+    await page.locator('[data-add-step="phone"]').click();
+
+    await expect(page.locator('#preview-stepper [data-preview-step="phone"]')).toBeVisible();
+    await expect(page.locator("#preview-step-title")).toContainText("Client Phone Number");
+    await expect(page.locator("#form-editor-title")).toContainText("Question settings");
+  });
+
   test("form creator preview toggle keeps the form size and removes edit hover styling", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/form-creator.html");

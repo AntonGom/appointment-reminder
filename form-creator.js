@@ -1267,6 +1267,19 @@ function getEssentialFields(stepId) {
   return getCustomFields().filter(field => String(field.semanticId || "").trim() === String(stepId || "").trim());
 }
 
+function isBuiltInStepHidden(stepId) {
+  return currentFormProfile.stepOverrides?.[stepId]?.hidden === true;
+}
+
+function addEssentialFieldFromToolbar(stepId) {
+  if (isBuiltInStepHidden(stepId) && !getEssentialFields(stepId).length) {
+    restoreBuiltInStep(stepId, { openEditor: true });
+    return;
+  }
+
+  insertEssentialFieldIntoCurrentPage(stepId, { openEditor: true });
+}
+
 function insertEssentialFieldIntoCurrentPage(stepId, options = {}) {
   const baseStep = BUILT_IN_STEP_MAP.get(stepId);
   const currentPageId = getCurrentPageId();
@@ -1281,6 +1294,11 @@ function insertEssentialFieldIntoCurrentPage(stepId, options = {}) {
   }
 
   if (currentPageId === stepId) {
+    if (isBuiltInStepHidden(stepId)) {
+      restoreBuiltInStep(stepId, { openEditor: options.openEditor });
+      return;
+    }
+
     selectedPreviewStepId = stepId;
     renderBuilder();
 
@@ -5618,7 +5636,7 @@ document.querySelectorAll("[data-add-type]").forEach(button => {
 
 document.querySelectorAll("[data-add-step]").forEach(button => {
   button.addEventListener("click", () => {
-    insertEssentialFieldIntoCurrentPage(button.dataset.addStep || "", { openEditor: true });
+    addEssentialFieldFromToolbar(button.dataset.addStep || "");
   });
   button.addEventListener("dragstart", event => {
     startDrag({
