@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Form Creator</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
-  <link rel="stylesheet" href="form-creator.css?v=20260429b">
+  <link rel="stylesheet" href="form-creator.css?v=20260429d">
 </head>
 <body data-page="form-creator">
   <div id="status-banner" class="status-banner" hidden></div>
@@ -23,6 +23,21 @@
   <div id="signed-in-shell" class="form-creator-studio" hidden>
     <div id="form-creator-canvas" class="form-creator-canvas">
       <main class="form-preview-stage" id="form-preview-stage">
+        <div id="form-preview-mode-toolbar" class="form-preview-mode-toolbar">
+          <div class="form-preview-mode-copy">
+            <span id="form-preview-mode-kicker" class="form-preview-mode-kicker">Editing form</span>
+            <strong id="form-preview-mode-title">Business / Employee View</strong>
+            <span id="form-preview-mode-detail">Shows the version your team fills out inside Send Reminder.</span>
+          </div>
+          <div class="form-preview-mode-actions">
+            <div class="form-perspective-toggle" role="group" aria-label="Preview form as">
+              <button class="form-perspective-button is-active" type="button" data-preview-perspective="staff" aria-pressed="true">Business / Employee</button>
+              <button class="form-perspective-button" type="button" data-preview-perspective="client" aria-pressed="false">Client Link</button>
+            </div>
+            <button id="enter-preview-mode-button" class="secondary-button" type="button">Preview Only</button>
+            <button id="exit-preview-mode-button" class="primary-button" type="button" hidden>Back to Edit</button>
+          </div>
+        </div>
         <div id="form-preview-shell" class="fc-preview-shell">
           <div class="form-shell-edit-zone form-shell-edit-zone-left" data-form-shell-zone="left" aria-hidden="true"></div>
           <div class="form-shell-edit-zone form-shell-edit-zone-right" data-form-shell-zone="right" aria-hidden="true"></div>
@@ -347,6 +362,6 @@
   </div>
 
   <script src="nav.js?v=20260427a"></script>
-  <script type="module" src="form-creator.js?v=20260429c"></script>
+  <script type="module" src="form-creator.js?v=20260429d"></script>
 </body>
 </html>

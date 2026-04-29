@@ -43,6 +43,77 @@ export const DEFAULT_STEP_MOTION_SPEED = "smooth";
 export const DEFAULT_STEP_HEAD_MOTION = "lift";
 export const DEFAULT_STEP_CHIP_MOTION = "pop";
 export const DEFAULT_REMEMBERED_CLIENT_FIELD_IDS = ["phone", "email", "name", "address"];
+export const FIELD_VISIBILITY_OPTIONS = [
+  { id: "both", label: "Business and client" },
+  { id: "staff", label: "Business only" },
+  { id: "client", label: "Client only" }
+];
+export const FIELD_SAVE_TARGET_OPTIONS = [
+  { id: "appointment_details", label: "Appointment details" },
+  { id: "client_profile", label: "Client profile" },
+  { id: "appointment_notes", label: "Appointment notes" },
+  { id: "internal_notes", label: "Internal notes" },
+  { id: "content_only", label: "Content only" }
+];
+
+export const BUILT_IN_CLIENT_WORDING = {
+  phone: {
+    title: "Your Phone Number",
+    copy: "Enter the best phone number for appointment updates.",
+    label: "Phone Number",
+    placeholder: "Enter your phone number",
+    helpText: "You can use email instead if you prefer."
+  },
+  email: {
+    title: "Your Email",
+    copy: "Enter the email address where you want appointment updates.",
+    label: "Email Address",
+    placeholder: "Enter your email",
+    helpText: "You can use a phone number instead if you prefer."
+  },
+  name: {
+    title: "Your Name",
+    copy: "Enter your name so the appointment request is easy to recognize.",
+    label: "Your Name",
+    placeholder: "Enter your name",
+    helpText: ""
+  },
+  date: {
+    title: "Preferred Date",
+    copy: "Choose the date that works best for you.",
+    label: "Preferred Date",
+    placeholder: "",
+    helpText: ""
+  },
+  time: {
+    title: "Preferred Time",
+    copy: "Choose the time that works best for you.",
+    label: "Preferred Time",
+    placeholder: "",
+    helpText: ""
+  },
+  address: {
+    title: "Service Location",
+    copy: "Tell us where the appointment should take place.",
+    label: "Service Location",
+    placeholder: "Enter the appointment address",
+    helpText: ""
+  },
+  businessContact: {
+    title: "Business Contact Information",
+    copy: "This is shown to clients after the business confirms the appointment.",
+    label: "Business Contact Information",
+    placeholder: "Business phone or email",
+    helpText: "Business-only by default."
+  },
+  notes: {
+    title: "Appointment Notes",
+    copy: "Tell us anything we should know before your appointment.",
+    label: "Anything we should know?",
+    placeholder: "Share parking instructions, access details, or special requests",
+    helpText: ""
+  }
+};
 
 export const BASE_REMINDER_STEPS = [
   {
@@ -55,7 +126,10 @@ export const BASE_REMINDER_STEPS = [
     type: "phone",
     required: false,
     helpText: "You can skip this and use email instead.",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "client_profile",
+    includeInReminder: false
   },
   {
     id: "email",
@@ -67,7 +141,10 @@ export const BASE_REMINDER_STEPS = [
     type: "email",
     required: false,
     helpText: "You can skip this and use a phone number instead.",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "client_profile",
+    includeInReminder: false
   },
   {
     id: "name",
@@ -79,7 +156,10 @@ export const BASE_REMINDER_STEPS = [
     type: "text",
     required: false,
     helpText: "",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "client_profile",
+    includeInReminder: false
   },
   {
     id: "date",
@@ -91,7 +171,10 @@ export const BASE_REMINDER_STEPS = [
     type: "date",
     required: false,
     helpText: "",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "appointment_details",
+    includeInReminder: true
   },
   {
     id: "time",
@@ -103,7 +186,10 @@ export const BASE_REMINDER_STEPS = [
     type: "time",
     required: false,
     helpText: "",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "appointment_details",
+    includeInReminder: true
   },
   {
     id: "address",
@@ -115,7 +201,10 @@ export const BASE_REMINDER_STEPS = [
     type: "text",
     required: false,
     helpText: "",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "appointment_details",
+    includeInReminder: true
   },
   {
     id: "businessContact",
@@ -127,7 +216,10 @@ export const BASE_REMINDER_STEPS = [
     type: "text",
     required: false,
     helpText: "Use the phone number or email the client should use if they need to reschedule or reach you.",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "staff",
+    saveTarget: "appointment_details",
+    includeInReminder: true
   },
   {
     id: "notes",
@@ -139,7 +231,10 @@ export const BASE_REMINDER_STEPS = [
     type: "textarea",
     required: false,
     helpText: "",
-    builtIn: true
+    builtIn: true,
+    visibleTo: "both",
+    saveTarget: "appointment_notes",
+    includeInReminder: true
   }
 ];
 
@@ -319,6 +414,81 @@ function pickOption(value, fallback, options) {
   return options.some(option => option.id === normalized) ? normalized : fallback;
 }
 
+function normalizeVisibility(value, fallback = "both") {
+  return pickOption(value, fallback, FIELD_VISIBILITY_OPTIONS);
+}
+
+function normalizeSaveTarget(value, fallback = "appointment_details") {
+  return pickOption(value, fallback, FIELD_SAVE_TARGET_OPTIONS);
+}
+
+function softenClientWording(value) {
+  return safeString(value)
+    .replace(/\bClient's\b/g, "Your")
+    .replace(/\bclient's\b/g, "your")
+    .replace(/\bClient\b/g, "Your")
+    .replace(/\bclient\b/g, "your")
+    .replace(/\bCustomer's\b/g, "Your")
+    .replace(/\bcustomer's\b/g, "your")
+    .replace(/\bCustomer\b/g, "Your")
+    .replace(/\bcustomer\b/g, "your")
+    .replace(/\bPatient's\b/g, "Your")
+    .replace(/\bpatient's\b/g, "your")
+    .replace(/\bPatient\b/g, "Your")
+    .replace(/\bpatient\b/g, "your")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getBuiltInClientWording(fieldId, key) {
+  return BUILT_IN_CLIENT_WORDING[String(fieldId || "").trim()]?.[key] || "";
+}
+
+export function getAutoClientFieldText(field = {}, key = "label") {
+  const fieldId = safeString(field.semanticId || field.id);
+  const builtInText = getBuiltInClientWording(fieldId, key);
+
+  if (builtInText) {
+    return builtInText;
+  }
+
+  const source = field[key] || field.label || field.title || "";
+  return softenClientWording(source);
+}
+
+export function getFieldVisibility(field = {}) {
+  return normalizeVisibility(field.visibleTo, "both");
+}
+
+export function isFieldVisibleForPerspective(field = {}, perspective = "staff") {
+  const visibility = getFieldVisibility(field);
+
+  if (perspective === "client") {
+    return visibility !== "staff";
+  }
+
+  return visibility !== "client";
+}
+
+export function getPerspectiveField(field = {}, perspective = "staff") {
+  if (perspective !== "client") {
+    return field;
+  }
+
+  return {
+    ...field,
+    title: safeString(field.clientTitle) || safeString(field.clientLabel) || getAutoClientFieldText(field, "title") || field.title,
+    copy: safeString(field.clientCopy) || getAutoClientFieldText(field, "copy") || field.copy,
+    label: safeString(field.clientLabel) || getAutoClientFieldText(field, "label") || field.label,
+    placeholder: safeString(field.clientPlaceholder) || getAutoClientFieldText(field, "placeholder") || field.placeholder,
+    helpText: safeString(field.clientHelpText) || getAutoClientFieldText(field, "helpText") || field.helpText,
+    navLabel: safeString(field.clientNavLabel)
+      || safeString(getAutoClientFieldText(field, "label")).slice(0, 12)
+      || safeString(field.navLabel)
+      || safeString(field.label).slice(0, 12)
+  };
+}
+
 function normalizeImageUrl(value) {
   return safeString(value).slice(0, 500);
 }
@@ -405,6 +575,15 @@ export function createCustomField(type = "text") {
     options: [],
     required: false,
     rememberClientAnswer: false,
+    visibleTo: "both",
+    clientTitle: "",
+    clientCopy: "",
+    clientLabel: "",
+    clientNavLabel: "",
+    clientPlaceholder: "",
+    clientHelpText: "",
+    saveTarget: isContentBlockType(meta.id) ? "content_only" : "appointment_details",
+    includeInReminder: !isContentBlockType(meta.id),
     ...normalizeTypography()
   };
 }
@@ -438,6 +617,8 @@ function normalizeCustomField(rawField, index) {
   const placeholder = meta.id === "date" || meta.id === "time" || isContentBlockType(meta.id)
     ? ""
     : safeString(rawField?.placeholder) || meta.placeholder;
+  const isContentBlock = isContentBlockType(meta.id);
+  const visibleTo = normalizeVisibility(rawField?.visibleTo, fallbackField.visibleTo || "both");
 
   return {
     id: safeString(rawField?.id) || `custom_${index}_${getRandomSuffix()}`,
@@ -453,13 +634,23 @@ function normalizeCustomField(rawField, index) {
     imageUrl: normalizeImageUrl(rawField?.imageUrl || fallbackField.imageUrl || ""),
     options: meta.id === "select" ? normalizeSelectFieldOptions(rawField?.options) : [],
     required: Boolean(rawField?.required),
-    rememberClientAnswer: isContentBlockType(meta.id) ? false : rawField?.rememberClientAnswer === true,
+    rememberClientAnswer: isContentBlock ? false : rawField?.rememberClientAnswer === true,
+    visibleTo,
+    clientTitle: safeString(rawField?.clientTitle).slice(0, 60),
+    clientCopy: safeString(rawField?.clientCopy).slice(0, 180),
+    clientLabel: safeString(rawField?.clientLabel).slice(0, 60),
+    clientNavLabel: safeString(rawField?.clientNavLabel).slice(0, 12),
+    clientPlaceholder: safeString(rawField?.clientPlaceholder).slice(0, 120),
+    clientHelpText: safeString(rawField?.clientHelpText).slice(0, 240),
+    saveTarget: normalizeSaveTarget(rawField?.saveTarget, isContentBlock ? "content_only" : "appointment_details"),
+    includeInReminder: isContentBlock ? false : rawField?.includeInReminder !== false,
     icon: meta.icon,
     ...normalizeTypography(rawField)
   };
 }
 
 function normalizeStepOverride(rawOverride = {}, fallbackStep = {}) {
+  const visibleTo = normalizeVisibility(rawOverride.visibleTo, fallbackStep.visibleTo || "both");
   return {
     title: safeString(rawOverride.title).slice(0, 60) || fallbackStep.title || "",
     navLabel: safeString(rawOverride.navLabel).slice(0, 12) || fallbackStep.navLabel || "",
@@ -470,6 +661,15 @@ function normalizeStepOverride(rawOverride = {}, fallbackStep = {}) {
     required: rawOverride.required === true,
     rememberClientAnswer: rawOverride.rememberClientAnswer === true
       || (rawOverride.rememberClientAnswer == null && isDefaultRememberedClientField(fallbackStep.id)),
+    visibleTo,
+    clientTitle: safeString(rawOverride.clientTitle).slice(0, 60),
+    clientCopy: safeString(rawOverride.clientCopy).slice(0, 180),
+    clientLabel: safeString(rawOverride.clientLabel).slice(0, 60),
+    clientNavLabel: safeString(rawOverride.clientNavLabel).slice(0, 12),
+    clientPlaceholder: safeString(rawOverride.clientPlaceholder).slice(0, 120),
+    clientHelpText: safeString(rawOverride.clientHelpText).slice(0, 180),
+    saveTarget: normalizeSaveTarget(rawOverride.saveTarget, fallbackStep.saveTarget || "appointment_details"),
+    includeInReminder: rawOverride.includeInReminder == null ? fallbackStep.includeInReminder !== false : rawOverride.includeInReminder !== false,
     hidden: rawOverride.hidden === true,
     ...normalizeTypography(rawOverride)
   };
@@ -635,7 +835,16 @@ export function buildPreviewStepList(profile) {
       labelFontSize: field.labelFontSize,
       labelBold: field.labelBold,
       helpFontSize: field.helpFontSize,
-      helpBold: field.helpBold
+      helpBold: field.helpBold,
+      visibleTo: field.visibleTo,
+      clientTitle: field.clientTitle,
+      clientCopy: field.clientCopy,
+      clientLabel: field.clientLabel,
+      clientNavLabel: field.clientNavLabel,
+      clientPlaceholder: field.clientPlaceholder,
+      clientHelpText: field.clientHelpText,
+      saveTarget: field.saveTarget,
+      includeInReminder: field.includeInReminder
     }));
   const orderedSteps = applySavedStepOrder(normalized, [
     ...builtInSteps,

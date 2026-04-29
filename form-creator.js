@@ -38,6 +38,8 @@ import {
   DEFAULT_STEP_MOTION_SPEED,
   DEFAULT_STEP_HEAD_MOTION,
   DEFAULT_STEP_CHIP_MOTION,
+  FIELD_VISIBILITY_OPTIONS,
+  FIELD_SAVE_TARGET_OPTIONS,
   STEP_NAV_SHAPE_OPTIONS,
   STEP_NAV_SIZE_OPTIONS,
   STEP_NAV_PLACEMENT_OPTIONS,
@@ -54,8 +56,12 @@ import {
   normalizeSelectFieldOptions,
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
-  isContentBlockType
-} from "./custom-form-profile.js?v=20260429c";
+  isContentBlockType,
+  getAutoClientFieldText,
+  getFieldVisibility,
+  isFieldVisibleForPerspective,
+  getPerspectiveField
+} from "./custom-form-profile.js?v=20260429d";
 
 const OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS = new Set(["notes"]);
 
@@ -69,6 +75,13 @@ const signedOutShell = document.getElementById("signed-out-shell");
 const signedInShell = document.getElementById("signed-in-shell");
 const formCreatorCanvas = document.getElementById("form-creator-canvas");
 const formPreviewStage = document.getElementById("form-preview-stage");
+const previewModeToolbar = document.getElementById("form-preview-mode-toolbar");
+const previewModeKicker = document.getElementById("form-preview-mode-kicker");
+const previewModeTitle = document.getElementById("form-preview-mode-title");
+const previewModeDetail = document.getElementById("form-preview-mode-detail");
+const previewPerspectiveButtons = Array.from(document.querySelectorAll("[data-preview-perspective]"));
+const enterPreviewModeButton = document.getElementById("enter-preview-mode-button");
+const exitPreviewModeButton = document.getElementById("exit-preview-mode-button");
 const studioPanel = document.getElementById("form-studio-panel");
 const studioPanelHandle = document.getElementById("form-studio-panel-handle");
 const studioPanelResizeHandle = document.getElementById("form-studio-panel-resize");
@@ -144,6 +157,8 @@ let studioPanelScrollDiscovered = false;
 let dragPayload = null;
 let statusBannerTimer = null;
 let activeStudioTab = "add-fields";
+let previewPerspective = "staff";
+let previewOnlyMode = false;
 let activeMenuPreviewHoverTarget = "";
 let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
@@ -990,8 +1005,14 @@ function getCustomPages() {
   return Array.isArray(currentFormProfile.customPages) ? currentFormProfile.customPages : [];
 }
 
-function getPreviewSteps() {
+function getAllPreviewSteps() {
   return buildPreviewStepList(currentFormProfile);
+}
+
+function getPreviewSteps() {
+  return getAllPreviewSteps()
+    .map(step => getPerspectiveStep(step, previewPerspective))
+    .filter(step => isStepVisibleForPerspective(step, previewPerspective));
 }
 
 function getTopLevelCustomFields() {
@@ -1008,7 +1029,7 @@ function getEditableStep(stepId) {
     return null;
   }
 
-  return getPreviewSteps().find(step => step.id === stepId)
+  return getAllPreviewSteps().find(step => step.id === stepId)
     || getCustomFields().find(field => field.id === stepId)
     || getCustomPages().find(page => page.id === stepId)
     || null;
@@ -1018,7 +1039,44 @@ function getCurrentPageId() {
   return selectedPreviewStepId;
 }
 
-function getPageFieldsForStep(stepId) {
+function getPerspectiveStep(step, perspective = previewPerspective) {
+  if (!step) {
+    return step;
+  }
+
+  if (step.type === "review" && perspective === "client") {
+    return {
+      ...step,
+      title: "Review and Submit",
+      navLabel: "Submit",
+      copy: "Review your appointment request before sending it to the business.",
+      label: "Review and Submit"
+    };
+  }
+
+  return getPerspectiveField(step, perspective);
+}
+
+function getVisibleFieldForPerspective(field, perspective = previewPerspective) {
+  return isFieldVisibleForPerspective(field, perspective)
+    ? getPerspectiveField(field, perspective)
+    : null;
+}
+
+function isStepVisibleForPerspective(step, perspective = previewPerspective) {
+  if (!step) {
+    return false;
+  }
+
+  if (step.type === "welcome" || step.type === "thankyou" || step.type === "review") {
+    return true;
+  }
+
+  return getPageFieldsForStep(step.id, { forPreview: true, perspective }).length > 0;
+}
+
+function getPageFieldsForStep(stepId, options = {}) {
+  const { forPreview = false, perspective = previewPerspective } = options;
   const page = getEditableStep(stepId);
 
   if (!page || ["review", "welcome", "thankyou"].includes(page.id) || ["review", "welcome", "thankyou"].includes(String(page.type || "").trim())) {
@@ -1042,13 +1100,16 @@ function getPageFieldsForStep(stepId) {
     isBaseField: false
   }));
   const allFields = [baseField, ...inlineFields].filter(Boolean);
+  const perspectiveFields = forPreview
+    ? allFields.map(field => getVisibleFieldForPerspective(field, perspective)).filter(Boolean)
+    : allFields;
   const orderedIds = Array.isArray(currentFormProfile.pageFieldOrder?.[page.id]) ? currentFormProfile.pageFieldOrder[page.id] : [];
 
   if (!orderedIds.length) {
-    return allFields;
+    return perspectiveFields;
   }
 
-  const fieldMap = new Map(allFields.map(field => [field.id, field]));
+  const fieldMap = new Map(perspectiveFields.map(field => [field.id, field]));
   const orderedFields = [];
 
   orderedIds.forEach(id => {
@@ -1060,7 +1121,7 @@ function getPageFieldsForStep(stepId) {
     }
   });
 
-  allFields.forEach(field => {
+  perspectiveFields.forEach(field => {
     if (fieldMap.has(field.id)) {
       orderedFields.push(field);
       fieldMap.delete(field.id);
@@ -1116,7 +1177,7 @@ function ensureStepOrderIds(stepIds) {
 }
 
 function getCurrentStepOrder() {
-  return getPreviewSteps().filter(isReorderablePreviewStep).map(step => step.id);
+  return getAllPreviewSteps().filter(isReorderablePreviewStep).map(step => step.id);
 }
 
 function setFieldOrderForPage(pageId, orderedIds) {
@@ -1187,7 +1248,16 @@ function buildEssentialField(stepId) {
     helpText,
     required: override.required === true,
     rememberClientAnswer: override.rememberClientAnswer === true
-      || (override.rememberClientAnswer == null && isDefaultRememberedClientField(stepId))
+      || (override.rememberClientAnswer == null && isDefaultRememberedClientField(stepId)),
+    visibleTo: override.visibleTo || baseStep.visibleTo || "both",
+    clientTitle: override.clientTitle || "",
+    clientCopy: override.clientCopy || "",
+    clientLabel: override.clientLabel || "",
+    clientNavLabel: override.clientNavLabel || "",
+    clientPlaceholder: override.clientPlaceholder || "",
+    clientHelpText: override.clientHelpText || "",
+    saveTarget: override.saveTarget || baseStep.saveTarget || "appointment_details",
+    includeInReminder: override.includeInReminder == null ? baseStep.includeInReminder !== false : override.includeInReminder !== false
   };
 }
 
@@ -1563,7 +1633,7 @@ function updateStepPointerDrag(clientX, clientY) {
 }
 
 function maybeStartStepPointerDrag(event) {
-  if (!previewStepper || event.button !== 0) {
+  if (previewOnlyMode || !previewStepper || event.button !== 0) {
     return;
   }
 
@@ -2416,6 +2486,90 @@ function refreshPreviewOnly() {
   renderPreview();
   applyMobileStudioScale();
   syncMenuPreviewHoverState();
+  syncPreviewModeChrome();
+}
+
+function getPreviewPerspectiveCopy() {
+  if (previewPerspective === "client") {
+    return {
+      title: "Client Link View",
+      detail: "Shows the version clients see from a QR code or shared link."
+    };
+  }
+
+  return {
+    title: "Business / Employee View",
+    detail: "Shows the version your team fills out inside Send Reminder."
+  };
+}
+
+function syncPreviewModeChrome() {
+  const perspectiveCopy = getPreviewPerspectiveCopy();
+
+  if (previewModeKicker) {
+    previewModeKicker.textContent = previewOnlyMode ? "Preview only" : "Editing form";
+  }
+
+  if (previewModeTitle) {
+    previewModeTitle.textContent = perspectiveCopy.title;
+  }
+
+  if (previewModeDetail) {
+    previewModeDetail.textContent = previewOnlyMode
+      ? `${perspectiveCopy.detail} Editing controls are hidden.`
+      : perspectiveCopy.detail;
+  }
+
+  previewPerspectiveButtons.forEach(button => {
+    const isActive = button.dataset.previewPerspective === previewPerspective;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  if (enterPreviewModeButton) {
+    enterPreviewModeButton.hidden = previewOnlyMode;
+  }
+
+  if (exitPreviewModeButton) {
+    exitPreviewModeButton.hidden = !previewOnlyMode;
+  }
+
+  signedInShell?.classList.toggle("is-preview-only-mode", previewOnlyMode);
+  formCreatorCanvas?.classList.toggle("is-preview-only-mode", previewOnlyMode);
+  previewShell?.classList.toggle("is-preview-only-mode", previewOnlyMode);
+
+  if (studioPanel) {
+    studioPanel.hidden = previewOnlyMode;
+  }
+}
+
+function setPreviewPerspective(nextPerspective) {
+  const normalized = nextPerspective === "client" ? "client" : "staff";
+
+  if (previewPerspective === normalized) {
+    syncPreviewModeChrome();
+    return;
+  }
+
+  previewPerspective = normalized;
+  const visibleSteps = getPreviewSteps();
+
+  if (!visibleSteps.some(step => step.id === selectedPreviewStepId)) {
+    selectedPreviewStepId = visibleSteps[0]?.id || "review";
+  }
+
+  closeEditor();
+  renderBuilder();
+}
+
+function setPreviewOnlyMode(nextValue) {
+  previewOnlyMode = Boolean(nextValue);
+
+  if (previewOnlyMode) {
+    closeEditor();
+  }
+
+  renderBuilder();
 }
 
 function applyBackgroundToPreview() {
@@ -2456,6 +2610,11 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-question-surface-shadow", questionState.shadow);
   previewShell.style.setProperty("--fc-question-selected-border", questionState.selectedBorder);
   previewShell.style.setProperty("--fc-question-selected-shadow", questionState.selectedShadow);
+
+  if (formPreviewStage) {
+    formPreviewStage.style.setProperty("--fc-form-shell-width", surfaceState.width);
+    formPreviewStage.style.setProperty("--fc-form-shell-min-width", surfaceState.minWidth);
+  }
 }
 
 function getStepNavigationSurfaceState(profile = currentFormProfile) {
@@ -2667,6 +2826,148 @@ function getBuiltInFieldSemanticNote(fieldId) {
   return `This still fills ${semanticName} everywhere else in Send Reminder, client memory, and reminder emails. If you need a new meaning, add a custom question instead of repurposing this core field.`;
 }
 
+function getVisibilityLabel(visibility) {
+  return FIELD_VISIBILITY_OPTIONS.find(option => option.id === getFieldVisibility({ visibleTo: visibility }))?.label || "Business and client";
+}
+
+function getSaveTargetLabel(saveTarget) {
+  return FIELD_SAVE_TARGET_OPTIONS.find(option => option.id === saveTarget)?.label || "Appointment details";
+}
+
+function getFieldMappingLabel(field, { isBuiltInStep = false, semanticFieldId = "" } = {}) {
+  const fieldId = semanticFieldId || field?.semanticId || field?.id || "";
+
+  if (isBuiltInStep || BUILT_IN_STEP_MAP.has(fieldId)) {
+    if (fieldId === "name" || fieldId === "email" || fieldId === "phone") {
+      return "Client profile";
+    }
+
+    if (fieldId === "notes") {
+      return "Appointment notes";
+    }
+
+    return "Appointment details";
+  }
+
+  return getSaveTargetLabel(field?.saveTarget || "appointment_details");
+}
+
+function shouldShowReminderIncludeToggle(field, options = {}) {
+  const { isContentBlock = false, semanticFieldId = "" } = options;
+  const mappedFieldId = String(semanticFieldId || field?.semanticId || field?.id || "").trim();
+
+  if (!field || isContentBlock) {
+    return false;
+  }
+
+  return !["name", "email", "phone"].includes(mappedFieldId);
+}
+
+function buildFieldAudienceSettingsMarkup(step, options = {}) {
+  const {
+    isContentBlock = false,
+    isBuiltInStep = false,
+    semanticFieldId = ""
+  } = options;
+  const visibility = getFieldVisibility(step);
+  const mappingLabel = getFieldMappingLabel(step, { isBuiltInStep, semanticFieldId });
+  const includeInReminder = step.includeInReminder !== false;
+  const autoClientTitle = getAutoClientFieldText(step, "title") || step.title || step.label || "";
+  const autoClientLabel = getAutoClientFieldText(step, "label") || step.label || step.title || "";
+  const autoClientPlaceholder = getAutoClientFieldText(step, "placeholder") || step.placeholder || "";
+  const clientTitle = step.clientTitle || "";
+  const clientLabel = step.clientLabel || "";
+  const clientPlaceholder = step.clientPlaceholder || "";
+
+  return `
+    <div class="field-audience-card">
+      <div class="field-audience-head">
+        <strong>Who sees this?</strong>
+        <span>${escapeHtml(getVisibilityLabel(visibility))}</span>
+      </div>
+      <div class="field-audience-toggle" role="group" aria-label="Who sees this field">
+        ${FIELD_VISIBILITY_OPTIONS.map(option => `
+          <button class="field-audience-option ${visibility === option.id ? "is-active" : ""}" type="button" data-field-visibility="${escapeHtml(option.id)}" aria-pressed="${visibility === option.id ? "true" : "false"}">${escapeHtml(option.label)}</button>
+        `).join("")}
+      </div>
+      <div class="field-mapping-line">
+        <span>Saves to</span>
+        <strong>${escapeHtml(mappingLabel)}</strong>
+      </div>
+      ${shouldShowReminderIncludeToggle(step, { isContentBlock, semanticFieldId }) ? `
+        <label class="toggle-row">
+          <span>Show this answer in the reminder email</span>
+          <input id="editor-field-include-reminder" type="checkbox" ${includeInReminder ? "checked" : ""}>
+        </label>
+      ` : ""}
+    </div>
+    <details class="client-wording-details">
+      <summary>
+        <span>Client wording</span>
+        <span>${visibility === "staff" ? "Hidden in client view" : escapeHtml(clientLabel || autoClientLabel || "Auto-generated")}</span>
+      </summary>
+      <div class="client-wording-body">
+        <div class="editor-inline-note">The app writes the client version automatically. Only customize this if the preview sounds off.</div>
+        <label>
+          Client page title
+          <input id="editor-field-client-title" type="text" value="${escapeHtml(clientTitle)}" placeholder="${escapeHtml(autoClientTitle)}" maxlength="60" ${visibility === "staff" ? "disabled" : ""}>
+        </label>
+        <label>
+          Client question label
+          <input id="editor-field-client-label" type="text" value="${escapeHtml(clientLabel)}" placeholder="${escapeHtml(autoClientLabel)}" maxlength="60" ${visibility === "staff" ? "disabled" : ""}>
+        </label>
+        <label>
+          Client placeholder
+          <input id="editor-field-client-placeholder" type="text" value="${escapeHtml(clientPlaceholder)}" placeholder="${escapeHtml(autoClientPlaceholder)}" maxlength="120" ${visibility === "staff" ? "disabled" : ""}>
+        </label>
+      </div>
+    </details>
+  `;
+}
+
+function bindFieldAudienceSettings(fieldId, step, options = {}) {
+  const visibilityButtons = editorBody?.querySelectorAll("[data-field-visibility]") || [];
+  const includeReminderInput = document.getElementById("editor-field-include-reminder");
+  const clientTitleInput = document.getElementById("editor-field-client-title");
+  const clientLabelInput = document.getElementById("editor-field-client-label");
+  const clientPlaceholderInput = document.getElementById("editor-field-client-placeholder");
+
+  const patchAudience = updates => {
+    patchStepConfig(fieldId, updates);
+    renderBuilder();
+    const refreshedStep = getEditableStep(fieldId);
+    if (refreshedStep) {
+      openFieldEditor(fieldId);
+    }
+  };
+
+  visibilityButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      patchAudience({ visibleTo: button.dataset.fieldVisibility || "both" });
+    });
+  });
+
+  includeReminderInput?.addEventListener("change", event => {
+    patchStepConfig(fieldId, { includeInReminder: Boolean(event.target.checked) });
+    renderBuilder();
+  });
+
+  clientTitleInput?.addEventListener("input", event => {
+    patchStepConfig(fieldId, { clientTitle: event.target.value.slice(0, 60) });
+    refreshPreviewOnly();
+  });
+
+  clientLabelInput?.addEventListener("input", event => {
+    patchStepConfig(fieldId, { clientLabel: event.target.value.slice(0, 60) });
+    refreshPreviewOnly();
+  });
+
+  clientPlaceholderInput?.addEventListener("input", event => {
+    patchStepConfig(fieldId, { clientPlaceholder: event.target.value.slice(0, 120) });
+    refreshPreviewOnly();
+  });
+}
+
 function removeBuilderField(fieldId) {
   const step = getEditableStep(fieldId);
   const isBuiltInStep = Boolean(step?.builtIn && step.id !== "review");
@@ -2810,7 +3111,7 @@ function buildPreviewFieldMarkup(step) {
     `;
   }
 
-  const currentPageFields = getCurrentPageFields();
+  const currentPageFields = getPageFieldsForStep(step.id, { forPreview: true });
   const visibleFields = currentPageFields.length
     ? currentPageFields
     : (step.baseFieldHidden ? [] : [{ ...step, isBaseField: true }]);
@@ -2836,16 +3137,20 @@ function buildPreviewFieldMarkup(step) {
 
 function renderPreview() {
   const steps = getPreviewSteps();
-  const selectedStep = getSelectedPreviewStep();
+  let selectedStep = getSelectedPreviewStep();
 
   if (!selectedStep) {
     return;
   }
 
+  if (!steps.some(step => step.id === selectedPreviewStepId)) {
+    selectedPreviewStepId = selectedStep.id;
+  }
+
   const selectedIndex = Math.max(0, steps.findIndex(step => step.id === selectedStep.id));
   const isRequired = selectedStep.type === "review"
     ? true
-    : getCurrentPageFields().some(field => field.required) || selectedStep.required === true;
+    : getPageFieldsForStep(selectedStep.id, { forPreview: true }).some(field => field.required) || selectedStep.required === true;
 
   if (previewTitle) {
     previewTitle.textContent = currentFormProfile.formTitle || DEFAULT_FORM_TITLE;
@@ -3025,6 +3330,11 @@ function renderFieldRail() {
     const fieldMeta = isContentBlock
       ? `${escapeHtml(meta.label)} block`
       : `${escapeHtml(meta.label)}`;
+    const visibilityLabel = getVisibilityLabel(field.visibleTo);
+    const mappingLabel = getFieldMappingLabel(field, {
+      isBuiltInStep: Boolean(field.isBaseField && BUILT_IN_STEP_MAP.has(field.id)),
+      semanticFieldId: field.semanticId || field.id
+    });
     return `
       <button
         class="field-rail-card ${field.isBaseField ? "is-built-in" : ""}"
@@ -3036,10 +3346,11 @@ function renderFieldRail() {
         <span class="field-rail-body">
           <span class="field-rail-tags">
             <span class="field-rail-tag is-${kindTone}">${kindLabel}</span>
+            <span class="field-rail-tag is-visibility">${escapeHtml(visibilityLabel)}</span>
             ${field.required ? `<span class="field-rail-tag is-required">Required</span>` : ""}
           </span>
           <span class="field-rail-title">${escapeHtml(field.label || field.title || "Field")}</span>
-          <span class="field-rail-meta">${fieldMeta}</span>
+          <span class="field-rail-meta">${fieldMeta} - Saves to ${escapeHtml(mappingLabel)}</span>
         </span>
         <span class="field-rail-grip" data-field-rail-grip aria-hidden="true">
           <span></span><span></span><span></span>
@@ -3777,6 +4088,7 @@ function renderBuilder() {
   updateStudioContextCard();
   applyMobileStudioScale();
   syncStudioEditorState();
+  syncPreviewModeChrome();
 }
 
 function closeEditor() {
@@ -4034,6 +4346,7 @@ function openFieldEditor(fieldId) {
           Supporting copy
           <textarea id="editor-block-copy" maxlength="160">${escapeHtml(step.helpText || "")}</textarea>
         </label>
+        ${buildFieldAudienceSettingsMarkup(step, { isContentBlock: true })}
         <div class="editor-inline-note">Use a direct image file link for the best results. If the host blocks hotlinking, the block will fall back to a placeholder.</div>
         <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
       `
@@ -4043,6 +4356,7 @@ function openFieldEditor(fieldId) {
             Divider label
             <input id="editor-block-caption" type="text" value="${escapeHtml(step.label || "")}" maxlength="40" placeholder="Optional section label">
           </label>
+          ${buildFieldAudienceSettingsMarkup(step, { isContentBlock: true })}
           <div class="editor-inline-note">Leave this blank if you want a clean divider line with no text.</div>
           <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
         `
@@ -4055,6 +4369,7 @@ function openFieldEditor(fieldId) {
             Body copy
             <textarea id="editor-block-copy" maxlength="240">${escapeHtml(step.helpText || step.copy || "")}</textarea>
           </label>
+          ${buildFieldAudienceSettingsMarkup(step, { isContentBlock: true })}
           <button id="editor-delete-field" class="delete-field-button" type="button">Delete this block</button>
         `;
 
@@ -4066,6 +4381,7 @@ function openFieldEditor(fieldId) {
     const imageUrlInput = document.getElementById("editor-block-image-url");
     const copyInput = document.getElementById("editor-block-copy");
     const deleteButton = document.getElementById("editor-delete-field");
+    bindFieldAudienceSettings(fieldId, step, { isContentBlock: true });
     const patchBlock = updates => {
       patchStepConfig(fieldId, updates);
       renderBuilder();
@@ -4104,6 +4420,7 @@ function openFieldEditor(fieldId) {
       Question title
       <input id="editor-field-label" type="text" value="${escapeHtml(step.label || "")}" maxlength="60">
     </label>
+    ${buildFieldAudienceSettingsMarkup(step, { isBuiltInStep, semanticFieldId })}
     ${isCustomField && !isMappedEssentialField ? `
       <label>
         Field type
@@ -4155,6 +4472,7 @@ function openFieldEditor(fieldId) {
   const optionsInput = document.getElementById("editor-field-options");
   const rememberInput = document.getElementById("editor-field-remember-answer");
   const deleteButton = document.getElementById("editor-delete-field");
+  bindFieldAudienceSettings(fieldId, step, { isBuiltInStep, semanticFieldId });
 
   const patchField = updates => {
     patchStepConfig(fieldId, updates);
@@ -5114,6 +5432,17 @@ statusBanner?.addEventListener("click", () => {
 });
 saveFormButton?.addEventListener("click", saveFormProfile);
 resetFormButton?.addEventListener("click", resetToSaved);
+previewPerspectiveButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    setPreviewPerspective(button.dataset.previewPerspective || "staff");
+  });
+});
+enterPreviewModeButton?.addEventListener("click", () => {
+  setPreviewOnlyMode(true);
+});
+exitPreviewModeButton?.addEventListener("click", () => {
+  setPreviewOnlyMode(false);
+});
 studioContextAction?.addEventListener("click", () => {
   const actionMode = studioContextAction.dataset.actionMode || "";
 
@@ -5282,6 +5611,10 @@ previewStepper?.addEventListener("click", event => {
 });
 
 previewStepper?.addEventListener("dragover", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   if (!dragPayload || !["step", "page-template"].includes(dragPayload.kind)) {
     return;
   }
@@ -5305,6 +5638,10 @@ previewStepper?.addEventListener("dragleave", event => {
 });
 
 previewStepper?.addEventListener("drop", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   if (!dragPayload) {
     return;
   }
@@ -5401,6 +5738,10 @@ previewStepHost?.addEventListener("click", event => {
     return;
   }
 
+  if (previewOnlyMode) {
+    return;
+  }
+
   const questionShellZone = event.target.closest("[data-question-shell-zone]");
 
   if (questionShellZone) {
@@ -5456,6 +5797,10 @@ previewStepHost?.addEventListener("click", event => {
   }
 });
 previewStepHost?.addEventListener("pointerdown", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const previewFieldControl = event.target.closest(".preview-field-control");
 
   if (!previewFieldControl) {
@@ -5484,6 +5829,10 @@ previewStepHost?.addEventListener("pointerdown", event => {
   openFieldEditor(fieldId);
 }, true);
 previewStepHost?.addEventListener("mouseover", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const zone = event.target.closest("[data-question-shell-zone]");
   if (!zone) {
     return;
@@ -5505,6 +5854,11 @@ previewStepHost?.addEventListener("mouseout", event => {
 });
 
 previewStepHost?.addEventListener("dragstart", event => {
+  if (previewOnlyMode) {
+    event.preventDefault();
+    return;
+  }
+
   const fieldCard = event.target.closest("[data-sortable-field-id]");
 
   if (!fieldCard) {
@@ -5523,6 +5877,10 @@ previewStepHost?.addEventListener("dragend", event => {
 });
 
 previewStepHost?.addEventListener("dragover", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const dropzone = event.target.closest("[data-drop-field-index]");
 
   if (!dropzone || !dragPayload || !["existing-field", "field-template", "essential-field-template"].includes(dragPayload.kind)) {
@@ -5534,6 +5892,10 @@ previewStepHost?.addEventListener("dragover", event => {
 });
 
 previewStepHost?.addEventListener("dragenter", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const dropzone = event.target.closest("[data-drop-field-index]");
 
   if (!dropzone || !dragPayload || !["existing-field", "field-template", "essential-field-template"].includes(dragPayload.kind)) {
@@ -5553,6 +5915,10 @@ previewStepHost?.addEventListener("dragleave", event => {
 });
 
 previewStepHost?.addEventListener("drop", event => {
+  if (previewOnlyMode) {
+    return;
+  }
+
   const dropzone = event.target.closest("[data-drop-field-index]");
 
   if (!dropzone || !dragPayload) {

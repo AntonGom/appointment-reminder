@@ -38,7 +38,7 @@ const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260429c";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260429c";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260429d";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -420,6 +420,31 @@ function getAllFormFieldIds() {
 
 function getCustomFieldConfig(fieldId) {
   return customFormFieldLookup.get(fieldId) || null;
+}
+
+function getFieldVisibility(field = {}) {
+  const visibility = String(field?.visibleTo || "both").trim();
+  return ["both", "staff", "client"].includes(visibility) ? visibility : "both";
+}
+
+function isFieldVisibleForStaff(field = {}) {
+  return getFieldVisibility(field) !== "client";
+}
+
+function shouldIncludeFieldInReminder(field = {}) {
+  return field?.includeInReminder !== false;
+}
+
+function shouldIncludeBuiltInAnswerInReminder(fieldId) {
+  const normalizedFieldId = String(fieldId || "").trim();
+  const mappedField = activeCustomFormFields.find(field => String(field?.semanticId || "").trim() === normalizedFieldId);
+
+  if (mappedField) {
+    return shouldIncludeFieldInReminder(mappedField);
+  }
+
+  const override = activeCustomFormProfile?.stepOverrides?.[normalizedFieldId] || {};
+  return override.includeInReminder !== false;
 }
 
 function getFormControlValue(element) {
@@ -1000,7 +1025,9 @@ function buildCustomFieldAnswerSnapshots() {
     const orderedFields = getOrderedFieldsForPage(step.id, includeBaseField ? step : null);
 
     orderedFields.forEach(field => {
-      if (BASE_FORM_FIELD_IDS.includes(field.id) || seenFieldIds.has(field.id) || isContentBlockFieldType(field.type)) {
+      const semanticFieldId = String(field.semanticId || "").trim();
+
+      if (BASE_FORM_FIELD_IDS.includes(field.id) || BASE_FORM_FIELD_IDS.includes(semanticFieldId) || seenFieldIds.has(field.id) || isContentBlockFieldType(field.type)) {
         return;
       }
 
@@ -1017,6 +1044,9 @@ function buildCustomFieldAnswerSnapshots() {
         field_id: String(field.id || "").trim(),
         label: String(field.label || field.title || "Custom Question").trim(),
         type: String(field.type || "text").trim(),
+        include_in_reminder: shouldIncludeFieldInReminder(field),
+        visible_to: getFieldVisibility(field),
+        save_target: String(field.saveTarget || "appointment_details").trim(),
         page_id: String(field.pageId || step.id || "").trim(),
         page_title: getFieldPageTitle(field, step),
         raw_value: String(rawValue || "").trim(),
@@ -2494,7 +2524,7 @@ function getOrderedActiveSteps() {
   const builtInSteps = BASE_FORM_FIELD_IDS.map(fieldId => {
     const defaults = BUILT_IN_FORM_STEP_DEFAULTS[fieldId];
     const override = profile.stepOverrides?.[fieldId] || {};
-    const baseFieldVisible = override.hidden !== true;
+    const baseFieldVisible = override.hidden !== true && isFieldVisibleForStaff(override);
 
     if (!baseFieldVisible && !inlinePageCounts[fieldId]) {
       return null;
@@ -2511,7 +2541,7 @@ function getOrderedActiveSteps() {
       helpText: override.helpText || defaults.helpText,
       placeholder: override.placeholder || defaults.placeholder,
       required: override.required === true,
-      baseFieldHidden: override.hidden === true,
+      baseFieldHidden: !baseFieldVisible,
       titleFontSize: override.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
       titleBold: override.titleBold !== false,
       copyFontSize: override.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
@@ -2682,7 +2712,7 @@ function applyBuiltInStepOverrides() {
 
     const override = activeCustomFormProfile?.stepOverrides?.[fieldId] || {};
     const inlineFields = getInlineCustomFieldsForPage(fieldId);
-    const baseFieldVisible = override.hidden !== true;
+    const baseFieldVisible = override.hidden !== true && isFieldVisibleForStaff(override);
     const shouldShowStep = baseFieldVisible || inlineFields.length > 0;
     const required = (baseFieldVisible && override.required === true) || inlineFields.some(field => field.required);
 
@@ -2975,7 +3005,9 @@ async function syncCustomFormFromUser(user = currentSignedInUser, options = {}) 
     }
 
     activeCustomFormProfile = normalizedProfile;
-    activeCustomFormFields = Array.isArray(activeCustomFormProfile.fields) ? activeCustomFormProfile.fields : [];
+    activeCustomFormFields = Array.isArray(activeCustomFormProfile.fields)
+      ? activeCustomFormProfile.fields.filter(isFieldVisibleForStaff)
+      : [];
     customFormFieldLookup = new Map(activeCustomFormFields.map(field => [field.id, field]));
     hideThankYouScreen();
     renderCustomWizardSteps();
@@ -2995,7 +3027,7 @@ async function syncCustomFormFromUser(user = currentSignedInUser, options = {}) 
 
 function buildCustomFieldMessageLines() {
   const lines = [];
-  buildCustomFieldAnswerSnapshots().forEach(answer => {
+  buildCustomFieldAnswerSnapshots().filter(answer => answer.include_in_reminder !== false).forEach(answer => {
     lines.push("");
 
     if (answer.type === "textarea") {
@@ -3025,19 +3057,19 @@ function generateMessage() {
   lines.push("");
   lines.push("This is a friendly reminder about your upcoming appointment.");
 
-  if (date) lines.push("Date: " + formatDate(date));
-  if (time) lines.push("Time: " + formatTime(time));
-  if (address) lines.push("Location: " + address);
+  if (date && shouldIncludeBuiltInAnswerInReminder("date")) lines.push("Date: " + formatDate(date));
+  if (time && shouldIncludeBuiltInAnswerInReminder("time")) lines.push("Time: " + formatTime(time));
+  if (address && shouldIncludeBuiltInAnswerInReminder("address")) lines.push("Location: " + address);
   lines.push(...buildCustomFieldMessageLines());
 
-  if (notes) {
+  if (notes && shouldIncludeBuiltInAnswerInReminder("notes")) {
     lines.push("");
     lines.push(`${getAppointmentNotesLabel()}:`);
     lines.push(notes);
   }
 
   lines.push("");
-  if (businessContact) {
+  if (businessContact && shouldIncludeBuiltInAnswerInReminder("businessContact")) {
     lines.push("If you need to reach us before your appointment, please contact us at " + businessContact + ".");
     lines.push("");
   }
