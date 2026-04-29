@@ -23,7 +23,7 @@ const FIELD_LIMITS = {
   name: { label: "Client Name", maxLength: 30 },
   phone: { label: "Client Phone Number", maxLength: 30 },
   address: { label: "Service Location", maxLength: 160 },
-  businessContact: { label: "Bussiness Contact Infoformation", maxLength: 60 }
+  businessContact: { label: "Business Contact Information", maxLength: 60 }
 };
 
 const PHONE_DIGIT_LIMIT = 10;
@@ -37,8 +37,8 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
-const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260403a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260416a";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260427a";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260425a";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -77,6 +77,8 @@ const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 180;
 const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 140;
 const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.9;
 const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.62;
+const PREVIEW_SCROLL_HINT_TEXT = "Scroll to review the rest of the message.";
+const PREVIEW_FALLBACK_HINT_TEXT = "We couldn't load the branded preview, so review this plain message before sending.";
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -111,6 +113,28 @@ let latestSignedInUserSyncInFlight = false;
 let liveFormFieldValueCache = new Map();
 let pendingReminderClientPrefill = null;
 let lastCustomFormSyncSignature = "";
+
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClient(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
+
+function setCustomFormLoading(isLoading) {
+  document.body.classList.toggle("custom-form-loading", Boolean(isLoading));
+  document.body.setAttribute("aria-busy", isLoading ? "true" : "false");
+}
 
 const BUILT_IN_FORM_STEP_DEFAULTS = {
   phone: {
@@ -168,10 +192,10 @@ const BUILT_IN_FORM_STEP_DEFAULTS = {
     required: false
   },
   businessContact: {
-    title: "Bussiness Contact Infoformation",
+    title: "Business Contact Information",
     navLabel: "Contact",
     copy: "This is the contact information your client will see in the reminder.",
-    label: "Bussiness Contact Infoformation",
+    label: "Business Contact Information",
     helpText: "Use the phone number or email the client should use if they need to reschedule or reach you.",
     placeholder: "Business phone or email",
     required: false
@@ -330,13 +354,7 @@ async function initAccountTierState() {
     }
 
     const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-    appSupabase = createClient(appPublicConfig.supabaseUrl, publicKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
+    appSupabase = getSharedSupabaseClient(appPublicConfig.supabaseUrl, publicKey, createClient);
 
     const {
       data: { session }
@@ -374,6 +392,8 @@ async function initAccountTierState() {
     currentUserTier = "free";
     renderBronzeFeatures();
     syncCustomFormFromUser(null);
+  } finally {
+    setCustomFormLoading(false);
   }
 }
 
@@ -1645,6 +1665,62 @@ function syncBronzePreviewScale() {
   shell.style.setProperty("--bronze-preview-height", `${scaledHeight}px`);
 }
 
+function showPlainReviewPreviewFallback(message, error) {
+  const preview = document.getElementById("preview");
+  const previewHint = document.getElementById("preview-hint");
+  const bronzePreviewShell = getBronzePreviewShell();
+  const bronzePreviewHint = getBronzePreviewHint();
+  const previewBodyShell = getPreviewBodyShell();
+  const reviewDraftCard = getReviewDraftCard();
+  const bronzePreviewEditorWrap = getBronzePreviewEditorWrap();
+  const frame = getBronzePreviewFrame();
+
+  if (error) {
+    console.warn("Unable to render branded email preview.", error);
+  }
+
+  if (frame) {
+    clearBronzePreviewContentWatchers(frame);
+    frame.onload = null;
+    frame.srcdoc = "";
+  }
+
+  if (preview) {
+    preview.hidden = false;
+    preview.readOnly = true;
+    preview.classList.remove("is-bronze-editor");
+    preview.value = message || getGeneratedReviewMessage();
+  }
+
+  if (bronzePreviewShell) {
+    bronzePreviewShell.hidden = true;
+  }
+
+  if (previewBodyShell) {
+    previewBodyShell.classList.remove("is-bronze");
+  }
+
+  if (reviewDraftCard) {
+    reviewDraftCard.classList.remove("is-bronze-compact");
+  }
+
+  if (bronzePreviewEditorWrap) {
+    bronzePreviewEditorWrap.classList.add("visible");
+  }
+
+  if (bronzePreviewHint) {
+    bronzePreviewHint.classList.remove("visible");
+    bronzePreviewHint.hidden = true;
+  }
+
+  updatePreviewLayout();
+
+  if (previewHint) {
+    previewHint.textContent = PREVIEW_FALLBACK_HINT_TEXT;
+    previewHint.classList.add("visible");
+  }
+}
+
 async function renderBronzeReviewPreview(message) {
   const frame = getBronzePreviewFrame();
 
@@ -1655,27 +1731,42 @@ async function renderBronzeReviewPreview(message) {
   clearBronzePreviewContentWatchers(frame);
 
   const currentToken = ++bronzePreviewRenderToken;
-  const module = await getBrandingTemplateModule();
+  let module;
+  let html;
 
-  if (currentToken !== bronzePreviewRenderToken) {
+  try {
+    module = await getBrandingTemplateModule();
+
+    if (currentToken !== bronzePreviewRenderToken) {
+      return;
+    }
+
+    html = module.buildReminderEmailHtml({
+      message,
+      calendarLinks: buildReviewPreviewCalendarLinks(message),
+      brandingProfile: getSavedBrandingProfile(),
+      previewMode: true
+    });
+  } catch (error) {
+    if (currentToken === bronzePreviewRenderToken) {
+      showPlainReviewPreviewFallback(message, error);
+    }
     return;
   }
-
-  const html = module.buildReminderEmailHtml({
-    message,
-    calendarLinks: buildReviewPreviewCalendarLinks(message),
-    brandingProfile: getSavedBrandingProfile(),
-    previewMode: true
-  });
 
   frame.onload = () => {
     if (currentToken !== bronzePreviewRenderToken) {
       return;
     }
 
-    const frameDocument = frame.contentDocument;
+    try {
+      const frameDocument = frame.contentDocument;
+      const frameWindow = frame.contentWindow;
 
-    if (frameDocument) {
+      if (!frameDocument || !frameWindow) {
+        throw new Error("Branded preview frame did not load.");
+      }
+
       const styleTag = frameDocument.createElement("style");
       styleTag.textContent = `
         html, body {
@@ -1730,15 +1821,19 @@ async function renderBronzeReviewPreview(message) {
           }
         }).catch(() => {});
       }
-    }
 
-    refreshBronzePreviewObservers();
-    frameWindow.requestAnimationFrame(() => {
+      refreshBronzePreviewObservers();
       frameWindow.requestAnimationFrame(() => {
-        syncBronzePreviewScale();
+        frameWindow.requestAnimationFrame(() => {
+          syncBronzePreviewScale();
+        });
       });
-    });
-    scheduleBronzePreviewScaleBurst();
+      scheduleBronzePreviewScaleBurst();
+    } catch (error) {
+      if (currentToken === bronzePreviewRenderToken) {
+        showPlainReviewPreviewFallback(message, error);
+      }
+    }
   };
   frame.srcdoc = html;
   scheduleBronzePreviewScaleBurst();
@@ -1793,6 +1888,10 @@ function updateReviewPreview() {
       bronzePreviewHint.hidden = true;
     }
 
+    if (previewHint) {
+      previewHint.textContent = PREVIEW_SCROLL_HINT_TEXT;
+    }
+
     updatePreviewLayout();
     return;
   }
@@ -1820,6 +1919,7 @@ function updateReviewPreview() {
   }
 
   if (previewHint) {
+    previewHint.textContent = PREVIEW_SCROLL_HINT_TEXT;
     previewHint.classList.remove("visible");
   }
 

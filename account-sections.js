@@ -22,6 +22,23 @@ let appConfig = null;
 let runtimeConfig = null;
 let currentAuthUserId = "";
 
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClientFn(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
+
 function setStatus(message, type = "info") {
   if (!statusBanner) {
     return;
@@ -338,13 +355,7 @@ async function initPage() {
     return;
   }
 
-  supabase = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
+  supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
   const {
     data: { session }

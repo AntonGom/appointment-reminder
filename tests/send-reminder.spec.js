@@ -86,6 +86,97 @@ test.describe("Send Reminder", () => {
     await expect(page.locator("#preview")).toBeHidden();
   });
 
+  test("renders the bronze branded preview with the latest appointment data", async ({ page }) => {
+    const consoleErrors = [];
+    page.on("console", message => {
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
+    });
+
+    await page.goto("/index.html");
+    await setSignedInUser(page, createBronzeUser({
+      user_metadata: {
+        branding_profile: {
+          brandingEnabled: true,
+          businessName: "Pink Paws Grooming",
+          templateStyle: "signature",
+          headerLabel: "Pet grooming reminder",
+          headerColor: "#ec4899",
+          secondaryColor: "#fbcfe8",
+          heroGradientColor: "#f9a8d4",
+          heroGradientStyle: "solid",
+          heroTextColor: "#ffffff",
+          contactEmail: "hello@pinkpaws.example"
+        }
+      }
+    }));
+
+    await page.evaluate(() => {
+      document.getElementById("name").value = "Ava Johnson";
+      document.getElementById("email").value = "ava@example.com";
+      document.getElementById("date").value = "2026-05-08";
+      document.getElementById("time").value = "10:30";
+      document.getElementById("address").value = "245 Rosebud Lane, Miami, FL 33131";
+      document.getElementById("notes").value = "Please bring Bella's vaccination records.";
+      refreshFormState();
+    });
+    await goToReviewStep(page);
+
+    const previewBody = page.frameLocator("#bronze-preview-frame").locator("body");
+
+    await expect(page.locator("#bronze-preview-shell")).toBeVisible();
+    await expect(previewBody).toContainText("Pink Paws Grooming");
+    await expect(previewBody).toContainText("Hello Ava Johnson,");
+    await expect(previewBody).toContainText("05/08/2026");
+    await expect(previewBody).toContainText("10:30 AM");
+    await expect(previewBody).toContainText("245 Rosebud Lane, Miami, FL 33131");
+    expect(consoleErrors.join("\n")).not.toContain("index is not defined");
+  });
+
+  test("falls back to the plain review message if the branded preview cannot render", async ({ page }) => {
+    const pageErrors = [];
+    page.on("pageerror", error => {
+      pageErrors.push(error.message);
+    });
+
+    await page.goto("/index.html");
+    await setSignedInUser(page, createBronzeUser({
+      user_metadata: {
+        branding_profile: {
+          brandingEnabled: true,
+          businessName: "Pink Paws Grooming",
+          templateStyle: "signature",
+          contactEmail: "hello@pinkpaws.example"
+        }
+      }
+    }));
+
+    await page.evaluate(() => {
+      window.eval(`
+        brandingTemplateModulePromise = Promise.resolve({
+          buildReminderEmailHtml() {
+            throw new Error("Preview exploded");
+          }
+        });
+      `);
+      document.getElementById("name").value = "Ava Johnson";
+      document.getElementById("email").value = "ava@example.com";
+      document.getElementById("date").value = "2026-05-08";
+      document.getElementById("time").value = "10:30";
+      document.getElementById("address").value = "245 Rosebud Lane, Miami, FL 33131";
+      refreshFormState();
+    });
+    await goToReviewStep(page);
+
+    await expect(page.locator("#preview")).toBeVisible();
+    await expect(page.locator("#preview")).toHaveValue(/Hello Ava Johnson,/);
+    await expect(page.locator("#preview")).toHaveValue(/245 Rosebud Lane, Miami, FL 33131/);
+    await expect(page.locator("#bronze-preview-shell")).toBeHidden();
+    await expect(page.locator("#preview-hint")).toContainText("plain message");
+    expect(pageErrors).toEqual([]);
+  });
+
   test("falls back to the standard preview when bronze branding is turned off", async ({ page }) => {
     await page.goto("/index.html");
 

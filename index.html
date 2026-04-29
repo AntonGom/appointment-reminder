@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Appointment Reminder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="nav.css?v=20260417a">
+  <link rel="stylesheet" href="nav.css?v=20260427a">
 
   <style>
     :root {
@@ -94,6 +94,31 @@
     .wizard-shell {
       position: relative;
       z-index: 1;
+    }
+
+    body.custom-form-loading .wizard-shell {
+      visibility: hidden;
+    }
+
+    body.custom-form-loading .container {
+      min-height: 420px;
+    }
+
+    body.custom-form-loading .container::before {
+      content: "Preparing your form...";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      height: auto;
+      padding: 28px;
+      color: var(--text-soft);
+      background: var(--card-background, var(--card));
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0;
+      opacity: 1;
     }
 
     .section-title {
@@ -2048,7 +2073,7 @@
   </style>
 </head>
 
-<body data-page="home">
+<body data-page="home" class="custom-form-loading" aria-busy="true">
 
 <div class="container">
   <div class="wizard-shell">
@@ -2128,9 +2153,9 @@
       </div>
     </div>
 
-    <div class="wizard-step" data-title="Bussiness Contact Infoformation" data-nav="Contact" data-field="businessContact" data-copy="This is the contact information your client will see in the reminder." data-optional="true">
+    <div class="wizard-step" data-title="Business Contact Information" data-nav="Contact" data-field="businessContact" data-copy="This is the contact information your client will see in the reminder." data-optional="true">
       <div class="question-wrap wide-wrap">
-        <label for="businessContact">Bussiness Contact Infoformation <span class="label-badge">Optional</span></label>
+        <label for="businessContact">Business Contact Information <span class="label-badge">Optional</span></label>
         <input id="businessContact" placeholder="Business phone or email">
         <div id="businessContact-error" class="field-error"></div>
         <p class="field-note visible">Use the phone number or email the client should use if they need to reschedule or reach you.</p>
@@ -2271,8 +2296,8 @@
   </div>
 </div>
 
-<script src="app.js?v=20260416d"></script>
-<script src="nav.js?v=20260331c"></script>
+  <script src="app.js?v=20260429a"></script>
+  <script src="nav.js?v=20260427a"></script>
 
 </body>
 </html>

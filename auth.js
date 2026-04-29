@@ -7,6 +7,23 @@ const signInForm = document.getElementById("sign-in-form");
 
 let supabase = null;
 
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClientFn(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
+
 function setStatus(message, type = "info") {
   if (!statusBanner) {
     return;
@@ -66,15 +83,17 @@ function goToClientDetails() {
 async function handleSignUp(event) {
   event.preventDefault();
 
+  const form = event.currentTarget;
+
   if (!supabase) {
     setStatus("Accounts are not configured yet.", "error");
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
-  const button = event.currentTarget.querySelector("button[type='submit']");
+  const button = form.querySelector("button[type='submit']");
 
   setButtonBusy(button, true, "Creating account...");
   setStatus("");
@@ -109,7 +128,7 @@ async function handleSignUp(event) {
     }
 
     setStatus("Account created. Check your email to confirm your account, then sign in.", "success");
-    event.currentTarget.reset();
+    form.reset();
   } catch (error) {
     setStatus(error.message || "Unable to create your account.", "error");
   } finally {
@@ -120,15 +139,17 @@ async function handleSignUp(event) {
 async function handleSignIn(event) {
   event.preventDefault();
 
+  const form = event.currentTarget;
+
   if (!supabase) {
     setStatus("Accounts are not configured yet.", "error");
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
-  const button = event.currentTarget.querySelector("button[type='submit']");
+  const button = form.querySelector("button[type='submit']");
 
   setButtonBusy(button, true, "Signing in...");
   setStatus("");
@@ -163,13 +184,7 @@ async function initAuthPage() {
       return;
     }
 
-    supabase = createClient(config.supabaseUrl, config.supabasePublishableKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
+  supabase = getSharedSupabaseClient(config.supabaseUrl, config.supabasePublishableKey, createClient);
 
     const {
       data: { session }

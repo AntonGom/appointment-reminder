@@ -975,7 +975,7 @@ function buildProductionBrandedEmail({ message, calendarLinks, branding, include
   const detailsHtml = parsed.details ? buildProductionDetails(parsed.details, branding, includePreviewStyles) : "";
   const hasHeroArt = shouldRenderHeroArt(branding);
   const bodyHtml = parsed.body.length
-    ? parsed.body.map(paragraph => `
+    ? parsed.body.map((paragraph, index) => `
         <tr>
           <td${includePreviewStyles ? ` data-review-edit="body-paragraph" data-review-index="${index}"` : ""} style="padding:0 0 12px;font-size:15px;line-height:1.7;${paintTextColor(bodyTextColor)}">
             ${escapeHtml(paragraph)}

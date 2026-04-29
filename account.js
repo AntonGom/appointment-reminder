@@ -64,6 +64,24 @@ let statusBannerTimer = 0;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
+
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClientFn(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
+
 const CLIENT_EXPORT_COLUMNS = [
   "id",
   "client_name",
@@ -2327,11 +2345,13 @@ function renderSavedClients() {
             const displayName = client.client_name || "Saved client";
             const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
             const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
+            const addressLabel = String(client.service_address || "").trim();
 
             return `
               <tr class="client-summary-row" data-client-row data-client-id="${client.id}">
                 <td>
                   <strong>${escapeHtml(displayName)}</strong>
+                  ${addressLabel ? `<span class="client-location-snippet">${escapeHtml(addressLabel)}</span>` : ""}
                 </td>
                 <td>${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</td>
                 <td>${phoneLabel ? escapeHtml(phoneLabel) : `<span class="table-muted">Not added</span>`}</td>
@@ -2355,11 +2375,16 @@ function renderSavedClients() {
         const displayName = client.client_name || "Saved client";
         const updatedLabel = formatSavedDate(client.updated_at || client.created_at);
         const phoneLabel = client.client_phone ? formatPhone(client.client_phone) : "";
+        const addressLabel = String(client.service_address || "").trim();
 
         return `
           <div class="client-mobile-card" data-client-row data-client-id="${client.id}">
             <h4 class="client-mobile-title">${escapeHtml(displayName)}</h4>
             <div class="client-mobile-grid">
+              <div class="client-mobile-row">
+                <div class="client-mobile-label">Address</div>
+                <div class="client-mobile-value">${addressLabel ? escapeHtml(addressLabel) : `<span class="table-muted">Not added</span>`}</div>
+              </div>
               <div class="client-mobile-row">
                 <div class="client-mobile-label">Email</div>
                 <div class="client-mobile-value">${client.client_email ? escapeHtml(client.client_email) : `<span class="table-muted">Not added</span>`}</div>
@@ -2696,13 +2721,7 @@ async function initSupabase() {
 
   setAuthFormsEnabled(true);
 
-  supabase = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
+  supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
   const {
     data: { session }
@@ -2730,16 +2749,18 @@ async function initSupabase() {
 async function handleSignUp(event) {
   event.preventDefault();
 
+  const form = event.currentTarget;
+
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
     setClientFormStatus("Accounts are not configured yet.", "error");
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
-  const button = event.currentTarget.querySelector("button[type='submit']");
+  const button = form.querySelector("button[type='submit']");
 
   setButtonBusy(button, true, "Creating account...");
   setStatus("");
@@ -2783,15 +2804,17 @@ async function handleSignUp(event) {
 async function handleSignIn(event) {
   event.preventDefault();
 
+  const form = event.currentTarget;
+
   if (!supabase) {
     setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
-  const button = event.currentTarget.querySelector("button[type='submit']");
+  const button = form.querySelector("button[type='submit']");
 
   setButtonBusy(button, true, "Signing in...");
   setStatus("");
@@ -2807,7 +2830,7 @@ async function handleSignIn(event) {
     }
 
     setStatus("Signed in successfully.", "success");
-    event.currentTarget.reset();
+    form.reset();
   } catch (error) {
     setStatus(error.message || "Unable to sign in.", "error");
   } finally {

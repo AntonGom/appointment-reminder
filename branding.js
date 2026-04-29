@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260402w";
+} from "./branding-templates.js?v=20260427a";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -52,6 +52,23 @@ const BRANDING_PREVIEW_WIDTH = 664;
 const BRANDING_PREVIEW_MAX_HEIGHT_MOBILE = 340;
 const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
 const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
+
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClientFn(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
 
 const fieldIds = {
   templateStyle: "branding-template-style",
@@ -2955,13 +2972,7 @@ async function initBrandingPage() {
     return;
   }
 
-  supabase = createClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
+  supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
   const {
     data: { session }

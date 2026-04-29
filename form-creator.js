@@ -55,7 +55,7 @@ import {
   getBackgroundPresetMatch,
   isDefaultRememberedClientField,
   isContentBlockType
-} from "./custom-form-profile.js?v=20260416a";
+} from "./custom-form-profile.js?v=20260425a";
 
 const OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS = new Set(["notes"]);
 
@@ -158,6 +158,23 @@ let mobileStudioExpandedState = { kind: "preset", size: "balanced" };
 let suppressNextMobileStudioHandleClick = false;
 let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
+
+function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
+  const clientKey = `${supabaseUrl}::${publicKey}`;
+  window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+  if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+    window.__appointmentReminderSupabaseClients.set(clientKey, createClientFn(supabaseUrl, publicKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    }));
+  }
+
+  return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
 
 const MOBILE_STUDIO_BREAKPOINT = 1040;
 const MOBILE_CANVAS_WIDTH = 560;
@@ -5041,13 +5058,7 @@ async function init() {
     return;
   }
 
-  supabase = createClient(appConfig.supabaseUrl, publicKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
+  supabase = getSharedSupabaseClient(appConfig.supabaseUrl, publicKey, createClient);
 
   const {
     data: { session }

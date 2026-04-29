@@ -454,6 +454,14 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#previous-list")).toContainText("Ava Buyer");
     await expect(page.locator("#all-appointments-list")).toContainText("Jordan Fade");
 
+    await page.locator("#all-appointments-list").getByText("Jordan Fade").click();
+    await expect(page.locator("#appointment-detail-modal")).toBeVisible();
+    await expect(page.locator("#appointment-detail-body")).toContainText("12 Barber Lane");
+    await expect(page.locator("#appointment-detail-body")).toContainText("Fade with beard trim");
+    await expect(page.locator("#appointment-detail-body")).toContainText("Email");
+    await page.locator("#close-appointment-detail-button").click();
+    await expect(page.locator("#appointment-detail-modal")).toBeHidden();
+
     await page.locator("#calendar-month-view").click();
     await expect(page.locator("#calendar-month-shell")).toBeVisible();
     await expect(page.locator("#calendar-week-shell")).toBeHidden();

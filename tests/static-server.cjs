@@ -58,6 +58,17 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (pathname === "/api/runtime-env") {
+    sendJson(response, 200, {
+      label: "DEV",
+      env: "preview",
+      branch: "codex-qa",
+      version: "20260429.1",
+      commitSha: "testsha"
+    });
+    return;
+  }
+
   if (pathname === "/api/calendar-ics") {
     response.writeHead(200, {
       "Content-Type": "text/calendar; charset=utf-8",

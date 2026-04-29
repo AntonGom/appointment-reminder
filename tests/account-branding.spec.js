@@ -380,6 +380,18 @@ async function stubModulePages(page, seedState) {
   });
 }
 
+async function goToReviewStep(page) {
+  await page.waitForFunction(() => typeof setStep === "function");
+  await page.evaluate(() => {
+    const reviewIndex = Array.from(document.querySelectorAll(".wizard-step"))
+      .findIndex(step => step.dataset.field === "consent" || step.dataset.nav === "Review");
+
+    if (reviewIndex >= 0) {
+      setStep(reviewIndex, "forward");
+    }
+  });
+}
+
 test.describe("Branding and Client Details", () => {
   test("branding toggle and saved colors persist after reload", async ({ page }) => {
     const seed = createSupabaseSeed({
@@ -431,6 +443,96 @@ test.describe("Branding and Client Details", () => {
     await expect(page.locator("#branding-business-name")).toHaveValue("Clip House Studio");
     await expect(page.locator("#branding-header-color")).toHaveValue("#224466");
     await expect(page.locator("#branding-enabled")).not.toBeChecked();
+  });
+
+  test("saved branding email toggle controls the Send Reminder branded preview", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          branding_profile: {
+            brandingEnabled: false,
+            businessName: "Northline Realty",
+            templateStyle: "signature",
+            headerColor: "#123456",
+            accentColor: "#123456",
+            contactEmail: "hello@northline.example"
+          }
+        }
+      })
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/branding.html");
+
+    await expect(page.locator("#branding-enabled")).not.toBeChecked();
+    await page.locator("#branding-enabled").check();
+    await page.evaluate(() => {
+      const businessName = document.getElementById("branding-business-name");
+      const headerColor = document.getElementById("branding-header-color");
+      const headerHex = document.getElementById("branding-header-hex");
+
+      businessName.value = "Northline Realty Group";
+      headerColor.value = "#224466";
+      headerHex.value = "#224466";
+
+      businessName.dispatchEvent(new Event("input", { bubbles: true }));
+      headerColor.dispatchEvent(new Event("input", { bubbles: true }));
+      headerColor.dispatchEvent(new Event("change", { bubbles: true }));
+      headerHex.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.locator("#save-branding-button").click();
+
+    await page.waitForFunction(key => {
+      const state = JSON.parse(window.localStorage.getItem(key) || "{}");
+      const profile = state?.user?.user_metadata?.branding_profile || {};
+      return profile.brandingEnabled === true
+        && profile.businessName === "Northline Realty Group"
+        && profile.headerColor === "#224466";
+    }, SUPABASE_STATE_KEY);
+
+    await page.goto("/index.html");
+    await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
+    await goToReviewStep(page);
+
+    await expect(page.locator("#bronze-preview-shell")).toBeVisible();
+    await expect(page.locator("#preview")).toBeHidden();
+    await expect(page.frameLocator("#bronze-preview-frame").locator("body")).toContainText("Northline Realty Group");
+  });
+
+  test("adding and editing a client persists saved contact details", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/client-details.html");
+
+    await expect(page.locator("#clients-list")).toContainText("No contacts saved yet.");
+    await page.locator("#open-add-client-button").click();
+    await expect(page.locator("#client-modal")).toBeVisible();
+
+    await page.locator("#client-name").fill("Casey Seller");
+    await page.locator("#client-email").fill("casey@example.com");
+    await page.locator("#client-phone").fill("(305) 555-0199");
+    await page.locator("#client-address").fill("44 Listing Lane");
+    await page.locator("#client-notes").fill("Prefers afternoon showings.");
+    await page.locator("#save-client-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Contact saved");
+    await expect(page.locator("#clients-list")).toContainText("Casey Seller");
+
+    await page.locator("#clients-list").locator('[data-action="edit"]').first().click();
+    await expect(page.locator("#client-modal")).toBeVisible();
+    await page.locator("#client-address").fill("88 Updated Ave");
+    await page.locator("#client-notes").fill("Use side gate for inspections.");
+    await page.locator("#save-client-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Contact updated");
+    await expect(page.locator("#clients-list")).toContainText("88 Updated Ave");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.clients).toHaveLength(1);
+    expect(state.tables.clients[0].client_name).toBe("Casey Seller");
+    expect(state.tables.clients[0].client_email).toBe("casey@example.com");
+    expect(state.tables.clients[0].client_phone).toBe("3055550199");
+    expect(state.tables.clients[0].service_address).toBe("88 Updated Ave");
+    expect(state.tables.clients[0].notes).toBe("Use side gate for inspections.");
   });
 
   test("exporting and reimporting clients updates matching ids without creating duplicates", async ({ page }) => {

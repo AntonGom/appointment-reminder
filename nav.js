@@ -79,6 +79,23 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSignedIn = false;
   let currentAuthUserId = "";
 
+  function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
+    const clientKey = `${supabaseUrl}::${publicKey}`;
+    window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
+
+    if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
+      window.__appointmentReminderSupabaseClients.set(clientKey, createClient(supabaseUrl, publicKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      }));
+    }
+
+    return window.__appointmentReminderSupabaseClients.get(clientKey);
+  }
+
   function closeNav() {
     nav.classList.remove("open");
     overlay.classList.remove("open");
@@ -129,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const hint = document.createElement("p");
       hint.className = "account-page-nav-hint";
       hint.innerHTML = `
-        <span class="account-page-nav-hint-icon" aria-hidden="true">↔</span>
+        <span class="account-page-nav-hint-icon" aria-hidden="true">&harr;</span>
         <span>Swipe to see more pages</span>
       `;
       shell.appendChild(hint);
@@ -264,15 +281,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  function showBadge(label) {
-    const normalized = String(label || "").trim().toLowerCase();
+  function showBadge(payload) {
+    const badgeData = typeof payload === "object" && payload ? payload : { label: payload };
+    const normalized = String(badgeData.label || "").trim().toLowerCase();
     const isDev = normalized === "qa" || normalized === "dev";
+    const displayLabel = normalized === "production" ? "Production" : isDev ? "DEV" : "Local";
+    const version = String(badgeData.version || "").trim();
+    const commitSha = String(badgeData.commitSha || badgeData.commit || "").trim().slice(0, 7);
 
     if (!normalized) {
       return;
     }
 
-    envBadge.textContent = normalized === "production" ? "Production" : isDev ? "DEV" : "Local";
+    envBadge.innerHTML = "";
+    const labelNode = document.createElement("span");
+    labelNode.className = "env-badge-label";
+    labelNode.textContent = displayLabel;
+    envBadge.appendChild(labelNode);
+
+    if (version) {
+      const versionNode = document.createElement("span");
+      versionNode.className = "env-badge-version";
+      versionNode.textContent = `v${version}`;
+      envBadge.appendChild(versionNode);
+    }
+
+    envBadge.title = [displayLabel, version ? `v${version}` : "", commitSha ? `commit ${commitSha}` : ""]
+      .filter(Boolean)
+      .join(" • ");
     envBadge.classList.remove("qa", "production", "local");
     envBadge.classList.add(normalized === "production" ? "production" : isDev ? "qa" : "local");
     envBadge.hidden = false;
@@ -354,13 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-      supabaseClient = createClient(config.supabaseUrl, config.supabasePublishableKey, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-          detectSessionInUrl: true
-        }
-      });
+      supabaseClient = getSharedSupabaseClient(config.supabaseUrl, config.supabasePublishableKey, createClient);
 
       const {
         data: { session }
@@ -405,10 +435,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const data = await response.json();
-      showBadge(data.label);
+      showBadge(data);
     } catch (error) {
       if (window.location.hostname.includes("git-codex-qa")) {
-        showBadge("QA");
+        showBadge({ label: "QA", version: "unknown" });
       }
     }
   }
