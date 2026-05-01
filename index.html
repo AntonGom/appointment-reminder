@@ -116,17 +116,28 @@
 
     @keyframes form-color-bloom {
       0% {
-        filter: saturate(0.42) brightness(0.74);
-        transform: scale(0.984);
-      }
-
-      62% {
-        filter: saturate(1.14) brightness(1.04);
-        transform: scale(1.008);
+        opacity: 0.62;
+        filter: saturate(0.55) brightness(0.78);
+        transform: scale(0.968);
       }
 
       100% {
+        opacity: 1;
         filter: saturate(1) brightness(1);
+        transform: scale(1);
+      }
+    }
+
+    @keyframes form-loading-content-reveal {
+      0% {
+        opacity: 0;
+        filter: blur(8px);
+        transform: scale(0.972);
+      }
+
+      100% {
+        opacity: 1;
+        filter: blur(0);
         transform: scale(1);
       }
     }
@@ -154,7 +165,7 @@
       opacity: 1;
       filter: blur(0) brightness(1) saturate(1);
       transform: scale(1);
-      transition: opacity 0.72s ease, filter 0.72s ease, transform 0.72s cubic-bezier(0.2, 0.82, 0.2, 1);
+      transition: opacity 0.68s ease, filter 0.68s ease, transform 0.68s cubic-bezier(0.2, 0.82, 0.2, 1);
     }
 
     body.custom-form-loading .container {
@@ -163,7 +174,14 @@
 
     body.custom-form-loading-exiting .container,
     body.custom-form-loaded .container {
-      animation: form-color-bloom 0.78s cubic-bezier(0.2, 0.82, 0.2, 1);
+      animation: form-color-bloom 0.68s cubic-bezier(0.2, 0.82, 0.2, 1);
+      transform-origin: center center;
+    }
+
+    body.custom-form-loading-exiting .wizard-head.is-step-motion-head,
+    body.custom-form-loading-exiting .wizard-step.active .question-wrap {
+      animation: form-loading-content-reveal 0.56s ease both !important;
+      transform-origin: center center;
     }
 
     .form-loading-overlay {
