@@ -708,6 +708,62 @@ test.describe("Branding and Client Details", () => {
     expect(JSON.stringify(exported.clients[0].profile_custom_answers || {})).toContain("Milo");
   });
 
+  test("use client opens Send Reminder with mapped contact and remembered answers", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          custom_form_profile: {
+            isEnabled: true,
+            fields: [
+              {
+                id: "custom_pet_name",
+                type: "text",
+                title: "Pet Name",
+                label: "Pet Name",
+                navLabel: "Pet",
+                placeholder: "Enter pet name",
+                rememberClientAnswer: true
+              }
+            ]
+          }
+        }
+      }),
+      clients: [
+        {
+          id: "client_use_1",
+          owner_id: "bronze_user_1",
+          client_name: "Riley Booker",
+          client_email: "riley@example.com",
+          client_phone: "3055550101",
+          service_address: "88 Palm Avenue",
+          profile_custom_answers: {
+            custom_pet_name: {
+              field_id: "custom_pet_name",
+              label: "Pet Name",
+              value: "Luna",
+              raw_value: "Luna",
+              display_value: "Luna",
+              type: "text"
+            }
+          }
+        }
+      ]
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/client-details.html");
+    await expect(page.locator("#clients-list")).toContainText("Riley Booker");
+    await page.locator('.clients-table [data-action="use"][data-client-id="client_use_1"]').click();
+
+    await expect(page).toHaveURL(/index\.html.*prefillClientId=client_use_1/);
+    await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
+    await expect(page.locator("#name")).toHaveValue("Riley Booker");
+    await expect(page.locator("#email")).toHaveValue("riley@example.com");
+    await expect(page.locator("#phone")).toHaveValue("(305) 555-0101");
+    await expect(page.locator("#address")).toHaveValue("88 Palm Avenue");
+    await expect(page.locator("#custom_pet_name")).toHaveValue("Luna");
+  });
+
   test("deleting a client removes only the targeted record even when another client shares the email", async ({ page }) => {
     const seed = createSupabaseSeed({
       clients: [

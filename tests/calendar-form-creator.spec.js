@@ -552,6 +552,57 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#form-enabled-toggle")).not.toBeChecked();
   });
 
+  test("saving the form prunes deleted remembered client answers", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          custom_form_profile: {
+            isEnabled: true,
+            fields: [
+              {
+                id: "custom_pet_name",
+                type: "text",
+                label: "Pet Name",
+                navLabel: "Pet",
+                rememberClientAnswer: true
+              }
+            ]
+          }
+        }
+      }),
+      clients: [
+        {
+          id: "client_cleanup_1",
+          owner_id: "bronze_user_1",
+          client_name: "Milo Paws",
+          profile_custom_answers: {
+            custom_pet_name: {
+              field_id: "custom_pet_name",
+              value: "Milo",
+              raw_value: "Milo",
+              display_value: "Milo"
+            },
+            custom_deleted_field: {
+              field_id: "custom_deleted_field",
+              value: "Old value",
+              raw_value: "Old value",
+              display_value: "Old value"
+            }
+          }
+        }
+      ]
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/form-creator.html");
+    await page.locator("#save-form-button").click();
+    await expect(page.locator("#status-banner")).toContainText("Form saved");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.clients[0].profile_custom_answers.custom_pet_name.value).toBe("Milo");
+    expect(state.tables.clients[0].profile_custom_answers.custom_deleted_field).toBeUndefined();
+  });
+
   test("deleted built-in essentials can be added back from the toolbar", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/form-creator.html");

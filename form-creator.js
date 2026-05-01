@@ -1267,6 +1267,100 @@ function getEssentialFields(stepId) {
   return getCustomFields().filter(field => String(field.semanticId || "").trim() === String(stepId || "").trim());
 }
 
+function isSupabaseMissingColumnError(error, columnName) {
+  if (!error || !columnName) {
+    return false;
+  }
+
+  const message = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
+  return message.includes(String(columnName).toLowerCase()) && (
+    message.includes("column") ||
+    message.includes("schema cache") ||
+    message.includes("could not find")
+  );
+}
+
+function getRememberedClientProfileFieldIds(profile) {
+  const normalized = normalizeCustomFormProfile(profile);
+  return new Set((Array.isArray(normalized.fields) ? normalized.fields : [])
+    .filter(field => field?.rememberClientAnswer === true && !isContentBlockType(field.type))
+    .map(field => String(field.id || "").trim())
+    .filter(Boolean));
+}
+
+function normalizeClientProfileAnswersForCleanup(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce((answers, [fieldId, rawAnswer]) => {
+    const normalizedFieldId = String(rawAnswer?.field_id || fieldId || "").trim();
+    const displayValue = String(rawAnswer?.display_value ?? rawAnswer?.raw_value ?? rawAnswer?.value ?? "").trim();
+
+    if (!normalizedFieldId || !displayValue) {
+      return answers;
+    }
+
+    answers[normalizedFieldId] = {
+      ...rawAnswer,
+      field_id: normalizedFieldId,
+      display_value: displayValue,
+      raw_value: String(rawAnswer?.raw_value ?? rawAnswer?.value ?? displayValue).trim(),
+      value: String(rawAnswer?.value ?? rawAnswer?.raw_value ?? displayValue).trim()
+    };
+    return answers;
+  }, {});
+}
+
+async function pruneRememberedClientAnswersForProfile(profile) {
+  if (!supabase || !currentUser?.id) {
+    return;
+  }
+
+  const rememberedFieldIds = getRememberedClientProfileFieldIds(profile);
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, profile_custom_answers")
+    .eq("owner_id", currentUser.id);
+
+  if (error) {
+    if (isSupabaseMissingColumnError(error, "profile_custom_answers")) {
+      return;
+    }
+
+    throw error;
+  }
+
+  const cleanupUpdates = (Array.isArray(data) ? data : [])
+    .map(client => {
+      const currentAnswers = normalizeClientProfileAnswersForCleanup(client?.profile_custom_answers);
+      const nextAnswers = Object.fromEntries(
+        Object.entries(currentAnswers).filter(([fieldId]) => rememberedFieldIds.has(fieldId))
+      );
+
+      return JSON.stringify(currentAnswers) === JSON.stringify(nextAnswers)
+        ? null
+        : { id: client.id, profile_custom_answers: nextAnswers };
+    })
+    .filter(Boolean);
+
+  for (const update of cleanupUpdates) {
+    const { error: updateError } = await supabase
+      .from("clients")
+      .update({ profile_custom_answers: update.profile_custom_answers })
+      .eq("id", update.id)
+      .eq("owner_id", currentUser.id);
+
+    if (updateError) {
+      if (isSupabaseMissingColumnError(updateError, "profile_custom_answers")) {
+        return;
+      }
+
+      throw updateError;
+    }
+  }
+}
+
 function isBuiltInStepHidden(stepId) {
   return currentFormProfile.stepOverrides?.[stepId]?.hidden === true;
 }
@@ -5407,6 +5501,12 @@ async function saveFormProfile(options = {}) {
 
     if (error) {
       throw error;
+    }
+
+    try {
+      await pruneRememberedClientAnswersForProfile(normalized);
+    } catch (cleanupError) {
+      console.warn("Unable to clean up deleted remembered client answers.", cleanupError);
     }
 
     currentUser = data.user || currentUser;

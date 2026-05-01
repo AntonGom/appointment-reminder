@@ -63,7 +63,7 @@ const server = http.createServer((request, response) => {
       label: "DEV",
       env: "preview",
       branch: "codex-qa",
-      version: "20260429.10",
+      version: "20260501.1",
       commitSha: "testsha"
     });
     return;
