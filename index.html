@@ -1007,11 +1007,16 @@
     }
 
     .review-panel {
-      padding: 16px;
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.82));
-      border: 1px solid rgba(255, 255, 255, 0.32);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+      min-width: 0;
+    }
+
+    .preview-panel-label {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 0 0 12px;
+      padding: 0 4px;
     }
 
     .bronze-panel {
@@ -1303,15 +1308,16 @@
 
     .bronze-preview-tip {
       display: none;
-      margin-top: 8px;
+      margin: 0;
       color: #475569;
       font-size: 12px;
       font-weight: 700;
       line-height: 1.45;
+      text-align: right;
     }
 
     .bronze-preview-tip.visible {
-      display: block;
+      display: inline;
     }
 
     .draft-field.is-clickable,
@@ -2151,8 +2157,17 @@
       }
 
       .review-panel {
-        padding: 13px;
-        border-radius: 16px;
+        padding: 0;
+      }
+
+      .preview-panel-label {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .bronze-preview-tip {
+        text-align: left;
       }
 
       .wizard-step[data-field="review"] h2 {
@@ -2350,7 +2365,10 @@
       <div class="question-wrap review-wrap">
         <div class="review-stack">
             <div class="review-panel">
-              <label for="preview">Draft Email Preview</label>
+              <label class="preview-panel-label" for="preview">
+                <span>Draft Email Preview</span>
+                <span id="bronze-preview-hint" class="bronze-preview-tip">Read-only preview. Edit the appointment answers to update this email.</span>
+              </label>
               <div id="review-draft-card" class="email-draft">
                 <div class="email-draft-bar">
                   <span class="email-draft-dots" aria-hidden="true">
@@ -2378,15 +2396,14 @@
                   </div>
                   <div id="bronze-preview-editor-wrap" class="bronze-preview-editor-wrap">
                     <div class="bronze-preview-editor-head">
-                      <span class="bronze-preview-editor-label">Edit message text</span>
-                      <span class="bronze-preview-editor-note">Changes here update the branded preview and the sent email.</span>
+                      <span class="bronze-preview-editor-label">Message text</span>
+                      <span class="bronze-preview-editor-note">Review the generated plain-text version of this reminder.</span>
                     </div>
                     <textarea id="preview" readonly></textarea>
                   </div>
                 </div>
               </div>
               <div id="preview-hint" class="preview-hint">Scroll to review the rest of the message.</div>
-              <div id="bronze-preview-hint" class="bronze-preview-tip">Click directly in the email text to edit the message. Branding colors and layout stay editable on the Branding page.</div>
             </div>
 
           <div class="consent-box">
@@ -2473,7 +2490,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501g"></script>
+  <script src="app.js?v=20260501h"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

@@ -188,6 +188,8 @@ test.describe("Send Reminder", () => {
     expect(previewBox.width).toBeLessThanOrEqual(draftBox.width + 1);
     expect(previewBox.height).toBeLessThanOrEqual(620);
     expect(stageBox.width).toBeLessThanOrEqual(previewBox.width + 1);
+    await expect(page.locator("#bronze-preview-hint")).toContainText("Read-only preview");
+    await expect(page.frameLocator("#bronze-preview-frame").locator('[contenteditable="true"]')).toHaveCount(0);
     await expect(previewBody).toContainText("Pink Paws Grooming");
     await expect(previewBody).toContainText("Hello Ava Johnson,");
     await expect(previewBody).toContainText("05/08/2026");

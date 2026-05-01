@@ -1895,16 +1895,6 @@ async function renderBronzeReviewPreview(message) {
           min-width: 640px !important;
           background: transparent !important;
         }
-        [data-review-edit] {
-          cursor: text;
-          transition: box-shadow 0.18s ease, background-color 0.18s ease;
-        }
-        [data-review-edit]:hover,
-        [data-review-edit]:focus {
-          background-color: rgba(59, 130, 246, 0.08);
-          box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.24);
-          outline: none;
-        }
       `;
       frameDocument.head.appendChild(styleTag);
 
@@ -1916,21 +1906,6 @@ async function renderBronzeReviewPreview(message) {
       }
 
       bindBronzePreviewContentWatchers(frame, frameDocument, frameWindow, currentToken);
-
-      frameDocument.querySelectorAll("[data-review-edit]").forEach(element => {
-        element.setAttribute("contenteditable", "true");
-        element.setAttribute("spellcheck", "true");
-        element.addEventListener("input", () => {
-          const nextMessage = buildManualReviewMessageFromFrame(frameDocument);
-          bronzePreviewUsesManualMessage = true;
-          bronzePreviewManualMessage = nextMessage;
-
-          const preview = document.getElementById("preview");
-          if (preview) {
-            preview.value = nextMessage;
-          }
-        });
-      });
 
       if (frameDocument.fonts?.ready) {
         frameDocument.fonts.ready.then(() => {
