@@ -102,7 +102,11 @@
       }
     }
 
-    body.custom-form-loading > :not(script):not(style) {
+    body.custom-form-loading {
+      overflow: hidden;
+    }
+
+    body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay) {
       opacity: 0.42;
       filter: blur(6px);
       pointer-events: none;
@@ -113,33 +117,37 @@
       min-height: 420px;
     }
 
-    body.custom-form-loading::before {
-      content: "Loading your form...";
+    .form-loading-overlay {
       position: fixed;
       inset: 0;
       z-index: 3000;
-      display: flex;
+      display: none;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 78px 24px 24px;
+      gap: 14px;
+      padding: 24px;
       color: color-mix(in srgb, var(--text-main, #111827) 88%, #0f172a);
       background: rgba(248, 250, 252, 0.28);
       -webkit-backdrop-filter: blur(18px) saturate(118%);
       backdrop-filter: blur(18px) saturate(118%);
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0;
-      opacity: 1;
-      text-shadow: 0 1px 16px rgba(255, 255, 255, 0.82);
       pointer-events: auto;
     }
 
-    body.custom-form-loading::after {
-      content: "";
-      position: fixed;
-      top: calc(50% - 36px);
-      left: calc(50% - 18px);
-      z-index: 3001;
+    body.custom-form-loading .form-loading-overlay {
+      display: flex;
+    }
+
+    .form-loading-text {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0;
+      line-height: 1.35;
+      text-shadow: 0 1px 16px rgba(255, 255, 255, 0.82);
+    }
+
+    .form-loading-spinner {
       width: 36px;
       height: 36px;
       border-radius: 999px;
@@ -2141,6 +2149,11 @@
 
 <body data-page="home" class="custom-form-loading" aria-busy="true">
 
+<div class="form-loading-overlay" role="status" aria-live="polite" aria-label="Loading your form">
+  <span class="form-loading-spinner" aria-hidden="true"></span>
+  <span class="form-loading-text">Loading your form...</span>
+</div>
+
 <div class="container">
   <div class="wizard-shell">
     <div class="form-brand-row" hidden>
@@ -2363,7 +2376,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501a"></script>
+  <script src="app.js?v=20260501b"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

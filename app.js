@@ -367,8 +367,9 @@ async function initAccountTierState() {
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);
     await hydrateReminderPrefillFromSelectedClient();
+    setCustomFormLoading(false);
     if (session?.user) {
-      await syncLatestSignedInUser({ silent: true });
+      syncLatestSignedInUser({ silent: true });
     }
 
     appSupabase.auth.onAuthStateChange((event, nextSession) => {
