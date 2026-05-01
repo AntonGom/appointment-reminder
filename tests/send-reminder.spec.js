@@ -86,6 +86,35 @@ test.describe("Send Reminder", () => {
     await expect(page.locator("#preview")).toBeHidden();
   });
 
+  test("defers the branded iframe render until the review step is opened", async ({ page }) => {
+    await page.goto("/index.html");
+    await setSignedInUser(page, createBronzeUser({
+      user_metadata: {
+        branding_profile: {
+          brandingEnabled: true,
+          businessName: "Pink Paws Grooming",
+          templateStyle: "signature",
+          contactEmail: "hello@pinkpaws.example"
+        }
+      }
+    }));
+
+    await expect(page.locator("#bronze-preview-shell")).toBeHidden();
+    await expect.poll(async () => page.locator("#bronze-preview-frame").evaluate(frame => frame.srcdoc)).toBe("");
+
+    await page.evaluate(() => {
+      document.getElementById("phone").value = "(555) 913-4470";
+      document.getElementById("name").value = "Ava Johnson";
+      refreshFormState();
+    });
+    await expect.poll(async () => page.locator("#bronze-preview-frame").evaluate(frame => frame.srcdoc)).toBe("");
+
+    await goToReviewStep(page);
+
+    await expect(page.locator("#bronze-preview-shell")).toBeVisible();
+    await expect(page.frameLocator("#bronze-preview-frame").locator("body")).toContainText("Pink Paws Grooming");
+  });
+
   test("uses the visible welcome screen start button without a duplicate bottom start control", async ({ page }) => {
     await page.goto("/index.html");
 

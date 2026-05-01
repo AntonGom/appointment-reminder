@@ -99,7 +99,9 @@ let linkedPrefillClientId = "";
 let brandingTemplateModulePromise = null;
 let customFormModulePromise = null;
 let bronzePreviewScaleTimer = null;
+let bronzePreviewScaleBurstTimers = [];
 let bronzePreviewRenderToken = 0;
+let lastBronzePreviewRenderSignature = "";
 let bronzePreviewManualMessage = "";
 let bronzePreviewUsesManualMessage = false;
 let bronzePreviewResizeObserver = null;
@@ -115,6 +117,7 @@ let liveFormFieldValueCache = new Map();
 let pendingReminderClientPrefill = null;
 let lastCustomFormSyncSignature = "";
 let customFormLoadingExitTimer = null;
+let lastStepNavigationRenderSignature = "";
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -1590,11 +1593,14 @@ function scheduleBronzePreviewScale() {
 }
 
 function scheduleBronzePreviewScaleBurst() {
-  [0, 90, 220, 500, 900, 1400, 2200].forEach(delay => {
+  bronzePreviewScaleBurstTimers.forEach(timerId => {
+    window.clearTimeout(timerId);
+  });
+  bronzePreviewScaleBurstTimers = [0, 90, 220, 500, 900, 1400].map(delay => (
     window.setTimeout(() => {
       syncBronzePreviewScale();
-    }, delay);
-  });
+    }, delay)
+  ));
 }
 
 function clearBronzePreviewContentWatchers(frame) {
@@ -1819,6 +1825,19 @@ async function renderBronzeReviewPreview(message) {
     return;
   }
 
+  const brandingProfile = getSavedBrandingProfile();
+  const calendarLinks = buildReviewPreviewCalendarLinks(message);
+  const renderSignature = JSON.stringify({
+    message,
+    calendarLinks,
+    brandingProfile
+  });
+
+  if (renderSignature === lastBronzePreviewRenderSignature && frame.srcdoc) {
+    scheduleBronzePreviewScale();
+    return;
+  }
+
   clearBronzePreviewContentWatchers(frame);
 
   const currentToken = ++bronzePreviewRenderToken;
@@ -1834,10 +1853,11 @@ async function renderBronzeReviewPreview(message) {
 
     html = module.buildReminderEmailHtml({
       message,
-      calendarLinks: buildReviewPreviewCalendarLinks(message),
-      brandingProfile: getSavedBrandingProfile(),
+      calendarLinks,
+      brandingProfile,
       previewMode: true
     });
+    lastBronzePreviewRenderSignature = renderSignature;
   } catch (error) {
     if (currentToken === bronzePreviewRenderToken) {
       showPlainReviewPreviewFallback(message, error);
@@ -1941,6 +1961,7 @@ function updateReviewPreview() {
   const generatedMessage = getGeneratedReviewMessage();
   const message = getCurrentReviewMessage();
   const shouldShowBronzePreview = Boolean(isBronzeUser() && getSavedBrandingProfile());
+  const isReviewActive = isReviewStepActive();
 
   if (preview) {
     if (!bronzePreviewUsesManualMessage || !shouldShowBronzePreview) {
@@ -1952,6 +1973,7 @@ function updateReviewPreview() {
   }
 
   if (!shouldShowBronzePreview) {
+    lastBronzePreviewRenderSignature = "";
     if (preview) {
       preview.hidden = false;
       preview.readOnly = true;
@@ -1994,7 +2016,7 @@ function updateReviewPreview() {
   }
 
   if (bronzePreviewShell) {
-    bronzePreviewShell.hidden = false;
+    bronzePreviewShell.hidden = !isReviewActive;
   }
 
   if (previewBodyShell) {
@@ -2015,11 +2037,20 @@ function updateReviewPreview() {
   }
 
   if (bronzePreviewHint) {
-    bronzePreviewHint.hidden = false;
-    bronzePreviewHint.classList.add("visible");
+    bronzePreviewHint.hidden = !isReviewActive;
+    bronzePreviewHint.classList.toggle("visible", isReviewActive);
+  }
+
+  if (!isReviewActive) {
+    return;
   }
 
   renderBronzeReviewPreview(message);
+}
+
+function isReviewStepActive() {
+  const currentStep = wizardSteps[currentStepIndex];
+  return currentStep?.dataset?.field === "consent";
 }
 
 function getFieldValue(id) {
@@ -2867,6 +2898,7 @@ function buildCustomWizardStepMarkup(step) {
 }
 
 function renderCustomWizardSteps() {
+  lastStepNavigationRenderSignature = "";
   snapshotWizardFieldValues();
   document.querySelectorAll(".custom-wizard-step").forEach(step => step.remove());
 
@@ -4307,42 +4339,71 @@ function renderStepNavigation() {
   stepper.style.setProperty("--step-nav-circle-font-size", stepSurfaceState.circleFontSize);
   stepper.style.setProperty("--step-nav-radius", stepSurfaceState.radius);
   stepper.classList.toggle("is-readonly", !stepNavClickable);
-  stepper.innerHTML = "";
-
-  wizardSteps.forEach((step, index) => {
-    const button = document.createElement("button");
+  const navigationItems = wizardSteps.map((step, index) => {
     const label = step.dataset.nav || step.dataset.title || `Step ${index + 1}`;
     const navAppearance = getStepNavigationAppearance(step);
     const invalid = isStepInvalid(step);
     const complete = isStepComplete(step, index);
     const canActivateStep = stepNavClickable || index <= currentStepIndex || complete;
-    const stepIcon = invalid ? "X" : complete ? "&#10003;" : String(index + 1);
+
+    return {
+      index,
+      label,
+      navAppearance,
+      invalid,
+      complete,
+      canActivateStep
+    };
+  });
+  const nextSignature = JSON.stringify({
+    currentStepIndex,
+    stepNavClickable,
+    stepSurfaceState,
+    items: navigationItems.map(item => ({
+      label: item.label,
+      navAppearance: item.navAppearance,
+      invalid: item.invalid,
+      complete: item.complete,
+      canActivateStep: item.canActivateStep
+    }))
+  });
+
+  if (nextSignature === lastStepNavigationRenderSignature && stepper.childElementCount === wizardSteps.length) {
+    return;
+  }
+
+  lastStepNavigationRenderSignature = nextSignature;
+  stepper.innerHTML = "";
+
+  navigationItems.forEach(item => {
+    const button = document.createElement("button");
+    const stepIcon = item.invalid ? "X" : item.complete ? "&#10003;" : String(item.index + 1);
 
     button.type = "button";
     button.className = "stepper-button";
-    button.setAttribute("aria-label", `Go to ${label}`);
+    button.setAttribute("aria-label", `Go to ${item.label}`);
     button.innerHTML = `
       <span class="stepper-circle">${stepIcon}</span>
-      <span class="stepper-label">${label}</span>
+      <span class="stepper-label">${item.label}</span>
     `;
 
-    button.style.setProperty("--step-nav-bg", navAppearance.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
-    button.style.setProperty("--step-nav-text", navAppearance.stepNavTextColor || navAppearance.navLabelColor || DEFAULT_STEP_NAV_TEXT_COLOR);
-    button.style.setProperty("--step-nav-active-bg", navAppearance.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
-    button.style.setProperty("--step-nav-active-text", navAppearance.stepNavActiveTextColor || navAppearance.stepNavTextColor || navAppearance.navLabelColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
+    button.style.setProperty("--step-nav-bg", item.navAppearance.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+    button.style.setProperty("--step-nav-text", item.navAppearance.stepNavTextColor || item.navAppearance.navLabelColor || DEFAULT_STEP_NAV_TEXT_COLOR);
+    button.style.setProperty("--step-nav-active-bg", item.navAppearance.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
+    button.style.setProperty("--step-nav-active-text", item.navAppearance.stepNavActiveTextColor || item.navAppearance.stepNavTextColor || item.navAppearance.navLabelColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
 
-    if (index === currentStepIndex) {
+    if (item.index === currentStepIndex) {
       button.classList.add("active");
     }
 
-    if (invalid) {
+    if (item.invalid) {
       button.classList.add("invalid");
-    } else if (complete) {
+    } else if (item.complete) {
       button.classList.add("complete");
     }
 
-    if (canActivateStep) {
-      button.addEventListener("click", () => setStep(index));
+    if (item.canActivateStep) {
+      button.addEventListener("click", () => setStep(item.index));
     }
     stepper.appendChild(button);
   });
@@ -4455,6 +4516,11 @@ function updateWizardUI() {
 
   focusStepField(currentStep);
   renderStepNavigation();
+
+  if (isReviewStepActive()) {
+    updateDraftPreviewChrome();
+    updateReviewPreview();
+  }
 
   if (wizardShell && !isLoadingTransitionActive) {
     const activeStepperButton = document.querySelector(".stepper-button.active");
