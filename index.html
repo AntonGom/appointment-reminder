@@ -102,19 +102,68 @@
       }
     }
 
-    body.custom-form-loading {
+    @keyframes form-loading-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 rgba(96, 165, 250, 0), 0 16px 42px rgba(2, 6, 23, 0.44);
+        filter: brightness(1);
+      }
+
+      50% {
+        box-shadow: 0 0 32px rgba(96, 165, 250, 0.34), 0 18px 46px rgba(2, 6, 23, 0.48);
+        filter: brightness(1.16);
+      }
+    }
+
+    @keyframes form-color-bloom {
+      0% {
+        filter: saturate(0.42) brightness(0.74);
+        transform: scale(0.984);
+      }
+
+      62% {
+        filter: saturate(1.14) brightness(1.04);
+        transform: scale(1.008);
+      }
+
+      100% {
+        filter: saturate(1) brightness(1);
+        transform: scale(1);
+      }
+    }
+
+    body.custom-form-loading,
+    body.custom-form-loading-exiting {
       overflow: hidden;
     }
 
-    body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay) {
-      opacity: 0.42;
-      filter: blur(6px);
+    body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay),
+    body.custom-form-loading-exiting > :not(script):not(style):not(.form-loading-overlay) {
       pointer-events: none;
       user-select: none;
+      will-change: opacity, filter, transform;
+    }
+
+    body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay) {
+      opacity: 0.16;
+      filter: blur(12px) brightness(0.44) saturate(0.58);
+      transform: scale(0.984);
+      transition: opacity 0.42s ease, filter 0.5s ease, transform 0.5s ease;
+    }
+
+    body.custom-form-loading-exiting > :not(script):not(style):not(.form-loading-overlay) {
+      opacity: 1;
+      filter: blur(0) brightness(1) saturate(1);
+      transform: scale(1);
+      transition: opacity 0.72s ease, filter 0.72s ease, transform 0.72s cubic-bezier(0.2, 0.82, 0.2, 1);
     }
 
     body.custom-form-loading .container {
       min-height: 420px;
+    }
+
+    body.custom-form-loading-exiting .container,
+    body.custom-form-loaded .container {
+      animation: form-color-bloom 0.78s cubic-bezier(0.2, 0.82, 0.2, 1);
     }
 
     .form-loading-overlay {
@@ -127,15 +176,27 @@
       justify-content: center;
       gap: 14px;
       padding: 24px;
-      color: color-mix(in srgb, var(--text-main, #111827) 88%, #0f172a);
-      background: rgba(248, 250, 252, 0.28);
-      -webkit-backdrop-filter: blur(18px) saturate(118%);
-      backdrop-filter: blur(18px) saturate(118%);
+      color: #f8fafc;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(37, 99, 235, 0.24), transparent 22%),
+        radial-gradient(circle at 50% 58%, rgba(14, 165, 233, 0.14), transparent 26%),
+        linear-gradient(180deg, rgba(2, 6, 23, 0.98), rgba(3, 7, 18, 0.96));
+      -webkit-backdrop-filter: blur(22px) saturate(118%);
+      backdrop-filter: blur(22px) saturate(118%);
+      opacity: 0;
       pointer-events: auto;
+      transition: opacity 0.58s ease, background 0.72s ease;
     }
 
     body.custom-form-loading .form-loading-overlay {
       display: flex;
+      opacity: 1;
+    }
+
+    body.custom-form-loading-exiting .form-loading-overlay {
+      display: flex;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .form-loading-text {
@@ -144,18 +205,33 @@
       font-weight: 800;
       letter-spacing: 0;
       line-height: 1.35;
-      text-shadow: 0 1px 16px rgba(255, 255, 255, 0.82);
+      text-shadow: 0 1px 18px rgba(96, 165, 250, 0.3);
     }
 
     .form-loading-spinner {
       width: 36px;
       height: 36px;
       border-radius: 999px;
-      border: 4px solid rgba(148, 163, 184, 0.28);
-      border-top-color: var(--accent, #2563eb);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
-      animation: form-loading-spin 0.78s linear infinite;
+      border: 4px solid rgba(226, 232, 240, 0.2);
+      border-top-color: #93c5fd;
+      border-right-color: rgba(147, 197, 253, 0.64);
+      box-shadow: 0 16px 42px rgba(2, 6, 23, 0.44);
+      animation: form-loading-spin 0.78s linear infinite, form-loading-pulse 1.8s ease-in-out infinite;
       pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay),
+      body.custom-form-loading-exiting > :not(script):not(style):not(.form-loading-overlay),
+      .form-loading-overlay {
+        transition: none;
+      }
+
+      body.custom-form-loading-exiting .container,
+      body.custom-form-loaded .container,
+      .form-loading-spinner {
+        animation: none;
+      }
     }
 
     .section-title {
@@ -2376,7 +2452,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501b"></script>
+  <script src="app.js?v=20260501c"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

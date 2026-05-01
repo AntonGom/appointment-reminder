@@ -114,6 +114,7 @@ let latestSignedInUserSyncInFlight = false;
 let liveFormFieldValueCache = new Map();
 let pendingReminderClientPrefill = null;
 let lastCustomFormSyncSignature = "";
+let customFormLoadingExitTimer = null;
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -133,8 +134,31 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
 }
 
 function setCustomFormLoading(isLoading) {
-  document.body.classList.toggle("custom-form-loading", Boolean(isLoading));
-  document.body.setAttribute("aria-busy", isLoading ? "true" : "false");
+  window.clearTimeout(customFormLoadingExitTimer);
+  customFormLoadingExitTimer = null;
+
+  if (isLoading) {
+    document.body.classList.remove("custom-form-loading-exiting", "custom-form-loaded");
+    document.body.classList.add("custom-form-loading");
+    document.body.setAttribute("aria-busy", "true");
+    return;
+  }
+
+  document.body.setAttribute("aria-busy", "false");
+
+  if (!document.body.classList.contains("custom-form-loading")) {
+    document.body.classList.remove("custom-form-loading-exiting");
+    document.body.classList.add("custom-form-loaded");
+    return;
+  }
+
+  document.body.classList.add("custom-form-loading-exiting");
+  document.body.classList.remove("custom-form-loading");
+  customFormLoadingExitTimer = window.setTimeout(() => {
+    document.body.classList.remove("custom-form-loading-exiting");
+    document.body.classList.add("custom-form-loaded");
+    customFormLoadingExitTimer = null;
+  }, 780);
 }
 
 const BUILT_IN_FORM_STEP_DEFAULTS = {
