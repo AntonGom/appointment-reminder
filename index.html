@@ -102,43 +102,44 @@
       }
     }
 
-    body.custom-form-loading .wizard-shell {
-      opacity: 0.34;
-      filter: blur(5px);
+    body.custom-form-loading > :not(script):not(style) {
+      opacity: 0.42;
+      filter: blur(6px);
       pointer-events: none;
       user-select: none;
     }
 
     body.custom-form-loading .container {
       min-height: 420px;
-      overflow: hidden;
     }
 
-    body.custom-form-loading .container::before {
+    body.custom-form-loading::before {
       content: "Loading your form...";
-      position: absolute;
+      position: fixed;
       inset: 0;
-      z-index: 3;
+      z-index: 3000;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: auto;
-      padding: 78px 28px 28px;
-      color: var(--text-soft);
-      background: color-mix(in srgb, var(--card-background, var(--card)) 78%, transparent);
-      backdrop-filter: blur(16px) saturate(125%);
+      padding: 78px 24px 24px;
+      color: color-mix(in srgb, var(--text-main, #111827) 88%, #0f172a);
+      background: rgba(248, 250, 252, 0.28);
+      -webkit-backdrop-filter: blur(18px) saturate(118%);
+      backdrop-filter: blur(18px) saturate(118%);
       font-size: 14px;
       font-weight: 800;
       letter-spacing: 0;
       opacity: 1;
+      text-shadow: 0 1px 16px rgba(255, 255, 255, 0.82);
+      pointer-events: auto;
     }
 
-    body.custom-form-loading .container::after {
+    body.custom-form-loading::after {
       content: "";
-      position: absolute;
+      position: fixed;
       top: calc(50% - 36px);
       left: calc(50% - 18px);
-      z-index: 4;
+      z-index: 3001;
       width: 36px;
       height: 36px;
       border-radius: 999px;
@@ -146,6 +147,7 @@
       border-top-color: var(--accent, #2563eb);
       box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
       animation: form-loading-spin 0.78s linear infinite;
+      pointer-events: none;
     }
 
     .section-title {
