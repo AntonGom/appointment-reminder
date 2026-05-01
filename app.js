@@ -71,8 +71,8 @@ const DEFAULT_STEP_MOTION_SPEED = "smooth";
 const DEFAULT_STEP_HEAD_MOTION = "lift";
 const DEFAULT_STEP_CHIP_MOTION = "pop";
 const BRONZE_REVIEW_PREVIEW_WIDTH = 664;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 1120;
-const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 520;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT = 620;
+const BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE = 420;
 const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT = 180;
 const BRONZE_REVIEW_PREVIEW_MIN_HEIGHT_MOBILE = 140;
 const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.9;
@@ -1734,8 +1734,14 @@ function syncBronzePreviewScale() {
   }
 
   const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, html.scrollHeight, html.offsetHeight, 480);
+  const reviewDraftCard = getReviewDraftCard();
   const previewContainer = shell.parentElement;
-  const availableWidth = Math.max(previewContainer?.clientWidth || shell.clientWidth, 260);
+  const widthCandidates = [
+    shell.clientWidth,
+    previewContainer?.clientWidth,
+    reviewDraftCard?.clientWidth
+  ].filter(value => Number.isFinite(value) && value > 0);
+  const availableWidth = Math.max(Math.min(...widthCandidates, BRONZE_REVIEW_PREVIEW_WIDTH) - 16, 240);
   const isMobileViewport = window.innerWidth <= 640;
   const maxPreviewHeight = isMobileViewport
     ? BRONZE_REVIEW_PREVIEW_MAX_HEIGHT_MOBILE
@@ -1754,6 +1760,7 @@ function syncBronzePreviewScale() {
   frame.style.width = `${BRONZE_REVIEW_PREVIEW_WIDTH}px`;
   frame.style.height = `${contentHeight}px`;
   frame.style.transform = `scale(${scale})`;
+  stage.style.width = `${Math.ceil(BRONZE_REVIEW_PREVIEW_WIDTH * scale)}px`;
   stage.style.height = `${scaledHeight}px`;
   shell.style.height = `${visibleHeight}px`;
   shell.style.maxHeight = `${maxPreviewHeight}px`;

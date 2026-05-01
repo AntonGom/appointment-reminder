@@ -1096,7 +1096,7 @@
     .email-draft.is-bronze-compact {
       max-width: 100%;
       margin: 0 auto;
-      overflow: visible;
+      overflow: hidden;
       border: none;
       border-radius: 0;
       background: transparent;
@@ -1231,6 +1231,8 @@
     .bronze-preview-shell {
       --bronze-preview-scale: 0.84;
       --bronze-preview-height: 180px;
+      box-sizing: border-box;
+      contain: layout paint;
       position: relative;
       width: 100%;
       max-width: 100%;
@@ -1248,8 +1250,10 @@
     .bronze-preview-stage {
       position: relative;
       width: calc(664px * var(--bronze-preview-scale));
+      max-width: 100%;
       height: var(--bronze-preview-height);
       margin: 0 auto;
+      overflow: hidden;
       transform-origin: top left;
       transition: height 0.18s ease;
     }
@@ -2469,7 +2473,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501f"></script>
+  <script src="app.js?v=20260501g"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>
