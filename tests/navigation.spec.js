@@ -29,7 +29,7 @@ test.describe("Navigation chrome", () => {
     await expect(overlay.locator("> :first-child")).toHaveClass(/form-loading-spinner/);
     await expect(overlay.locator("> :last-child")).toHaveText("Loading your form...");
     await expect(overlay).toHaveCSS("color", "rgb(248, 250, 252)");
-    expect(await overlay.evaluate(element => getComputedStyle(element).backgroundImage)).toContain("rgba(2, 6, 23");
+    expect(await overlay.evaluate(element => getComputedStyle(element).backgroundImage)).toContain("linear-gradient");
 
     releaseConfig();
     await expect(page.locator("body")).toHaveClass(/custom-form-loading-exiting/);
@@ -47,7 +47,7 @@ test.describe("Navigation chrome", () => {
     const badge = page.locator(".env-badge");
     await expect(badge).toBeVisible();
     await expect(badge).toContainText("DEV");
-    await expect(badge).toContainText("v20260501.6");
+    await expect(badge).toContainText("v20260501.7");
     await expect(badge).toHaveAttribute("title", /commit testsha/);
     await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
     await expect(page.locator(".form-loading-overlay")).toBeHidden();

@@ -2216,6 +2216,7 @@ function applyCustomFormPresentation(profile) {
   const normalizedTitle = String(profile?.formTitle || "").trim();
   const surfaceState = getCustomFormSurfaceState(profile);
   const questionState = getCustomQuestionSurfaceState(profile);
+  const loadingPalette = getCustomFormLoadingPalette(profile);
 
   if (sectionTitle) {
     sectionTitle.textContent = normalizedTitle || "Appointment Reminder";
@@ -2231,6 +2232,9 @@ function applyCustomFormPresentation(profile) {
   document.documentElement.style.setProperty("--page-background", buildCustomPageBackground(profile));
   document.documentElement.style.setProperty("--bg-top", profile?.backgroundTop || "#10141c");
   document.documentElement.style.setProperty("--bg-bottom", profile?.backgroundBottom || "#1a2230");
+  document.documentElement.style.setProperty("--form-loading-top-rgb", loadingPalette.top);
+  document.documentElement.style.setProperty("--form-loading-bottom-rgb", loadingPalette.bottom);
+  document.documentElement.style.setProperty("--form-loading-accent-rgb", loadingPalette.accent);
 
   if (container) {
     container.style.setProperty("--card", profile?.formSurfaceColor || DEFAULT_FORM_SURFACE_COLOR);
@@ -2536,6 +2540,45 @@ function buildCustomPageBackground(profile) {
   }
 
   return `radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 32%), radial-gradient(circle at right, rgba(148, 163, 184, 0.18), transparent 28%), linear-gradient(160deg, ${top} 0%, ${bottom} 100%)`;
+}
+
+function getHexRgbTriplet(value, fallbackColor = "#10141c") {
+  const fallback = String(fallbackColor || "#10141c").trim();
+  let hex = String(value || fallback).trim();
+
+  if (!/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
+    hex = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(fallback) ? fallback : "#10141c";
+  }
+
+  const normalized = hex.length === 4
+    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+    : hex;
+  const numeric = Number.parseInt(normalized.slice(1), 16);
+
+  return `${(numeric >> 16) & 255}, ${(numeric >> 8) & 255}, ${numeric & 255}`;
+}
+
+function getCustomFormLoadingPalette(profile) {
+  const backgroundStyle = profile?.backgroundStyle === "solid" ? "solid" : DEFAULT_BACKGROUND_STYLE;
+  const solidColor = String(profile?.backgroundSolidColor || DEFAULT_BACKGROUND_SOLID_COLOR).trim() || DEFAULT_BACKGROUND_SOLID_COLOR;
+  const topColor = backgroundStyle === "solid"
+    ? solidColor
+    : String(profile?.backgroundTop || "#10141c").trim() || "#10141c";
+  const bottomColor = backgroundStyle === "solid"
+    ? solidColor
+    : String(profile?.backgroundBottom || "#1a2230").trim() || "#1a2230";
+  const accentColor = String(
+    profile?.formSurfaceAccentColor
+    || profile?.formSurfaceColor
+    || profile?.backgroundTop
+    || DEFAULT_FORM_SURFACE_ACCENT_COLOR
+  ).trim() || DEFAULT_FORM_SURFACE_ACCENT_COLOR;
+
+  return {
+    top: getHexRgbTriplet(topColor, "#10141c"),
+    bottom: getHexRgbTriplet(bottomColor, "#1a2230"),
+    accent: getHexRgbTriplet(accentColor, DEFAULT_FORM_SURFACE_ACCENT_COLOR)
+  };
 }
 
 function getActiveCustomPages() {

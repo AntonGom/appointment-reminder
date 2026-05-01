@@ -764,6 +764,37 @@ test.describe("Branding and Client Details", () => {
     await expect(page.locator("#custom_pet_name")).toHaveValue("Luna");
   });
 
+  test("loading intro uses the saved form background palette", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          custom_form_profile: {
+            isEnabled: true,
+            backgroundTop: "#ff7ab6",
+            backgroundBottom: "#7c2d57",
+            formSurfaceAccentColor: "#ffd1e4"
+          }
+        }
+      })
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/index.html");
+    await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
+
+    const loadingPalette = await page.evaluate(() => ({
+      top: getComputedStyle(document.documentElement).getPropertyValue("--form-loading-top-rgb").trim(),
+      bottom: getComputedStyle(document.documentElement).getPropertyValue("--form-loading-bottom-rgb").trim(),
+      accent: getComputedStyle(document.documentElement).getPropertyValue("--form-loading-accent-rgb").trim()
+    }));
+
+    expect(loadingPalette).toEqual({
+      top: "255, 122, 182",
+      bottom: "124, 45, 87",
+      accent: "255, 209, 228"
+    });
+  });
+
   test("deleting a client removes only the targeted record even when another client shares the email", async ({ page }) => {
     const seed = createSupabaseSeed({
       clients: [
