@@ -116,15 +116,13 @@
 
     @keyframes form-color-bloom {
       0% {
-        opacity: 0.62;
-        filter: saturate(0.55) brightness(0.78);
-        transform: scale(0.968);
+        opacity: 0.58;
+        filter: blur(8px) saturate(0.58) brightness(0.78);
       }
 
       100% {
         opacity: 1;
-        filter: saturate(1) brightness(1);
-        transform: scale(1);
+        filter: blur(0) saturate(1) brightness(1);
       }
     }
 
@@ -132,13 +130,11 @@
       0% {
         opacity: 0;
         filter: blur(8px);
-        transform: scale(0.972);
       }
 
       100% {
         opacity: 1;
         filter: blur(0);
-        transform: scale(1);
       }
     }
 
@@ -151,21 +147,19 @@
     body.custom-form-loading-exiting > :not(script):not(style):not(.form-loading-overlay) {
       pointer-events: none;
       user-select: none;
-      will-change: opacity, filter, transform;
+      will-change: opacity, filter;
     }
 
     body.custom-form-loading > :not(script):not(style):not(.form-loading-overlay) {
       opacity: 0.16;
       filter: blur(12px) brightness(0.44) saturate(0.58);
-      transform: scale(0.984);
-      transition: opacity 0.42s ease, filter 0.5s ease, transform 0.5s ease;
+      transition: opacity 0.42s ease, filter 0.5s ease;
     }
 
     body.custom-form-loading-exiting > :not(script):not(style):not(.form-loading-overlay) {
       opacity: 1;
       filter: blur(0) brightness(1) saturate(1);
-      transform: scale(1);
-      transition: opacity 0.68s ease, filter 0.68s ease, transform 0.68s cubic-bezier(0.2, 0.82, 0.2, 1);
+      transition: opacity 0.68s ease, filter 0.68s ease;
     }
 
     body.custom-form-loading .container {
@@ -174,14 +168,12 @@
 
     body.custom-form-loading-exiting .container,
     body.custom-form-loaded .container {
-      animation: form-color-bloom 0.68s cubic-bezier(0.2, 0.82, 0.2, 1);
-      transform-origin: center center;
+      animation: form-color-bloom 0.68s ease both;
     }
 
     body.custom-form-loading-exiting .wizard-head.is-step-motion-head,
     body.custom-form-loading-exiting .wizard-step.active .question-wrap {
       animation: form-loading-content-reveal 0.56s ease both !important;
-      transform-origin: center center;
     }
 
     .form-loading-overlay {
@@ -2470,7 +2462,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501c"></script>
+  <script src="app.js?v=20260501d"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

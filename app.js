@@ -161,6 +161,11 @@ function setCustomFormLoading(isLoading) {
   }, 780);
 }
 
+function isCustomFormLoadingTransitionActive() {
+  return document.body.classList.contains("custom-form-loading")
+    || document.body.classList.contains("custom-form-loading-exiting");
+}
+
 const BUILT_IN_FORM_STEP_DEFAULTS = {
   phone: {
     title: "Client Phone Number",
@@ -4341,6 +4346,7 @@ function updateWizardUI() {
   const stepNavPlacement = activeCustomFormProfile?.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
   const isWelcomeStep = currentStep.dataset.stepKind === "welcome";
   const motionState = applyWizardMotionPresentation(activeCustomFormProfile || {});
+  const isLoadingTransitionActive = isCustomFormLoadingTransitionActive();
 
   wizardSteps.forEach((step, index) => {
     step.classList.toggle("active", index === currentStepIndex);
@@ -4361,7 +4367,7 @@ function updateWizardUI() {
     wizardHead.classList.toggle("is-nav-above", stepNavPlacement === "above-title");
     wizardHead.classList.toggle("is-nav-hidden", stepNavPlacement === "hidden");
 
-    if (motionState.head !== "none") {
+    if (motionState.head !== "none" && !isLoadingTransitionActive) {
       retriggerAnimationClass(wizardHead, "is-step-motion-head");
     } else {
       wizardHead.classList.remove("is-step-motion-head");
@@ -4407,7 +4413,7 @@ function updateWizardUI() {
   focusStepField(currentStep);
   renderStepNavigation();
 
-  if (wizardShell) {
+  if (wizardShell && !isLoadingTransitionActive) {
     const activeStepperButton = document.querySelector(".stepper-button.active");
     if (activeStepperButton) {
       activeStepperButton.scrollIntoView({
