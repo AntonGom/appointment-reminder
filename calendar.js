@@ -54,14 +54,18 @@ const DEFAULT_WEEK_END_HOUR = 19;
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
 const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const SUPABASE_READ_TIMEOUT_MS = 6000;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
+const CALENDAR_LOADING_STALE_MS = 4500;
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];
 let loadedSupabaseCreateClient = null;
 let calendarRecoveryTimers = [];
+let calendarLoadStartedAt = 0;
+let calendarLoadSequence = 0;
 const calendarDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const calendarDebugLog = [];
 
@@ -383,7 +387,7 @@ async function refreshCalendarSessionAndData() {
 function scheduleCalendarSessionRecovery() {
   calendarRecoveryTimers.forEach(timerId => window.clearTimeout(timerId));
   calendarRecoveryTimers = SESSION_RECOVERY_DELAYS_MS.map(delayMs => window.setTimeout(() => {
-    if (!currentAuthUserId || calendarLoadFailed || (!calendarLoading || calendarLoading.hidden) && !appointments.length) {
+    if (!currentAuthUserId || calendarLoadFailed || hasStaleCalendarLoad() || (!calendarLoading || calendarLoading.hidden) && !appointments.length) {
       recordCalendarDebug("scheduled recovery", `${delayMs}ms`);
       refreshCalendarSessionAndData();
     }
@@ -430,6 +434,8 @@ function isBronzeUser(user) {
 }
 
 function setLoadingState(isLoading) {
+  calendarLoadStartedAt = isLoading ? Date.now() : 0;
+
   if (calendarLoading) {
     calendarLoading.hidden = !isLoading;
   }
@@ -438,6 +444,11 @@ function setLoadingState(isLoading) {
     calendarLayout.hidden = isLoading || calendarLoadFailed;
     calendarLayout.setAttribute("aria-busy", isLoading ? "true" : "false");
   }
+}
+
+function hasStaleCalendarLoad() {
+  return calendarLoadStartedAt > 0
+    && Date.now() - calendarLoadStartedAt > CALENDAR_LOADING_STALE_MS;
 }
 
 function clearCounts() {
@@ -1683,6 +1694,9 @@ function renderCalendar() {
 }
 
 async function loadAppointments(user) {
+  const loadId = calendarLoadSequence + 1;
+  calendarLoadSequence = loadId;
+
   if (!supabase || !user?.id) {
     recordCalendarDebug("load appointments skipped", !supabase ? "no supabase client" : "no user");
     appointments = [];
@@ -1704,14 +1718,14 @@ async function loadAppointments(user) {
         .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
         .eq("owner_id", user.id)
         .order("service_date", { ascending: true })
-        .order("service_time", { ascending: true }));
+        .order("service_time", { ascending: true }), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
 
     const historyResult = await withSupabaseRetry(() => supabase
         .from("client_reminder_history")
         .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
         .eq("owner_id", user.id)
         .order("sent_at", { ascending: false })
-        .limit(500))
+        .limit(500), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS })
       .catch(error => ({ data: [], error }));
 
     const { data, error } = appointmentsResult;
@@ -1747,6 +1761,11 @@ async function loadAppointments(user) {
       setStatus("Appointments loaded, but reminder history is temporarily unavailable.", "info");
     }
 
+    if (loadId !== calendarLoadSequence) {
+      recordCalendarDebug("stale calendar result ignored", `load ${loadId}`);
+      return;
+    }
+
     appointmentsReady = true;
     calendarLoadFailed = false;
     appointments = data || [];
@@ -1759,6 +1778,10 @@ async function loadAppointments(user) {
     renderCalendar();
     recordCalendarDebug("calendar rendered", `${appointments.length} appointment${appointments.length === 1 ? "" : "s"}`);
   } catch (error) {
+    if (loadId !== calendarLoadSequence) {
+      recordCalendarDebug("stale calendar error ignored", error?.message || String(error));
+      return;
+    }
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;
@@ -1767,7 +1790,9 @@ async function loadAppointments(user) {
     renderCalendarLoadError("We could not reach your saved appointments right now. Nothing was changed.");
     setStatus(error.message || "Unable to load appointments.", "error");
   } finally {
-    setLoadingState(false);
+    if (loadId === calendarLoadSequence) {
+      setLoadingState(false);
+    }
   }
 }
 
@@ -2044,6 +2069,7 @@ async function initPage() {
 
   currentAuthUser = initialUser || null;
   currentAuthUserId = initialUser?.id || "";
+  scheduleCalendarSessionRecovery();
   updateSignedInView(initialUser || null);
   await loadAppointments(initialUser || null);
 
@@ -2064,8 +2090,6 @@ async function initPage() {
     updateSignedInView(currentAuthUser);
     await loadAppointments(currentAuthUser);
   });
-
-  scheduleCalendarSessionRecovery();
 
   window.addEventListener("pageshow", event => {
     if (event.persisted) {

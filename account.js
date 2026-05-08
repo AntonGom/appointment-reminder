@@ -67,14 +67,18 @@ const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
 const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const SUPABASE_READ_TIMEOUT_MS = 6000;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
+const CLIENTS_LOADING_STALE_MS = 4500;
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];
 let loadedSupabaseCreateClient = null;
 let accountRecoveryTimers = [];
+let clientsLoadStartedAt = 0;
+let clientsLoadSequence = 0;
 const accountDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const accountDebugLog = [];
 
@@ -1130,6 +1134,7 @@ function renderContactsLoadError(message = "We could not reach your saved contac
 
 function setClientsLoadingState(isLoading) {
   isLoadingClients = isLoading;
+  clientsLoadStartedAt = isLoading ? Date.now() : 0;
 
   if (contactsCard) {
     contactsCard.classList.toggle("is-loading", isLoading);
@@ -1145,6 +1150,12 @@ function setClientsLoadingState(isLoading) {
   }
 
   updateContactsCount();
+}
+
+function hasStaleClientsLoad() {
+  return isLoadingClients
+    && clientsLoadStartedAt > 0
+    && Date.now() - clientsLoadStartedAt > CLIENTS_LOADING_STALE_MS;
 }
 
 function formatSavedDate(value) {
@@ -1760,13 +1771,13 @@ async function loadSavedClientRows(ownerId) {
   let { data, error } = await withSupabaseRetry(() => supabase
     .from("clients")
     .select(primarySelect)
-    .order("created_at", { ascending: false }));
+    .order("created_at", { ascending: false }), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
 
   if (error && isMissingColumnError(error, "profile_custom_answers")) {
     ({ data, error } = await withSupabaseRetry(() => supabase
       .from("clients")
       .select(fallbackSelect)
-      .order("created_at", { ascending: false })));
+      .order("created_at", { ascending: false }), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS }));
   }
 
   if (error) {
@@ -1791,7 +1802,7 @@ async function loadSavedAppointmentsForClients(ownerId) {
     .select(primarySelect)
     .eq("owner_id", ownerId)
     .order("updated_at", { ascending: false })
-    .limit(500));
+    .limit(500), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
 
   if (error && isMissingColumnError(error, "custom_answers")) {
     ({ data, error } = await withSupabaseRetry(() => supabase
@@ -1799,7 +1810,7 @@ async function loadSavedAppointmentsForClients(ownerId) {
       .select(fallbackSelect)
       .eq("owner_id", ownerId)
       .order("updated_at", { ascending: false })
-      .limit(500)));
+      .limit(500), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS }));
   }
 
   if (error) {
@@ -2061,7 +2072,7 @@ async function loadReminderHistory(ownerId) {
     .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
     .eq("owner_id", ownerId)
     .order("sent_at", { ascending: false })
-    .limit(500));
+    .limit(500), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
 
   if (error) {
     if (error.code === "42P01") {
@@ -2792,7 +2803,7 @@ async function ensureProfile(user) {
       {
         onConflict: "id"
       }
-    ));
+    ), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
 
   if (error) {
     console.warn("Unable to refresh profile row.", error);
@@ -2805,6 +2816,8 @@ async function loadSavedClients(userOverride = null) {
     return;
   }
 
+  const loadId = clientsLoadSequence + 1;
+  clientsLoadSequence = loadId;
   setClientsLoadingState(true);
 
   try {
@@ -2812,6 +2825,10 @@ async function loadSavedClients(userOverride = null) {
     recordAccountDebug("load clients start", user?.id ? `user ${user.id}` : "no user");
 
     if (!user?.id) {
+      if (loadId !== clientsLoadSequence) {
+        recordAccountDebug("stale clients load ignored", `load ${loadId}`);
+        return;
+      }
       savedClients = [];
       clientsLoadError = "";
       recordAccountDebug("load clients stopped", "no signed-in user");
@@ -2843,17 +2860,28 @@ async function loadSavedClients(userOverride = null) {
       await new Promise(resolve => window.requestAnimationFrame(resolve));
     }
 
+    if (loadId !== clientsLoadSequence) {
+      recordAccountDebug("stale clients result ignored", `load ${loadId}`);
+      return;
+    }
+
     savedClients = attachAppointmentsToClients(attachReminderHistory(clientsData, historyRows), appointmentsRows);
     clientsLoadError = "";
     recordAccountDebug("contacts rendered", `${savedClients.length} saved`);
   } catch (error) {
+    if (loadId !== clientsLoadSequence) {
+      recordAccountDebug("stale clients error ignored", error?.message || String(error));
+      return;
+    }
     savedClients = [];
     clientsLoadError = "We could not reach your saved contacts right now. Nothing was changed.";
     recordAccountDebug("load clients error", error?.message || String(error));
     setStatus(error.message || "Unable to load saved clients.", "error");
   } finally {
-    setClientsLoadingState(false);
-    renderSavedClients();
+    if (loadId === clientsLoadSequence) {
+      setClientsLoadingState(false);
+      renderSavedClients();
+    }
   }
 }
 
@@ -2917,7 +2945,7 @@ async function refreshAccountSessionAndData() {
 function scheduleAccountSessionRecovery() {
   accountRecoveryTimers.forEach(timerId => window.clearTimeout(timerId));
   accountRecoveryTimers = SESSION_RECOVERY_DELAYS_MS.map(delayMs => window.setTimeout(() => {
-    if (!currentAuthUserId || clientsLoadError || (!isLoadingClients && !savedClients.length)) {
+    if (!currentAuthUserId || clientsLoadError || hasStaleClientsLoad() || (!isLoadingClients && !savedClients.length)) {
       recordAccountDebug("scheduled recovery", `${delayMs}ms`);
       refreshAccountSessionAndData();
     }
@@ -3073,6 +3101,9 @@ async function initSupabase() {
   recordAccountDebug("supabase client ready");
 
   const initialUser = await getCurrentSupabaseUser();
+  currentAuthUser = initialUser || null;
+  currentAuthUserId = initialUser?.id || "";
+  scheduleAccountSessionRecovery();
   await syncSignedInState(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
@@ -3090,8 +3121,6 @@ async function initSupabase() {
     currentAuthUserId = nextUserId;
     await syncSignedInState(nextSession?.user || null);
   });
-
-  scheduleAccountSessionRecovery();
 
   window.addEventListener("pageshow", event => {
     if (event.persisted) {
