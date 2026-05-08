@@ -231,32 +231,112 @@ function updateAccountDebugPanel() {
     return;
   }
 
+  let shell = document.getElementById("account-debug-shell");
   let panel = document.getElementById("account-debug-panel");
+  let copyButton = document.getElementById("account-debug-copy");
 
-  if (!panel) {
-    panel = document.createElement("pre");
-    panel.id = "account-debug-panel";
-    panel.style.cssText = [
+  if (!shell) {
+    shell = document.createElement("div");
+    shell.id = "account-debug-shell";
+    shell.style.cssText = [
       "position:fixed",
       "left:10px",
       "right:10px",
       "bottom:10px",
       "z-index:3000",
-      "max-height:42vh",
+      "max-height:46vh",
+      "display:grid",
+      "grid-template-rows:auto minmax(0,1fr)",
+      "overflow:hidden",
+      "border-radius:14px",
+      "background:rgba(15,23,42,0.94)",
+      "box-shadow:0 18px 46px rgba(15,23,42,0.34)"
+    ].join(";");
+
+    const toolbar = document.createElement("div");
+    toolbar.style.cssText = [
+      "display:flex",
+      "align-items:center",
+      "justify-content:space-between",
+      "gap:10px",
+      "padding:10px 10px 0",
+      "color:#e5f0ff",
+      "font:700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace"
+    ].join(";");
+
+    const title = document.createElement("span");
+    title.textContent = "Account debug log";
+
+    copyButton = document.createElement("button");
+    copyButton.id = "account-debug-copy";
+    copyButton.type = "button";
+    copyButton.textContent = "Copy log";
+    copyButton.style.cssText = [
+      "appearance:none",
+      "border:1px solid rgba(226,232,240,0.3)",
+      "border-radius:999px",
+      "background:rgba(226,232,240,0.12)",
+      "color:#e5f0ff",
+      "padding:8px 10px",
+      "font:700 12px/1 ui-sans-serif,system-ui,sans-serif"
+    ].join(";");
+    copyButton.addEventListener("click", copyAccountDebugLog);
+
+    panel = document.createElement("pre");
+    panel.id = "account-debug-panel";
+    panel.style.cssText = [
       "overflow:auto",
       "margin:0",
       "padding:12px",
-      "border-radius:14px",
-      "background:rgba(15,23,42,0.94)",
       "color:#e5f0ff",
       "font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace",
       "white-space:pre-wrap",
-      "box-shadow:0 18px 46px rgba(15,23,42,0.34)"
+      "-webkit-user-select:text",
+      "user-select:text"
     ].join(";");
-    document.body.appendChild(panel);
+
+    toolbar.append(title, copyButton);
+    shell.append(toolbar, panel);
+    document.body.appendChild(shell);
   }
 
   panel.textContent = accountDebugLog.slice(-40).join("\n");
+}
+
+async function copyAccountDebugLog() {
+  const text = accountDebugLog.join("\n");
+  let copied = false;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    }
+  } catch (_error) {
+    copied = false;
+  }
+
+  if (!copied) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    copied = document.execCommand("copy");
+    textarea.remove();
+  }
+
+  const copyButton = document.getElementById("account-debug-copy");
+
+  if (copyButton) {
+    copyButton.textContent = copied ? "Copied" : "Select text";
+    window.setTimeout(() => {
+      copyButton.textContent = "Copy log";
+    }, 1600);
+  }
 }
 
 function delay(ms) {
