@@ -481,6 +481,43 @@ async function getCurrentSupabaseUser() {
   return user;
 }
 
+async function getCurrentSupabaseAccessToken() {
+  if (!supabase) {
+    return "";
+  }
+
+  const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession(), { attempts: 1, timeoutMs: 3000 });
+  return String(sessionResult?.data?.session?.access_token || "").trim();
+}
+
+async function fetchAccountDataResource(resource, ownerId = "") {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({ resource });
+
+  if (ownerId) {
+    params.set("ownerId", ownerId);
+  }
+
+  const response = await runWithTimeout(() => fetch(`/api/account-data?${params.toString()}`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to load account data.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 function setClientFormStatus(message, type = "info") {
   if (!clientFormStatus) {
     return;
@@ -1819,6 +1856,18 @@ async function loadSavedClientRows(ownerId) {
 
   const fallbackSelect = "id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at";
   const primarySelect = `${fallbackSelect}, profile_custom_answers`;
+
+  try {
+    const apiRows = await fetchAccountDataResource("clients", ownerId);
+    recordAccountDebug("clients api query", `${apiRows.length} row${apiRows.length === 1 ? "" : "s"}`);
+    return (apiRows || []).map(client => ({
+      ...client,
+      profile_custom_answers: normalizeProfileCustomAnswers(client?.profile_custom_answers)
+    }));
+  } catch (error) {
+    recordAccountDebug("clients api fallback", error?.message || String(error));
+  }
+
   let { data, error } = await withSupabaseRetry(() => supabase
     .from("clients")
     .select(primarySelect)
@@ -1848,6 +1897,18 @@ async function loadSavedAppointmentsForClients(ownerId) {
 
   const fallbackSelect = "id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, updated_at";
   const primarySelect = `${fallbackSelect}, custom_answers`;
+
+  try {
+    const apiRows = await fetchAccountDataResource("appointments", ownerId);
+    recordAccountDebug("appointments api query", `${apiRows.length} row${apiRows.length === 1 ? "" : "s"}`);
+    return (apiRows || []).map(appointment => ({
+      ...appointment,
+      custom_answers: normalizeCustomAnswerList(appointment?.custom_answers)
+    }));
+  } catch (error) {
+    recordAccountDebug("appointments api fallback", error?.message || String(error));
+  }
+
   let { data, error } = await withSupabaseRetry(() => supabase
     .from("appointments")
     .select(primarySelect)
@@ -2116,6 +2177,15 @@ async function deleteClientRelatedData(client, ownerId) {
 async function loadReminderHistory(ownerId) {
   if (!supabase || !ownerId) {
     return [];
+  }
+
+  try {
+    const apiRows = await fetchAccountDataResource("history", ownerId);
+    reminderHistoryReady = true;
+    recordAccountDebug("history api query", `${apiRows.length} row${apiRows.length === 1 ? "" : "s"}`);
+    return apiRows || [];
+  } catch (error) {
+    recordAccountDebug("history api fallback", error?.message || String(error));
   }
 
   const { data, error } = await withSupabaseRetry(() => supabase

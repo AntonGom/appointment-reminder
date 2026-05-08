@@ -414,6 +414,43 @@ async function getCurrentSupabaseUser() {
   return user;
 }
 
+async function getCurrentSupabaseAccessToken() {
+  if (!supabase) {
+    return "";
+  }
+
+  const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession(), { attempts: 1, timeoutMs: 3000 });
+  return String(sessionResult?.data?.session?.access_token || "").trim();
+}
+
+async function fetchAccountDataResource(resource, ownerId = "") {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({ resource });
+
+  if (ownerId) {
+    params.set("ownerId", ownerId);
+  }
+
+  const response = await runWithTimeout(() => fetch(`/api/account-data?${params.toString()}`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to load account data.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 async function refreshCalendarSessionAndData() {
   if (!supabase) {
     recordCalendarDebug("refresh skipped", "no supabase client");
@@ -1764,20 +1801,42 @@ async function loadAppointments(user) {
   recordCalendarDebug("load appointments start", `user ${user.id}`);
 
   try {
-    const appointmentsResult = await withSupabaseRetry(() => supabase
+    let appointmentsResult = null;
+    let historyResult = null;
+
+    try {
+      const [apiAppointments, apiHistory] = await Promise.all([
+        fetchAccountDataResource("calendar-appointments", user.id),
+        fetchAccountDataResource("history", user.id).catch(error => {
+          recordCalendarDebug("history api failed", error?.message || String(error));
+          return [];
+        })
+      ]);
+      appointmentsResult = { data: apiAppointments, error: null };
+      historyResult = { data: apiHistory, error: null };
+      recordCalendarDebug("appointments api query", `${apiAppointments.length} row${apiAppointments.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      recordCalendarDebug("appointments api fallback", error?.message || String(error));
+    }
+
+    if (!appointmentsResult) {
+      appointmentsResult = await withSupabaseRetry(() => supabase
         .from("appointments")
         .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
         .eq("owner_id", user.id)
         .order("service_date", { ascending: true })
         .order("service_time", { ascending: true }), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
+    }
 
-    const historyResult = await withSupabaseRetry(() => supabase
+    if (!historyResult) {
+      historyResult = await withSupabaseRetry(() => supabase
         .from("client_reminder_history")
         .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
         .eq("owner_id", user.id)
         .order("sent_at", { ascending: false })
         .limit(500), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS })
       .catch(error => ({ data: [], error }));
+    }
 
     const { data, error } = appointmentsResult;
     const { data: historyData, error: historyError } = historyResult;
