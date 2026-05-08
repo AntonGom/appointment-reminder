@@ -1,5 +1,3 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
 const signedOutShell = document.getElementById("signed-out-shell");
@@ -55,6 +53,12 @@ const DEFAULT_WEEK_START_HOUR = 7;
 const DEFAULT_WEEK_END_HOUR = 19;
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
+const SUPABASE_MODULE_TIMEOUT_MS = 4500;
+const SUPABASE_MODULE_URLS = [
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+  "https://esm.sh/@supabase/supabase-js@2"
+];
+let loadedSupabaseCreateClient = null;
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -71,6 +75,51 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   }
 
   return window.__appointmentReminderSupabaseClients.get(clientKey);
+}
+
+async function importWithTimeout(url, timeoutMs = SUPABASE_MODULE_TIMEOUT_MS) {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      import(url),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(`Timed out loading ${url}`));
+        }, timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
+async function loadSupabaseCreateClient() {
+  if (loadedSupabaseCreateClient) {
+    return loadedSupabaseCreateClient;
+  }
+
+  let lastError = null;
+
+  for (const url of SUPABASE_MODULE_URLS) {
+    try {
+      const module = await importWithTimeout(url);
+
+      if (typeof module?.createClient === "function") {
+        loadedSupabaseCreateClient = module.createClient;
+        return loadedSupabaseCreateClient;
+      }
+
+      lastError = new Error(`Supabase module at ${url} did not export createClient.`);
+    } catch (error) {
+      lastError = error;
+      console.warn("Unable to load Supabase SDK from", url, error);
+    }
+  }
+
+  throw lastError || new Error("Unable to load Supabase SDK.");
 }
 
 function setStatus(message, type = "info") {
@@ -1807,6 +1856,7 @@ async function initPage() {
     return;
   }
 
+  const createClient = await loadSupabaseCreateClient();
   supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
   const initialUser = await getCurrentSupabaseUser();
