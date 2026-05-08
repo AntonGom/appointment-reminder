@@ -47,6 +47,8 @@ let calendarLoadFailed = false;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = getTodayKey();
 let currentAuthUserId = "";
+let currentAuthUser = null;
+let initialSessionRecoveryTimer = 0;
 const MOBILE_CALENDAR_QUERY = window.matchMedia("(max-width: 760px)");
 let currentCalendarView = MOBILE_CALENDAR_QUERY.matches ? "month" : "week";
 const DEFAULT_WEEK_START_HOUR = 7;
@@ -132,6 +134,40 @@ function isRetryableSupabaseError(error) {
     || message.includes("network")
     || message.includes("timeout")
     || message.includes("temporarily unavailable");
+}
+
+async function getCurrentSupabaseUser() {
+  if (!supabase) {
+    return null;
+  }
+
+  const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession());
+  const sessionUser = sessionResult?.data?.session?.user || null;
+
+  if (sessionUser?.id) {
+    return sessionUser;
+  }
+
+  const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
+  return userResult?.data?.user || null;
+}
+
+async function refreshCalendarSessionAndData() {
+  if (!supabase) {
+    return;
+  }
+
+  try {
+    const user = await getCurrentSupabaseUser();
+    const nextUserId = user?.id || "";
+
+    currentAuthUser = user || null;
+    currentAuthUserId = nextUserId;
+    updateSignedInView(user || null);
+    await loadAppointments(user || null);
+  } catch (error) {
+    setStatus(error.message || "Unable to refresh your calendar session.", "error");
+  }
 }
 
 function renderCalendarLoadError(message = "We could not reach your saved appointments right now.") {
@@ -1699,7 +1735,7 @@ function bindCalendarControls() {
 
       if (retryButton) {
         event.preventDefault();
-        loadAppointments({ id: currentAuthUserId, user_metadata: { tier: "bronze" } });
+        refreshCalendarSessionAndData();
         return;
       }
 
@@ -1773,13 +1809,12 @@ async function initPage() {
 
   supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
-  const {
-    data: { session }
-  } = await withSupabaseRetry(() => supabase.auth.getSession());
+  const initialUser = await getCurrentSupabaseUser();
 
-  currentAuthUserId = session?.user?.id || "";
-  updateSignedInView(session?.user || null);
-  await loadAppointments(session?.user || null);
+  currentAuthUser = initialUser || null;
+  currentAuthUserId = initialUser?.id || "";
+  updateSignedInView(initialUser || null);
+  await loadAppointments(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
@@ -1793,8 +1828,29 @@ async function initPage() {
     }
 
     currentAuthUserId = nextUserId;
-    updateSignedInView(nextSession?.user || null);
-    await loadAppointments(nextSession?.user || null);
+    currentAuthUser = nextSession?.user || null;
+    updateSignedInView(currentAuthUser);
+    await loadAppointments(currentAuthUser);
+  });
+
+  initialSessionRecoveryTimer = window.setTimeout(() => {
+    refreshCalendarSessionAndData();
+  }, 900);
+
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) {
+      refreshCalendarSessionAndData();
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentAuthUserId && !appointments.length && !calendarLoading?.hidden) {
+      return;
+    }
+
+    if (document.visibilityState === "visible" && currentAuthUserId && (!appointments.length || calendarLoadFailed)) {
+      refreshCalendarSessionAndData();
+    }
   });
 
   MOBILE_CALENDAR_QUERY.addEventListener("change", event => {

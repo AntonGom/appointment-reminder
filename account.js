@@ -61,6 +61,7 @@ let reminderHistoryReady = true;
 let isLoadingClients = false;
 let clientsLoadError = "";
 let currentAuthUserId = "";
+let currentAuthUser = null;
 let statusBannerTimer = 0;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
@@ -200,6 +201,22 @@ function isRetryableSupabaseError(error) {
     || message.includes("network")
     || message.includes("timeout")
     || message.includes("temporarily unavailable");
+}
+
+async function getCurrentSupabaseUser() {
+  if (!supabase) {
+    return null;
+  }
+
+  const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession());
+  const sessionUser = sessionResult?.data?.session?.user || null;
+
+  if (sessionUser?.id) {
+    return sessionUser;
+  }
+
+  const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
+  return userResult?.data?.user || null;
 }
 
 function setClientFormStatus(message, type = "info") {
@@ -2560,18 +2577,22 @@ async function ensureProfile(user) {
     return;
   }
 
-  await supabase.from("profiles").upsert(
-    {
-      id: user.id,
-      email: user.email || ""
-    },
-    {
-      onConflict: "id"
-    }
-  );
+  const { error } = await withSupabaseRetry(() => supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email || ""
+      },
+      {
+        onConflict: "id"
+      }
+    ));
+
+  if (error) {
+    console.warn("Unable to refresh profile row.", error);
+  }
 }
 
-async function loadSavedClients() {
+async function loadSavedClients(userOverride = null) {
   if (!supabase) {
     return;
   }
@@ -2579,11 +2600,7 @@ async function loadSavedClients() {
   setClientsLoadingState(true);
 
   try {
-    const {
-      data: { session }
-    } = await supabase.auth.getSession();
-
-    const user = session?.user || null;
+    const user = userOverride?.id ? userOverride : await getCurrentSupabaseUser();
 
     if (!user?.id) {
       savedClients = [];
@@ -2643,6 +2660,8 @@ async function hydrateRuntimeConfigForUser(user) {
 }
 
 async function syncSignedInState(user) {
+  currentAuthUser = user || null;
+  currentAuthUserId = user?.id || "";
   updateSignedInView(user);
 
   if (!user) {
@@ -2652,11 +2671,13 @@ async function syncSignedInState(user) {
     return;
   }
 
-  await ensureProfile(user);
+  await ensureProfile(user).catch(error => {
+    console.warn("Profile refresh failed, continuing to load account data.", error);
+  });
 
   if (isBronzeUser(user)) {
     await Promise.all([
-      loadSavedClients(),
+      loadSavedClients(user),
       hydrateRuntimeConfigForUser(user)
     ]);
     return;
@@ -2666,6 +2687,19 @@ async function syncSignedInState(user) {
   clientsLoadError = "";
   renderSavedClients();
   await hydrateRuntimeConfigForUser(user);
+}
+
+async function refreshAccountSessionAndData() {
+  if (!supabase) {
+    return;
+  }
+
+  try {
+    const user = await getCurrentSupabaseUser();
+    await syncSignedInState(user || null);
+  } catch (error) {
+    setStatus(error.message || "Unable to refresh your account session.", "error");
+  }
 }
 
 function updateSignedInView(user) {
@@ -2812,12 +2846,8 @@ async function initSupabase() {
 
   supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
 
-  const {
-    data: { session }
-  } = await withSupabaseRetry(() => supabase.auth.getSession());
-
-  currentAuthUserId = session?.user?.id || "";
-  await syncSignedInState(session?.user || null);
+  const initialUser = await getCurrentSupabaseUser();
+  await syncSignedInState(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
@@ -2832,6 +2862,22 @@ async function initSupabase() {
 
     currentAuthUserId = nextUserId;
     await syncSignedInState(nextSession?.user || null);
+  });
+
+  window.setTimeout(() => {
+    refreshAccountSessionAndData();
+  }, 900);
+
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) {
+      refreshAccountSessionAndData();
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentAuthUserId && (!savedClients.length || clientsLoadError)) {
+      refreshAccountSessionAndData();
+    }
   });
 }
 
