@@ -82,8 +82,56 @@ let clientsLoadSequence = 0;
 const accountDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const accountDebugLog = [];
 
+function createTimedSupabaseFetch() {
+  return async (input, init = {}) => {
+    if (typeof AbortController === "undefined") {
+      return fetch(input, init);
+    }
+
+    const controller = new AbortController();
+    const upstreamSignal = init?.signal;
+    let timeoutId = 0;
+
+    const abortFromUpstream = () => {
+      controller.abort(upstreamSignal?.reason);
+    };
+
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        abortFromUpstream();
+      } else {
+        upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+      }
+    }
+
+    timeoutId = window.setTimeout(() => {
+      recordAccountDebug("aborting supabase fetch", `${SUPABASE_QUERY_TIMEOUT_MS}ms`);
+      controller.abort(new Error("Supabase request timed out."));
+    }, SUPABASE_QUERY_TIMEOUT_MS);
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error("Supabase request timed out.");
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (upstreamSignal) {
+        upstreamSignal.removeEventListener("abort", abortFromUpstream);
+      }
+    }
+  };
+}
+
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
-  const clientKey = `${supabaseUrl}::${publicKey}`;
+  const clientKey = `${supabaseUrl}::${publicKey}::abortable-v1`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
@@ -92,6 +140,9 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      global: {
+        fetch: createTimedSupabaseFetch()
       }
     }));
   }
