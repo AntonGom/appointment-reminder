@@ -43,6 +43,7 @@ let appConfig = null;
 let appointments = [];
 let reminderHistory = [];
 let appointmentsReady = true;
+let calendarLoadFailed = false;
 let viewMonth = startOfMonth(new Date());
 let selectedDateKey = getTodayKey();
 let currentAuthUserId = "";
@@ -50,6 +51,8 @@ const MOBILE_CALENDAR_QUERY = window.matchMedia("(max-width: 760px)");
 let currentCalendarView = MOBILE_CALENDAR_QUERY.matches ? "month" : "week";
 const DEFAULT_WEEK_START_HOUR = 7;
 const DEFAULT_WEEK_END_HOUR = 19;
+const SUPABASE_RETRY_ATTEMPTS = 2;
+const SUPABASE_RETRY_DELAY_MS = 700;
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -85,6 +88,73 @@ function setStatus(message, type = "info") {
   statusBanner.className = `status-banner ${type}`;
 }
 
+function delay(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+async function withSupabaseRetry(operation, options = {}) {
+  const attempts = Number.isFinite(options.attempts) ? Math.max(1, options.attempts) : SUPABASE_RETRY_ATTEMPTS;
+  const delayMs = Number.isFinite(options.delayMs) ? Math.max(0, options.delayMs) : SUPABASE_RETRY_DELAY_MS;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await operation();
+
+      if (result?.error && isRetryableSupabaseError(result.error)) {
+        throw result.error;
+      }
+
+      return result;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < attempts) {
+        await delay(delayMs * attempt);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function isRetryableSupabaseError(error) {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const code = String(error?.code || "").trim();
+  const message = String(error?.message || "").toLowerCase();
+
+  if (code === "42P01" || code === "42703") {
+    return false;
+  }
+
+  return status >= 500
+    || message.includes("failed to fetch")
+    || message.includes("network")
+    || message.includes("timeout")
+    || message.includes("temporarily unavailable");
+}
+
+function renderCalendarLoadError(message = "We could not reach your saved appointments right now.") {
+  const retryMarkup = `
+    <div class="empty-state retry-state">
+      <p>${escapeHtml(message)}</p>
+      <button class="secondary-button" type="button" data-calendar-retry>Try again</button>
+    </div>
+  `;
+
+  if (calendarLayout) {
+    calendarLayout.hidden = true;
+  }
+
+  clearCounts();
+  renderAppointmentList(upcomingList, [], "Unable to load appointments right now.");
+  renderAppointmentList(previousList, [], "Unable to load appointments right now.");
+
+  if (allAppointmentsList) {
+    allAppointmentsList.innerHTML = retryMarkup;
+  }
+}
+
 function getTierKey(user) {
   const candidates = [
     user?.user_metadata?.tier,
@@ -109,7 +179,7 @@ function setLoadingState(isLoading) {
   }
 
   if (calendarLayout) {
-    calendarLayout.hidden = isLoading;
+    calendarLayout.hidden = isLoading || calendarLoadFailed;
     calendarLayout.setAttribute("aria-busy", isLoading ? "true" : "false");
   }
 }
@@ -1361,28 +1431,30 @@ async function loadAppointments(user) {
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;
+    calendarLoadFailed = false;
     renderCalendar();
     return;
   }
 
   setLoadingState(true);
   setStatus("");
+  calendarLoadFailed = false;
 
   try {
-    const [appointmentsResult, historyResult] = await Promise.all([
-      supabase
+    const appointmentsResult = await withSupabaseRetry(() => supabase
         .from("appointments")
         .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
         .eq("owner_id", user.id)
         .order("service_date", { ascending: true })
-        .order("service_time", { ascending: true }),
-      supabase
+        .order("service_time", { ascending: true }));
+
+    const historyResult = await withSupabaseRetry(() => supabase
         .from("client_reminder_history")
         .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
         .eq("owner_id", user.id)
         .order("sent_at", { ascending: false })
-        .limit(500)
-    ]);
+        .limit(500))
+      .catch(error => ({ data: [], error }));
 
     const { data, error } = appointmentsResult;
     const { data: historyData, error: historyError } = historyResult;
@@ -1411,12 +1483,14 @@ async function loadAppointments(user) {
     }
 
     if (historyError && historyError.code !== "42P01") {
-      throw historyError;
+      console.warn("Unable to load reminder history for calendar.", historyError);
+      setStatus("Appointments loaded, but reminder history is temporarily unavailable.", "info");
     }
 
     appointmentsReady = true;
+    calendarLoadFailed = false;
     appointments = data || [];
-    reminderHistory = historyData || [];
+    reminderHistory = historyError ? [] : historyData || [];
 
     if (appointmentsSetupNotice) {
       appointmentsSetupNotice.hidden = true;
@@ -1427,13 +1501,8 @@ async function loadAppointments(user) {
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;
-    clearCounts();
-    if (calendarLayout) {
-      calendarLayout.hidden = true;
-    }
-    if (allAppointmentsList) {
-      allAppointmentsList.innerHTML = `<div class="empty-state">Unable to load appointments right now.</div>`;
-    }
+    calendarLoadFailed = true;
+    renderCalendarLoadError("We could not reach your saved appointments right now. Nothing was changed.");
     setStatus(error.message || "Unable to load appointments.", "error");
   } finally {
     setLoadingState(false);
@@ -1626,6 +1695,14 @@ function bindCalendarControls() {
 
   if (allAppointmentsList) {
     allAppointmentsList.addEventListener("click", event => {
+      const retryButton = event.target.closest("[data-calendar-retry]");
+
+      if (retryButton) {
+        event.preventDefault();
+        loadAppointments({ id: currentAuthUserId, user_metadata: { tier: "bronze" } });
+        return;
+      }
+
       const appointmentElement = event.target.closest("[data-appointment-id]");
 
       if (appointmentElement) {
@@ -1698,7 +1775,7 @@ async function initPage() {
 
   const {
     data: { session }
-  } = await supabase.auth.getSession();
+  } = await withSupabaseRetry(() => supabase.auth.getSession());
 
   currentAuthUserId = session?.user?.id || "";
   updateSignedInView(session?.user || null);

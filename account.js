@@ -59,11 +59,14 @@ let clientsSortMode = "newest";
 let clientsPage = 1;
 let reminderHistoryReady = true;
 let isLoadingClients = false;
+let clientsLoadError = "";
 let currentAuthUserId = "";
 let statusBannerTimer = 0;
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const CLIENTS_PER_PAGE = 10;
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
+const SUPABASE_RETRY_ATTEMPTS = 2;
+const SUPABASE_RETRY_DELAY_MS = 700;
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -151,6 +154,52 @@ function setStatus(message, type = "info", options = {}) {
       statusBannerTimer = 0;
     }, type === "error" ? 4600 : 3200);
   }
+}
+
+function delay(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+async function withSupabaseRetry(operation, options = {}) {
+  const attempts = Number.isFinite(options.attempts) ? Math.max(1, options.attempts) : SUPABASE_RETRY_ATTEMPTS;
+  const delayMs = Number.isFinite(options.delayMs) ? Math.max(0, options.delayMs) : SUPABASE_RETRY_DELAY_MS;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const result = await operation();
+
+      if (result?.error && isRetryableSupabaseError(result.error)) {
+        throw result.error;
+      }
+
+      return result;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < attempts) {
+        await delay(delayMs * attempt);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function isRetryableSupabaseError(error) {
+  const status = Number(error?.status || error?.statusCode || 0);
+  const code = String(error?.code || "").trim();
+  const message = String(error?.message || "").toLowerCase();
+
+  if (code === "42P01" || code === "42703") {
+    return false;
+  }
+
+  return status >= 500
+    || message.includes("failed to fetch")
+    || message.includes("network")
+    || message.includes("timeout")
+    || message.includes("temporarily unavailable");
 }
 
 function setClientFormStatus(message, type = "info") {
@@ -842,6 +891,19 @@ function renderContactsLoadingState() {
   `;
 }
 
+function renderContactsLoadError(message = "We could not reach your saved contacts right now. Nothing was changed.") {
+  if (!clientsList) {
+    return;
+  }
+
+  clientsList.innerHTML = `
+    <div class="empty-state retry-state">
+      <p>${escapeHtml(message)}</p>
+      <button class="secondary-button" type="button" data-retry-clients>Try again</button>
+    </div>
+  `;
+}
+
 function setClientsLoadingState(isLoading) {
   isLoadingClients = isLoading;
 
@@ -853,6 +915,7 @@ function setClientsLoadingState(isLoading) {
     if (contactsCountBadge) {
       contactsCountBadge.textContent = "Loading contacts...";
     }
+    clientsLoadError = "";
     renderContactsLoadingState();
     return;
   }
@@ -1470,16 +1533,16 @@ async function loadSavedClientRows(ownerId) {
 
   const fallbackSelect = "id, client_name, client_email, client_phone, service_address, notes, created_at, updated_at";
   const primarySelect = `${fallbackSelect}, profile_custom_answers`;
-  let { data, error } = await supabase
+  let { data, error } = await withSupabaseRetry(() => supabase
     .from("clients")
     .select(primarySelect)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }));
 
   if (error && isMissingColumnError(error, "profile_custom_answers")) {
-    ({ data, error } = await supabase
+    ({ data, error } = await withSupabaseRetry(() => supabase
       .from("clients")
       .select(fallbackSelect)
-      .order("created_at", { ascending: false }));
+      .order("created_at", { ascending: false })));
   }
 
   if (error) {
@@ -1499,20 +1562,20 @@ async function loadSavedAppointmentsForClients(ownerId) {
 
   const fallbackSelect = "id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, updated_at";
   const primarySelect = `${fallbackSelect}, custom_answers`;
-  let { data, error } = await supabase
+  let { data, error } = await withSupabaseRetry(() => supabase
     .from("appointments")
     .select(primarySelect)
     .eq("owner_id", ownerId)
     .order("updated_at", { ascending: false })
-    .limit(500);
+    .limit(500));
 
   if (error && isMissingColumnError(error, "custom_answers")) {
-    ({ data, error } = await supabase
+    ({ data, error } = await withSupabaseRetry(() => supabase
       .from("appointments")
       .select(fallbackSelect)
       .eq("owner_id", ownerId)
       .order("updated_at", { ascending: false })
-      .limit(500));
+      .limit(500)));
   }
 
   if (error) {
@@ -1769,12 +1832,12 @@ async function loadReminderHistory(ownerId) {
     return [];
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await withSupabaseRetry(() => supabase
     .from("client_reminder_history")
     .select("id, client_id, channel, source, message_id, recipient_email, event_type, status, occurred_at, sent_at, created_at, message_preview")
     .eq("owner_id", ownerId)
     .order("sent_at", { ascending: false })
-    .limit(500);
+    .limit(500));
 
   if (error) {
     if (error.code === "42P01") {
@@ -2117,7 +2180,7 @@ async function rememberClientAnswer(clientId, appointmentId, fieldId) {
 
   const {
     data: { user }
-  } = await supabase.auth.getUser();
+  } = await withSupabaseRetry(() => supabase.auth.getUser());
 
   if (!user?.id) {
     setStatus("Please sign in again before saving that client detail.", "error");
@@ -2303,6 +2366,12 @@ function renderSavedClients() {
 
   if (isLoadingClients) {
     renderContactsLoadingState();
+    return;
+  }
+
+  if (clientsLoadError) {
+    updateContactsCount(0);
+    renderContactsLoadError(clientsLoadError);
     return;
   }
 
@@ -2518,14 +2587,25 @@ async function loadSavedClients() {
 
     if (!user?.id) {
       savedClients = [];
+      clientsLoadError = "";
       return;
     }
 
-    const [clientsRows, historyRows, appointmentsRows] = await Promise.all([
-      loadSavedClientRows(user.id),
+    const clientsRows = await loadSavedClientRows(user.id);
+    const [historyResult, appointmentsResult] = await Promise.allSettled([
       loadReminderHistory(user.id),
       loadSavedAppointmentsForClients(user.id)
     ]);
+    const historyRows = historyResult.status === "fulfilled" ? historyResult.value : [];
+    const appointmentsRows = appointmentsResult.status === "fulfilled" ? appointmentsResult.value : [];
+
+    if (historyResult.status === "rejected" || appointmentsResult.status === "rejected") {
+      console.warn("Saved contacts loaded, but related appointment or reminder history failed.", {
+        historyError: historyResult.status === "rejected" ? historyResult.reason : null,
+        appointmentsError: appointmentsResult.status === "rejected" ? appointmentsResult.reason : null
+      });
+      setStatus("Contacts loaded, but appointment or reminder history is temporarily unavailable.", "info");
+    }
 
     let clientsData = clientsRows || [];
     clientsData = await backfillClientsFromAppointments(user.id, clientsData, appointmentsRows);
@@ -2535,8 +2615,10 @@ async function loadSavedClients() {
     }
 
     savedClients = attachAppointmentsToClients(attachReminderHistory(clientsData, historyRows), appointmentsRows);
+    clientsLoadError = "";
   } catch (error) {
     savedClients = [];
+    clientsLoadError = "We could not reach your saved contacts right now. Nothing was changed.";
     setStatus(error.message || "Unable to load saved clients.", "error");
   } finally {
     setClientsLoadingState(false);
@@ -2565,6 +2647,7 @@ async function syncSignedInState(user) {
 
   if (!user) {
     savedClients = [];
+    clientsLoadError = "";
     renderSavedClients();
     return;
   }
@@ -2580,6 +2663,7 @@ async function syncSignedInState(user) {
   }
 
   savedClients = [];
+  clientsLoadError = "";
   renderSavedClients();
   await hydrateRuntimeConfigForUser(user);
 }
@@ -2730,7 +2814,7 @@ async function initSupabase() {
 
   const {
     data: { session }
-  } = await supabase.auth.getSession();
+  } = await withSupabaseRetry(() => supabase.auth.getSession());
 
   currentAuthUserId = session?.user?.id || "";
   await syncSignedInState(session?.user || null);
@@ -2873,9 +2957,16 @@ async function handleSaveClient(event) {
     return;
   }
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
+    user = userResult?.data?.user || null;
+  } catch (error) {
+    setStatus(error.message || "Unable to reach accounts right now.", "error");
+    setClientFormStatus("Could not save. Nothing was changed.", "error");
+    return;
+  }
 
   if (!user?.id) {
     setStatus("Please sign in before saving a client.", "error");
@@ -2924,11 +3015,9 @@ async function handleSaveClient(event) {
   try {
     const isEditing = Boolean(editingClientId);
     const activeEditingId = editingClientId;
-    const query = isEditing
+    const { error } = await withSupabaseRetry(() => isEditing
       ? supabase.from("clients").update(payload).eq("id", activeEditingId).eq("owner_id", user.id)
-      : supabase.from("clients").insert(payload);
-
-    const { error } = await query;
+      : supabase.from("clients").insert(payload));
 
     if (error) {
       throw error;
@@ -3353,6 +3442,14 @@ async function deleteClient(clientId) {
 }
 
 function handleClientsListClick(event) {
+  const retryButton = event.target.closest("[data-retry-clients]");
+
+  if (retryButton) {
+    event.preventDefault();
+    loadSavedClients();
+    return;
+  }
+
   const helpButton = event.target.closest("[data-status-help]");
 
   if (helpButton) {

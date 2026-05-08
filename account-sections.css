@@ -1406,6 +1406,16 @@ button.calendar-week-mobile-day {
   color: var(--text-soft);
 }
 
+.retry-state {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.retry-state p {
+  margin: 0;
+}
+
 [hidden] {
   display: none !important;
 }
