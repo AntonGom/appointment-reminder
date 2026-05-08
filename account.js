@@ -66,6 +66,7 @@ const CLIENTS_PER_PAGE = 10;
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
+const SUPABASE_QUERY_TIMEOUT_MS = 8500;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const SUPABASE_MODULE_URLS = [
@@ -262,14 +263,34 @@ function delay(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
+async function runWithTimeout(operation, timeoutMs = SUPABASE_QUERY_TIMEOUT_MS) {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error("Supabase request timed out."));
+        }, timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function withSupabaseRetry(operation, options = {}) {
   const attempts = Number.isFinite(options.attempts) ? Math.max(1, options.attempts) : SUPABASE_RETRY_ATTEMPTS;
   const delayMs = Number.isFinite(options.delayMs) ? Math.max(0, options.delayMs) : SUPABASE_RETRY_DELAY_MS;
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(1000, options.timeoutMs) : SUPABASE_QUERY_TIMEOUT_MS;
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const result = await operation();
+      const result = await runWithTimeout(operation, timeoutMs);
 
       if (result?.error && isRetryableSupabaseError(result.error)) {
         throw result.error;
@@ -301,6 +322,7 @@ function isRetryableSupabaseError(error) {
     || message.includes("failed to fetch")
     || message.includes("network")
     || message.includes("timeout")
+    || message.includes("timed out")
     || message.includes("temporarily unavailable");
 }
 
@@ -2784,7 +2806,9 @@ async function syncSignedInState(user) {
     return;
   }
 
-  await ensureProfile(user).catch(error => {
+  recordAccountDebug("profile refresh queued");
+  ensureProfile(user).catch(error => {
+    recordAccountDebug("profile refresh failed", error?.message || String(error));
     console.warn("Profile refresh failed, continuing to load account data.", error);
   });
 
