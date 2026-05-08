@@ -247,11 +247,11 @@ function updateSignedInView(user) {
   }
 
   if (freeShell) {
-    freeShell.hidden = !(isSignedIn && !isBronze);
+    freeShell.hidden = true;
   }
 
   if (bronzeShell) {
-    bronzeShell.hidden = !isBronze;
+    bronzeShell.hidden = !isSignedIn;
   }
 
   if (pricePill) {
@@ -1463,7 +1463,7 @@ function renderCalendar() {
 }
 
 async function loadAppointments(user) {
-  if (!supabase || !user?.id || !isBronzeUser(user)) {
+  if (!supabase || !user?.id) {
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;

@@ -2675,18 +2675,10 @@ async function syncSignedInState(user) {
     console.warn("Profile refresh failed, continuing to load account data.", error);
   });
 
-  if (isBronzeUser(user)) {
-    await Promise.all([
-      loadSavedClients(user),
-      hydrateRuntimeConfigForUser(user)
-    ]);
-    return;
-  }
-
-  savedClients = [];
-  clientsLoadError = "";
-  renderSavedClients();
-  await hydrateRuntimeConfigForUser(user);
+  await Promise.all([
+    loadSavedClients(user),
+    hydrateRuntimeConfigForUser(user)
+  ]);
 }
 
 async function refreshAccountSessionAndData() {
@@ -2769,11 +2761,11 @@ function updateSignedInView(user) {
   }
 
   if (freeContactsShell) {
-    freeContactsShell.hidden = !(isSignedIn && !isBronze);
+    freeContactsShell.hidden = true;
   }
 
   if (bronzeContactsShell) {
-    bronzeContactsShell.hidden = !isBronze;
+    bronzeContactsShell.hidden = !isSignedIn;
   }
 
   if (seedClientsButton) {
