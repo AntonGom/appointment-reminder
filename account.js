@@ -67,11 +67,15 @@ const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
+const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];
 let loadedSupabaseCreateClient = null;
+let accountRecoveryTimers = [];
+const accountDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
+const accountDebugLog = [];
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -111,6 +115,7 @@ async function importWithTimeout(url, timeoutMs = SUPABASE_MODULE_TIMEOUT_MS) {
 
 async function loadSupabaseCreateClient() {
   if (loadedSupabaseCreateClient) {
+    recordAccountDebug("supabase sdk cached");
     return loadedSupabaseCreateClient;
   }
 
@@ -118,16 +123,19 @@ async function loadSupabaseCreateClient() {
 
   for (const url of SUPABASE_MODULE_URLS) {
     try {
+      recordAccountDebug("loading supabase sdk", url);
       const module = await importWithTimeout(url);
 
       if (typeof module?.createClient === "function") {
         loadedSupabaseCreateClient = module.createClient;
+        recordAccountDebug("supabase sdk loaded", url);
         return loadedSupabaseCreateClient;
       }
 
       lastError = new Error(`Supabase module at ${url} did not export createClient.`);
     } catch (error) {
       lastError = error;
+      recordAccountDebug("supabase sdk failed", `${url} | ${error?.message || error}`);
       console.warn("Unable to load Supabase SDK from", url, error);
     }
   }
@@ -206,6 +214,50 @@ function setStatus(message, type = "info", options = {}) {
   }
 }
 
+function recordAccountDebug(step, detail = "") {
+  if (!accountDebugEnabled) {
+    return;
+  }
+
+  const timestamp = new Date().toLocaleTimeString();
+  const line = `[${timestamp}] ${step}${detail ? `: ${detail}` : ""}`;
+  accountDebugLog.push(line);
+  updateAccountDebugPanel();
+}
+
+function updateAccountDebugPanel() {
+  if (!accountDebugEnabled) {
+    return;
+  }
+
+  let panel = document.getElementById("account-debug-panel");
+
+  if (!panel) {
+    panel = document.createElement("pre");
+    panel.id = "account-debug-panel";
+    panel.style.cssText = [
+      "position:fixed",
+      "left:10px",
+      "right:10px",
+      "bottom:10px",
+      "z-index:3000",
+      "max-height:42vh",
+      "overflow:auto",
+      "margin:0",
+      "padding:12px",
+      "border-radius:14px",
+      "background:rgba(15,23,42,0.94)",
+      "color:#e5f0ff",
+      "font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace",
+      "white-space:pre-wrap",
+      "box-shadow:0 18px 46px rgba(15,23,42,0.34)"
+    ].join(";");
+    document.body.appendChild(panel);
+  }
+
+  panel.textContent = accountDebugLog.slice(-40).join("\n");
+}
+
 function delay(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms));
 }
@@ -254,18 +306,22 @@ function isRetryableSupabaseError(error) {
 
 async function getCurrentSupabaseUser() {
   if (!supabase) {
+    recordAccountDebug("get user skipped", "no supabase client");
     return null;
   }
 
   const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession());
   const sessionUser = sessionResult?.data?.session?.user || null;
+  recordAccountDebug("getSession", sessionUser?.id ? `user ${sessionUser.id}` : "no session user");
 
   if (sessionUser?.id) {
     return sessionUser;
   }
 
   const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
-  return userResult?.data?.user || null;
+  const user = userResult?.data?.user || null;
+  recordAccountDebug("getUser", user?.id ? `user ${user.id}` : userResult?.error?.message || "no auth user");
+  return user;
 }
 
 function setClientFormStatus(message, type = "info") {
@@ -2643,6 +2699,7 @@ async function ensureProfile(user) {
 
 async function loadSavedClients(userOverride = null) {
   if (!supabase) {
+    recordAccountDebug("load clients skipped", "no supabase client");
     return;
   }
 
@@ -2650,14 +2707,17 @@ async function loadSavedClients(userOverride = null) {
 
   try {
     const user = userOverride?.id ? userOverride : await getCurrentSupabaseUser();
+    recordAccountDebug("load clients start", user?.id ? `user ${user.id}` : "no user");
 
     if (!user?.id) {
       savedClients = [];
       clientsLoadError = "";
+      recordAccountDebug("load clients stopped", "no signed-in user");
       return;
     }
 
     const clientsRows = await loadSavedClientRows(user.id);
+    recordAccountDebug("clients query", `${clientsRows.length} row${clientsRows.length === 1 ? "" : "s"}`);
     const [historyResult, appointmentsResult] = await Promise.allSettled([
       loadReminderHistory(user.id),
       loadSavedAppointmentsForClients(user.id)
@@ -2666,6 +2726,7 @@ async function loadSavedClients(userOverride = null) {
     const appointmentsRows = appointmentsResult.status === "fulfilled" ? appointmentsResult.value : [];
 
     if (historyResult.status === "rejected" || appointmentsResult.status === "rejected") {
+      recordAccountDebug("related data partial failure", "contacts still loaded");
       console.warn("Saved contacts loaded, but related appointment or reminder history failed.", {
         historyError: historyResult.status === "rejected" ? historyResult.reason : null,
         appointmentsError: appointmentsResult.status === "rejected" ? appointmentsResult.reason : null
@@ -2682,9 +2743,11 @@ async function loadSavedClients(userOverride = null) {
 
     savedClients = attachAppointmentsToClients(attachReminderHistory(clientsData, historyRows), appointmentsRows);
     clientsLoadError = "";
+    recordAccountDebug("contacts rendered", `${savedClients.length} saved`);
   } catch (error) {
     savedClients = [];
     clientsLoadError = "We could not reach your saved contacts right now. Nothing was changed.";
+    recordAccountDebug("load clients error", error?.message || String(error));
     setStatus(error.message || "Unable to load saved clients.", "error");
   } finally {
     setClientsLoadingState(false);
@@ -2711,6 +2774,7 @@ async function hydrateRuntimeConfigForUser(user) {
 async function syncSignedInState(user) {
   currentAuthUser = user || null;
   currentAuthUserId = user?.id || "";
+  recordAccountDebug("sync signed-in state", user?.id ? `user ${user.id}, tier ${getTierKey(user)}` : "no user");
   updateSignedInView(user);
 
   if (!user) {
@@ -2732,15 +2796,28 @@ async function syncSignedInState(user) {
 
 async function refreshAccountSessionAndData() {
   if (!supabase) {
+    recordAccountDebug("refresh skipped", "no supabase client");
     return;
   }
 
   try {
+    recordAccountDebug("refresh session");
     const user = await getCurrentSupabaseUser();
     await syncSignedInState(user || null);
   } catch (error) {
+    recordAccountDebug("refresh error", error?.message || String(error));
     setStatus(error.message || "Unable to refresh your account session.", "error");
   }
+}
+
+function scheduleAccountSessionRecovery() {
+  accountRecoveryTimers.forEach(timerId => window.clearTimeout(timerId));
+  accountRecoveryTimers = SESSION_RECOVERY_DELAYS_MS.map(delayMs => window.setTimeout(() => {
+    if (!currentAuthUserId || clientsLoadError || (!isLoadingClients && !savedClients.length)) {
+      recordAccountDebug("scheduled recovery", `${delayMs}ms`);
+      refreshAccountSessionAndData();
+    }
+  }, delayMs));
 }
 
 function updateSignedInView(user) {
@@ -2868,7 +2945,9 @@ async function ensureRuntimeConfig() {
 }
 
 async function initSupabase() {
+  recordAccountDebug("init start");
   appConfig = await getPublicConfig();
+  recordAccountDebug("public config", appConfig.accountsEnabled ? "accounts enabled" : "accounts disabled");
 
   if (pricePill) {
     pricePill.textContent = "Optional Bronze";
@@ -2887,11 +2966,13 @@ async function initSupabase() {
 
   const createClient = await loadSupabaseCreateClient();
   supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
+  recordAccountDebug("supabase client ready");
 
   const initialUser = await getCurrentSupabaseUser();
   await syncSignedInState(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    recordAccountDebug("auth event", `${event} ${nextSession?.user?.id || "no user"}`);
     if (event === "TOKEN_REFRESHED") {
       return;
     }
@@ -2906,9 +2987,7 @@ async function initSupabase() {
     await syncSignedInState(nextSession?.user || null);
   });
 
-  window.setTimeout(() => {
-    refreshAccountSessionAndData();
-  }, 900);
+  scheduleAccountSessionRecovery();
 
   window.addEventListener("pageshow", event => {
     if (event.persisted) {

@@ -54,11 +54,15 @@ const DEFAULT_WEEK_END_HOUR = 19;
 const SUPABASE_RETRY_ATTEMPTS = 2;
 const SUPABASE_RETRY_DELAY_MS = 700;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
+const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];
 let loadedSupabaseCreateClient = null;
+let calendarRecoveryTimers = [];
+const calendarDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
+const calendarDebugLog = [];
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -98,6 +102,7 @@ async function importWithTimeout(url, timeoutMs = SUPABASE_MODULE_TIMEOUT_MS) {
 
 async function loadSupabaseCreateClient() {
   if (loadedSupabaseCreateClient) {
+    recordCalendarDebug("supabase sdk cached");
     return loadedSupabaseCreateClient;
   }
 
@@ -105,16 +110,19 @@ async function loadSupabaseCreateClient() {
 
   for (const url of SUPABASE_MODULE_URLS) {
     try {
+      recordCalendarDebug("loading supabase sdk", url);
       const module = await importWithTimeout(url);
 
       if (typeof module?.createClient === "function") {
         loadedSupabaseCreateClient = module.createClient;
+        recordCalendarDebug("supabase sdk loaded", url);
         return loadedSupabaseCreateClient;
       }
 
       lastError = new Error(`Supabase module at ${url} did not export createClient.`);
     } catch (error) {
       lastError = error;
+      recordCalendarDebug("supabase sdk failed", `${url} | ${error?.message || error}`);
       console.warn("Unable to load Supabase SDK from", url, error);
     }
   }
@@ -137,6 +145,50 @@ function setStatus(message, type = "info") {
   statusBanner.hidden = false;
   statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
+}
+
+function recordCalendarDebug(step, detail = "") {
+  if (!calendarDebugEnabled) {
+    return;
+  }
+
+  const timestamp = new Date().toLocaleTimeString();
+  const line = `[${timestamp}] ${step}${detail ? `: ${detail}` : ""}`;
+  calendarDebugLog.push(line);
+  updateCalendarDebugPanel();
+}
+
+function updateCalendarDebugPanel() {
+  if (!calendarDebugEnabled) {
+    return;
+  }
+
+  let panel = document.getElementById("account-debug-panel");
+
+  if (!panel) {
+    panel = document.createElement("pre");
+    panel.id = "account-debug-panel";
+    panel.style.cssText = [
+      "position:fixed",
+      "left:10px",
+      "right:10px",
+      "bottom:10px",
+      "z-index:3000",
+      "max-height:42vh",
+      "overflow:auto",
+      "margin:0",
+      "padding:12px",
+      "border-radius:14px",
+      "background:rgba(15,23,42,0.94)",
+      "color:#e5f0ff",
+      "font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace",
+      "white-space:pre-wrap",
+      "box-shadow:0 18px 46px rgba(15,23,42,0.34)"
+    ].join(";");
+    document.body.appendChild(panel);
+  }
+
+  panel.textContent = calendarDebugLog.slice(-40).join("\n");
 }
 
 function delay(ms) {
@@ -187,26 +239,32 @@ function isRetryableSupabaseError(error) {
 
 async function getCurrentSupabaseUser() {
   if (!supabase) {
+    recordCalendarDebug("get user skipped", "no supabase client");
     return null;
   }
 
   const sessionResult = await withSupabaseRetry(() => supabase.auth.getSession());
   const sessionUser = sessionResult?.data?.session?.user || null;
+  recordCalendarDebug("getSession", sessionUser?.id ? `user ${sessionUser.id}` : "no session user");
 
   if (sessionUser?.id) {
     return sessionUser;
   }
 
   const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
-  return userResult?.data?.user || null;
+  const user = userResult?.data?.user || null;
+  recordCalendarDebug("getUser", user?.id ? `user ${user.id}` : userResult?.error?.message || "no auth user");
+  return user;
 }
 
 async function refreshCalendarSessionAndData() {
   if (!supabase) {
+    recordCalendarDebug("refresh skipped", "no supabase client");
     return;
   }
 
   try {
+    recordCalendarDebug("refresh session");
     const user = await getCurrentSupabaseUser();
     const nextUserId = user?.id || "";
 
@@ -215,8 +273,19 @@ async function refreshCalendarSessionAndData() {
     updateSignedInView(user || null);
     await loadAppointments(user || null);
   } catch (error) {
+    recordCalendarDebug("refresh error", error?.message || String(error));
     setStatus(error.message || "Unable to refresh your calendar session.", "error");
   }
+}
+
+function scheduleCalendarSessionRecovery() {
+  calendarRecoveryTimers.forEach(timerId => window.clearTimeout(timerId));
+  calendarRecoveryTimers = SESSION_RECOVERY_DELAYS_MS.map(delayMs => window.setTimeout(() => {
+    if (!currentAuthUserId || calendarLoadFailed || (!calendarLoading || calendarLoading.hidden) && !appointments.length) {
+      recordCalendarDebug("scheduled recovery", `${delayMs}ms`);
+      refreshCalendarSessionAndData();
+    }
+  }, delayMs));
 }
 
 function renderCalendarLoadError(message = "We could not reach your saved appointments right now.") {
@@ -1513,6 +1582,7 @@ function renderCalendar() {
 
 async function loadAppointments(user) {
   if (!supabase || !user?.id) {
+    recordCalendarDebug("load appointments skipped", !supabase ? "no supabase client" : "no user");
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;
@@ -1524,6 +1594,7 @@ async function loadAppointments(user) {
   setLoadingState(true);
   setStatus("");
   calendarLoadFailed = false;
+  recordCalendarDebug("load appointments start", `user ${user.id}`);
 
   try {
     const appointmentsResult = await withSupabaseRetry(() => supabase
@@ -1543,6 +1614,7 @@ async function loadAppointments(user) {
 
     const { data, error } = appointmentsResult;
     const { data: historyData, error: historyError } = historyResult;
+    recordCalendarDebug("appointments query", error ? error.message || String(error) : `${(data || []).length} row${(data || []).length === 1 ? "" : "s"}`);
 
     if (error) {
       if (error.code === "42P01") {
@@ -1568,6 +1640,7 @@ async function loadAppointments(user) {
     }
 
     if (historyError && historyError.code !== "42P01") {
+      recordCalendarDebug("history query failed", historyError.message || String(historyError));
       console.warn("Unable to load reminder history for calendar.", historyError);
       setStatus("Appointments loaded, but reminder history is temporarily unavailable.", "info");
     }
@@ -1582,11 +1655,13 @@ async function loadAppointments(user) {
     }
 
     renderCalendar();
+    recordCalendarDebug("calendar rendered", `${appointments.length} appointment${appointments.length === 1 ? "" : "s"}`);
   } catch (error) {
     appointments = [];
     reminderHistory = [];
     appointmentsReady = true;
     calendarLoadFailed = true;
+    recordCalendarDebug("load appointments error", error?.message || String(error));
     renderCalendarLoadError("We could not reach your saved appointments right now. Nothing was changed.");
     setStatus(error.message || "Unable to load appointments.", "error");
   } finally {
@@ -1839,11 +1914,14 @@ function bindCalendarControls() {
 }
 
 async function initPage() {
+  recordCalendarDebug("init start");
   bindCalendarControls();
 
   try {
     appConfig = await getPublicConfig();
+    recordCalendarDebug("public config", appConfig.accountsEnabled ? "accounts enabled" : "accounts disabled");
   } catch (error) {
+    recordCalendarDebug("public config error", error?.message || String(error));
     setStatus(error.message || "Unable to load this page.", "error");
     return;
   }
@@ -1858,6 +1936,7 @@ async function initPage() {
 
   const createClient = await loadSupabaseCreateClient();
   supabase = getSharedSupabaseClient(appConfig.supabaseUrl, appConfig.supabasePublishableKey, createClient);
+  recordCalendarDebug("supabase client ready");
 
   const initialUser = await getCurrentSupabaseUser();
 
@@ -1867,6 +1946,7 @@ async function initPage() {
   await loadAppointments(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    recordCalendarDebug("auth event", `${event} ${nextSession?.user?.id || "no user"}`);
     if (event === "TOKEN_REFRESHED") {
       return;
     }
@@ -1883,9 +1963,7 @@ async function initPage() {
     await loadAppointments(currentAuthUser);
   });
 
-  initialSessionRecoveryTimer = window.setTimeout(() => {
-    refreshCalendarSessionAndData();
-  }, 900);
+  scheduleCalendarSessionRecovery();
 
   window.addEventListener("pageshow", event => {
     if (event.persisted) {
@@ -1909,4 +1987,7 @@ async function initPage() {
   });
 }
 
-initPage();
+initPage().catch(error => {
+  recordCalendarDebug("init error", error?.message || String(error));
+  setStatus(error.message || "Unable to load this page.", "error");
+});
