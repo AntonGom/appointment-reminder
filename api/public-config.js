@@ -3,6 +3,11 @@ export default function handler(req, res) {
   const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
   const stripePriceLabel = process.env.PRO_MONTHLY_PRICE_LABEL || "$9/month";
   const googleCalendarClientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID || "";
+  const outlookCalendarClientId = process.env.OUTLOOK_CALENDAR_CLIENT_ID
+    || process.env.MICROSOFT_CALENDAR_CLIENT_ID
+    || process.env.NEXT_PUBLIC_OUTLOOK_CALENDAR_CLIENT_ID
+    || process.env.NEXT_PUBLIC_MICROSOFT_CALENDAR_CLIENT_ID
+    || "";
   const inboundAppointmentEmail = process.env.INBOUND_APPOINTMENT_EMAIL || "";
 
   res.setHeader("Cache-Control", "no-store");
@@ -14,6 +19,8 @@ export default function handler(req, res) {
     stripePriceLabel,
     googleCalendarClientId,
     googleCalendarEnabled: Boolean(googleCalendarClientId),
+    outlookCalendarClientId,
+    outlookCalendarEnabled: Boolean(outlookCalendarClientId),
     inboundAppointmentEmail
   });
 }

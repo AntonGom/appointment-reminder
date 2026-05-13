@@ -56,6 +56,8 @@ const server = http.createServer((request, response) => {
       supabasePublishableKey: "",
       googleCalendarClientId: "",
       googleCalendarEnabled: false,
+      outlookCalendarClientId: "",
+      outlookCalendarEnabled: false,
       inboundAppointmentEmail: ""
     });
     return;
@@ -66,7 +68,7 @@ const server = http.createServer((request, response) => {
       label: "DEV",
       env: "preview",
       branch: "codex-qa",
-      version: "20260513.22",
+      version: "20260513.23",
       commitSha: "testsha"
     });
     return;

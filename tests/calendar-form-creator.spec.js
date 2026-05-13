@@ -318,7 +318,12 @@ async function stubModulePages(page, seedState) {
         accountsEnabled: true,
         supabaseUrl: "https://example.supabase.co",
         supabaseAnonKey: "anon-key",
-        supabasePublishableKey: "publishable-key"
+        supabasePublishableKey: "publishable-key",
+        googleCalendarClientId: "",
+        googleCalendarEnabled: false,
+        outlookCalendarClientId: "outlook-client-id",
+        outlookCalendarEnabled: true,
+        inboundAppointmentEmail: ""
       })
     });
   });
@@ -605,6 +610,70 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].service_date).toBe("2027-05-05");
     expect(state.tables.appointments[0].service_time).toBe("10:15");
     expect(state.tables.appointments[0].last_source).toBe("calendar_link");
+  });
+
+  test("calendar syncs appointments from Outlook Calendar", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.addInitScript(() => {
+      window.msal = {
+        PublicClientApplication: class {
+          async initialize() {}
+          getAllAccounts() {
+            return [];
+          }
+          async acquireTokenPopup() {
+            return { accessToken: "outlook-access-token" };
+          }
+        }
+      };
+    });
+    await page.route("https://graph.microsoft.com/v1.0/me/calendarView?**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          value: [
+            {
+              id: "outlook_event_1",
+              iCalUId: "outlook-uid-1",
+              subject: "Buyer showing",
+              start: {
+                dateTime: "2027-05-06T13:45:00.0000000",
+                timeZone: "Eastern Standard Time"
+              },
+              location: {
+                displayName: "91 Outlook Ave"
+              },
+              attendees: [
+                {
+                  emailAddress: {
+                    name: "Olivia Outlook",
+                    address: "olivia@example.com"
+                  }
+                }
+              ],
+              bodyPreview: "Bring buyer packet."
+            }
+          ]
+        })
+      });
+    });
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator("#sync-outlook-calendar-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Olivia Outlook");
+    await expect(page.locator("#all-appointments-list")).toContainText("91 Outlook Ave");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Olivia Outlook");
+    expect(state.tables.appointments[0].client_email).toBe("olivia@example.com");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-06");
+    expect(state.tables.appointments[0].service_time).toBe("13:45");
+    expect(state.tables.appointments[0].last_source).toBe("outlook_calendar");
   });
 
   test("form creator saves a selected template and keeps it after reload", async ({ page }) => {

@@ -1733,7 +1733,14 @@ function syncBronzePreviewScale() {
     return;
   }
 
-  const contentHeight = Math.max(body.scrollHeight, body.offsetHeight, html.scrollHeight, html.offsetHeight, 480);
+  const contentRoot = Array.from(body.children).filter(child => child.tagName === "DIV").pop() || body.lastElementChild;
+  const contentRootRect = contentRoot?.getBoundingClientRect?.();
+  const contentHeight = Math.max(
+    Math.ceil(contentRootRect?.height || 0),
+    Math.ceil(contentRoot?.scrollHeight || 0),
+    Math.ceil(contentRoot?.offsetHeight || 0),
+    1
+  );
   const reviewDraftCard = getReviewDraftCard();
   const previewContainer = shell.parentElement;
   const widthCandidates = [
@@ -1889,8 +1896,14 @@ async function renderBronzeReviewPreview(message) {
       styleTag.textContent = `
         html, body {
           background: transparent !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-height: 0 !important;
+          height: auto !important;
+          overflow: hidden !important;
         }
         body > div:last-of-type {
+          display: block !important;
           padding: 0 !important;
           min-width: 640px !important;
           background: transparent !important;

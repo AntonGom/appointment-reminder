@@ -1019,6 +1019,39 @@
       padding: 0 4px;
     }
 
+    .preview-panel-label label {
+      margin: 0;
+    }
+
+    .preview-panel-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .preview-editor-toggle {
+      display: none;
+      flex: 0 0 auto;
+      min-height: 34px;
+      width: auto;
+      padding: 8px 12px;
+      border: 1px solid rgba(37, 99, 235, 0.18);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.78);
+      color: #1d4ed8;
+      box-shadow: none;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .preview-editor-toggle.visible {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .bronze-panel {
       display: none;
       padding: 16px;
@@ -1110,10 +1143,6 @@
 
     .email-draft.is-bronze-compact .email-draft-bar,
     .email-draft.is-bronze-compact .email-draft-fields {
-      display: none;
-    }
-
-    .email-draft.is-bronze-compact .bronze-preview-editor-wrap {
       display: none;
     }
 
@@ -1211,6 +1240,11 @@
     }
 
     .bronze-preview-editor-wrap {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .bronze-preview-editor-wrap.visible {
       display: block;
     }
 
@@ -1266,7 +1300,7 @@
     .bronze-preview-frame {
       display: block;
       width: 664px;
-      height: 1100px;
+      height: 1px;
       border: none;
       background: transparent;
       transform: scale(var(--bronze-preview-scale));
@@ -2166,6 +2200,11 @@
         gap: 6px;
       }
 
+      .preview-panel-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
       .bronze-preview-tip {
         text-align: left;
       }
@@ -2365,10 +2404,13 @@
       <div class="question-wrap review-wrap">
         <div class="review-stack">
             <div class="review-panel">
-              <label class="preview-panel-label" for="preview">
-                <span>Draft Email Preview</span>
-                <span id="bronze-preview-hint" class="bronze-preview-tip">Read-only preview. Edit the appointment answers to update this email.</span>
-              </label>
+              <div class="preview-panel-label">
+                <label for="preview">Draft Email Preview</label>
+                <div class="preview-panel-actions">
+                  <span id="bronze-preview-hint" class="bronze-preview-tip">Use Edit text to customize the final wording.</span>
+                  <button id="toggle-preview-editor" class="preview-editor-toggle" type="button" aria-expanded="false" aria-controls="bronze-preview-editor-wrap">Edit text</button>
+                </div>
+              </div>
               <div id="review-draft-card" class="email-draft">
                 <div class="email-draft-bar">
                   <span class="email-draft-dots" aria-hidden="true">
@@ -2490,7 +2532,7 @@
   </div>
 </div>
 
-  <script src="app.js?v=20260501h"></script>
+  <script src="app.js?v=20260513b"></script>
   <script src="nav.js?v=20260427a"></script>
 
 </body>

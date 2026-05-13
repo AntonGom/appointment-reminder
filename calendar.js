@@ -32,6 +32,7 @@ const importAppointmentsInput = document.getElementById("import-appointments-inp
 const importIcsButton = document.getElementById("import-ics-button");
 const importIcsInput = document.getElementById("import-ics-input");
 const syncGoogleCalendarButton = document.getElementById("sync-google-calendar-button");
+const syncOutlookCalendarButton = document.getElementById("sync-outlook-calendar-button");
 const calendarFeedUrlInput = document.getElementById("calendar-feed-url");
 const syncCalendarLinkButton = document.getElementById("sync-calendar-link-button");
 const forwardingEmailValue = document.getElementById("forwarding-email-value");
@@ -71,6 +72,10 @@ const GOOGLE_IDENTITY_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
 const GOOGLE_CALENDAR_LOOKBACK_DAYS = 30;
 const GOOGLE_CALENDAR_LOOKAHEAD_DAYS = 180;
+const MICROSOFT_IDENTITY_SCRIPT_URL = "https://alcdn.msauth.net/browser/2.38.4/js/msal-browser.min.js";
+const MICROSOFT_CALENDAR_SCOPES = ["Calendars.Read"];
+const MICROSOFT_CALENDAR_LOOKBACK_DAYS = 30;
+const MICROSOFT_CALENDAR_LOOKAHEAD_DAYS = 180;
 const APPOINTMENT_IMPORT_ALIASES = {
   importId: ["id", "appointment_id", "event_id", "booking_id", "external_id", "confirmation_id"],
   clientName: ["client_name", "customer_name", "customer", "name", "full_name", "invitee_name", "guest_name", "patient_name"],
@@ -92,6 +97,7 @@ let calendarRecoveryTimers = [];
 let calendarLoadStartedAt = 0;
 let calendarLoadSequence = 0;
 let googleCalendarTokenGranted = false;
+let microsoftCalendarAuthClient = null;
 const calendarDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const calendarDebugLog = [];
 
@@ -690,6 +696,7 @@ function getForwardingAddressForUser(user) {
 function updateAppointmentSourceControls(user = currentAuthUser) {
   const hasUser = Boolean(user?.id);
   const hasGoogleClient = Boolean(String(appConfig?.googleCalendarClientId || "").trim());
+  const hasOutlookClient = Boolean(String(appConfig?.outlookCalendarClientId || "").trim());
   const forwardingAddress = getForwardingAddressForUser(user);
 
   if (syncGoogleCalendarButton) {
@@ -697,6 +704,13 @@ function updateAppointmentSourceControls(user = currentAuthUser) {
     syncGoogleCalendarButton.title = hasGoogleClient
       ? "Connect Google Calendar and import upcoming events"
       : "Add GOOGLE_CALENDAR_CLIENT_ID in Vercel to enable Google Calendar sync";
+  }
+
+  if (syncOutlookCalendarButton) {
+    syncOutlookCalendarButton.disabled = !hasUser || !hasOutlookClient;
+    syncOutlookCalendarButton.title = hasOutlookClient
+      ? "Connect Outlook Calendar and import upcoming events"
+      : "Add OUTLOOK_CALENDAR_CLIENT_ID in Vercel to enable Outlook Calendar sync";
   }
 
   if (syncCalendarLinkButton) {
@@ -926,6 +940,11 @@ function buildNormalizedImportValueMap(rawRecord) {
 function getImportedFieldValue(valueMap, aliases = []) {
   const match = aliases.find(alias => Object.prototype.hasOwnProperty.call(valueMap, alias));
   return match ? valueMap[match] : "";
+}
+
+function getImportedScalarFieldValue(valueMap, aliases = []) {
+  const value = getImportedFieldValue(valueMap, aliases);
+  return value === null || typeof value === "object" ? "" : value;
 }
 
 function parseImportedAppointmentJson(text) {
@@ -1169,6 +1188,25 @@ function getGoogleEventEmail(rawRecord) {
   return attendee?.email || "";
 }
 
+function getMicrosoftEventAttendee(rawRecord) {
+  const attendees = Array.isArray(rawRecord?.attendees) ? rawRecord.attendees : [];
+
+  return attendees
+    .map(entry => ({
+      name: String(entry?.emailAddress?.name || entry?.name || "").trim(),
+      email: String(entry?.emailAddress?.address || entry?.email || "").trim()
+    }))
+    .find(entry => entry.email) || null;
+}
+
+function getMicrosoftEventEmail(rawRecord) {
+  return getMicrosoftEventAttendee(rawRecord)?.email || "";
+}
+
+function getMicrosoftEventName(rawRecord) {
+  return getMicrosoftEventAttendee(rawRecord)?.name || "";
+}
+
 function normalizeImportedAppointmentRecord(rawRecord, ownerId, source = "import") {
   if (!rawRecord || typeof rawRecord !== "object") {
     return null;
@@ -1176,16 +1214,17 @@ function normalizeImportedAppointmentRecord(rawRecord, ownerId, source = "import
 
   const valueMap = buildNormalizedImportValueMap(rawRecord);
   const nestedStart = rawRecord.start && typeof rawRecord.start === "object" ? rawRecord.start : null;
-  const startDateTime = getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.startDateTime) || nestedStart?.dateTime || nestedStart?.date || "";
+  const startDateTime = getImportedScalarFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.startDateTime) || nestedStart?.dateTime || nestedStart?.date || "";
   const serviceDate = parseDateFromText(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceDate) || startDateTime);
   const serviceTime = parseTimeFromText(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceTime) || startDateTime);
-  const clientName = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientName) || rawRecord.summary || "").trim().slice(0, 80);
-  const clientEmail = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientEmail) || getGoogleEventEmail(rawRecord)).trim();
+  const clientName = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientName) || getMicrosoftEventName(rawRecord) || rawRecord.summary || rawRecord.subject || "").trim().slice(0, 80);
+  const clientEmail = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientEmail) || getGoogleEventEmail(rawRecord) || getMicrosoftEventEmail(rawRecord)).trim();
   const clientPhone = normalizePhone(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientPhone));
-  const serviceLocation = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceLocation) || rawRecord.location || "").trim().slice(0, 240);
+  const rawLocation = typeof rawRecord.location === "string" ? rawRecord.location : rawRecord.location?.displayName || "";
+  const serviceLocation = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceLocation) || rawLocation || "").trim().slice(0, 240);
   const appointmentType = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.appointmentType) || "").trim();
   const notes = [
-    String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.notes) || rawRecord.description || "").trim(),
+    String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.notes) || rawRecord.description || rawRecord.bodyPreview || "").trim(),
     appointmentType ? `Type: ${appointmentType}` : ""
   ].filter(Boolean).join("\n").slice(0, 1200);
   const importId = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.importId) || rawRecord.id || rawRecord.iCalUID || "").trim();
@@ -1383,7 +1422,7 @@ async function handleImportIcsFile(event) {
   }
 }
 
-function loadExternalScript(url, id) {
+function loadExternalScript(url, id, errorMessage = "Unable to load sign-in.") {
   const existingScript = id ? document.getElementById(id) : null;
 
   if (existingScript?.dataset.loaded === "true") {
@@ -1401,7 +1440,7 @@ function loadExternalScript(url, id) {
       script.dataset.loaded = "true";
       resolve();
     };
-    script.onerror = () => reject(new Error("Unable to load Google Calendar sign-in."));
+    script.onerror = () => reject(new Error(errorMessage));
 
     if (!existingScript) {
       document.head.appendChild(script);
@@ -1416,7 +1455,7 @@ async function requestGoogleCalendarAccessToken() {
     throw new Error("Google Calendar sync needs GOOGLE_CALENDAR_CLIENT_ID in Vercel.");
   }
 
-  await loadExternalScript(GOOGLE_IDENTITY_SCRIPT_URL, "google-identity-services");
+  await loadExternalScript(GOOGLE_IDENTITY_SCRIPT_URL, "google-identity-services", "Unable to load Google Calendar sign-in.");
 
   if (!window.google?.accounts?.oauth2?.initTokenClient) {
     throw new Error("Google Calendar sign-in did not finish loading.");
@@ -1478,6 +1517,179 @@ async function fetchGoogleCalendarEvents(accessToken) {
   return Array.isArray(payload?.items)
     ? payload.items.filter(event => String(event?.status || "").toLowerCase() !== "cancelled")
     : [];
+}
+
+async function loadMicrosoftIdentity() {
+  if (window.msal?.PublicClientApplication) {
+    return window.msal;
+  }
+
+  await loadExternalScript(MICROSOFT_IDENTITY_SCRIPT_URL, "microsoft-identity-services", "Unable to load Outlook Calendar sign-in.");
+
+  if (!window.msal?.PublicClientApplication) {
+    throw new Error("Outlook Calendar sign-in did not finish loading.");
+  }
+
+  return window.msal;
+}
+
+async function requestOutlookCalendarAccessToken() {
+  const clientId = String(appConfig?.outlookCalendarClientId || "").trim();
+
+  if (!clientId) {
+    throw new Error("Outlook Calendar sync needs OUTLOOK_CALENDAR_CLIENT_ID in Vercel.");
+  }
+
+  const msal = await loadMicrosoftIdentity();
+
+  if (!microsoftCalendarAuthClient) {
+    microsoftCalendarAuthClient = new msal.PublicClientApplication({
+      auth: {
+        clientId,
+        authority: "https://login.microsoftonline.com/common",
+        redirectUri: `${window.location.origin}/calendar.html`
+      },
+      cache: {
+        cacheLocation: "sessionStorage",
+        storeAuthStateInCookie: false
+      }
+    });
+  }
+
+  if (typeof microsoftCalendarAuthClient.initialize === "function") {
+    await microsoftCalendarAuthClient.initialize();
+  }
+
+  const accounts = typeof microsoftCalendarAuthClient.getAllAccounts === "function"
+    ? microsoftCalendarAuthClient.getAllAccounts()
+    : [];
+  const account = accounts[0] || null;
+  const tokenRequest = {
+    scopes: MICROSOFT_CALENDAR_SCOPES,
+    account
+  };
+  let tokenResponse = null;
+
+  if (account && typeof microsoftCalendarAuthClient.acquireTokenSilent === "function") {
+    tokenResponse = await microsoftCalendarAuthClient.acquireTokenSilent(tokenRequest)
+      .catch(() => null);
+  }
+
+  if (!tokenResponse) {
+    tokenResponse = await microsoftCalendarAuthClient.acquireTokenPopup({
+      scopes: MICROSOFT_CALENDAR_SCOPES,
+      prompt: account ? undefined : "select_account"
+    });
+  }
+
+  const accessToken = String(tokenResponse?.accessToken || tokenResponse?.access_token || "").trim();
+
+  if (!accessToken) {
+    throw new Error("Outlook Calendar did not return an access token.");
+  }
+
+  return accessToken;
+}
+
+function normalizeMicrosoftGraphEvent(event) {
+  const attendee = getMicrosoftEventAttendee(event);
+  const startDateTime = String(event?.start?.dateTime || event?.start?.date || "").trim();
+  const location = String(event?.location?.displayName || event?.locations?.[0]?.displayName || "").trim();
+
+  return {
+    id: event?.id || event?.iCalUId || "",
+    event_id: event?.iCalUId || event?.id || "",
+    summary: String(event?.subject || attendee?.name || "").trim(),
+    client_name: attendee?.name || "",
+    client_email: attendee?.email || "",
+    start: {
+      dateTime: startDateTime
+    },
+    location,
+    description: String(event?.bodyPreview || "").trim()
+  };
+}
+
+async function fetchOutlookCalendarEvents(accessToken) {
+  const startDateTime = addDays(new Date(), -MICROSOFT_CALENDAR_LOOKBACK_DAYS).toISOString();
+  const endDateTime = addDays(new Date(), MICROSOFT_CALENDAR_LOOKAHEAD_DAYS).toISOString();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const params = new URLSearchParams({
+    startDateTime,
+    endDateTime,
+    "$top": "250"
+  });
+  let requestUrl = `https://graph.microsoft.com/v1.0/me/calendarView?${params.toString()}`;
+  const events = [];
+
+  while (requestUrl && events.length < 500) {
+    const response = await fetch(requestUrl, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Prefer: `outlook.timezone="${timeZone}"`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || "Unable to read Outlook Calendar events.");
+    }
+
+    if (Array.isArray(payload?.value)) {
+      events.push(...payload.value);
+    }
+
+    requestUrl = payload?.["@odata.nextLink"] || "";
+  }
+
+  return events
+    .filter(event => !event?.isCancelled)
+    .map(normalizeMicrosoftGraphEvent)
+    .sort((left, right) => String(left?.start?.dateTime || "").localeCompare(String(right?.start?.dateTime || "")));
+}
+
+async function handleSyncOutlookCalendar() {
+  if (!supabase) {
+    setStatus("Add your Supabase keys before syncing appointments.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before syncing appointments.", "error");
+    return;
+  }
+
+  setButtonBusy(syncOutlookCalendarButton, true, "Syncing...");
+  setStatus("Connecting to Outlook Calendar...", "info");
+
+  try {
+    const accessToken = await requestOutlookCalendarAccessToken();
+    setStatus("Reading Outlook Calendar events...", "info");
+    const rawRecords = await fetchOutlookCalendarEvents(accessToken);
+
+    if (!rawRecords.length) {
+      setStatus("Outlook Calendar did not return any upcoming events.", "info");
+      return;
+    }
+
+    await importAppointmentRecords(rawRecords, user, {
+      source: "outlook_calendar",
+      successVerb: "Synced",
+      emptyMessage: "No usable Outlook Calendar events were found. Events need a date and at least a title, attendee email, or phone number."
+    });
+  } catch (error) {
+    setStatus(error.message || "Unable to sync Outlook Calendar.", "error");
+  } finally {
+    setButtonBusy(syncOutlookCalendarButton, false);
+    updateAppointmentSourceControls(user);
+  }
 }
 
 async function handleSyncGoogleCalendar() {
@@ -2812,6 +3024,10 @@ function bindCalendarControls() {
 
   if (syncGoogleCalendarButton) {
     syncGoogleCalendarButton.addEventListener("click", handleSyncGoogleCalendar);
+  }
+
+  if (syncOutlookCalendarButton) {
+    syncOutlookCalendarButton.addEventListener("click", handleSyncOutlookCalendar);
   }
 
   if (syncCalendarLinkButton) {
