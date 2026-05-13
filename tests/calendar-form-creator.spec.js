@@ -507,6 +507,32 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#all-appointments-list")).toContainText("No appointments have been saved yet.");
   });
 
+  test("calendar imports appointments from CSV", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator("#import-appointments-input").setInputFiles({
+      name: "appointments.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from([
+        "client_name,client_email,client_phone,appointment_date,appointment_time,location,notes",
+        "Mia Tenant,mia@example.com,3055550190,2027-05-03,3:15 PM,44 Rental Ave,Bring lease docs"
+      ].join("\n"))
+    });
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Mia Tenant");
+    await expect(page.locator("#all-appointments-list")).toContainText("44 Rental Ave");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Mia Tenant");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-03");
+    expect(state.tables.appointments[0].service_time).toBe("15:15");
+    expect(state.tables.appointments[0].last_source).toBe("import");
+  });
+
   test("form creator saves a selected template and keeps it after reload", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/form-creator.html");

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
-  <link rel="stylesheet" href="account-sections.css?v=20260501a">
+  <link rel="stylesheet" href="account-sections.css?v=20260501b">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -72,6 +72,22 @@
             </div>
 
             <div id="appointments-setup-notice" class="notice" hidden>Appointments setup is still needed. Run the new SQL file in Supabase to turn this calendar on.</div>
+
+            <div class="section-card appointment-import-card">
+              <div class="appointments-card-head">
+                <div>
+                  <h3>Import appointments</h3>
+                  <p>Bring in appointments from another booking system using a CSV or JSON file.</p>
+                </div>
+                <div class="calendar-import-actions">
+                  <input id="import-appointments-input" type="file" accept=".csv,.json,text/csv,application/json" hidden>
+                  <button id="import-appointments-button" class="secondary-button" type="button">Import File</button>
+                </div>
+              </div>
+              <div class="import-helper">
+                Common columns work automatically: client name, email, phone, date, time, location, notes, and appointment type.
+              </div>
+            </div>
 
             <div id="calendar-loading" class="loading-card loading-card-skeleton" hidden>
               <div class="loading-spinner" aria-hidden="true"></div>
@@ -194,6 +210,6 @@
   </div>
 
   <script src="nav.js?v=20260501a"></script>
-  <script type="module" src="calendar.js?v=20260501j"></script>
+  <script type="module" src="calendar.js?v=20260501k"></script>
 </body>
 </html>

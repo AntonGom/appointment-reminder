@@ -841,6 +841,23 @@ h1 {
   gap: 14px;
 }
 
+.appointment-import-card {
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-import-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.import-helper {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .calendar-layout.is-month-view .appointment-lists {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

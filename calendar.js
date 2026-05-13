@@ -27,6 +27,8 @@ const prevButton = document.getElementById("calendar-prev");
 const todayButton = document.getElementById("calendar-today");
 const nextButton = document.getElementById("calendar-next");
 const allAppointmentsList = document.getElementById("all-appointments-list");
+const importAppointmentsButton = document.getElementById("import-appointments-button");
+const importAppointmentsInput = document.getElementById("import-appointments-input");
 const appointmentDetailModal = document.getElementById("appointment-detail-modal");
 const appointmentDetailTitle = document.getElementById("appointment-detail-title");
 const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
@@ -58,6 +60,18 @@ const SUPABASE_READ_TIMEOUT_MS = 6000;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const CALENDAR_LOADING_STALE_MS = 4500;
+const APPOINTMENT_IMPORT_ALIASES = {
+  importId: ["id", "appointment_id", "event_id", "booking_id", "external_id", "confirmation_id"],
+  clientName: ["client_name", "customer_name", "customer", "name", "full_name", "invitee_name", "guest_name", "patient_name"],
+  clientEmail: ["client_email", "customer_email", "email", "email_address", "invitee_email", "guest_email"],
+  clientPhone: ["client_phone", "customer_phone", "phone", "phone_number", "mobile", "mobile_phone"],
+  serviceDate: ["service_date", "appointment_date", "date", "start_date", "event_date", "booking_date", "scheduled_date"],
+  serviceTime: ["service_time", "appointment_time", "time", "start_time", "event_time", "booking_time", "scheduled_time"],
+  startDateTime: ["start", "starts_at", "start_at", "start_datetime", "start_date_time", "appointment_start", "event_start", "booking_start", "scheduled_start"],
+  serviceLocation: ["service_location", "location", "address", "service_address", "meeting_location", "event_location"],
+  notes: ["notes", "note", "description", "details", "appointment_notes", "internal_notes"],
+  appointmentType: ["appointment_type", "type", "service", "service_name", "event_type", "booking_type"]
+};
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
@@ -201,6 +215,19 @@ function setStatus(message, type = "info") {
   statusBanner.hidden = false;
   statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
+}
+
+function setButtonBusy(button, busy, busyText = "Working...") {
+  if (!button) {
+    return;
+  }
+
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent || "";
+  }
+
+  button.disabled = busy;
+  button.textContent = busy ? busyText : button.dataset.defaultText;
 }
 
 function recordCalendarDebug(step, detail = "") {
@@ -725,6 +752,361 @@ function formatAppointmentChipMeta(appointment) {
 
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function parseCsvRecords(text) {
+  const rows = [];
+  let currentField = "";
+  let currentRow = [];
+  let insideQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (insideQuotes) {
+      if (char === "\"" && nextChar === "\"") {
+        currentField += "\"";
+        index += 1;
+      } else if (char === "\"") {
+        insideQuotes = false;
+      } else {
+        currentField += char;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      insideQuotes = true;
+      continue;
+    }
+
+    if (char === ",") {
+      currentRow.push(currentField);
+      currentField = "";
+      continue;
+    }
+
+    if (char === "\r") {
+      continue;
+    }
+
+    if (char === "\n") {
+      currentRow.push(currentField);
+      rows.push(currentRow);
+      currentRow = [];
+      currentField = "";
+      continue;
+    }
+
+    currentField += char;
+  }
+
+  if (currentField.length || currentRow.length) {
+    currentRow.push(currentField);
+    rows.push(currentRow);
+  }
+
+  return rows.filter(row => row.some(cell => String(cell || "").trim()));
+}
+
+function normalizeImportHeader(header) {
+  return String(header || "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildNormalizedImportValueMap(rawRecord) {
+  if (!rawRecord || typeof rawRecord !== "object") {
+    return {};
+  }
+
+  return Object.entries(rawRecord).reduce((map, [rawKey, rawValue]) => {
+    if (String(rawKey || "").startsWith("__")) {
+      return map;
+    }
+
+    const normalizedKey = normalizeImportHeader(rawKey);
+
+    if (!normalizedKey || Object.prototype.hasOwnProperty.call(map, normalizedKey)) {
+      return map;
+    }
+
+    map[normalizedKey] = rawValue;
+    return map;
+  }, {});
+}
+
+function getImportedFieldValue(valueMap, aliases = []) {
+  const match = aliases.find(alias => Object.prototype.hasOwnProperty.call(valueMap, alias));
+  return match ? valueMap[match] : "";
+}
+
+function parseImportedAppointmentJson(text) {
+  const parsed = JSON.parse(text);
+  const records = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.appointments) ? parsed.appointments : Array.isArray(parsed?.events) ? parsed.events : null;
+
+  if (!records) {
+    throw new Error("That JSON file does not look like an appointment export.");
+  }
+
+  return records;
+}
+
+function parseImportedAppointmentCsv(text) {
+  const rows = parseCsvRecords(text);
+
+  if (rows.length < 2) {
+    throw new Error("That CSV file does not have any appointment rows yet.");
+  }
+
+  const rawHeaders = rows[0].map(header => String(header || "").trim());
+  const headers = rawHeaders.map(normalizeImportHeader);
+
+  return rows.slice(1).map(row => {
+    const record = headers.reduce((accumulator, header, index) => {
+      if (header) {
+        accumulator[header] = row[index] ?? "";
+      }
+      return accumulator;
+    }, {});
+
+    return record;
+  });
+}
+
+function parseDateFromText(value) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+  }
+
+  const slashMatch = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+
+  if (slashMatch) {
+    const year = slashMatch[3].length === 2 ? `20${slashMatch[3]}` : slashMatch[3];
+    return `${year}-${slashMatch[1].padStart(2, "0")}-${slashMatch[2].padStart(2, "0")}`;
+  }
+
+  const date = new Date(text);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return formatDateKey(date);
+}
+
+function parseTimeFromText(value) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  if (/\d{4}-\d{1,2}-\d{1,2}[T\s]\d{1,2}:\d{2}/.test(text)) {
+    const date = new Date(text);
+
+    if (!Number.isNaN(date.getTime())) {
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+  }
+
+  const timeMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)?/i);
+
+  if (!timeMatch) {
+    return "";
+  }
+
+  let hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2] || "0");
+  const meridiem = String(timeMatch[3] || "").toLowerCase();
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 24 || minutes > 59) {
+    return "";
+  }
+
+  if (meridiem.startsWith("p") && hours < 12) {
+    hours += 12;
+  } else if (meridiem.startsWith("a") && hours === 12) {
+    hours = 0;
+  }
+
+  if (hours === 24) {
+    hours = 0;
+  }
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function getGoogleEventEmail(rawRecord) {
+  const attendees = Array.isArray(rawRecord?.attendees) ? rawRecord.attendees : [];
+  const attendee = attendees.find(entry => String(entry?.email || "").trim());
+  return attendee?.email || "";
+}
+
+function normalizeImportedAppointmentRecord(rawRecord, ownerId) {
+  if (!rawRecord || typeof rawRecord !== "object") {
+    return null;
+  }
+
+  const valueMap = buildNormalizedImportValueMap(rawRecord);
+  const nestedStart = rawRecord.start && typeof rawRecord.start === "object" ? rawRecord.start : null;
+  const startDateTime = getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.startDateTime) || nestedStart?.dateTime || nestedStart?.date || "";
+  const serviceDate = parseDateFromText(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceDate) || startDateTime);
+  const serviceTime = parseTimeFromText(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceTime) || startDateTime);
+  const clientName = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientName) || rawRecord.summary || "").trim().slice(0, 80);
+  const clientEmail = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientEmail) || getGoogleEventEmail(rawRecord)).trim();
+  const clientPhone = normalizePhone(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.clientPhone));
+  const serviceLocation = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.serviceLocation) || rawRecord.location || "").trim().slice(0, 240);
+  const appointmentType = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.appointmentType) || "").trim();
+  const notes = [
+    String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.notes) || rawRecord.description || "").trim(),
+    appointmentType ? `Type: ${appointmentType}` : ""
+  ].filter(Boolean).join("\n").slice(0, 1200);
+  const importId = String(getImportedFieldValue(valueMap, APPOINTMENT_IMPORT_ALIASES.importId) || rawRecord.id || rawRecord.iCalUID || "").trim();
+
+  if (!serviceDate || (!clientName && !clientEmail && !clientPhone)) {
+    return null;
+  }
+
+  if (clientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(clientEmail)) {
+    return null;
+  }
+
+  return {
+    importId,
+    payload: {
+      owner_id: ownerId,
+      client_name: clientName,
+      client_email: clientEmail,
+      client_phone: clientPhone,
+      service_date: serviceDate,
+      service_time: serviceTime || null,
+      service_location: serviceLocation,
+      notes,
+      last_source: "import",
+      updated_at: new Date().toISOString()
+    }
+  };
+}
+
+function getAppointmentDuplicateKey(appointment) {
+  return [
+    String(appointment?.service_date || "").trim(),
+    String(appointment?.service_time || "").trim(),
+    String(appointment?.client_email || "").trim().toLowerCase(),
+    normalizePhone(appointment?.client_phone || ""),
+    String(appointment?.client_name || "").trim().toLowerCase()
+  ].join("|");
+}
+
+async function persistImportedAppointments(rows) {
+  if (!rows.length) {
+    return [];
+  }
+
+  const { data, error } = await withSupabaseRetry(() => supabase
+    .from("appointments")
+    .insert(rows), {
+      attempts: 1,
+      timeoutMs: SUPABASE_QUERY_TIMEOUT_MS
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || rows;
+}
+
+async function handleImportAppointmentsFile(event) {
+  const file = event.target.files?.[0] || null;
+  event.target.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  if (!supabase) {
+    setStatus("Add your Supabase keys before importing appointments.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before importing appointments.", "error");
+    return;
+  }
+
+  setButtonBusy(importAppointmentsButton, true, "Importing...");
+  setStatus("Importing appointments...", "info");
+
+  try {
+    const text = await file.text();
+    const extension = String(file.name || "").split(".").pop().toLowerCase();
+    const rawRecords = extension === "json" || file.type === "application/json"
+      ? parseImportedAppointmentJson(text)
+      : parseImportedAppointmentCsv(text);
+    const normalizedRecords = rawRecords
+      .map(record => normalizeImportedAppointmentRecord(record, user.id))
+      .filter(Boolean);
+
+    if (!normalizedRecords.length) {
+      throw new Error("No valid appointments were found. Include at least a client name/email/phone and appointment date.");
+    }
+
+    const knownKeys = new Set((appointments || []).map(getAppointmentDuplicateKey));
+    const pendingRows = [];
+    let skippedDuplicates = 0;
+
+    normalizedRecords.forEach(record => {
+      const key = getAppointmentDuplicateKey(record.payload);
+
+      if (knownKeys.has(key)) {
+        skippedDuplicates += 1;
+        return;
+      }
+
+      knownKeys.add(key);
+      pendingRows.push(record.payload);
+    });
+
+    if (!pendingRows.length) {
+      setStatus(`No new appointments imported. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
+      return;
+    }
+
+    await persistImportedAppointments(pendingRows);
+    await loadAppointments(user);
+
+    const summary = [`Imported ${pendingRows.length} appointment${pendingRows.length === 1 ? "" : "s"}`];
+
+    if (skippedDuplicates) {
+      summary.push(`skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}`);
+    }
+
+    setStatus(`${summary.join("; ")}.`, "success");
+  } catch (error) {
+    setStatus(error.message || "Unable to import appointments.", "error");
+  } finally {
+    setButtonBusy(importAppointmentsButton, false);
+  }
 }
 
 function formatPhone(value) {
@@ -1907,6 +2289,13 @@ async function loadAppointments(user) {
 }
 
 function bindCalendarControls() {
+  if (importAppointmentsButton && importAppointmentsInput) {
+    importAppointmentsButton.addEventListener("click", () => {
+      importAppointmentsInput.click();
+    });
+    importAppointmentsInput.addEventListener("change", handleImportAppointmentsFile);
+  }
+
   if (monthSelect) {
     monthSelect.addEventListener("change", event => {
       const nextMonth = Number(event.target.value);
