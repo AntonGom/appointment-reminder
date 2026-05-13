@@ -7,6 +7,11 @@ import {
   hasSavedBrandingProfile,
   normalizeBrandingProfile
 } from "./branding-templates.js?v=20260429c";
+import {
+  BASE_REMINDER_STEPS,
+  isContentBlockType,
+  normalizeCustomFormProfile
+} from "./custom-form-profile.js?v=20260429d";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");
@@ -27,6 +32,8 @@ const previewEmail = document.getElementById("branding-preview-email");
 const previewBusinessName = document.getElementById("branding-preview-business-name");
 const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
+const previewFieldList = document.getElementById("branding-preview-field-list");
+const previewFieldCard = document.getElementById("branding-preview-fields-card");
 const editorModal = document.getElementById("branding-editor-modal");
 const editorCloseButton = document.getElementById("branding-editor-close");
 const editorHead = editorModal?.querySelector(".branding-editor-head") || null;
@@ -140,7 +147,8 @@ const fieldIds = {
   footerHex: "branding-footer-hex",
   footerTextColor: "branding-footer-text-color",
   footerTextHex: "branding-footer-text-hex",
-  socialLinks: "branding-social-links"
+  socialLinks: "branding-social-links",
+  previewFields: "branding-preview-field-list"
 };
 
 const helperTextIds = {
@@ -374,6 +382,11 @@ const PREVIEW_HIGHLIGHT_CONFIG = {
   [fieldIds.socialLinks]: {
     iframeAreas: ["footer"],
     note: "Highlighting the footer social icons that appear when you add social links."
+  },
+  [fieldIds.previewFields]: {
+    iframeAreas: ["summary", "details", "custom-fields", "contact"],
+    selectors: ["#branding-preview-fields-card"],
+    note: "Highlighting the appointment fields selected for the email preview."
   }
 };
 
@@ -459,6 +472,7 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.footerTextColor]: "footer",
   [fieldIds.footerTextHex]: "footer",
   [fieldIds.socialLinks]: "footer",
+  [fieldIds.previewFields]: "details",
   [fieldIds.logoUrl]: "contact",
   [fieldIds.contactEmail]: "contact",
   [fieldIds.contactPhone]: "contact"
@@ -528,6 +542,8 @@ let appConfig = null;
 let runtimeConfig = null;
 let currentUser = null;
 let currentSavedBranding = {};
+let currentCustomFormProfile = normalizeCustomFormProfile(null);
+let availablePreviewFields = [];
 let currentAuthUserId = "";
 let previewRenderTimer = null;
 let lastPreviewKey = "";
@@ -759,28 +775,397 @@ function getFieldElement(fieldId) {
   return document.getElementById(fieldId);
 }
 
-function buildSampleMessage(profile) {
-  const businessContact = profile.contactPhone || profile.contactEmail || "your business";
+const BASE_PREVIEW_FIELD_IDS = new Set(BASE_REMINDER_STEPS.map(step => step.id));
+const CORE_SAMPLE_VALUES = {
+  phone: "(305) 555-0188",
+  email: "ava@example.com",
+  name: "Ava Johnson",
+  date: "04/05/2026",
+  time: "4:00 PM",
+  address: "1540 Bay Road",
+  businessContact: "hello@yourbusiness.example",
+  notes: "Please call when you are on the way."
+};
 
-  return [
+function getFieldVisibility(field = {}) {
+  const visibility = String(field?.visibleTo || "both").trim();
+  return ["both", "staff", "client"].includes(visibility) ? visibility : "both";
+}
+
+function isFieldVisibleForStaff(field = {}) {
+  return getFieldVisibility(field) !== "client";
+}
+
+function getFieldLabel(field = {}) {
+  return String(field?.label || field?.title || field?.navLabel || "Appointment Detail").trim();
+}
+
+function getPreviewFieldKind(field = {}) {
+  if (field.builtIn) {
+    return "Core field";
+  }
+
+  const type = String(field.type || "text").trim();
+  const labels = {
+    text: "Short answer",
+    textarea: "Long answer",
+    select: "Dropdown",
+    email: "Email",
+    phone: "Phone",
+    date: "Date",
+    time: "Time"
+  };
+
+  return labels[type] || "Custom field";
+}
+
+function normalizePreviewFieldSelections(selections = {}) {
+  if (!selections || typeof selections !== "object" || Array.isArray(selections)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(selections)
+      .map(([fieldId, isSelected]) => [String(fieldId || "").trim(), Boolean(isSelected)])
+      .filter(([fieldId]) => Boolean(fieldId))
+  );
+}
+
+function getSavedPreviewFieldSelections(branding = {}) {
+  return normalizePreviewFieldSelections(branding?.previewFieldSelections);
+}
+
+function getPreviewFieldDefaultSelection(field = {}, savedSelections = {}) {
+  const fieldId = String(field.id || "").trim();
+
+  if (Object.prototype.hasOwnProperty.call(savedSelections, fieldId)) {
+    return Boolean(savedSelections[fieldId]);
+  }
+
+  return field.includeInReminder !== false;
+}
+
+function getSampleValueForField(field = {}, brandingProfile = {}) {
+  const fieldId = String(field.id || "").trim();
+
+  if (fieldId === "businessContact") {
+    return brandingProfile.contactPhone || brandingProfile.contactEmail || CORE_SAMPLE_VALUES.businessContact;
+  }
+
+  if (CORE_SAMPLE_VALUES[fieldId]) {
+    return CORE_SAMPLE_VALUES[fieldId];
+  }
+
+  const options = Array.isArray(field.options) ? field.options : [];
+  const firstOption = options.map(option => String(option || "").trim()).find(Boolean);
+  if (firstOption) {
+    return firstOption;
+  }
+
+  const placeholder = String(field.placeholder || "").trim();
+  if (placeholder && !/^type your answer$/i.test(placeholder) && !/^choose an option$/i.test(placeholder)) {
+    return placeholder;
+  }
+
+  const type = String(field.type || "text").trim();
+
+  if (type === "email") {
+    return "ava@example.com";
+  }
+  if (type === "phone") {
+    return "(305) 555-0188";
+  }
+  if (type === "date") {
+    return "04/12/2026";
+  }
+  if (type === "time") {
+    return "2:30 PM";
+  }
+  if (type === "textarea") {
+    return "Please use the side gate and text when you arrive.";
+  }
+
+  return `Sample ${getFieldLabel(field).toLowerCase()}`;
+}
+
+function getOrderedFieldsForBrandingPreview(normalizedProfile = {}) {
+  const fields = Array.isArray(normalizedProfile.fields)
+    ? normalizedProfile.fields.filter(field => {
+        const semanticId = String(field?.semanticId || "").trim();
+        return !semanticId
+          && !BASE_PREVIEW_FIELD_IDS.has(String(field?.id || "").trim())
+          && !isContentBlockType(field?.type)
+          && isFieldVisibleForStaff(field);
+      })
+    : [];
+  const fieldById = new Map(fields.map(field => [String(field.id || "").trim(), field]));
+  const ordered = [];
+  const seen = new Set();
+
+  const addField = field => {
+    const fieldId = String(field?.id || "").trim();
+
+    if (!fieldId || seen.has(fieldId)) {
+      return;
+    }
+
+    seen.add(fieldId);
+    ordered.push(field);
+  };
+
+  const addPageFields = pageId => {
+    const normalizedPageId = String(pageId || "").trim();
+    if (!normalizedPageId) {
+      return;
+    }
+
+    const pageFields = fields.filter(field => String(field.pageId || "").trim() === normalizedPageId);
+    const savedOrder = Array.isArray(normalizedProfile.pageFieldOrder?.[normalizedPageId])
+      ? normalizedProfile.pageFieldOrder[normalizedPageId]
+      : [];
+
+    savedOrder.forEach(fieldId => {
+      const field = fieldById.get(String(fieldId || "").trim());
+
+      if (field && String(field.pageId || "").trim() === normalizedPageId) {
+        addField(field);
+      }
+    });
+
+    pageFields.forEach(addField);
+  };
+
+  const pageOrder = [
+    ...(Array.isArray(normalizedProfile.stepOrder) ? normalizedProfile.stepOrder : []),
+    ...BASE_REMINDER_STEPS.map(step => step.id),
+    ...(Array.isArray(normalizedProfile.customPages) ? normalizedProfile.customPages.map(page => page.id) : []),
+    ...fields.filter(field => !field.pageId).map(field => field.id)
+  ];
+
+  pageOrder.forEach(itemId => {
+    const normalizedItemId = String(itemId || "").trim();
+    const directField = fieldById.get(normalizedItemId);
+
+    if (directField && !directField.pageId) {
+      addField(directField);
+    }
+
+    addPageFields(normalizedItemId);
+  });
+
+  fields.forEach(addField);
+  return ordered;
+}
+
+function buildBrandingPreviewFields(rawProfile = currentCustomFormProfile, branding = currentSavedBranding) {
+  const normalizedProfile = normalizeCustomFormProfile(rawProfile);
+  const effectiveProfile = normalizedProfile.isEnabled === false
+    ? normalizeCustomFormProfile(null)
+    : normalizedProfile;
+  const savedSelections = getSavedPreviewFieldSelections(branding);
+  const semanticFields = new Map();
+
+  effectiveProfile.fields.forEach(field => {
+    const semanticId = String(field?.semanticId || "").trim();
+
+    if (BASE_PREVIEW_FIELD_IDS.has(semanticId) && !semanticFields.has(semanticId)) {
+      semanticFields.set(semanticId, field);
+    }
+  });
+
+  const builtInFields = BASE_REMINDER_STEPS.map((step, index) => {
+    const mappedField = semanticFields.get(step.id);
+    const override = effectiveProfile.stepOverrides?.[step.id] || {};
+
+    if (!mappedField && override.hidden === true) {
+      return null;
+    }
+
+    const mergedField = mappedField
+      ? {
+          ...step,
+          ...mappedField,
+          id: step.id,
+          sourceFieldId: mappedField.id,
+          semanticId: step.id,
+          builtIn: true,
+          hidden: false
+        }
+      : {
+          ...step,
+          ...override,
+          id: step.id,
+          sourceFieldId: step.id,
+          builtIn: true
+        };
+
+    if (!isFieldVisibleForStaff(mergedField)) {
+      return null;
+    }
+
+    return {
+      id: step.id,
+      sourceFieldId: mergedField.sourceFieldId || step.id,
+      label: getFieldLabel(mergedField),
+      title: String(mergedField.title || step.title || getFieldLabel(mergedField)).trim(),
+      type: mergedField.type || step.type,
+      placeholder: String(mergedField.placeholder || "").trim(),
+      options: Array.isArray(mergedField.options) ? [...mergedField.options] : [],
+      builtIn: true,
+      includeInReminder: mergedField.includeInReminder !== false,
+      selected: getPreviewFieldDefaultSelection({ ...mergedField, id: step.id }, savedSelections),
+      sampleValue: getSampleValueForField({ ...mergedField, id: step.id }, branding),
+      orderIndex: index
+    };
+  }).filter(Boolean);
+
+  const customFields = getOrderedFieldsForBrandingPreview(effectiveProfile).map((field, index) => ({
+    id: String(field.id || "").trim(),
+    sourceFieldId: String(field.id || "").trim(),
+    label: getFieldLabel(field),
+    title: String(field.title || getFieldLabel(field)).trim(),
+    type: String(field.type || "text").trim(),
+    placeholder: String(field.placeholder || "").trim(),
+    options: Array.isArray(field.options) ? [...field.options] : [],
+    builtIn: false,
+    includeInReminder: field.includeInReminder !== false,
+    selected: getPreviewFieldDefaultSelection(field, savedSelections),
+    sampleValue: getSampleValueForField(field, branding),
+    orderIndex: builtInFields.length + index
+  })).filter(field => Boolean(field.id));
+
+  return [...builtInFields, ...customFields];
+}
+
+function getPreviewFieldInputId(fieldId) {
+  return `branding-preview-field-${String(fieldId || "").replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
+function renderPreviewFieldToggles(branding = currentSavedBranding) {
+  if (!previewFieldList) {
+    availablePreviewFields = buildBrandingPreviewFields(currentCustomFormProfile, branding);
+    return;
+  }
+
+  availablePreviewFields = buildBrandingPreviewFields(currentCustomFormProfile, branding);
+
+  if (previewFieldCard) {
+    previewFieldCard.hidden = false;
+  }
+
+  if (!availablePreviewFields.length) {
+    previewFieldList.innerHTML = `
+      <div class="branding-preview-field-empty">
+        Save fields in Form Creator and they will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  previewFieldList.innerHTML = availablePreviewFields.map(field => {
+    const inputId = getPreviewFieldInputId(field.id);
+    const isSelected = field.selected !== false;
+
+    return `
+      <label class="branding-preview-field-toggle" for="${escapeHtml(inputId)}">
+        <input id="${escapeHtml(inputId)}" class="branding-preview-field-checkbox" type="checkbox" data-preview-field-id="${escapeHtml(field.id)}" ${isSelected ? "checked" : ""}>
+        <span class="branding-preview-field-copy">
+          <span class="branding-preview-field-name">${escapeHtml(field.label)}</span>
+          <span class="branding-preview-field-kind">${escapeHtml(getPreviewFieldKind(field))}</span>
+        </span>
+      </label>
+    `;
+  }).join("");
+}
+
+function readPreviewFieldSelections() {
+  const fields = availablePreviewFields.length
+    ? availablePreviewFields
+    : buildBrandingPreviewFields(currentCustomFormProfile, currentSavedBranding);
+
+  return fields.reduce((selections, field) => {
+    const checkbox = previewFieldList
+      ? Array.from(previewFieldList.querySelectorAll(".branding-preview-field-checkbox"))
+          .find(input => input.dataset.previewFieldId === field.id)
+      : null;
+
+    selections[field.id] = checkbox ? checkbox.checked : field.selected !== false;
+    return selections;
+  }, {});
+}
+
+function getSelectedPreviewFields(brandingProfile = {}) {
+  const selections = readPreviewFieldSelections();
+  const fields = availablePreviewFields.length
+    ? availablePreviewFields
+    : buildBrandingPreviewFields(currentCustomFormProfile, brandingProfile);
+
+  return fields
+    .map(field => ({
+      ...field,
+      sampleValue: getSampleValueForField(field, brandingProfile)
+    }))
+    .filter(field => selections[field.id] !== false);
+}
+
+function buildSampleMessage(profile) {
+  const selectedFields = getSelectedPreviewFields(profile);
+  const selectedById = new Map(selectedFields.map(field => [field.id, field]));
+  const summaryFieldIds = new Set(["date", "time", "address"]);
+  const contactField = selectedById.get("businessContact");
+  const notesField = selectedById.get("notes");
+  const customDetailFields = selectedFields.filter(field => (
+    !summaryFieldIds.has(field.id)
+    && field.id !== "businessContact"
+    && field.id !== "notes"
+  ));
+
+  const lines = [
     "Hello Ava Johnson,",
     "",
-    "This is a friendly reminder about your upcoming appointment.",
-    "Date: 04/05/2026",
-    "Time: 4:00 PM",
-    "Location: 1540 Bay Road",
-    "",
-    "Service Type: Follow-up visit",
-    "",
-    "Client Preference: Text before arrival",
-    "",
-    "Appointment Notes:",
-    "Please call when you are on the way.",
-    "",
-    `If you need to reach us before your appointment, please contact us at ${businessContact}.`,
-    "",
-    "Thank you."
-  ].join("\n");
+    "This is a friendly reminder about your upcoming appointment."
+  ];
+
+  if (selectedById.has("date")) {
+    lines.push(`Date: ${selectedById.get("date").sampleValue}`);
+  }
+
+  if (selectedById.has("time")) {
+    lines.push(`Time: ${selectedById.get("time").sampleValue}`);
+  }
+
+  if (selectedById.has("address")) {
+    lines.push(`Location: ${selectedById.get("address").sampleValue}`);
+  }
+
+  customDetailFields.forEach(field => {
+    lines.push("");
+
+    if (field.type === "textarea") {
+      lines.push(`${field.label}:`);
+      lines.push(field.sampleValue);
+      return;
+    }
+
+    lines.push(`${field.label}: ${field.sampleValue}`);
+  });
+
+  if (notesField) {
+    lines.push("");
+    lines.push(`${notesField.label || "Appointment Notes"}:`);
+    lines.push(notesField.sampleValue || CORE_SAMPLE_VALUES.notes);
+  }
+
+  lines.push("");
+
+  if (contactField) {
+    lines.push(`If you need to reach us before your appointment, please contact us at ${contactField.sampleValue}.`);
+    lines.push("");
+  }
+
+  lines.push("Thank you.");
+
+  return lines.join("\n");
 }
 
 function inferSocialPlatformLabel(url) {
@@ -930,17 +1315,22 @@ function getDraftBranding() {
     rescheduleUrl: getFieldElement(fieldIds.rescheduleUrl)?.value || "",
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
     footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || "",
-    socialLinks: readSocialLinksFromForm()
+    socialLinks: readSocialLinksFromForm(),
+    previewFieldSelections: readPreviewFieldSelections()
   };
   rawDraft.accentColor = rawDraft.headerColor || rawDraft.buttonColor || "";
 
-  return normalizeBrandingProfile(rawDraft, {
-    forPreview: true,
-    fallbackEmail: currentUser?.email || ""
-  });
+  return {
+    ...normalizeBrandingProfile(rawDraft, {
+      forPreview: true,
+      fallbackEmail: currentUser?.email || ""
+    }),
+    previewFieldSelections: rawDraft.previewFieldSelections
+  };
 }
 
 function applyBrandingToForm(branding) {
+  currentCustomFormProfile = normalizeCustomFormProfile(currentUser?.user_metadata?.custom_form_profile || null);
   const normalized = normalizeBrandingProfile(branding, {
     fallbackEmail: currentUser?.email || ""
   });
@@ -1014,6 +1404,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.footerTextColor).value = normalized.footerTextColor;
   getFieldElement(fieldIds.footerTextHex).value = normalized.footerTextColor;
   renderSocialLinksEditor(Array.isArray(branding.socialLinks) ? branding.socialLinks : []);
+  renderPreviewFieldToggles(branding);
   updateHelperHints();
   syncTemplateCards();
   updateBrandingEditorAvailability();
@@ -2270,7 +2661,8 @@ async function saveBranding() {
     rescheduleUrl: (getFieldElement(fieldIds.rescheduleUrl)?.value || "").trim(),
     footerColor: getFieldElement(fieldIds.footerColor)?.value || getFieldElement(fieldIds.footerHex)?.value || "",
     footerTextColor: getFieldElement(fieldIds.footerTextColor)?.value || getFieldElement(fieldIds.footerTextHex)?.value || "",
-    socialLinks: readSocialLinksFromForm()
+    socialLinks: readSocialLinksFromForm(),
+    previewFieldSelections: readPreviewFieldSelections()
   };
   rawBranding.accentColor = rawBranding.headerColor || rawBranding.buttonColor || "";
 
@@ -2280,9 +2672,12 @@ async function saveBranding() {
     return;
   }
 
-  const normalizedForStorage = normalizeBrandingProfile(rawBranding, {
-    fallbackEmail: currentUser.email || ""
-  });
+  const normalizedForStorage = {
+    ...normalizeBrandingProfile(rawBranding, {
+      fallbackEmail: currentUser.email || ""
+    }),
+    previewFieldSelections: rawBranding.previewFieldSelections
+  };
 
   setButtonBusy(saveBrandingButton, true, "Saving branding...");
   setStatus("");
@@ -2392,15 +2787,18 @@ async function persistBrandingToggleState(enabled) {
 
   const thisSaveToken = ++brandingToggleSaveToken;
   const baseBranding = getDraftBranding();
-  const normalizedForStorage = normalizeBrandingProfile(
-    {
-      ...baseBranding,
-      brandingEnabled: enabled
-    },
-    {
-      fallbackEmail: currentUser.email || ""
-    }
-  );
+  const normalizedForStorage = {
+    ...normalizeBrandingProfile(
+      {
+        ...baseBranding,
+        brandingEnabled: enabled
+      },
+      {
+        fallbackEmail: currentUser.email || ""
+      }
+    ),
+    previewFieldSelections: baseBranding.previewFieldSelections || readPreviewFieldSelections()
+  };
 
   try {
     const metadata = {
@@ -2822,6 +3220,29 @@ function wireFormInputs() {
     clearPreviewHighlightIfIdle();
   });
 
+  if (previewFieldList) {
+    previewFieldList.addEventListener("change", event => {
+      const checkbox = event.target.closest(".branding-preview-field-checkbox");
+
+      if (!checkbox) {
+        return;
+      }
+
+      openEditorGroupForField(fieldIds.previewFields);
+      applyPreviewHighlight(fieldIds.previewFields);
+      queuePreviewRender();
+    });
+
+    previewFieldList.addEventListener("focusin", () => {
+      openEditorGroupForField(fieldIds.previewFields);
+      applyPreviewHighlight(fieldIds.previewFields);
+    });
+
+    previewFieldList.addEventListener("focusout", () => {
+      clearPreviewHighlightIfIdle();
+    });
+  }
+
   if (brandingEnabledInput) {
     brandingEnabledInput.addEventListener("change", () => {
       const nextEnabled = Boolean(brandingEnabledInput.checked);
@@ -2852,8 +3273,9 @@ function wireFormInputs() {
   document.addEventListener("pointerdown", event => {
     const target = event.target;
     const insideForm = brandingForm.contains(target);
+    const insidePreviewFields = previewFieldList?.contains(target);
 
-    if (!insideForm) {
+    if (!insideForm && !insidePreviewFields) {
       applyPreviewHighlight("");
     }
   });

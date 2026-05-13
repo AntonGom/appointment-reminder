@@ -500,6 +500,97 @@ test.describe("Branding and Client Details", () => {
     expect(requestPayload.message).toContain("Hello Ava Johnson,");
   });
 
+  test("branding preview field toggles include saved Form Creator fields", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        email: "owner@example.com",
+        user_metadata: {
+          branding_profile: {
+            brandingEnabled: true,
+            businessName: "Pink Paws Grooming",
+            templateStyle: "signature",
+            headerColor: "#ec4899",
+            buttonColor: "#db2777",
+            contactEmail: "hello@pinkpaws.example",
+            previewFieldSelections: {
+              custom_pet_name: false,
+              custom_coat_notes: false
+            }
+          },
+          custom_form_profile: {
+            isEnabled: true,
+            fields: [
+              {
+                id: "custom_pet_name",
+                type: "text",
+                title: "Pet Name",
+                label: "Pet Name",
+                navLabel: "Pet",
+                placeholder: "Milo",
+                includeInReminder: true,
+                visibleTo: "both"
+              },
+              {
+                id: "custom_coat_notes",
+                type: "textarea",
+                title: "Coat Notes",
+                label: "Coat Notes",
+                navLabel: "Coat",
+                includeInReminder: false,
+                visibleTo: "staff"
+              },
+              {
+                id: "custom_client_secret",
+                type: "text",
+                title: "Client-only Question",
+                label: "Client-only Question",
+                visibleTo: "client"
+              },
+              {
+                id: "custom_intro_block",
+                type: "content-text",
+                title: "Intro Copy",
+                label: "Intro Copy",
+                visibleTo: "both"
+              }
+            ]
+          }
+        }
+      })
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/branding.html");
+
+    const fieldList = page.locator("#branding-preview-field-list");
+    await expect(fieldList).toContainText("Pet Name");
+    await expect(fieldList).toContainText("Coat Notes");
+    await expect(fieldList).not.toContainText("Client-only Question");
+    await expect(fieldList).not.toContainText("Intro Copy");
+
+    const petNameToggle = page.locator('[data-preview-field-id="custom_pet_name"]');
+    const coatNotesToggle = page.locator('[data-preview-field-id="custom_coat_notes"]');
+    await expect(petNameToggle).not.toBeChecked();
+    await expect(coatNotesToggle).not.toBeChecked();
+    await expect(page.frameLocator("#branding-preview-frame").locator("body")).not.toContainText("Pet Name");
+
+    await petNameToggle.check();
+    await expect(page.frameLocator("#branding-preview-frame").locator("body")).toContainText("Pet Name");
+    await expect(page.frameLocator("#branding-preview-frame").locator("body")).toContainText("Milo");
+
+    await coatNotesToggle.check();
+    await expect(page.frameLocator("#branding-preview-frame").locator("body")).toContainText("Coat Notes");
+
+    await page.locator("#save-branding-button").click();
+    await page.waitForFunction(key => {
+      const state = JSON.parse(window.localStorage.getItem(key) || "{}");
+      const selections = state?.user?.user_metadata?.branding_profile?.previewFieldSelections || {};
+      return selections.custom_pet_name === true
+        && selections.custom_coat_notes === true
+        && selections.custom_client_secret == null;
+    }, SUPABASE_STATE_KEY);
+  });
+
   test("saved branding email toggle controls the Send Reminder branded preview", async ({ page }) => {
     const seed = createSupabaseSeed({
       user: createBronzeUser({

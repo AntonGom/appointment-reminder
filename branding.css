@@ -254,6 +254,111 @@ body[data-page="branding"] .section-card {
   margin-bottom: 20px;
 }
 
+.branding-preview-fields-card {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+}
+
+.branding-preview-fields-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.branding-preview-fields-title {
+  display: block;
+  color: var(--branding-ink);
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.branding-preview-fields-link {
+  flex: 0 0 auto;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.branding-preview-fields-link:hover {
+  text-decoration: underline;
+}
+
+.branding-preview-field-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px;
+}
+
+.branding-preview-field-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.9);
+  cursor: pointer;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.branding-preview-field-toggle:hover,
+.branding-preview-field-toggle:focus-within {
+  border-color: color-mix(in srgb, var(--branding-live-accent) 42%, rgba(148, 163, 184, 0.42));
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.branding-preview-field-checkbox {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--branding-live-accent);
+}
+
+.branding-preview-field-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.branding-preview-field-name {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.branding-preview-field-kind {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.branding-preview-field-empty {
+  padding: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  border-radius: 16px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .branding-toggle-row {
   display: flex;
   align-items: center;
