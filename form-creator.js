@@ -172,9 +172,78 @@ let mobileStudioExpandedState = { kind: "preset", size: "balanced" };
 let suppressNextMobileStudioHandleClick = false;
 let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
+const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const FORM_SAVE_TIMEOUT_MS = 12000;
+const FORM_CLEANUP_TIMEOUT_MS = 5000;
+
+function createTimedSupabaseFetch() {
+  return async (input, init = {}) => {
+    if (typeof AbortController === "undefined") {
+      return fetch(input, init);
+    }
+
+    const controller = new AbortController();
+    const upstreamSignal = init?.signal;
+    let timeoutId = 0;
+
+    const abortFromUpstream = () => {
+      controller.abort(upstreamSignal?.reason);
+    };
+
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        abortFromUpstream();
+      } else {
+        upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+      }
+    }
+
+    timeoutId = window.setTimeout(() => {
+      controller.abort(new Error("Supabase request timed out."));
+    }, SUPABASE_QUERY_TIMEOUT_MS);
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error("Supabase request timed out.");
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (upstreamSignal) {
+        upstreamSignal.removeEventListener("abort", abortFromUpstream);
+      }
+    }
+  };
+}
+
+async function runWithTimeout(operation, timeoutMs, message = "Request timed out.") {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
-  const clientKey = `${supabaseUrl}::${publicKey}`;
+  const clientKey = `${supabaseUrl}::${publicKey}::abortable-v1`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
@@ -183,6 +252,9 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      global: {
+        fetch: createTimedSupabaseFetch()
       }
     }));
   }
@@ -5476,7 +5548,7 @@ async function saveFormProfile(options = {}) {
     if (!silent) {
       setStatus("Please sign in first.", "error");
     }
-    return;
+    return false;
   }
 
   if (!skipBusy) {
@@ -5495,16 +5567,22 @@ async function saveFormProfile(options = {}) {
       custom_form_profile: normalized
     };
 
-    const { data, error } = await supabase.auth.updateUser({
-      data: metadata
-    });
+    const { data, error } = await runWithTimeout(
+      () => supabase.auth.updateUser({ data: metadata }),
+      FORM_SAVE_TIMEOUT_MS,
+      "Saving the form timed out. Check your connection and try again."
+    );
 
     if (error) {
       throw error;
     }
 
     try {
-      await pruneRememberedClientAnswersForProfile(normalized);
+      await runWithTimeout(
+        () => pruneRememberedClientAnswersForProfile(normalized),
+        FORM_CLEANUP_TIMEOUT_MS,
+        "Saved form, but client-answer cleanup timed out."
+      );
     } catch (cleanupError) {
       console.warn("Unable to clean up deleted remembered client answers.", cleanupError);
     }
@@ -5517,8 +5595,10 @@ async function saveFormProfile(options = {}) {
     if (!silent) {
       setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
     }
+    return true;
   } catch (error) {
     setStatus(error.message || "Unable to save this form right now.", "error");
+    return false;
   } finally {
     if (!skipBusy) {
       setButtonBusy(saveFormButton, false);
@@ -5631,12 +5711,45 @@ studioContextAction?.addEventListener("click", () => {
   }
 });
 formEnabledToggle?.addEventListener("change", async event => {
+  const nextEnabled = Boolean(event.target.checked);
+  const previousEnabled = currentFormProfile.isEnabled !== false;
   currentFormProfile = {
     ...currentFormProfile,
-    isEnabled: Boolean(event.target.checked)
+    isEnabled: nextEnabled
   };
   renderBuilder();
-  await saveFormProfile({ silent: true, skipBusy: true });
+  if (formEnabledToggle) {
+    formEnabledToggle.disabled = true;
+  }
+
+  setStatus(
+    nextEnabled
+      ? "Turning custom Form Creator flow on..."
+      : "Turning custom Form Creator flow off so Send Reminder uses the default form...",
+    "info"
+  );
+
+  const saved = await saveFormProfile({ silent: true, skipBusy: true });
+
+  if (!saved) {
+    currentFormProfile = {
+      ...currentFormProfile,
+      isEnabled: previousEnabled
+    };
+    renderBuilder();
+    setStatus("That change was not saved, so the form toggle was restored.", "error");
+  } else {
+    setStatus(
+      nextEnabled
+        ? "Custom form is on. Send Reminder will use your Form Creator flow."
+        : "Custom form is off. Send Reminder will use the default appointment form.",
+      "success"
+    );
+  }
+
+  if (formEnabledToggle) {
+    formEnabledToggle.disabled = false;
+  }
 });
 studioTabButtons.forEach(button => {
   button.addEventListener("click", () => {

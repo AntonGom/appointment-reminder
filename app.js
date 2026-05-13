@@ -79,6 +79,9 @@ const BRONZE_REVIEW_MAX_SCALE_DESKTOP = 0.9;
 const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.62;
 const PREVIEW_SCROLL_HINT_TEXT = "Scroll to review the rest of the message.";
 const PREVIEW_FALLBACK_HINT_TEXT = "We couldn't load the branded preview, so review this plain message before sending.";
+const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const SEND_EMAIL_TIMEOUT_MS = 25000;
+const POST_SEND_SAVE_TIMEOUT_MS = 8500;
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -119,8 +122,109 @@ let lastCustomFormSyncSignature = "";
 let customFormLoadingExitTimer = null;
 let lastStepNavigationRenderSignature = "";
 
+function createTimedSupabaseFetch() {
+  return async (input, init = {}) => {
+    if (typeof AbortController === "undefined") {
+      return fetch(input, init);
+    }
+
+    const controller = new AbortController();
+    const upstreamSignal = init?.signal;
+    let timeoutId = 0;
+
+    const abortFromUpstream = () => {
+      controller.abort(upstreamSignal?.reason);
+    };
+
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        abortFromUpstream();
+      } else {
+        upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+      }
+    }
+
+    timeoutId = window.setTimeout(() => {
+      controller.abort(new Error("Supabase request timed out."));
+    }, SUPABASE_QUERY_TIMEOUT_MS);
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error("Supabase request timed out.");
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (upstreamSignal) {
+        upstreamSignal.removeEventListener("abort", abortFromUpstream);
+      }
+    }
+  };
+}
+
+function getSendEmailTimeoutMs() {
+  const override = Number(window.__TEST_SEND_EMAIL_TIMEOUT_MS);
+  return Number.isFinite(override) && override >= 50 ? override : SEND_EMAIL_TIMEOUT_MS;
+}
+
+async function runWithTimeout(operation, timeoutMs, message = "Request timed out.") {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = SEND_EMAIL_TIMEOUT_MS) {
+  if (typeof AbortController === "undefined") {
+    const response = await fetch(url, options);
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort(new Error("Email request timed out."));
+  }, timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("Email request timed out. Check your connection and try again.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
-  const clientKey = `${supabaseUrl}::${publicKey}`;
+  const clientKey = `${supabaseUrl}::${publicKey}::abortable-v1`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
@@ -129,6 +233,9 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      global: {
+        fetch: createTimedSupabaseFetch()
       }
     }));
   }
@@ -397,12 +504,18 @@ async function initAccountTierState() {
     currentAuthUserId = session?.user?.id || "";
     renderBronzeFeatures();
     updateDraftPreviewChrome();
-    await syncCustomFormFromUser(currentSignedInUser);
-    await hydrateReminderPrefillFromSelectedClient();
-    setCustomFormLoading(false);
     if (session?.user) {
-      syncLatestSignedInUser({ silent: true });
+      const refreshed = await syncLatestSignedInUser({ silent: true });
+
+      if (!refreshed) {
+        await syncCustomFormFromUser(currentSignedInUser);
+        await hydrateReminderPrefillFromSelectedClient();
+      }
+    } else {
+      await syncCustomFormFromUser(null);
+      await hydrateReminderPrefillFromSelectedClient();
     }
+    setCustomFormLoading(false);
 
     appSupabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {
@@ -2145,7 +2258,7 @@ async function syncLatestSignedInUser(options = {}) {
   const { silent = true } = options;
 
   if (!appSupabase || latestSignedInUserSyncInFlight) {
-    return;
+    return false;
   }
 
   latestSignedInUserSyncInFlight = true;
@@ -2161,7 +2274,7 @@ async function syncLatestSignedInUser(options = {}) {
       renderBronzeFeatures();
       updateDraftPreviewChrome();
       await syncCustomFormFromUser(null);
-      return;
+      return true;
     }
 
     const { data, error } = await appSupabase.auth.getUser();
@@ -2176,10 +2289,12 @@ async function syncLatestSignedInUser(options = {}) {
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);
     await hydrateReminderPrefillFromSelectedClient();
+    return true;
   } catch (error) {
     if (!silent) {
       console.warn("Unable to refresh latest signed-in user.", error);
     }
+    return false;
   } finally {
     latestSignedInUserSyncInFlight = false;
   }
@@ -4954,8 +5069,22 @@ async function confirmSendBrevoEmail() {
   setSendEmailButtonState("loading");
   setSendStatus("Sending email...", "info");
   try {
-    const clientId = isBronzeUser() ? await autoSaveBronzeContact() : null;
-    const res = await fetch("/api/send-email", {
+    let clientId = null;
+
+    if (isBronzeUser()) {
+      try {
+        clientId = await runWithTimeout(
+          () => autoSaveBronzeContact(),
+          POST_SEND_SAVE_TIMEOUT_MS,
+          "Saving the client before send timed out."
+        );
+      } catch (saveError) {
+        console.warn("Unable to save Bronze contact before sending email.", saveError);
+        setSendStatus("Sending email now. Client Details may update after the send.", "info");
+      }
+    }
+
+    const { response: res, data } = await fetchJsonWithTimeout("/api/send-email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -4966,28 +5095,48 @@ async function confirmSendBrevoEmail() {
         trackingClientId: clientId || "",
         trackingSource: "automated_email"
       })
-    });
-
-    const data = await res.json();
+    }, getSendEmailTimeoutMs());
 
     if (res.ok && data.success) {
       if (data.qaEmailDebug) {
         storeQaLastSentEmail(data.qaEmailDebug);
       }
 
-      const appointmentId = await upsertBronzeAppointment({
-        clientId,
-        channel: "email",
-        source: "automated_email"
-      });
-      await persistBronzeClientProfileAnswers(clientId, appointmentId);
       safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
+      setSendStatus("Email sent. Saving the appointment record...", "success");
+
+      let savedRecord = false;
+
+      if (isBronzeUser()) {
+        try {
+          const appointmentId = await runWithTimeout(
+            () => upsertBronzeAppointment({
+              clientId,
+              channel: "email",
+              source: "automated_email"
+            }),
+            POST_SEND_SAVE_TIMEOUT_MS,
+            "Saving the appointment record timed out."
+          );
+          await runWithTimeout(
+            () => persistBronzeClientProfileAnswers(clientId, appointmentId),
+            POST_SEND_SAVE_TIMEOUT_MS,
+            "Saving remembered client answers timed out."
+          );
+          savedRecord = Boolean(appointmentId || clientId);
+        } catch (recordError) {
+          console.warn("Email sent, but saving the Bronze record failed.", recordError);
+        }
+      }
+
       setSendStatus(
         isBronzeUser()
-          ? "Email sent and saved to Client Details."
+          ? (savedRecord
+              ? "Email sent and saved to Client Details."
+              : "Email sent. Client Details did not finish saving, so check that page before relying on the saved record.")
           : "Email sent.",
-        "success"
+        savedRecord || !isBronzeUser() ? "success" : "info"
       );
       showThankYouScreen();
     } else {
@@ -4999,7 +5148,9 @@ async function confirmSendBrevoEmail() {
   } catch (error) {
     console.warn("Unable to send automated email.", error);
     setSendEmailButtonState("idle");
-    const message = "Email could not be sent. Check your connection and try again.";
+    const message = /timed out/i.test(String(error?.message || ""))
+      ? error.message
+      : "Email could not be sent. Check your connection and try again.";
     setSendStatus(message, "error");
     alert(message);
   }

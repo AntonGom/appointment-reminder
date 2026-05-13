@@ -56,6 +56,7 @@ function createBronzeUser(overrides = {}) {
 }
 
 async function goToReviewStep(page) {
+  await page.waitForFunction(() => typeof setStep === "function" && document.querySelectorAll(".wizard-step").length > 0);
   await page.evaluate(() => {
     const reviewIndex = Array.from(document.querySelectorAll(".wizard-step"))
       .findIndex(step => step.dataset.field === "consent" || step.dataset.nav === "Review");
@@ -64,6 +65,7 @@ async function goToReviewStep(page) {
       setStep(reviewIndex, "forward");
     }
   });
+  await expect(page.locator('.wizard-step[data-field="consent"]')).toHaveClass(/active/);
 }
 
 test.describe("Send Reminder", () => {
@@ -71,7 +73,7 @@ test.describe("Send Reminder", () => {
     await page.goto("/index.html");
     await goToReviewStep(page);
 
-    await expect(page.locator("#preview")).toBeVisible();
+    await expect(page.locator("#review-draft-card")).toBeVisible();
     await expect(page.locator("#bronze-preview-shell")).toBeHidden();
     await expect(page.locator("#preview")).toHaveJSProperty("readOnly", true);
   });
@@ -188,7 +190,7 @@ test.describe("Send Reminder", () => {
     expect(previewBox.width).toBeLessThanOrEqual(draftBox.width + 1);
     expect(previewBox.height).toBeLessThanOrEqual(620);
     expect(stageBox.width).toBeLessThanOrEqual(previewBox.width + 1);
-    await expect(page.locator("#bronze-preview-hint")).toContainText("Read-only preview");
+    await expect(page.locator("#bronze-preview-hint")).toContainText("Use Edit text");
     await expect(page.frameLocator("#bronze-preview-frame").locator('[contenteditable="true"]')).toHaveCount(0);
     await expect(previewBody).toContainText("Pink Paws Grooming");
     await expect(previewBody).toContainText("Hello Ava Johnson,");
@@ -257,7 +259,7 @@ test.describe("Send Reminder", () => {
     }));
     await goToReviewStep(page);
 
-    await expect(page.locator("#preview")).toBeVisible();
+    await expect(page.locator("#review-draft-card")).toBeVisible();
     await expect(page.locator("#bronze-preview-shell")).toBeHidden();
   });
 
@@ -354,5 +356,42 @@ test.describe("Send Reminder", () => {
     expect(message).toContain("Please call when you are on the way.");
     expect(message).toContain("If you need to reach us before your appointment, please contact us at (305) 555-0188.");
     expect(subject).toContain("Appointment Reminder for 04/05/2026 at 4:00 PM - Ava Johnson");
+  });
+
+  test("send email button returns to idle if the email request stalls", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__TEST_SEND_EMAIL_TIMEOUT_MS = 250;
+    });
+    page.on("dialog", dialog => dialog.accept());
+    await page.route("**/api/send-email", async route => {
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true })
+      }).catch(() => {});
+    });
+
+    await page.goto("/index.html");
+    await page.evaluate(() => {
+      document.getElementById("name").value = "Ava Johnson";
+      document.getElementById("email").value = "ava@example.com";
+      document.getElementById("date").value = "2026-04-05";
+      document.getElementById("time").value = "16:00";
+      document.getElementById("address").value = "1540 Bay Road";
+      document.getElementById("consent").checked = true;
+      document.getElementById("consent").dispatchEvent(new Event("change", { bubbles: true }));
+      refreshFormState();
+    });
+    await goToReviewStep(page);
+
+    await page.locator("#send-email-button").click();
+    await expect(page.locator("#email-modal")).toBeVisible();
+    await page.locator(".email-modal-continue").click();
+
+    await expect(page.locator("#send-email-button")).toHaveClass(/loading/);
+    await expect(page.locator("#send-status")).toContainText("Email request timed out");
+    await expect(page.locator("#send-email-button")).not.toBeDisabled();
+    await expect(page.locator("#send-email-button")).toHaveText("Send Automated Email");
   });
 });

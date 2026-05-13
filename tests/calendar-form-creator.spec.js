@@ -721,6 +721,46 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#form-enabled-toggle")).not.toBeChecked();
   });
 
+  test("form creator toggle-off makes Send Reminder use the default form", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      user: createBronzeUser({
+        user_metadata: {
+          custom_form_profile: {
+            isEnabled: true,
+            formTitle: "Pet Grooming Reminder",
+            fields: [
+              {
+                id: "custom_pet_name",
+                type: "text",
+                title: "Pet Name",
+                label: "Pet Name",
+                navLabel: "Pet",
+                placeholder: "Enter pet name"
+              }
+            ]
+          }
+        }
+      })
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/form-creator.html");
+
+    await expect(page.locator("#form-enabled-toggle")).toBeChecked();
+    await expect(page.locator("#form-preview-title")).toContainText("Pet Grooming Reminder");
+    await page.locator(".form-enabled-row").click();
+    await expect(page.locator("#status-banner")).toContainText("default appointment form");
+    await page.waitForFunction(key => {
+      const state = JSON.parse(window.localStorage.getItem(key) || "{}");
+      return state?.user?.user_metadata?.custom_form_profile?.isEnabled === false;
+    }, SUPABASE_STATE_KEY);
+
+    await page.goto("/index.html");
+    await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
+    await expect(page.locator("#custom_pet_name")).toHaveCount(0);
+    await expect(page.locator("#step-title")).toHaveText("Client Phone Number");
+  });
+
   test("saving the form prunes deleted remembered client answers", async ({ page }) => {
     const seed = createSupabaseSeed({
       user: createBronzeUser({
