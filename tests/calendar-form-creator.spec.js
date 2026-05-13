@@ -49,7 +49,7 @@ function setTableRows(table, rows) {
 
 function emitAuthEvent(event) {
   const state = readState();
-  const session = state.user ? { user: clone(state.user) } : null;
+  const session = state.user ? { user: clone(state.user), access_token: "test-token" } : null;
   listeners.forEach(listener => {
     try {
       listener(event, session);
@@ -212,7 +212,7 @@ export function createClient() {
         const state = readState();
         return {
           data: {
-            session: state.user ? { user: clone(state.user) } : null
+            session: state.user ? { user: clone(state.user), access_token: "test-token" } : null
           },
           error: null
         };
@@ -531,6 +531,80 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].service_date).toBe("2027-05-03");
     expect(state.tables.appointments[0].service_time).toBe("15:15");
     expect(state.tables.appointments[0].last_source).toBe("import");
+  });
+
+  test("calendar imports appointments from ICS", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator("#import-ics-input").setInputFiles({
+      name: "calendar.ics",
+      mimeType: "text/calendar",
+      buffer: Buffer.from([
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VEVENT",
+        "UID:grooming-appointment-1",
+        "SUMMARY:Mila Grooming",
+        "DTSTART:20270504T143000",
+        "LOCATION:22 Pink Paws Ave",
+        "DESCRIPTION:Bath and nail trim",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ].join("\r\n"))
+    });
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Mila Grooming");
+    await expect(page.locator("#all-appointments-list")).toContainText("22 Pink Paws Ave");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Mila Grooming");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-04");
+    expect(state.tables.appointments[0].service_time).toBe("14:30");
+    expect(state.tables.appointments[0].last_source).toBe("ics_import");
+  });
+
+  test("calendar syncs appointments from an ICS link", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.route("**/api/calendar-feed", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          text: [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "BEGIN:VEVENT",
+            "UID:calendar-link-appointment-1",
+            "SUMMARY:Outlook Client Visit",
+            "DTSTART:20270505T101500",
+            "LOCATION:77 Sync Street",
+            "DESCRIPTION:Imported from a calendar feed",
+            "END:VEVENT",
+            "END:VCALENDAR"
+          ].join("\r\n")
+        })
+      });
+    });
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator("#calendar-feed-url").fill("webcal://calendar.example.com/feed.ics");
+    await page.locator("#sync-calendar-link-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Outlook Client Visit");
+    await expect(page.locator("#all-appointments-list")).toContainText("77 Sync Street");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Outlook Client Visit");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-05");
+    expect(state.tables.appointments[0].service_time).toBe("10:15");
+    expect(state.tables.appointments[0].last_source).toBe("calendar_link");
   });
 
   test("form creator saves a selected template and keeps it after reload", async ({ page }) => {

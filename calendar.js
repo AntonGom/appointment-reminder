@@ -29,6 +29,13 @@ const nextButton = document.getElementById("calendar-next");
 const allAppointmentsList = document.getElementById("all-appointments-list");
 const importAppointmentsButton = document.getElementById("import-appointments-button");
 const importAppointmentsInput = document.getElementById("import-appointments-input");
+const importIcsButton = document.getElementById("import-ics-button");
+const importIcsInput = document.getElementById("import-ics-input");
+const syncGoogleCalendarButton = document.getElementById("sync-google-calendar-button");
+const calendarFeedUrlInput = document.getElementById("calendar-feed-url");
+const syncCalendarLinkButton = document.getElementById("sync-calendar-link-button");
+const forwardingEmailValue = document.getElementById("forwarding-email-value");
+const copyForwardingEmailButton = document.getElementById("copy-forwarding-email-button");
 const appointmentDetailModal = document.getElementById("appointment-detail-modal");
 const appointmentDetailTitle = document.getElementById("appointment-detail-title");
 const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
@@ -60,6 +67,10 @@ const SUPABASE_READ_TIMEOUT_MS = 6000;
 const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const CALENDAR_LOADING_STALE_MS = 4500;
+const GOOGLE_IDENTITY_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+const GOOGLE_CALENDAR_LOOKBACK_DAYS = 30;
+const GOOGLE_CALENDAR_LOOKAHEAD_DAYS = 180;
 const APPOINTMENT_IMPORT_ALIASES = {
   importId: ["id", "appointment_id", "event_id", "booking_id", "external_id", "confirmation_id"],
   clientName: ["client_name", "customer_name", "customer", "name", "full_name", "invitee_name", "guest_name", "patient_name"],
@@ -80,6 +91,7 @@ let loadedSupabaseCreateClient = null;
 let calendarRecoveryTimers = [];
 let calendarLoadStartedAt = 0;
 let calendarLoadSequence = 0;
+let googleCalendarTokenGranted = false;
 const calendarDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const calendarDebugLog = [];
 
@@ -478,6 +490,37 @@ async function fetchAccountDataResource(resource, ownerId = "") {
   return Array.isArray(payload?.data) ? payload.data : [];
 }
 
+async function postAccountDataResource(resource, rows, ownerId = "") {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({ resource });
+
+  if (ownerId) {
+    params.set("ownerId", ownerId);
+  }
+
+  const response = await runWithTimeout(() => fetch(`/api/account-data?${params.toString()}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ rows })
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save account data.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 async function refreshCalendarSessionAndData() {
   if (!supabase) {
     recordCalendarDebug("refresh skipped", "no supabase client");
@@ -627,6 +670,46 @@ function updateSignedInView(user) {
     if (allAppointmentsList) {
       allAppointmentsList.innerHTML = "";
     }
+  }
+
+  updateAppointmentSourceControls(user);
+}
+
+function getForwardingAddressForUser(user) {
+  const rawAddress = String(appConfig?.inboundAppointmentEmail || "").trim();
+
+  if (!rawAddress || !user?.id) {
+    return "";
+  }
+
+  return rawAddress
+    .split("{ownerId}").join(user.id)
+    .split("{userId}").join(user.id);
+}
+
+function updateAppointmentSourceControls(user = currentAuthUser) {
+  const hasUser = Boolean(user?.id);
+  const hasGoogleClient = Boolean(String(appConfig?.googleCalendarClientId || "").trim());
+  const forwardingAddress = getForwardingAddressForUser(user);
+
+  if (syncGoogleCalendarButton) {
+    syncGoogleCalendarButton.disabled = !hasUser || !hasGoogleClient;
+    syncGoogleCalendarButton.title = hasGoogleClient
+      ? "Connect Google Calendar and import upcoming events"
+      : "Add GOOGLE_CALENDAR_CLIENT_ID in Vercel to enable Google Calendar sync";
+  }
+
+  if (syncCalendarLinkButton) {
+    syncCalendarLinkButton.disabled = !hasUser;
+  }
+
+  if (forwardingEmailValue) {
+    forwardingEmailValue.textContent = forwardingAddress || "Set INBOUND_APPOINTMENT_EMAIL in Vercel";
+    forwardingEmailValue.classList.toggle("is-empty", !forwardingAddress);
+  }
+
+  if (copyForwardingEmailButton) {
+    copyForwardingEmailButton.disabled = !forwardingAddress;
   }
 }
 
@@ -878,11 +961,126 @@ function parseImportedAppointmentCsv(text) {
   });
 }
 
+function unfoldIcsLines(text) {
+  const lines = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const unfolded = [];
+
+  lines.forEach(line => {
+    if (/^[ \t]/.test(line) && unfolded.length) {
+      unfolded[unfolded.length - 1] += line.slice(1);
+      return;
+    }
+
+    unfolded.push(line);
+  });
+
+  return unfolded;
+}
+
+function decodeIcsValue(value) {
+  return String(value || "")
+    .replace(/\\n/gi, "\n")
+    .replace(/\\,/g, ",")
+    .replace(/\\;/g, ";")
+    .replace(/\\\\/g, "\\")
+    .trim();
+}
+
+function parseIcsPropertyLine(line) {
+  const separatorIndex = String(line || "").indexOf(":");
+
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const nameAndParams = line.slice(0, separatorIndex);
+  const name = String(nameAndParams.split(";")[0] || "").trim().toUpperCase();
+  const value = decodeIcsValue(line.slice(separatorIndex + 1));
+
+  return name ? { name, value } : null;
+}
+
+function parseIcsEmail(value) {
+  const mailtoMatch = String(value || "").match(/mailto:([^\s;]+)/i);
+
+  if (mailtoMatch) {
+    return mailtoMatch[1].trim();
+  }
+
+  const emailMatch = String(value || "").match(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/i);
+  return emailMatch ? emailMatch[0].trim() : "";
+}
+
+function parseIcsAppointments(text) {
+  const events = [];
+  let currentEvent = null;
+
+  unfoldIcsLines(text).forEach(line => {
+    const normalizedLine = String(line || "").trim();
+
+    if (normalizedLine.toUpperCase() === "BEGIN:VEVENT") {
+      currentEvent = {};
+      return;
+    }
+
+    if (normalizedLine.toUpperCase() === "END:VEVENT") {
+      if (currentEvent) {
+        events.push(currentEvent);
+      }
+      currentEvent = null;
+      return;
+    }
+
+    if (!currentEvent) {
+      return;
+    }
+
+    const property = parseIcsPropertyLine(normalizedLine);
+
+    if (!property) {
+      return;
+    }
+
+    if (property.name === "UID") {
+      currentEvent.event_id = property.value;
+    } else if (property.name === "SUMMARY") {
+      currentEvent.summary = property.value;
+    } else if (property.name === "DESCRIPTION") {
+      currentEvent.description = property.value;
+    } else if (property.name === "LOCATION") {
+      currentEvent.location = property.value;
+    } else if (property.name === "DTSTART") {
+      currentEvent.start = property.value;
+    } else if (property.name === "ATTENDEE" && !currentEvent.client_email) {
+      currentEvent.client_email = parseIcsEmail(property.value);
+    }
+  });
+
+  if (!events.length) {
+    throw new Error("That calendar file did not include any events.");
+  }
+
+  return events;
+}
+
 function parseDateFromText(value) {
   const text = String(value || "").trim();
 
   if (!text) {
     return "";
+  }
+
+  const compactIcsMatch = text.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/i);
+
+  if (compactIcsMatch) {
+    const [, year, month, day, hour, minute, second = "00", zone] = compactIcsMatch;
+
+    if (hour && zone) {
+      const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+      return Number.isNaN(date.getTime()) ? "" : formatDateKey(date);
+    }
+
+    return `${year}-${month}-${day}`;
   }
 
   const isoMatch = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -912,6 +1110,22 @@ function parseTimeFromText(value) {
 
   if (!text) {
     return "";
+  }
+
+  const compactIcsMatch = text.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/i);
+
+  if (compactIcsMatch) {
+    const [, year, month, day, hour, minute, second = "00", zone] = compactIcsMatch;
+
+    if (zone) {
+      const date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+
+      if (!Number.isNaN(date.getTime())) {
+        return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+      }
+    }
+
+    return `${hour}:${minute}`;
   }
 
   if (/\d{4}-\d{1,2}-\d{1,2}[T\s]\d{1,2}:\d{2}/.test(text)) {
@@ -955,7 +1169,7 @@ function getGoogleEventEmail(rawRecord) {
   return attendee?.email || "";
 }
 
-function normalizeImportedAppointmentRecord(rawRecord, ownerId) {
+function normalizeImportedAppointmentRecord(rawRecord, ownerId, source = "import") {
   if (!rawRecord || typeof rawRecord !== "object") {
     return null;
   }
@@ -995,7 +1209,7 @@ function normalizeImportedAppointmentRecord(rawRecord, ownerId) {
       service_time: serviceTime || null,
       service_location: serviceLocation,
       notes,
-      last_source: "import",
+      last_source: source,
       updated_at: new Date().toISOString()
     }
   };
@@ -1016,6 +1230,12 @@ async function persistImportedAppointments(rows) {
     return [];
   }
 
+  try {
+    return await postAccountDataResource("appointments", rows, rows[0]?.owner_id || "");
+  } catch (error) {
+    recordCalendarDebug("appointment save api fallback", error?.message || String(error));
+  }
+
   const { data, error } = await withSupabaseRetry(() => supabase
     .from("appointments")
     .insert(rows), {
@@ -1028,6 +1248,54 @@ async function persistImportedAppointments(rows) {
   }
 
   return data || rows;
+}
+
+async function importAppointmentRecords(rawRecords, user, options = {}) {
+  const {
+    source = "import",
+    emptyMessage = "No valid appointments were found. Include at least a client name/email/phone and appointment date.",
+    successVerb = "Imported"
+  } = options;
+  const normalizedRecords = rawRecords
+    .map(record => normalizeImportedAppointmentRecord(record, user.id, source))
+    .filter(Boolean);
+
+  if (!normalizedRecords.length) {
+    throw new Error(emptyMessage);
+  }
+
+  const knownKeys = new Set((appointments || []).map(getAppointmentDuplicateKey));
+  const pendingRows = [];
+  let skippedDuplicates = 0;
+
+  normalizedRecords.forEach(record => {
+    const key = getAppointmentDuplicateKey(record.payload);
+
+    if (knownKeys.has(key)) {
+      skippedDuplicates += 1;
+      return;
+    }
+
+    knownKeys.add(key);
+    pendingRows.push(record.payload);
+  });
+
+  if (!pendingRows.length) {
+    setStatus(`No new appointments saved. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
+    return { saved: 0, skippedDuplicates };
+  }
+
+  await persistImportedAppointments(pendingRows);
+  await loadAppointments(user);
+
+  const summary = [`${successVerb} ${pendingRows.length} appointment${pendingRows.length === 1 ? "" : "s"}`];
+
+  if (skippedDuplicates) {
+    summary.push(`skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}`);
+  }
+
+  setStatus(`${summary.join("; ")}.`, "success");
+  return { saved: pendingRows.length, skippedDuplicates };
 }
 
 async function handleImportAppointmentsFile(event) {
@@ -1063,49 +1331,288 @@ async function handleImportAppointmentsFile(event) {
     const rawRecords = extension === "json" || file.type === "application/json"
       ? parseImportedAppointmentJson(text)
       : parseImportedAppointmentCsv(text);
-    const normalizedRecords = rawRecords
-      .map(record => normalizeImportedAppointmentRecord(record, user.id))
-      .filter(Boolean);
-
-    if (!normalizedRecords.length) {
-      throw new Error("No valid appointments were found. Include at least a client name/email/phone and appointment date.");
-    }
-
-    const knownKeys = new Set((appointments || []).map(getAppointmentDuplicateKey));
-    const pendingRows = [];
-    let skippedDuplicates = 0;
-
-    normalizedRecords.forEach(record => {
-      const key = getAppointmentDuplicateKey(record.payload);
-
-      if (knownKeys.has(key)) {
-        skippedDuplicates += 1;
-        return;
-      }
-
-      knownKeys.add(key);
-      pendingRows.push(record.payload);
+    await importAppointmentRecords(rawRecords, user, {
+      source: "import",
+      successVerb: "Imported"
     });
-
-    if (!pendingRows.length) {
-      setStatus(`No new appointments imported. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
-      return;
-    }
-
-    await persistImportedAppointments(pendingRows);
-    await loadAppointments(user);
-
-    const summary = [`Imported ${pendingRows.length} appointment${pendingRows.length === 1 ? "" : "s"}`];
-
-    if (skippedDuplicates) {
-      summary.push(`skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}`);
-    }
-
-    setStatus(`${summary.join("; ")}.`, "success");
   } catch (error) {
     setStatus(error.message || "Unable to import appointments.", "error");
   } finally {
     setButtonBusy(importAppointmentsButton, false);
+  }
+}
+
+async function handleImportIcsFile(event) {
+  const file = event.target.files?.[0] || null;
+  event.target.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  if (!supabase) {
+    setStatus("Add your Supabase keys before importing appointments.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before importing appointments.", "error");
+    return;
+  }
+
+  setButtonBusy(importIcsButton, true, "Importing...");
+  setStatus("Importing calendar events...", "info");
+
+  try {
+    const rawRecords = parseIcsAppointments(await file.text());
+    await importAppointmentRecords(rawRecords, user, {
+      source: "ics_import",
+      successVerb: "Imported",
+      emptyMessage: "No valid calendar events were found. Events need a date and at least a title, email, or phone number."
+    });
+  } catch (error) {
+    setStatus(error.message || "Unable to import that calendar file.", "error");
+  } finally {
+    setButtonBusy(importIcsButton, false);
+  }
+}
+
+function loadExternalScript(url, id) {
+  const existingScript = id ? document.getElementById(id) : null;
+
+  if (existingScript?.dataset.loaded === "true") {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = existingScript || document.createElement("script");
+
+    script.id = id || "";
+    script.src = url;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
+    script.onerror = () => reject(new Error("Unable to load Google Calendar sign-in."));
+
+    if (!existingScript) {
+      document.head.appendChild(script);
+    }
+  });
+}
+
+async function requestGoogleCalendarAccessToken() {
+  const clientId = String(appConfig?.googleCalendarClientId || "").trim();
+
+  if (!clientId) {
+    throw new Error("Google Calendar sync needs GOOGLE_CALENDAR_CLIENT_ID in Vercel.");
+  }
+
+  await loadExternalScript(GOOGLE_IDENTITY_SCRIPT_URL, "google-identity-services");
+
+  if (!window.google?.accounts?.oauth2?.initTokenClient) {
+    throw new Error("Google Calendar sign-in did not finish loading.");
+  }
+
+  return new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: GOOGLE_CALENDAR_SCOPE,
+      callback: tokenResponse => {
+        if (tokenResponse?.error) {
+          reject(new Error(tokenResponse.error_description || tokenResponse.error));
+          return;
+        }
+
+        const accessToken = String(tokenResponse?.access_token || "").trim();
+
+        if (!accessToken) {
+          reject(new Error("Google Calendar did not return an access token."));
+          return;
+        }
+
+        googleCalendarTokenGranted = true;
+        resolve(accessToken);
+      },
+      error_callback: error => {
+        reject(new Error(error?.message || error?.type || "Google Calendar sign-in was cancelled."));
+      }
+    });
+
+    tokenClient.requestAccessToken({
+      prompt: googleCalendarTokenGranted ? "" : "consent"
+    });
+  });
+}
+
+async function fetchGoogleCalendarEvents(accessToken) {
+  const timeMin = addDays(new Date(), -GOOGLE_CALENDAR_LOOKBACK_DAYS).toISOString();
+  const timeMax = addDays(new Date(), GOOGLE_CALENDAR_LOOKAHEAD_DAYS).toISOString();
+  const params = new URLSearchParams({
+    singleEvents: "true",
+    orderBy: "startTime",
+    timeMin,
+    timeMax,
+    maxResults: "250"
+  });
+  const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "Unable to read Google Calendar events.");
+  }
+
+  return Array.isArray(payload?.items)
+    ? payload.items.filter(event => String(event?.status || "").toLowerCase() !== "cancelled")
+    : [];
+}
+
+async function handleSyncGoogleCalendar() {
+  if (!supabase) {
+    setStatus("Add your Supabase keys before syncing appointments.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before syncing appointments.", "error");
+    return;
+  }
+
+  setButtonBusy(syncGoogleCalendarButton, true, "Syncing...");
+  setStatus("Connecting to Google Calendar...", "info");
+
+  try {
+    const accessToken = await requestGoogleCalendarAccessToken();
+    setStatus("Reading Google Calendar events...", "info");
+    const rawRecords = await fetchGoogleCalendarEvents(accessToken);
+
+    if (!rawRecords.length) {
+      setStatus("Google Calendar did not return any upcoming events.", "info");
+      return;
+    }
+
+    await importAppointmentRecords(rawRecords, user, {
+      source: "google_calendar",
+      successVerb: "Synced",
+      emptyMessage: "No usable Google Calendar events were found. Events need a date and at least a title, attendee email, or phone number."
+    });
+  } catch (error) {
+    setStatus(error.message || "Unable to sync Google Calendar.", "error");
+  } finally {
+    setButtonBusy(syncGoogleCalendarButton, false);
+    updateAppointmentSourceControls(user);
+  }
+}
+
+async function fetchCalendarFeedText(feedUrl) {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const response = await runWithTimeout(() => fetch("/api/calendar-feed", {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ url: feedUrl })
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to read that calendar link.");
+  }
+
+  return String(payload?.text || "");
+}
+
+async function handleSyncCalendarLink() {
+  if (!supabase) {
+    setStatus("Add your Supabase keys before syncing appointments.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before syncing appointments.", "error");
+    return;
+  }
+
+  const feedUrl = String(calendarFeedUrlInput?.value || "").trim();
+
+  if (!feedUrl) {
+    setStatus("Paste a webcal or .ics calendar link first.", "error");
+    return;
+  }
+
+  setButtonBusy(syncCalendarLinkButton, true, "Syncing...");
+  setStatus("Reading calendar link...", "info");
+
+  try {
+    const text = await fetchCalendarFeedText(feedUrl);
+    const rawRecords = parseIcsAppointments(text);
+    await importAppointmentRecords(rawRecords, user, {
+      source: "calendar_link",
+      successVerb: "Synced",
+      emptyMessage: "No valid calendar events were found in that link."
+    });
+  } catch (error) {
+    setStatus(error.message || "Unable to sync that calendar link.", "error");
+  } finally {
+    setButtonBusy(syncCalendarLinkButton, false);
+    updateAppointmentSourceControls(user);
+  }
+}
+
+async function copyForwardingEmailAddress() {
+  const address = getForwardingAddressForUser(currentAuthUser);
+
+  if (!address) {
+    setStatus("Add INBOUND_APPOINTMENT_EMAIL in Vercel before copying a forwarding address.", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(address);
+    setStatus("Forwarding address copied.", "success");
+  } catch (_error) {
+    const textArea = document.createElement("textarea");
+    textArea.value = address;
+    textArea.setAttribute("readonly", "true");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    textArea.remove();
+    setStatus("Forwarding address copied.", "success");
   }
 }
 
@@ -2294,6 +2801,34 @@ function bindCalendarControls() {
       importAppointmentsInput.click();
     });
     importAppointmentsInput.addEventListener("change", handleImportAppointmentsFile);
+  }
+
+  if (importIcsButton && importIcsInput) {
+    importIcsButton.addEventListener("click", () => {
+      importIcsInput.click();
+    });
+    importIcsInput.addEventListener("change", handleImportIcsFile);
+  }
+
+  if (syncGoogleCalendarButton) {
+    syncGoogleCalendarButton.addEventListener("click", handleSyncGoogleCalendar);
+  }
+
+  if (syncCalendarLinkButton) {
+    syncCalendarLinkButton.addEventListener("click", handleSyncCalendarLink);
+  }
+
+  if (calendarFeedUrlInput) {
+    calendarFeedUrlInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleSyncCalendarLink();
+      }
+    });
+  }
+
+  if (copyForwardingEmailButton) {
+    copyForwardingEmailButton.addEventListener("click", copyForwardingEmailAddress);
   }
 
   if (monthSelect) {

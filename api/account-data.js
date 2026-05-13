@@ -81,6 +81,38 @@ async function fetchRestRows({ supabaseUrl, publicKey, token, table, select, sea
   return Array.isArray(payload) ? payload : [];
 }
 
+async function insertRestRows({ supabaseUrl, publicKey, token, table, rows }) {
+  const url = new URL(`/rest/v1/${table}`, supabaseUrl);
+  const response = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: {
+      apikey: publicKey,
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(Array.isArray(rows) ? rows : [rows])
+  });
+  const text = await response.text();
+  let payload = null;
+
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (_error) {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    const error = new Error(typeof payload?.message === "string" ? payload.message : `Unable to save ${table}.`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return Array.isArray(payload) ? payload : [];
+}
+
 async function loadClients(config) {
   const fallbackSelect = "id,client_name,client_email,client_phone,service_address,notes,created_at,updated_at";
   const primarySelect = `${fallbackSelect},profile_custom_answers`;
@@ -181,7 +213,7 @@ async function loadHistory(config, ownerId) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     sendJson(res, 405, { error: "Method not allowed." });
     return;
   }
@@ -209,6 +241,29 @@ export default async function handler(req, res) {
   };
 
   try {
+    if (req.method === "POST") {
+      if (resource !== "appointments") {
+        sendJson(res, 400, { error: "This resource cannot be saved here." });
+        return;
+      }
+
+      const rows = Array.isArray(req.body?.rows) ? req.body.rows : Array.isArray(req.body) ? req.body : [];
+
+      if (!rows.length) {
+        sendJson(res, 400, { error: "No appointment rows were provided." });
+        return;
+      }
+
+      const data = await insertRestRows({
+        ...config,
+        table: "appointments",
+        rows
+      });
+
+      sendJson(res, 200, { data });
+      return;
+    }
+
     let data = [];
 
     if (resource === "clients") {

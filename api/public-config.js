@@ -2,6 +2,8 @@ export default function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL || "";
   const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || "";
   const stripePriceLabel = process.env.PRO_MONTHLY_PRICE_LABEL || "$9/month";
+  const googleCalendarClientId = process.env.GOOGLE_CALENDAR_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID || "";
+  const inboundAppointmentEmail = process.env.INBOUND_APPOINTMENT_EMAIL || "";
 
   res.setHeader("Cache-Control", "no-store");
   res.status(200).json({
@@ -9,6 +11,9 @@ export default function handler(req, res) {
     supabasePublishableKey,
     accountsEnabled: Boolean(supabaseUrl && supabasePublishableKey),
     paymentsEnabled: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRO_MONTHLY_PRICE_ID),
-    stripePriceLabel
+    stripePriceLabel,
+    googleCalendarClientId,
+    googleCalendarEnabled: Boolean(googleCalendarClientId),
+    inboundAppointmentEmail
   });
 }

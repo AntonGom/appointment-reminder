@@ -53,7 +53,10 @@ const server = http.createServer((request, response) => {
       accountsEnabled: false,
       supabaseUrl: "",
       supabaseAnonKey: "",
-      supabasePublishableKey: ""
+      supabasePublishableKey: "",
+      googleCalendarClientId: "",
+      googleCalendarEnabled: false,
+      inboundAppointmentEmail: ""
     });
     return;
   }
@@ -63,7 +66,7 @@ const server = http.createServer((request, response) => {
       label: "DEV",
       env: "preview",
       branch: "codex-qa",
-      version: "20260501.21",
+      version: "20260513.22",
       commitSha: "testsha"
     });
     return;
