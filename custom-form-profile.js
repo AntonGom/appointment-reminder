@@ -602,6 +602,9 @@ function normalizeCustomPage(rawPage, index) {
     title,
     navLabel,
     copy: safeString(rawPage?.copy).slice(0, 180),
+    clientTitle: safeString(rawPage?.clientTitle).slice(0, 60),
+    clientCopy: safeString(rawPage?.clientCopy).slice(0, 180),
+    clientNavLabel: safeString(rawPage?.clientNavLabel).slice(0, 12),
     required: rawPage?.required === true,
     ...normalizeTypography(rawPage || fallback)
   };

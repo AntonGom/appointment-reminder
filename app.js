@@ -38,7 +38,7 @@ const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
 const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260514a";
-const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260429d";
+const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260514b";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";

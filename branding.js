@@ -11,7 +11,7 @@ import {
   BASE_REMINDER_STEPS,
   isContentBlockType,
   normalizeCustomFormProfile
-} from "./custom-form-profile.js?v=20260429d";
+} from "./custom-form-profile.js?v=20260514b";
 
 const statusBanner = document.getElementById("status-banner");
 const authSetupNotice = document.getElementById("auth-setup-notice");

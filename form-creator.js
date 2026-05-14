@@ -61,9 +61,38 @@ import {
   getFieldVisibility,
   isFieldVisibleForPerspective,
   getPerspectiveField
-} from "./custom-form-profile.js?v=20260429d";
+} from "./custom-form-profile.js?v=20260514b";
 
 const OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS = new Set(["notes"]);
+const DEFAULT_SEND_REMINDER_PREVIEW_PROFILE = normalizeCustomFormProfile({
+  isEnabled: true,
+  formTitle: DEFAULT_FORM_TITLE,
+  formLogoUrl: "",
+  backgroundStyle: "solid",
+  backgroundSolidColor: "#eef5f9",
+  backgroundTop: "#eef5f9",
+  backgroundBottom: "#eef5f9",
+  formSurfaceColor: "#ffffff",
+  formSurfaceAccentColor: "#ffffff",
+  formSurfaceGradient: "solid",
+  formSurfaceShineEnabled: false,
+  formSurfaceShape: "rounded",
+  formSurfaceLayout: "compact",
+  formTextColor: "#111827",
+  questionSurfaceColor: "#ffffff",
+  questionTextColor: "#111827",
+  questionSurfaceVisible: true,
+  stepNavBackgroundColor: "#f8fafc",
+  stepNavActiveBackgroundColor: "#dbeafe",
+  stepNavTextColor: "#0f172a",
+  stepNavActiveTextColor: "#1d4ed8",
+  stepNavShape: "rounded",
+  stepNavSize: "medium",
+  stepNavPlacement: "below-title",
+  stepMotionStyle: "none",
+  stepHeadMotion: "none",
+  stepChipMotion: "none"
+});
 
 function canToggleBuiltInRememberField(fieldId) {
   return OPTIONAL_BUILT_IN_REMEMBER_FIELD_IDS.has(String(fieldId || "").trim());
@@ -88,6 +117,7 @@ const studioMobileResizeHandle = document.getElementById("form-studio-mobile-res
 const studioScrollHint = document.getElementById("form-studio-scroll-hint");
 const saveFormButton = document.getElementById("save-form-button");
 const resetFormButton = document.getElementById("reset-form-button");
+const resetDefaultFormButton = document.getElementById("reset-default-form-button");
 const formEnabledToggle = document.getElementById("form-enabled-toggle");
 const mobileStudioSizeButtons = Array.from(document.querySelectorAll("[data-mobile-studio-size]"));
 const fieldRailList = document.getElementById("field-rail-list");
@@ -163,6 +193,9 @@ let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
 let formProfileSaveInFlight = false;
 let lastFormProfileSaveEndedAt = 0;
+let pendingResetSaveTimer = null;
+let pendingResetCountdownTimer = null;
+let pendingResetState = null;
 let stepPointerDragState = null;
 let suppressNextStepperClick = false;
 let fieldRailPointerDragState = null;
@@ -992,7 +1025,7 @@ const FORM_TEMPLATE_LIBRARY = [
   }
 ];
 
-function setStatus(message, type = "info") {
+function setStatus(message, type = "info", options = {}) {
   if (!statusBanner) {
     return;
   }
@@ -1004,19 +1037,51 @@ function setStatus(message, type = "info") {
 
   if (!message) {
     statusBanner.hidden = true;
-    statusBanner.textContent = "";
+    statusBanner.replaceChildren();
     statusBanner.className = "status-banner";
     return;
   }
 
   statusBanner.hidden = false;
-  statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
 
-  const autoHideDelay = type === "error" ? 7000 : type === "success" ? 4200 : 3600;
-  statusBannerTimer = window.setTimeout(() => {
+  const messageNode = document.createElement("span");
+  messageNode.className = "status-banner-message";
+  messageNode.textContent = message;
+  statusBanner.replaceChildren(messageNode);
+
+  if (options.actionLabel && typeof options.onAction === "function") {
+    const actionButton = document.createElement("button");
+    actionButton.className = "status-banner-action";
+    actionButton.type = "button";
+    actionButton.textContent = options.actionLabel;
+    actionButton.addEventListener("click", event => {
+      event.stopPropagation();
+      options.onAction();
+    });
+    statusBanner.appendChild(actionButton);
+  }
+
+  const dismissButton = document.createElement("button");
+  dismissButton.className = "status-banner-dismiss";
+  dismissButton.type = "button";
+  dismissButton.setAttribute("aria-label", "Dismiss notification");
+  dismissButton.textContent = "x";
+  dismissButton.addEventListener("click", event => {
+    event.stopPropagation();
     setStatus("");
-  }, autoHideDelay);
+  });
+  statusBanner.appendChild(dismissButton);
+
+  const autoHideDelay = Number.isFinite(Number(options.duration))
+    ? Number(options.duration)
+    : type === "error" ? 3800 : type === "success" ? 2400 : 2200;
+
+  if (autoHideDelay > 0) {
+    statusBannerTimer = window.setTimeout(() => {
+      setStatus("");
+    }, autoHideDelay);
+  }
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -1078,10 +1143,22 @@ function getCustomPages() {
   return Array.isArray(currentFormProfile.customPages) ? currentFormProfile.customPages : [];
 }
 
+function isCustomFormEditingLocked() {
+  return currentFormProfile.isEnabled === false;
+}
+
 function getPreviewFormProfile() {
-  return currentFormProfile.isEnabled === false
-    ? normalizeCustomFormProfile({ isEnabled: true })
+  return isCustomFormEditingLocked()
+    ? DEFAULT_SEND_REMINDER_PREVIEW_PROFILE
     : currentFormProfile;
+}
+
+function getDefaultEditableFormProfile(options = {}) {
+  const { preserveEnabled = true } = options;
+  return normalizeCustomFormProfile({
+    ...DEFAULT_SEND_REMINDER_PREVIEW_PROFILE,
+    isEnabled: preserveEnabled ? currentFormProfile.isEnabled !== false : true
+  });
 }
 
 function getAllPreviewSteps() {
@@ -2505,6 +2582,11 @@ function showEditorView(title, copy, markup) {
     return false;
   }
 
+  if (isCustomFormEditingLocked()) {
+    setStatus("Turn on Use Custom Form before editing the form.", "info");
+    return false;
+  }
+
   if (editorTransitionTimer) {
     window.clearTimeout(editorTransitionTimer);
     editorTransitionTimer = null;
@@ -2827,16 +2909,17 @@ function applyBackgroundToPreview() {
     return;
   }
 
-  const surfaceState = getFormSurfaceState(currentFormProfile);
-  const questionState = getQuestionSurfaceState(currentFormProfile);
+  const previewProfile = getPreviewFormProfile();
+  const surfaceState = getFormSurfaceState(previewProfile);
+  const questionState = getQuestionSurfaceState(previewProfile);
 
   previewShell.dataset.formShape = surfaceState.shape;
   previewShell.dataset.formLayout = surfaceState.layout;
-  document.documentElement.style.setProperty("--fc-page-background", buildPageBackground(currentFormProfile));
-  document.documentElement.style.setProperty("--fc-bg-top", currentFormProfile.backgroundTop || DEFAULT_BACKGROUND_TOP);
-  document.documentElement.style.setProperty("--fc-bg-bottom", currentFormProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM);
+  document.documentElement.style.setProperty("--fc-page-background", buildPageBackground(previewProfile));
+  document.documentElement.style.setProperty("--fc-bg-top", previewProfile.backgroundTop || DEFAULT_BACKGROUND_TOP);
+  document.documentElement.style.setProperty("--fc-bg-bottom", previewProfile.backgroundBottom || DEFAULT_BACKGROUND_BOTTOM);
   previewShell.style.setProperty("--fc-form-surface-background", surfaceState.background);
-  previewShell.style.setProperty("--fc-form-shine-background", buildFormSurfaceShineBackground(currentFormProfile));
+  previewShell.style.setProperty("--fc-form-shine-background", buildFormSurfaceShineBackground(previewProfile));
   previewShell.style.setProperty("--fc-form-shine-opacity", surfaceState.shineOpacity);
   previewShell.style.setProperty("--fc-form-shell-width", surfaceState.width);
   previewShell.style.setProperty("--fc-form-shell-min-width", surfaceState.minWidth);
@@ -2851,8 +2934,8 @@ function applyBackgroundToPreview() {
   previewShell.style.setProperty("--fc-form-question-wide-max-width", surfaceState.questionWideMaxWidth);
   previewShell.style.setProperty("--fc-form-shell-outline-inset", surfaceState.shellOutlineInset);
   previewShell.style.setProperty("--fc-form-shell-outline-radius", surfaceState.shellOutlineRadius);
-  previewShell.style.setProperty("--fc-form-text-main", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
-  previewShell.style.setProperty("--fc-form-text-soft", currentFormProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  previewShell.style.setProperty("--fc-form-text-main", previewProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
+  previewShell.style.setProperty("--fc-form-text-soft", previewProfile.formTextColor || DEFAULT_FORM_TEXT_COLOR);
   previewShell.style.setProperty("--fc-question-surface-background", questionState.background);
   previewShell.style.setProperty("--fc-question-surface-border", questionState.border);
   previewShell.style.setProperty("--fc-question-text-main", questionState.text);
@@ -2930,13 +3013,14 @@ function applyStepNavigationStyles() {
     return;
   }
 
-  const stepSurfaceState = getStepNavigationSurfaceState();
-  const stepNavPlacement = currentFormProfile.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
+  const previewProfile = getPreviewFormProfile();
+  const stepSurfaceState = getStepNavigationSurfaceState(previewProfile);
+  const stepNavPlacement = previewProfile.stepNavPlacement || DEFAULT_STEP_NAV_PLACEMENT;
 
-  previewStepper.style.setProperty("--fc-step-nav-bg", currentFormProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
-  previewStepper.style.setProperty("--fc-step-nav-active-bg", currentFormProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
-  previewStepper.style.setProperty("--fc-step-nav-text", currentFormProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
-  previewStepper.style.setProperty("--fc-step-nav-active-text", currentFormProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
+  previewStepper.style.setProperty("--fc-step-nav-bg", previewProfile.stepNavBackgroundColor || DEFAULT_STEP_NAV_BACKGROUND);
+  previewStepper.style.setProperty("--fc-step-nav-active-bg", previewProfile.stepNavActiveBackgroundColor || DEFAULT_STEP_NAV_ACTIVE_BACKGROUND);
+  previewStepper.style.setProperty("--fc-step-nav-text", previewProfile.stepNavTextColor || DEFAULT_STEP_NAV_TEXT_COLOR);
+  previewStepper.style.setProperty("--fc-step-nav-active-text", previewProfile.stepNavActiveTextColor || DEFAULT_STEP_NAV_ACTIVE_TEXT_COLOR);
   previewStepper.style.setProperty("--fc-step-nav-width", stepSurfaceState.width);
   previewStepper.style.setProperty("--fc-step-nav-min-height", stepSurfaceState.minHeight);
   previewStepper.style.setProperty("--fc-step-nav-padding", stepSurfaceState.padding);
@@ -3410,6 +3494,7 @@ function buildPreviewFieldMarkup(step) {
 function renderPreview() {
   const steps = getPreviewSteps();
   let selectedStep = getSelectedPreviewStep();
+  const previewProfile = getPreviewFormProfile();
 
   if (!selectedStep) {
     return;
@@ -3425,12 +3510,12 @@ function renderPreview() {
     : getPageFieldsForStep(selectedStep.id, { forPreview: true }).some(field => field.required) || selectedStep.required === true;
 
   if (previewTitle) {
-    previewTitle.textContent = currentFormProfile.formTitle || DEFAULT_FORM_TITLE;
-    previewTitle.style.fontSize = `${currentFormProfile.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE}px`;
-    previewTitle.style.fontWeight = currentFormProfile.formTitleBold === false ? "500" : "800";
+    previewTitle.textContent = previewProfile.formTitle || DEFAULT_FORM_TITLE;
+    previewTitle.style.fontSize = `${previewProfile.formTitleFontSize || DEFAULT_FORM_TITLE_FONT_SIZE}px`;
+    previewTitle.style.fontWeight = previewProfile.formTitleBold === false ? "500" : "800";
   }
 
-  updatePreviewLogo();
+  updatePreviewLogo(previewProfile);
 
   if (previewStepCount) {
     previewStepCount.textContent = `Step ${selectedIndex + 1} of ${steps.length}`;
@@ -3524,12 +3609,12 @@ function renderPreview() {
   });
 }
 
-function updatePreviewLogo() {
+function updatePreviewLogo(profile = getPreviewFormProfile()) {
   if (!previewLogoWrap || !previewLogoImage) {
     return;
   }
 
-  const logoUrl = String(currentFormProfile.formLogoUrl || "").trim();
+  const logoUrl = String(profile.formLogoUrl || "").trim();
 
   if (!logoUrl) {
     previewLogoWrap.hidden = true;
@@ -4006,7 +4091,7 @@ function applyPreviewMotionStyles() {
     return;
   }
 
-  const motionState = getStepMotionState();
+  const motionState = getStepMotionState(getPreviewFormProfile());
   previewShell.dataset.stepMotionStyle = motionState.style;
   previewShell.dataset.stepMotionSpeed = motionState.speed;
   previewShell.dataset.stepHeadMotion = motionState.head;
@@ -4351,6 +4436,11 @@ function renderBuilder() {
   if (formEnabledToggle) {
     formEnabledToggle.checked = currentFormProfile.isEnabled !== false;
   }
+
+  if (isCustomFormEditingLocked()) {
+    closeEditor();
+  }
+
   setActiveStudioTab(activeStudioTab);
   renderFormSettingsTab();
   renderGlobalSettingsTab();
@@ -4361,6 +4451,30 @@ function renderBuilder() {
   applyMobileStudioScale();
   syncStudioEditorState();
   syncPreviewModeChrome();
+  syncFormEditingAvailability();
+}
+
+function syncFormEditingAvailability() {
+  const locked = isCustomFormEditingLocked();
+
+  signedInShell?.classList.toggle("is-custom-form-off", locked);
+  formCreatorCanvas?.classList.toggle("is-custom-form-off", locked);
+  studioPanel?.classList.toggle("is-custom-form-off", locked);
+
+  if (!studioPanel) {
+    return;
+  }
+
+  studioPanel.querySelectorAll("button, input, select, textarea").forEach(control => {
+    if (
+      control.closest(".form-enabled-card")
+      || control.closest(".form-preview-control-card")
+    ) {
+      return;
+    }
+
+    control.disabled = locked;
+  });
 }
 
 function closeEditor() {
@@ -4871,6 +4985,7 @@ function openCustomPageEditor(step) {
   if (!step || !editorPopover || !editorBody) {
     return;
   }
+  const isClientTextView = previewPerspective === "client";
 
   if (isSpecialPreviewScreen(step)) {
     const isThankYou = step.type === "thankyou";
@@ -4975,16 +5090,31 @@ function openCustomPageEditor(step) {
     `
     : `<div class="editor-inline-note">There is nothing on this page yet. Add fields from the Builder tab and they will appear here.</div>`;
 
+  const navLabelValue = isClientTextView ? (step.clientNavLabel || "") : (step.navLabel || "");
+  const navLabelPlaceholder = isClientTextView
+    ? (step.clientNavLabel || getAutoClientFieldText(step, "label").slice(0, 12) || step.navLabel || step.label || step.title || "Step")
+    : (step.navLabel || step.label || step.title || "Step");
+  const titleValue = isClientTextView ? (step.clientTitle || "") : (step.title || "");
+  const titlePlaceholder = isClientTextView
+    ? (step.clientTitle || getAutoClientFieldText(step, "title") || step.title || "Custom Page")
+    : (step.title || "Custom Page");
+  const copyValue = isClientTextView ? (step.clientCopy || "") : (step.copy || "");
+  const copyPlaceholder = isClientTextView
+    ? (step.clientCopy || getAutoClientFieldText(step, "copy") || step.copy || "")
+    : (step.copy || "");
+
   if (!showEditorView(
-    "Page settings",
-    "Edit the page text, the step chip, every item on this page, or remove the whole page from your form.",
+    isClientTextView ? "Client page settings" : "Business page settings",
+    isClientTextView
+      ? "Edit the wording clients see for this page, including the step chip."
+      : "Edit the business view text, the step chip, every item on this page, or remove the whole page from your form.",
     `
       <div class="page-editor-section" data-preview-hover="steps">
-        <strong class="page-editor-section-title">Step chip</strong>
-        <div class="page-editor-chip-preview">${escapeHtml(step.navLabel || step.label || step.title || "Step")}</div>
+        <strong class="page-editor-section-title">${isClientTextView ? "Client step chip" : "Business step chip"}</strong>
+        <div class="page-editor-chip-preview">${escapeHtml(navLabelValue || navLabelPlaceholder)}</div>
         <label>
-          Step chip label
-          <input id="editor-page-nav-label" type="text" value="${escapeHtml(step.navLabel || "")}" maxlength="12">
+          ${isClientTextView ? "Client chip label" : "Business chip label"}
+          <input id="editor-page-nav-label" type="text" value="${escapeHtml(navLabelValue)}" placeholder="${escapeHtml(navLabelPlaceholder)}" maxlength="12">
         </label>
       </div>
       <div class="page-editor-section">
@@ -4992,12 +5122,12 @@ function openCustomPageEditor(step) {
         ${pageItemsMarkup}
       </div>
       <label>
-        Page title
-        <input id="editor-page-title" type="text" value="${escapeHtml(step.title || "")}" maxlength="60">
+        ${isClientTextView ? "Client page title" : "Business page title"}
+        <input id="editor-page-title" type="text" value="${escapeHtml(titleValue)}" placeholder="${escapeHtml(titlePlaceholder)}" maxlength="60">
       </label>
       <label>
-        Supporting copy
-        <textarea id="editor-page-copy" maxlength="180">${escapeHtml(step.copy || "")}</textarea>
+        ${isClientTextView ? "Client supporting copy" : "Business supporting copy"}
+        <textarea id="editor-page-copy" maxlength="180" placeholder="${escapeHtml(copyPlaceholder)}">${escapeHtml(copyValue)}</textarea>
       </label>
       <div class="page-editor-danger-zone">
         <button id="editor-delete-page" class="delete-field-button" type="button">Delete this page</button>
@@ -5020,19 +5150,24 @@ function openCustomPageEditor(step) {
   };
 
   titleInput?.addEventListener("input", event => {
-    patchPage({ title: event.target.value.slice(0, 60) || "Custom Page" });
+    const nextTitle = event.target.value.slice(0, 60);
+    patchPage(isClientTextView
+      ? { clientTitle: nextTitle }
+      : { title: nextTitle || "Custom Page" });
   });
 
   navLabelInput?.addEventListener("input", event => {
     const nextLabel = safeShortLabel(event.target.value);
-    patchPage({ navLabel: nextLabel });
+    patchPage(isClientTextView ? { clientNavLabel: nextLabel } : { navLabel: nextLabel });
     if (chipPreview) {
-      chipPreview.textContent = nextLabel || step.navLabel || step.label || step.title || "Step";
+      chipPreview.textContent = nextLabel || navLabelPlaceholder || "Step";
     }
   });
 
   copyInput?.addEventListener("input", event => {
-    patchPage({ copy: event.target.value.slice(0, 180) });
+    patchPage(isClientTextView
+      ? { clientCopy: event.target.value.slice(0, 180) }
+      : { copy: event.target.value.slice(0, 180) });
   });
 
   editorBody.querySelectorAll("[data-page-item-edit]").forEach(button => {
@@ -5135,12 +5270,16 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
   }
 
   if (target === "step-title") {
+    const isClientTextView = previewPerspective === "client";
+    const titleKey = isClientTextView ? "clientTitle" : "title";
     openTypographyEditor({
-      title: "Step title",
-      copy: step.builtIn
-        ? `Edit the large question title for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
-        : "Edit the large question title for this step.",
-      text: step.title,
+      title: isClientTextView ? "Client step title" : "Business step title",
+      copy: isClientTextView
+        ? "Edit the large question title clients see for this page."
+        : step.builtIn
+          ? `Edit the large question title for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
+          : "Edit the large question title for this step.",
+      text: isClientTextView ? (step.clientTitle || step.title) : step.title,
       fontSize: step.titleFontSize || DEFAULT_STEP_TITLE_FONT_SIZE,
       bold: step.titleBold !== false,
       minSize: 20,
@@ -5148,7 +5287,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       maxLength: 60,
       apply({ text, fontSize, bold }) {
         patchStepConfig(step.id, {
-          title: typeof text === "string" ? text : step.title,
+          [titleKey]: typeof text === "string" ? text : step[titleKey],
           titleFontSize: fontSize ?? step.titleFontSize,
           titleBold: bold ?? step.titleBold
         });
@@ -5158,12 +5297,16 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
   }
 
   if (target === "step-copy") {
+    const isClientTextView = previewPerspective === "client";
+    const copyKey = isClientTextView ? "clientCopy" : "copy";
     openTypographyEditor({
-      title: "Step copy",
-      copy: step.builtIn
-        ? `Edit the supporting sentence for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
-        : "Edit the supporting sentence below the question title.",
-      text: step.copy || "",
+      title: isClientTextView ? "Client step copy" : "Business step copy",
+      copy: isClientTextView
+        ? "Edit the supporting sentence clients see below the question title."
+        : step.builtIn
+          ? `Edit the supporting sentence for this page. It still maps to ${getBuiltInFieldSemanticName(step.id)} in reminders.`
+          : "Edit the supporting sentence below the question title.",
+      text: isClientTextView ? (step.clientCopy || step.copy || "") : (step.copy || ""),
       fontSize: step.copyFontSize || DEFAULT_STEP_COPY_FONT_SIZE,
       bold: Boolean(step.copyBold),
       minSize: 12,
@@ -5171,7 +5314,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       maxLength: 180,
       apply({ text, fontSize, bold }) {
         patchStepConfig(step.id, {
-          copy: typeof text === "string" ? text : step.copy,
+          [copyKey]: typeof text === "string" ? text : step[copyKey],
           copyFontSize: fontSize ?? step.copyFontSize,
           copyBold: bold ?? step.copyBold
         });
@@ -5194,12 +5337,20 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
       ? step?.rememberClientAnswer === true
       : isAutoRememberedBuiltIn;
     const rememberToggleDisabled = isAutoRememberedBuiltIn;
+    const isClientTextView = previewPerspective === "client";
+    const labelKey = isClientTextView ? "clientLabel" : "label";
+    const labelValue = isClientTextView ? (step.clientLabel || step.label || "") : (step.label || "");
 
-    if (!showEditorView("Field label", "Edit the question label, whether it is required, and whether the answer should be remembered later.", `
+    if (!showEditorView(
+      isClientTextView ? "Client field label" : "Business field label",
+      isClientTextView
+        ? "Edit the question label clients see for this field."
+        : "Edit the question label, whether it is required, and whether the answer should be remembered later.",
+      `
       ${isBuiltInStep ? `<div class="editor-inline-note">${escapeHtml(getBuiltInFieldSemanticNote(step.id))}</div>` : ""}
       <label>
-        Label text
-        <textarea id="editor-label-text" maxlength="60">${escapeHtml(step.label || "")}</textarea>
+        ${isClientTextView ? "Client label text" : "Business label text"}
+        <textarea id="editor-label-text" maxlength="60">${escapeHtml(labelValue)}</textarea>
       </label>
       <div class="form-editor-grid">
         <label>
@@ -5249,7 +5400,7 @@ function openSelectedStepTextEditor(target, fieldIdOverride = "") {
     };
 
     labelTextInput?.addEventListener("input", event => {
-      applyLabelPatch({ label: event.target.value.slice(0, 60) });
+      applyLabelPatch({ [labelKey]: event.target.value.slice(0, 60) });
     });
 
     const syncLabelSize = nextValue => {
@@ -5576,6 +5727,10 @@ function addCustomField(type) {
 async function saveFormProfile(options = {}) {
   const { silent = false, skipBusy = false } = options;
 
+  if (pendingResetState) {
+    clearPendingResetSave();
+  }
+
   if (!supabase || !currentUser) {
     if (!silent) {
       setStatus("Please sign in first.", "error");
@@ -5651,11 +5806,116 @@ async function saveFormProfile(options = {}) {
 }
 
 function resetToSaved() {
+  const previousProfile = normalizeCustomFormProfile(currentFormProfile);
   currentFormProfile = normalizeCustomFormProfile(savedFormProfile);
   selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
   closeEditor();
   renderBuilder();
-  setStatus("Reverted to your saved form.", "info");
+  scheduleResetSave({
+    label: "Reset to saved form",
+    previousProfile,
+    targetProfile: normalizeCustomFormProfile(currentFormProfile)
+  });
+}
+
+function resetToDefaultForm() {
+  const previousProfile = normalizeCustomFormProfile(currentFormProfile);
+  currentFormProfile = getDefaultEditableFormProfile();
+  selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  closeEditor();
+  renderBuilder();
+  scheduleResetSave({
+    label: "Reset to default form",
+    previousProfile,
+    targetProfile: normalizeCustomFormProfile(currentFormProfile)
+  });
+}
+
+function clearPendingResetSave() {
+  if (pendingResetSaveTimer) {
+    window.clearTimeout(pendingResetSaveTimer);
+    pendingResetSaveTimer = null;
+  }
+
+  if (pendingResetCountdownTimer) {
+    window.clearInterval(pendingResetCountdownTimer);
+    pendingResetCountdownTimer = null;
+  }
+
+  pendingResetState = null;
+}
+
+function showResetCountdownStatus(secondsRemaining) {
+  if (!pendingResetState) {
+    return;
+  }
+
+  setStatus(
+    `${pendingResetState.label} saves in ${secondsRemaining}.`,
+    "info",
+    {
+      duration: 0,
+      actionLabel: "Undo",
+      onAction: undoPendingResetSave
+    }
+  );
+}
+
+function undoPendingResetSave() {
+  if (!pendingResetState) {
+    return;
+  }
+
+  const previousProfile = normalizeCustomFormProfile(pendingResetState.previousProfile);
+  clearPendingResetSave();
+  currentFormProfile = previousProfile;
+  selectedPreviewStepId = getPreviewSteps()[0]?.id || BASE_REMINDER_STEPS[0]?.id || "phone";
+  closeEditor();
+  renderBuilder();
+  setStatus("Reset undone.", "success");
+}
+
+function scheduleResetSave({ label, previousProfile, targetProfile }) {
+  clearPendingResetSave();
+  pendingResetState = {
+    label,
+    previousProfile: normalizeCustomFormProfile(previousProfile),
+    targetProfile: normalizeCustomFormProfile(targetProfile)
+  };
+
+  let secondsRemaining = 5;
+  showResetCountdownStatus(secondsRemaining);
+
+  pendingResetCountdownTimer = window.setInterval(() => {
+    secondsRemaining -= 1;
+
+    if (secondsRemaining <= 0) {
+      window.clearInterval(pendingResetCountdownTimer);
+      pendingResetCountdownTimer = null;
+      return;
+    }
+
+    showResetCountdownStatus(secondsRemaining);
+  }, 1000);
+
+  pendingResetSaveTimer = window.setTimeout(async () => {
+    const resetState = pendingResetState;
+    clearPendingResetSave();
+
+    if (!resetState) {
+      return;
+    }
+
+    if (!areProfilesEquivalent(currentFormProfile, resetState.targetProfile)) {
+      setStatus("Reset auto-save canceled because the form changed again.", "info");
+      return;
+    }
+
+    const saved = await saveFormProfile({ silent: true, skipBusy: true });
+    if (saved) {
+      setStatus(`${resetState.label} saved.`, "success");
+    }
+  }, 5000);
 }
 
 async function loadPublicConfig() {
@@ -5729,6 +5989,7 @@ statusBanner?.addEventListener("click", () => {
 });
 saveFormButton?.addEventListener("click", saveFormProfile);
 resetFormButton?.addEventListener("click", resetToSaved);
+resetDefaultFormButton?.addEventListener("click", resetToDefaultForm);
 previewPerspectiveButtons.forEach(button => {
   button.addEventListener("click", () => {
     setPreviewPerspective(button.dataset.previewPerspective || "staff");
