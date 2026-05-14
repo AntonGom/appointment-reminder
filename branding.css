@@ -215,6 +215,8 @@ body[data-page="branding"] .section-card {
 }
 
 body[data-page="branding"] .status-banner {
+  top: 88px;
+  z-index: 5200;
   width: min(360px, calc(100vw - 28px));
   min-height: 52px;
   height: auto;
@@ -238,6 +240,8 @@ body[data-page="branding"] .status-banner {
   white-space: normal;
   overflow: visible;
   pointer-events: auto;
+  transform: translateX(-50%);
+  animation: branding-status-pop-in 0.2s ease both;
 }
 
 body[data-page="branding"] .status-banner[hidden] {
@@ -290,6 +294,18 @@ body[data-page="branding"] .status-banner-dismiss {
   font-weight: 850;
   line-height: 1;
   cursor: pointer;
+}
+
+@keyframes branding-status-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
 }
 
 .branding-card:first-child {
