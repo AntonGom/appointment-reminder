@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
-  <link rel="stylesheet" href="account-sections.css?v=20260501b">
+  <link rel="stylesheet" href="account-sections.css?v=20260514a">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -36,7 +36,7 @@
         </nav>
 
         <div class="content-stack">
-          <div id="signed-out-shell" class="section-card">
+          <div id="signed-out-shell" class="section-card" hidden>
             <h2 class="section-title">Sign in to view your calendar</h2>
             <p class="signed-out-copy">Sign in first, then come back here to see your saved appointments.</p>
             <div class="button-row" style="margin-top:16px;">
@@ -76,59 +76,64 @@
             <div class="section-card appointment-import-card">
               <div class="appointments-card-head">
                 <div>
-                  <h3>Appointment sources</h3>
+                  <h3>Calendar imports</h3>
                   <p>Bring in bookings from another system, calendar, or forwarded confirmation email.</p>
                 </div>
-              </div>
-              <div class="appointment-source-list">
-                <div class="appointment-source-row">
-                  <div class="appointment-source-copy">
-                    <span class="source-chip">File</span>
-                    <span>CSV, JSON, and exported calendar files.</span>
+                <details class="calendar-import-menu">
+                  <summary class="secondary-button calendar-import-summary">Import Calendar Data</summary>
+                  <div class="calendar-import-panel">
+                    <div class="appointment-source-list">
+                      <div class="appointment-source-row">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">File</span>
+                          <span>Upload CSV, JSON, or exported calendar files.</span>
+                        </div>
+                        <div class="calendar-import-actions">
+                          <input id="import-appointments-input" type="file" accept=".csv,.json,text/csv,application/json" hidden>
+                          <input id="import-ics-input" type="file" accept=".ics,text/calendar" hidden>
+                          <button id="import-appointments-button" class="secondary-button" type="button">Upload CSV/JSON</button>
+                          <button id="import-ics-button" class="secondary-button" type="button">Upload ICS</button>
+                        </div>
+                      </div>
+                      <div class="appointment-source-row">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Google</span>
+                          <span>Sync upcoming events from the signed-in Google Calendar.</span>
+                        </div>
+                        <div class="calendar-import-actions">
+                          <button id="sync-google-calendar-button" class="secondary-button" type="button">Sync Google Calendar</button>
+                        </div>
+                      </div>
+                      <div class="appointment-source-row">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Outlook</span>
+                          <span>Sync upcoming events from Outlook or Microsoft 365 Calendar.</span>
+                        </div>
+                        <div class="calendar-import-actions">
+                          <button id="sync-outlook-calendar-button" class="secondary-button" type="button">Sync Outlook Calendar</button>
+                        </div>
+                      </div>
+                      <div class="appointment-source-row">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Link</span>
+                          <input id="calendar-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste webcal or .ics link">
+                        </div>
+                        <div class="calendar-import-actions">
+                          <button id="sync-calendar-link-button" class="secondary-button" type="button">Sync Link</button>
+                        </div>
+                      </div>
+                      <div class="appointment-source-row">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Email</span>
+                          <span id="forwarding-email-value" class="forwarding-address">Forwarding address not configured</span>
+                        </div>
+                        <div class="calendar-import-actions">
+                          <button id="copy-forwarding-email-button" class="secondary-button" type="button">Copy Address</button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="calendar-import-actions">
-                    <input id="import-appointments-input" type="file" accept=".csv,.json,text/csv,application/json" hidden>
-                    <input id="import-ics-input" type="file" accept=".ics,text/calendar" hidden>
-                    <button id="import-appointments-button" class="secondary-button" type="button">Import CSV/JSON</button>
-                    <button id="import-ics-button" class="secondary-button" type="button">Import ICS</button>
-                  </div>
-                </div>
-                <div class="appointment-source-row">
-                  <div class="appointment-source-copy">
-                    <span class="source-chip">Google</span>
-                    <span>Sync upcoming events from the signed-in Google Calendar.</span>
-                  </div>
-                  <div class="calendar-import-actions">
-                    <button id="sync-google-calendar-button" class="secondary-button" type="button">Sync Google Calendar</button>
-                  </div>
-                </div>
-                <div class="appointment-source-row">
-                  <div class="appointment-source-copy">
-                    <span class="source-chip">Outlook</span>
-                    <span>Sync upcoming events from Outlook or Microsoft 365 Calendar.</span>
-                  </div>
-                  <div class="calendar-import-actions">
-                    <button id="sync-outlook-calendar-button" class="secondary-button" type="button">Sync Outlook Calendar</button>
-                  </div>
-                </div>
-                <div class="appointment-source-row">
-                  <div class="appointment-source-copy">
-                    <span class="source-chip">Link</span>
-                    <input id="calendar-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste webcal or .ics link">
-                  </div>
-                  <div class="calendar-import-actions">
-                    <button id="sync-calendar-link-button" class="secondary-button" type="button">Sync Link</button>
-                  </div>
-                </div>
-                <div class="appointment-source-row">
-                  <div class="appointment-source-copy">
-                    <span class="source-chip">Email</span>
-                    <span id="forwarding-email-value" class="forwarding-address">Forwarding address not configured</span>
-                  </div>
-                  <div class="calendar-import-actions">
-                    <button id="copy-forwarding-email-button" class="secondary-button" type="button">Copy Address</button>
-                  </div>
-                </div>
+                </details>
               </div>
               <div class="import-helper">
                 Common fields work automatically: client name, email, phone, date, time, location, notes, and appointment type.

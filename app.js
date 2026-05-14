@@ -37,7 +37,7 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
-const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260429c";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260514a";
 const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260429d";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
@@ -380,6 +380,8 @@ function getSavedBrandingProfile() {
     businessName,
     tagline: String(profile.tagline || "").trim(),
     headerLabel: String(profile.headerLabel || "").trim(),
+    greetingTemplate: String(profile.greetingTemplate || "").trim(),
+    closingParagraph: String(profile.closingParagraph || "").trim(),
     accentColor: String(profile.accentColor || "").trim(),
     headerColor: String(profile.headerColor || "").trim(),
     heroGradientColor: String(profile.heroGradientColor || "").trim(),
@@ -3237,6 +3239,19 @@ async function syncCustomFormFromUser(user = currentSignedInUser, options = {}) 
     refreshFormState();
   } catch (error) {
     console.warn("Unable to load custom form profile.", error);
+    activeCustomFormProfile = null;
+    activeCustomFormFields = [];
+    customFormFieldLookup = new Map();
+    hideThankYouScreen();
+    renderCustomWizardSteps();
+    applyPendingClientProfilePrefill();
+    applyReminderClientPrefillPayload(pendingReminderClientPrefill);
+    applyCustomFormPresentation(null);
+    currentStepIndex = getRestoredWizardStepIndex(currentStepSnapshot);
+    requiredFieldAttemptIds.clear();
+    lastCustomFormSyncSignature = nextCustomFormSyncSignature;
+    initWizard();
+    refreshFormState();
   }
 }
 
@@ -3257,6 +3272,14 @@ function buildCustomFieldMessageLines() {
   return lines;
 }
 
+function applyReminderTextTemplate(template, tokens = {}) {
+  return String(template || "")
+    .replace(/\{client\}/gi, tokens.client || "")
+    .replace(/\{business\}/gi, tokens.business || "")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
+
 function generateMessage() {
   const name = getFieldValue("name");
   const address = getFieldValue("address");
@@ -3264,9 +3287,18 @@ function generateMessage() {
   const date = getFieldValue("date");
   const time = getFieldValue("time");
   const notes = getFieldValue("notes");
+  const brandingProfile = getSavedBrandingProfile();
+  const businessName = brandingProfile?.businessName || "";
 
   const lines = [];
-  const greeting = name ? "Hello " + name + "," : "Hello,";
+  const greeting = applyReminderTextTemplate(brandingProfile?.greetingTemplate, {
+    client: name,
+    business: businessName
+  }) || (name ? "Hello " + name + "," : "Hello,");
+  const closing = applyReminderTextTemplate(brandingProfile?.closingParagraph, {
+    client: name,
+    business: businessName
+  }) || "Thank you.";
 
   lines.push(greeting);
   lines.push("");
@@ -3288,7 +3320,7 @@ function generateMessage() {
     lines.push("If you need to reach us before your appointment, please contact us at " + businessContact + ".");
     lines.push("");
   }
-  lines.push("Thank you.");
+  lines.push(closing);
 
   return lines.join("\n");
 }

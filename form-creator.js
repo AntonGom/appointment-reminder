@@ -161,6 +161,8 @@ let previewOnlyMode = false;
 let activeMenuPreviewHoverTarget = "";
 let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
+let formProfileSaveInFlight = false;
+let lastFormProfileSaveEndedAt = 0;
 let stepPointerDragState = null;
 let suppressNextStepperClick = false;
 let fieldRailPointerDragState = null;
@@ -1076,8 +1078,14 @@ function getCustomPages() {
   return Array.isArray(currentFormProfile.customPages) ? currentFormProfile.customPages : [];
 }
 
+function getPreviewFormProfile() {
+  return currentFormProfile.isEnabled === false
+    ? normalizeCustomFormProfile({ isEnabled: true })
+    : currentFormProfile;
+}
+
 function getAllPreviewSteps() {
-  return buildPreviewStepList(currentFormProfile);
+  return buildPreviewStepList(getPreviewFormProfile());
 }
 
 function getPreviewSteps() {
@@ -2584,6 +2592,10 @@ async function syncLatestUserProfile(options = {}) {
     return;
   }
 
+  if (formProfileSaveInFlight || Date.now() - lastFormProfileSaveEndedAt < 1800) {
+    return;
+  }
+
   latestUserSyncInFlight = true;
 
   try {
@@ -2606,7 +2618,6 @@ async function syncLatestUserProfile(options = {}) {
     }
 
     if (localProfileDirty && preserveDirty) {
-      savedFormProfile = latestProfile;
       if (!silent) {
         setStatus("A newer saved form was found from another device. Save here to overwrite it, or Reset to load it.", "info");
       }
@@ -3140,7 +3151,7 @@ function buildFieldAudienceSettingsMarkup(step, options = {}) {
         </label>
       ` : ""}
     </div>
-    <details class="client-wording-details">
+    <details class="client-wording-details" ${previewPerspective === "client" && visibility !== "staff" ? "open" : ""}>
       <summary>
         <span>Client wording</span>
         <span>${visibility === "staff" ? "Hidden in client view" : escapeHtml(clientLabel || autoClientLabel || "Auto-generated")}</span>
@@ -3162,6 +3173,25 @@ function buildFieldAudienceSettingsMarkup(step, options = {}) {
       </div>
     </details>
   `;
+}
+
+function focusPreferredFieldWording() {
+  if (previewPerspective !== "client" || !editorBody) {
+    return;
+  }
+
+  const details = editorBody.querySelector(".client-wording-details");
+  const clientLabelInput = document.getElementById("editor-field-client-label");
+
+  if (!details || !clientLabelInput || clientLabelInput.disabled) {
+    return;
+  }
+
+  details.open = true;
+  window.requestAnimationFrame(() => {
+    details.scrollIntoView({ block: "start", behavior: "smooth" });
+    clientLabelInput.focus({ preventScroll: true });
+  });
 }
 
 function bindFieldAudienceSettings(fieldId, step, options = {}) {
@@ -4624,6 +4654,7 @@ function openFieldEditor(fieldId) {
     const copyInput = document.getElementById("editor-block-copy");
     const deleteButton = document.getElementById("editor-delete-field");
     bindFieldAudienceSettings(fieldId, step, { isContentBlock: true });
+    focusPreferredFieldWording();
     const patchBlock = updates => {
       patchStepConfig(fieldId, updates);
       renderBuilder();
@@ -4715,6 +4746,7 @@ function openFieldEditor(fieldId) {
   const rememberInput = document.getElementById("editor-field-remember-answer");
   const deleteButton = document.getElementById("editor-delete-field");
   bindFieldAudienceSettings(fieldId, step, { isBuiltInStep, semanticFieldId });
+  focusPreferredFieldWording();
 
   const patchField = updates => {
     patchStepConfig(fieldId, updates);
@@ -5559,6 +5591,7 @@ async function saveFormProfile(options = {}) {
     setStatus("");
   }
   let saved = false;
+  formProfileSaveInFlight = true;
 
   try {
     const normalized = normalizeCustomFormProfile(currentFormProfile);
@@ -5587,9 +5620,15 @@ async function saveFormProfile(options = {}) {
       console.warn("Unable to clean up deleted remembered client answers.", cleanupError);
     }
 
-    currentUser = data.user || currentUser;
-    currentFormProfile = normalizeCustomFormProfile(currentUser?.user_metadata?.custom_form_profile || normalized);
-    savedFormProfile = normalizeCustomFormProfile(currentFormProfile);
+    currentUser = {
+      ...(data.user || currentUser),
+      user_metadata: {
+        ...((data.user || currentUser)?.user_metadata || {}),
+        custom_form_profile: normalized
+      }
+    };
+    currentFormProfile = normalizeCustomFormProfile(normalized);
+    savedFormProfile = normalizeCustomFormProfile(normalized);
     renderBuilder();
     saved = true;
     if (!silent) {
@@ -5606,6 +5645,8 @@ async function saveFormProfile(options = {}) {
         flashButtonConfirmation(saveFormButton, "Saved");
       }
     }
+    formProfileSaveInFlight = false;
+    lastFormProfileSaveEndedAt = Date.now();
   }
 }
 

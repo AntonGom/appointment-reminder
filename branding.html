@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
-  <link rel="stylesheet" href="account-sections.css?v=20260427a">
-  <link rel="stylesheet" href="branding.css?v=20260513a">
+  <link rel="stylesheet" href="account-sections.css?v=20260514a">
+  <link rel="stylesheet" href="branding.css?v=20260514a">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -37,7 +37,7 @@
         </nav>
 
         <div class="content-stack">
-          <div id="signed-out-shell" class="section-card">
+          <div id="signed-out-shell" class="section-card" hidden>
             <h2 class="section-title">Sign in to style your reminder emails</h2>
             <p class="signed-out-copy">Branding is saved to your account. Sign in first, then come back here to preview how your reminder emails will look.</p>
             <div class="button-row" style="margin-top:16px;">
@@ -129,6 +129,18 @@
                     <div class="field-span-2" data-editor-group="hero">
                       <label class="branding-label" for="branding-header-label">Top label</label>
                       <input id="branding-header-label" class="branding-input" type="text" maxlength="50" placeholder="Appointment reminder">
+                    </div>
+
+                    <div class="field-span-2" data-editor-group="body">
+                      <label class="branding-label" for="branding-greeting-template">Greeting line</label>
+                      <input id="branding-greeting-template" class="branding-input" type="text" maxlength="120" placeholder="Hello {client},">
+                      <p class="field-hint branding-helper">Use {client} to insert the client name automatically.</p>
+                    </div>
+
+                    <div class="field-span-2" data-editor-group="footer body">
+                      <label class="branding-label" for="branding-closing-paragraph">Last paragraph</label>
+                      <textarea id="branding-closing-paragraph" class="branding-input branding-textarea" maxlength="600" rows="4" placeholder="Thank you."></textarea>
+                      <p class="field-hint branding-helper">Add a disclosure, HIPAA notice, or closing text that should appear in every reminder.</p>
                     </div>
 
                     <div data-editor-group="hero">
@@ -524,9 +536,9 @@
 
                 <div class="branding-studio-actions">
                   <button id="save-branding-button" class="primary-button" type="submit" form="branding-form">Save Branding</button>
-                  <button id="send-branding-test-button" class="secondary-button" type="button">Send Test Email</button>
                   <button id="reset-branding-button" class="secondary-button" type="button">Reset to Saved</button>
-                  <button id="branding-sign-out" class="secondary-button" type="button">Sign Out</button>
+                  <span id="branding-test-email-note" class="branding-test-email-note">Test email sends to your account email.</span>
+                  <button id="send-branding-test-button" class="secondary-button" type="button">Send Test Email</button>
                 </div>
               </section>
             </div>
@@ -591,6 +603,6 @@
   </div>
 
   <script src="nav.js?v=20260427a"></script>
-  <script type="module" src="branding.js?v=20260513a"></script>
+  <script type="module" src="branding.js?v=20260514a"></script>
 </body>
 </html>

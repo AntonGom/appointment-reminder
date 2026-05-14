@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260429c";
+} from "./branding-templates.js?v=20260514a";
 import {
   BASE_REMINDER_STEPS,
   isContentBlockType,
@@ -34,6 +34,7 @@ const previewShell = document.getElementById("branding-preview-shell");
 const previewFocusNote = document.getElementById("branding-preview-focus-note");
 const previewFieldList = document.getElementById("branding-preview-field-list");
 const previewFieldCard = document.getElementById("branding-preview-fields-card");
+const testEmailNote = document.getElementById("branding-test-email-note");
 const editorModal = document.getElementById("branding-editor-modal");
 const editorCloseButton = document.getElementById("branding-editor-close");
 const editorHead = editorModal?.querySelector(".branding-editor-head") || null;
@@ -84,6 +85,8 @@ const fieldIds = {
   businessName: "branding-business-name",
   tagline: "branding-tagline",
   headerLabel: "branding-header-label",
+  greetingTemplate: "branding-greeting-template",
+  closingParagraph: "branding-closing-paragraph",
   accentColor: "branding-accent-color",
   accentHex: "branding-accent-hex",
   headerColor: "branding-header-color",
@@ -1108,12 +1111,39 @@ function getSelectedPreviewFields(brandingProfile = {}) {
     .filter(field => selections[field.id] !== false);
 }
 
+function applyBrandingTextTemplate(template, tokens = {}) {
+  return String(template || "")
+    .replace(/\{client\}/gi, tokens.client || "")
+    .replace(/\{business\}/gi, tokens.business || "")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
+
+function updateTestEmailNote() {
+  if (!testEmailNote) {
+    return;
+  }
+
+  testEmailNote.textContent = currentUser?.email
+    ? `Test email will be sent to ${currentUser.email}.`
+    : "Test email sends to your account email.";
+}
+
 function buildSampleMessage(profile) {
   const selectedFields = getSelectedPreviewFields(profile);
   const selectedById = new Map(selectedFields.map(field => [field.id, field]));
   const summaryFieldIds = new Set(["date", "time", "address"]);
   const contactField = selectedById.get("businessContact");
   const notesField = selectedById.get("notes");
+  const clientName = "Ava Johnson";
+  const greetingLine = applyBrandingTextTemplate(profile?.greetingTemplate, {
+    client: clientName,
+    business: profile?.businessName || ""
+  }) || `Hello ${clientName},`;
+  const closingParagraph = applyBrandingTextTemplate(profile?.closingParagraph, {
+    client: clientName,
+    business: profile?.businessName || ""
+  }) || "Thank you.";
   const customDetailFields = selectedFields.filter(field => (
     !summaryFieldIds.has(field.id)
     && field.id !== "businessContact"
@@ -1121,7 +1151,7 @@ function buildSampleMessage(profile) {
   ));
 
   const lines = [
-    "Hello Ava Johnson,",
+    greetingLine,
     "",
     "This is a friendly reminder about your upcoming appointment."
   ];
@@ -1163,7 +1193,7 @@ function buildSampleMessage(profile) {
     lines.push("");
   }
 
-  lines.push("Thank you.");
+  lines.push(closingParagraph);
 
   return lines.join("\n");
 }
@@ -1275,6 +1305,8 @@ function getDraftBranding() {
     businessName: getFieldElement(fieldIds.businessName)?.value || "",
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
+    greetingTemplate: getFieldElement(fieldIds.greetingTemplate)?.value || "",
+    closingParagraph: getFieldElement(fieldIds.closingParagraph)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",
@@ -1340,6 +1372,8 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.businessName).value = branding.businessName || "";
   getFieldElement(fieldIds.tagline).value = branding.tagline || "";
   getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
+  getFieldElement(fieldIds.greetingTemplate).value = normalized.greetingTemplate || "";
+  getFieldElement(fieldIds.closingParagraph).value = normalized.closingParagraph || "";
   getFieldElement(fieldIds.accentColor).value = normalized.accentColor;
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
   getFieldElement(fieldIds.headerColor).value = normalized.headerColor;
@@ -2604,6 +2638,8 @@ function updateSignedInView(user) {
     qaToolsShell.hidden = !(isSignedIn && isQaRuntime());
   }
 
+  updateTestEmailNote();
+
   if (!isSignedIn) {
     clearLastSentEmailRecord();
   }
@@ -2621,6 +2657,8 @@ async function saveBranding() {
     businessName: (getFieldElement(fieldIds.businessName)?.value || "").trim(),
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
+    greetingTemplate: (getFieldElement(fieldIds.greetingTemplate)?.value || "").trim(),
+    closingParagraph: (getFieldElement(fieldIds.closingParagraph)?.value || "").trim(),
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
     heroGradientColor: getFieldElement(fieldIds.heroGradientColor)?.value || getFieldElement(fieldIds.heroGradientHex)?.value || "",

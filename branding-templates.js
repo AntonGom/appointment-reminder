@@ -270,6 +270,8 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const businessName = cleanText(profile?.businessName, 80);
   const tagline = cleanText(profile?.tagline, 120);
   const headerLabel = cleanText(profile?.headerLabel, 50);
+  const greetingTemplate = cleanText(profile?.greetingTemplate, 120);
+  const closingParagraph = cleanText(profile?.closingParagraph, 600);
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
   const headerColor = normalizeHexColor(profile?.headerColor) || templatePreset.headerColor || accentColor;
   const heroGradientColor = normalizeHexColor(profile?.heroGradientColor) || templatePreset.heroGradientColor || normalizeHexColor(profile?.secondaryColor) || templatePreset.secondaryColor || DEFAULT_SECONDARY;
@@ -321,6 +323,8 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     businessName: businessName || (forPreview ? "North Shore Wellness" : ""),
     tagline,
     headerLabel,
+    greetingTemplate,
+    closingParagraph,
     accentColor,
     headerColor,
     heroGradientColor,

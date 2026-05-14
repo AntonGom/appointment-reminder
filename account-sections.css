@@ -162,26 +162,66 @@ h1 {
 }
 
 .status-banner {
-  padding: 15px 18px;
-  border-radius: 18px;
-  font-size: 16px;
-  font-weight: 700;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 2400;
+  width: min(540px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 26px 64px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(20px) saturate(130%);
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 760;
   line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+  animation: account-status-pop-in 0.2s ease both;
+}
+
+.status-banner.loading::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  opacity: 0.82;
+  animation: spin 0.85s linear infinite;
+  flex: 0 0 18px;
 }
 
 .status-banner.success {
-  background: var(--success-bg);
+  background: rgba(240, 253, 244, 0.97);
   color: var(--success);
 }
 
 .status-banner.error {
-  background: var(--error-bg);
+  background: rgba(254, 242, 242, 0.97);
   color: var(--error);
 }
 
 .status-banner.info {
-  background: var(--info-bg);
+  background: rgba(239, 246, 255, 0.97);
   color: var(--info);
+}
+
+@keyframes account-status-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .account-page-nav {
@@ -286,10 +326,11 @@ h1 {
 .calendar-layout {
   display: grid;
   gap: 18px;
+  align-items: start;
 }
 
 .calendar-layout.is-week-view {
-  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  grid-template-columns: minmax(0, 1.28fr) minmax(310px, 0.72fr);
 }
 
 .calendar-layout.is-month-view {
@@ -416,6 +457,11 @@ h1 {
 .calendar-view-shell {
   display: grid;
   gap: 10px;
+  max-height: min(690px, calc(100vh - 230px));
+  overflow: auto;
+  padding: 2px 4px 8px 2px;
+  scroll-snap-type: y proximity;
+  scrollbar-width: thin;
 }
 
 .calendar-month-strip-copy {
@@ -839,11 +885,50 @@ h1 {
 .appointments-card {
   display: grid;
   gap: 14px;
+  scroll-snap-align: start;
 }
 
 .appointment-import-card {
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.calendar-import-menu {
+  position: relative;
+  z-index: 5;
+}
+
+.calendar-import-summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.calendar-import-summary::-webkit-details-marker,
+.calendar-import-summary::marker {
+  display: none;
+  content: "";
+}
+
+.calendar-import-menu[open] .calendar-import-summary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.18);
+}
+
+.calendar-import-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 80;
+  width: min(760px, calc(100vw - 42px));
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(191, 219, 254, 0.88);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(20px);
 }
 
 .appointment-source-list {
@@ -935,6 +1020,19 @@ h1 {
 
 .calendar-layout.is-month-view .appointment-lists {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.calendar-layout > .section-card {
+  position: sticky;
+  top: 96px;
+}
+
+.calendar-layout .appointment-lists {
+  max-height: min(760px, calc(100vh - 118px));
+  overflow: auto;
+  padding-right: 4px;
+  scroll-snap-type: y proximity;
+  scrollbar-width: thin;
 }
 
 .appointments-card-head {
@@ -1530,6 +1628,23 @@ button.calendar-week-mobile-day {
   .calendar-layout > .section-card,
   .calendar-layout > .appointment-lists {
     min-width: 0;
+  }
+
+  .calendar-layout > .section-card {
+    position: static;
+  }
+
+  .calendar-view-shell,
+  .calendar-layout .appointment-lists {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .calendar-import-panel {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
   }
 
   .button-row button,

@@ -948,6 +948,28 @@ function parseImportedClientCsv(text) {
   });
 }
 
+async function parseImportedClientSpreadsheet(file) {
+  const workbookModule = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+  const XLSX = workbookModule.default || workbookModule;
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const firstSheetName = workbook.SheetNames?.[0];
+
+  if (!firstSheetName || !workbook.Sheets?.[firstSheetName]) {
+    throw new Error("That Excel file does not have a readable first sheet.");
+  }
+
+  const records = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+    defval: "",
+    raw: false
+  });
+
+  if (!records.length) {
+    throw new Error("That Excel file does not have any client rows yet.");
+  }
+
+  return records;
+}
+
 function parseImportedProfileAnswers(value) {
   if (!value) {
     return {};
@@ -3682,11 +3704,16 @@ async function handleImportClientsFile(event) {
   setStatus("Importing client data...", "info", { loading: true });
 
   try {
-    const fileText = await file.text();
     const extension = String(file.name.split(".").pop() || "").trim().toLowerCase();
-    const rawRecords = extension === "csv"
-      ? parseImportedClientCsv(fileText)
-      : parseImportedClientJson(fileText);
+    let rawRecords = [];
+
+    if (extension === "csv") {
+      rawRecords = parseImportedClientCsv(await file.text());
+    } else if (extension === "xlsx" || extension === "xls") {
+      rawRecords = await parseImportedClientSpreadsheet(file);
+    } else {
+      rawRecords = parseImportedClientJson(await file.text());
+    }
 
     const normalizedRecords = rawRecords
       .map(record => normalizeImportedClientRecord(record, user.id))

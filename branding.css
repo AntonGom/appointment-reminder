@@ -192,6 +192,16 @@ body[data-page="branding"] .section-card {
   min-width: 170px;
 }
 
+.branding-test-email-note {
+  align-self: center;
+  max-width: 260px;
+  color: var(--branding-muted);
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.45;
+  text-align: right;
+}
+
 .branding-card:first-child {
   background:
     radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 22%),
@@ -483,6 +493,12 @@ body[data-page="branding"] .section-card {
   font-family: inherit;
   outline: none;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.branding-textarea {
+  min-height: 116px;
+  resize: vertical;
+  line-height: 1.55;
 }
 
 .branding-input:focus,
@@ -2041,6 +2057,12 @@ body.branding-modal-open {
   .branding-studio-actions button {
     width: 100%;
     min-width: 0;
+  }
+
+  .branding-test-email-note {
+    width: 100%;
+    max-width: none;
+    text-align: center;
   }
 
   .branding-actions button {
