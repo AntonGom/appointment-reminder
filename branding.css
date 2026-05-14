@@ -280,8 +280,9 @@ body[data-page="branding"] .status-banner-dismiss {
   top: 9px;
   right: 9px;
   width: 28px;
+  min-width: 0 !important;
   height: 28px;
-  padding: 0;
+  padding: 0 !important;
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.48);
@@ -289,11 +290,14 @@ body[data-page="branding"] .status-banner-dismiss {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 28px;
   font: inherit;
   font-size: 14px;
   font-weight: 850;
   line-height: 1;
   cursor: pointer;
+  box-shadow: none;
+  text-decoration: none;
 }
 
 @keyframes branding-status-pop-in {

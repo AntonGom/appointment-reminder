@@ -1015,8 +1015,12 @@ test.describe("Branding mobile UX", () => {
     await expect(toast).toContainText("Branding saved");
 
     const toastBox = await toast.boundingBox();
+    const dismissBox = await toast.locator(".status-banner-dismiss").boundingBox();
     expect(toastBox).not.toBeNull();
+    expect(dismissBox).not.toBeNull();
     expect(toastBox.y).toBeGreaterThan(560);
     expect(toastBox.width).toBeLessThanOrEqual(370);
+    expect(dismissBox.width).toBeLessThanOrEqual(32);
+    expect(dismissBox.x).toBeGreaterThan(toastBox.x + toastBox.width - 48);
   });
 });
