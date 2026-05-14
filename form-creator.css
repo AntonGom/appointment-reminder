@@ -377,7 +377,11 @@ body[data-page="form-creator"] {
 
 .fc-preview-shell.is-preview-only-mode .form-shell-edit-zone,
 .fc-preview-shell.is-preview-only-mode .question-shell-edit-zone,
-.fc-preview-shell.is-preview-only-mode .preview-field-dropzone {
+.fc-preview-shell.is-preview-only-mode .preview-field-dropzone,
+.fc-preview-shell.is-custom-form-off .form-shell-edit-zone,
+.fc-preview-shell.is-custom-form-off .question-shell-edit-zone,
+.fc-preview-shell.is-custom-form-off .preview-field-dropzone,
+.fc-preview-shell.is-custom-form-off .preview-step-dropzone {
   display: none;
 }
 

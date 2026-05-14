@@ -47,7 +47,7 @@ test.describe("Navigation chrome", () => {
     const badge = page.locator(".env-badge");
     await expect(badge).toBeVisible();
     await expect(badge).toContainText("DEV");
-    await expect(badge).toContainText("v20260514.9");
+    await expect(badge).toContainText("v20260514.10");
     await expect(badge).toHaveAttribute("title", /commit testsha/);
     await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
     await expect(page.locator(".form-loading-overlay")).toBeHidden();

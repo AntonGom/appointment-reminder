@@ -4466,6 +4466,7 @@ function syncFormEditingAvailability() {
 
   signedInShell?.classList.toggle("is-custom-form-off", locked);
   formCreatorCanvas?.classList.toggle("is-custom-form-off", locked);
+  previewShell?.classList.toggle("is-custom-form-off", locked);
   studioPanel?.classList.toggle("is-custom-form-off", locked);
 
   if (!studioPanel) {
