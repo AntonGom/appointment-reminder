@@ -193,6 +193,7 @@ let latestUserSyncInFlight = false;
 let latestUserSyncInterval = null;
 let formProfileSaveInFlight = false;
 let lastFormProfileSaveEndedAt = 0;
+let lastFormSaveError = null;
 let pendingResetSaveTimer = null;
 let pendingResetCountdownTimer = null;
 let pendingResetState = null;
@@ -1127,6 +1128,10 @@ function getCustomFields() {
   return Array.isArray(currentFormProfile.fields) ? currentFormProfile.fields : [];
 }
 
+function getProfileFields(profile = currentFormProfile) {
+  return Array.isArray(profile?.fields) ? profile.fields : [];
+}
+
 function getBuilderFieldTypeOptions(currentType = "") {
   if (BUILDER_CUSTOM_FIELD_TYPES.some(option => option.id === currentType)) {
     return BUILDER_CUSTOM_FIELD_TYPES;
@@ -1236,6 +1241,8 @@ function isStepVisibleForPerspective(step, perspective = previewPerspective) {
 
 function getPageFieldsForStep(stepId, options = {}) {
   const { forPreview = false, perspective = previewPerspective } = options;
+  const sourceProfile = forPreview ? getPreviewFormProfile() : currentFormProfile;
+  const sourceFields = getProfileFields(sourceProfile);
   const page = getEditableStep(stepId);
 
   if (!page || ["review", "welcome", "thankyou"].includes(page.id) || ["review", "welcome", "thankyou"].includes(String(page.type || "").trim())) {
@@ -1244,7 +1251,7 @@ function getPageFieldsForStep(stepId, options = {}) {
 
   const baseFieldHidden = Boolean(page.baseFieldHidden);
   const isBuiltInPage = BASE_REMINDER_STEPS.some(step => step.id === page.id);
-  const isLegacyFieldPage = !isBuiltInPage && getCustomFields().some(field => !field.pageId && field.id === page.id);
+  const isLegacyFieldPage = !isBuiltInPage && sourceFields.some(field => !field.pageId && field.id === page.id);
   const baseField = (!baseFieldHidden && (isBuiltInPage || isLegacyFieldPage))
     ? {
         ...page,
@@ -1254,7 +1261,7 @@ function getPageFieldsForStep(stepId, options = {}) {
       }
     : null;
 
-  const inlineFields = getInlineFieldsForPage(currentFormProfile, page.id).map(field => ({
+  const inlineFields = getInlineFieldsForPage(sourceProfile, page.id).map(field => ({
     ...field,
     isBaseField: false
   }));
@@ -1262,7 +1269,7 @@ function getPageFieldsForStep(stepId, options = {}) {
   const perspectiveFields = forPreview
     ? allFields.map(field => getVisibleFieldForPerspective(field, perspective)).filter(Boolean)
     : allFields;
-  const orderedIds = Array.isArray(currentFormProfile.pageFieldOrder?.[page.id]) ? currentFormProfile.pageFieldOrder[page.id] : [];
+  const orderedIds = Array.isArray(sourceProfile.pageFieldOrder?.[page.id]) ? sourceProfile.pageFieldOrder[page.id] : [];
 
   if (!orderedIds.length) {
     return perspectiveFields;
@@ -5724,6 +5731,39 @@ function addCustomField(type) {
   insertFieldIntoCurrentPage(type);
 }
 
+function isRetryableFormSaveError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("timed out")
+    || message.includes("timeout")
+    || message.includes("failed to fetch")
+    || message.includes("network")
+    || message.includes("load failed");
+}
+
+async function updateUserMetadataWithRetry(metadata) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await runWithTimeout(
+        () => supabase.auth.updateUser({ data: metadata }),
+        FORM_SAVE_TIMEOUT_MS + (attempt * 4000),
+        "Saving the form timed out. Check your connection and try again."
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (attempt > 0 || !isRetryableFormSaveError(error)) {
+        throw error;
+      }
+
+      await supabase.auth.getSession().catch(() => null);
+    }
+  }
+
+  throw lastError || new Error("Unable to save this form right now.");
+}
+
 async function saveFormProfile(options = {}) {
   const { silent = false, skipBusy = false } = options;
 
@@ -5732,6 +5772,7 @@ async function saveFormProfile(options = {}) {
   }
 
   if (!supabase || !currentUser) {
+    lastFormSaveError = new Error("Please sign in first.");
     if (!silent) {
       setStatus("Please sign in first.", "error");
     }
@@ -5747,6 +5788,7 @@ async function saveFormProfile(options = {}) {
   }
   let saved = false;
   formProfileSaveInFlight = true;
+  lastFormSaveError = null;
 
   try {
     const normalized = normalizeCustomFormProfile(currentFormProfile);
@@ -5755,11 +5797,7 @@ async function saveFormProfile(options = {}) {
       custom_form_profile: normalized
     };
 
-    const { data, error } = await runWithTimeout(
-      () => supabase.auth.updateUser({ data: metadata }),
-      FORM_SAVE_TIMEOUT_MS,
-      "Saving the form timed out. Check your connection and try again."
-    );
+    const { data, error } = await updateUserMetadataWithRetry(metadata);
 
     if (error) {
       throw error;
@@ -5789,8 +5827,10 @@ async function saveFormProfile(options = {}) {
     if (!silent) {
       setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
     }
+    lastFormSaveError = null;
     return true;
   } catch (error) {
+    lastFormSaveError = error;
     setStatus(error.message || "Unable to save this form right now.", "error");
     return false;
   } finally {
@@ -6034,12 +6074,19 @@ formEnabledToggle?.addEventListener("change", async event => {
   const saved = await saveFormProfile({ silent: true, skipBusy: true });
 
   if (!saved) {
+    const errorMessage = String(lastFormSaveError?.message || "").trim();
     currentFormProfile = {
       ...currentFormProfile,
       isEnabled: previousEnabled
     };
     renderBuilder();
-    setStatus("That change was not saved, so the form toggle was restored.", "error");
+    setStatus(
+      errorMessage
+        ? `That change was not saved: ${errorMessage}`
+        : "That change was not saved, so the form toggle was restored.",
+      "error",
+      { duration: 5200 }
+    );
   } else {
     setStatus(
       nextEnabled
