@@ -1006,5 +1006,17 @@ test.describe("Branding mobile UX", () => {
     expect(editorBox).not.toBeNull();
     expect(editorBox.width).toBeGreaterThan(250);
     expect(editorBox.height).toBeGreaterThan(300);
+
+    await page.locator("#branding-editor-close").click();
+    await page.locator("#save-branding-button").click();
+
+    const toast = page.locator("#status-banner");
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText("Branding saved");
+
+    const toastBox = await toast.boundingBox();
+    expect(toastBox).not.toBeNull();
+    expect(toastBox.y).toBeGreaterThan(560);
+    expect(toastBox.width).toBeLessThanOrEqual(370);
   });
 });

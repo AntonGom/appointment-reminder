@@ -47,11 +47,25 @@ test.describe("Navigation chrome", () => {
     const badge = page.locator(".env-badge");
     await expect(badge).toBeVisible();
     await expect(badge).toContainText("DEV");
-    await expect(badge).toContainText("v20260514.6");
+    await expect(badge).toContainText("v20260514.7");
     await expect(badge).toHaveAttribute("title", /commit testsha/);
     await expect(page.locator("body")).not.toHaveClass(/custom-form-loading/);
     await expect(page.locator(".form-loading-overlay")).toBeHidden();
     await expect(page.locator(".form-loading-overlay > :first-child")).toHaveClass(/form-loading-spinner/);
     await expect(page.locator(".form-loading-overlay > :last-child")).toHaveText("Loading your form...");
+  });
+
+  test("keeps the mobile navigation chrome compact", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/index.html");
+
+    const navToggleBox = await page.locator(".nav-toggle").boundingBox();
+    const accountChipBox = await page.locator(".account-chip").boundingBox();
+
+    expect(navToggleBox).not.toBeNull();
+    expect(accountChipBox).not.toBeNull();
+    expect(navToggleBox.width).toBeLessThanOrEqual(46);
+    expect(accountChipBox.width).toBeLessThanOrEqual(170);
+    await expect(page.locator(".env-badge")).toBeVisible();
   });
 });

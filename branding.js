@@ -701,7 +701,7 @@ function setStatus(message, type = "info", options = {}) {
   dismissButton.className = "status-banner-dismiss";
   dismissButton.type = "button";
   dismissButton.setAttribute("aria-label", "Dismiss notification");
-  dismissButton.textContent = "x";
+  dismissButton.textContent = "×";
   dismissButton.addEventListener("click", event => {
     event.stopPropagation();
     setStatus("");

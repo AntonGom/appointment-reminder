@@ -308,6 +308,18 @@ body[data-page="branding"] .status-banner-dismiss {
   }
 }
 
+@keyframes branding-mobile-status-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .branding-card:first-child {
   background:
     radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 22%),
@@ -1965,6 +1977,38 @@ body.branding-modal-open {
     background: rgba(15, 23, 42, 0.04);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+  }
+
+  body[data-page="branding"] .status-banner {
+    top: auto;
+    right: 14px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 14px;
+    width: auto;
+    min-height: 0;
+    max-height: min(34vh, 220px);
+    padding: 13px 42px 13px 14px;
+    border-radius: 18px;
+    align-items: center;
+    font-size: 13px;
+    line-height: 1.4;
+    transform: none;
+    animation: branding-mobile-status-pop-in 0.2s ease both;
+  }
+
+  body[data-page="branding"] .status-banner-message {
+    max-height: 160px;
+    overflow: auto;
+  }
+
+  body[data-page="branding"] .status-banner-dismiss {
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+  }
+
+  body[data-page="branding"] .status-banner[hidden] {
+    display: none;
   }
 
   .branding-editor-card {

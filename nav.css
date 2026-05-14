@@ -48,8 +48,10 @@
   top: 16px;
   left: 16px;
   z-index: 1003;
-  width: 52px;
+  width: 52px !important;
+  min-width: 0 !important;
   height: 52px;
+  padding: 0 !important;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(19, 31, 51, 0.9));
@@ -105,10 +107,10 @@
   -webkit-appearance: none;
   box-sizing: border-box;
   width: 100%;
-  min-width: 0;
+  min-width: 0 !important;
   min-height: 44px;
   max-width: 100%;
-  padding: 9px 12px;
+  padding: 9px 12px !important;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(24, 34, 54, 0.88));
@@ -139,10 +141,10 @@
 
 .account-chip.signed-out {
   width: auto;
-  min-width: unset;
+  min-width: 0 !important;
   max-width: max-content;
   flex: 0 0 auto;
-  padding: 10px 14px;
+  padding: 10px 14px !important;
 }
 
 .account-chip-label {
@@ -208,7 +210,8 @@
   box-sizing: border-box;
   display: block;
   width: 100%;
-  padding: 11px 12px;
+  min-width: 0 !important;
+  padding: 11px 12px !important;
   border: 0;
   border-radius: 12px;
   background: rgba(30, 41, 59, 0.9);
@@ -426,8 +429,10 @@
   .nav-toggle {
     top: 10px;
     left: 10px;
-    width: 44px;
+    width: 44px !important;
+    min-width: 0 !important;
     height: 44px;
+    padding: 0 !important;
     border-radius: 13px;
     box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);
   }
@@ -453,7 +458,8 @@
   .account-chip {
     min-height: 36px;
     max-width: 100%;
-    padding: 7px 9px;
+    min-width: 0 !important;
+    padding: 7px 9px !important;
     border-radius: 11px;
     gap: 7px;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(24, 34, 54, 0.76));
@@ -474,10 +480,10 @@
 
   .account-chip.signed-out {
     width: auto;
-    min-width: unset;
+    min-width: 0 !important;
     max-width: max-content;
     flex: 0 0 auto;
-    padding: 7px 11px;
+    padding: 7px 11px !important;
   }
 
   .account-chip-label {
@@ -502,7 +508,8 @@
 
   .account-dropdown-link,
   .account-dropdown-action {
-    padding: 9px 10px;
+    min-width: 0 !important;
+    padding: 9px 10px !important;
     border-radius: 10px;
     font-size: 12px;
   }
