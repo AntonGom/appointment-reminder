@@ -42,7 +42,6 @@ const editorHandle = document.getElementById("branding-editor-handle");
 const editorTitle = document.getElementById("branding-editor-title");
 const editorCopy = document.getElementById("branding-editor-copy");
 const brandingEnabledNote = document.getElementById("branding-enabled-note");
-const signOutButton = document.getElementById("branding-sign-out");
 const addSocialLinkButton = document.getElementById("branding-add-social-link");
 const socialLinksContainer = document.getElementById("branding-social-links");
 const qaToolsShell = document.getElementById("branding-qa-tools");
@@ -414,6 +413,8 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.businessName]: "hero",
   [fieldIds.tagline]: "hero",
   [fieldIds.headerLabel]: "hero",
+  [fieldIds.greetingTemplate]: "body",
+  [fieldIds.closingParagraph]: "body",
   [fieldIds.accentColor]: "hero",
   [fieldIds.accentHex]: "hero",
   [fieldIds.headerColor]: "hero",
@@ -558,6 +559,7 @@ let lastSentEmailRecord = null;
 let editorHasCustomPosition = false;
 let editorDragState = null;
 let previewHeightSyncTimer = null;
+let statusBannerTimer = null;
 let brandingToggleSaveToken = 0;
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 
@@ -664,21 +666,53 @@ function buildTemplateThumbButtonBackground(primaryColor, secondaryColor, gradie
   return primary;
 }
 
-function setStatus(message, type = "info") {
+function setStatus(message, type = "info", options = {}) {
   if (!statusBanner) {
     return;
   }
 
+  if (statusBannerTimer) {
+    window.clearTimeout(statusBannerTimer);
+    statusBannerTimer = null;
+  }
+
   if (!message) {
     statusBanner.hidden = true;
-    statusBanner.textContent = "";
+    statusBanner.replaceChildren();
     statusBanner.className = "status-banner";
     return;
   }
 
   statusBanner.hidden = false;
-  statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}`;
+  statusBanner.setAttribute("role", type === "error" ? "alert" : "status");
+  statusBanner.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+
+  const messageNode = document.createElement("span");
+  messageNode.className = "status-banner-message";
+  messageNode.textContent = message;
+  statusBanner.replaceChildren(messageNode);
+
+  const dismissButton = document.createElement("button");
+  dismissButton.className = "status-banner-dismiss";
+  dismissButton.type = "button";
+  dismissButton.setAttribute("aria-label", "Dismiss notification");
+  dismissButton.textContent = "x";
+  dismissButton.addEventListener("click", event => {
+    event.stopPropagation();
+    setStatus("");
+  });
+  statusBanner.appendChild(dismissButton);
+
+  const autoHideDelay = Number.isFinite(Number(options.duration))
+    ? Number(options.duration)
+    : type === "error" ? 4200 : type === "success" ? 2600 : 2400;
+
+  if (autoHideDelay > 0) {
+    statusBannerTimer = window.setTimeout(() => {
+      setStatus("");
+    }, autoHideDelay);
+  }
 }
 
 function setButtonBusy(button, isBusy, busyText) {
@@ -3486,23 +3520,6 @@ function wireFormInputs() {
     socialLinksContainer.addEventListener("focusin", () => {
       openEditorGroupForField(fieldIds.socialLinks);
       applyPreviewHighlight(fieldIds.socialLinks);
-    });
-  }
-
-  if (signOutButton) {
-    signOutButton.addEventListener("click", async () => {
-      if (!supabase) {
-        return;
-      }
-
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        setStatus(error.message || "Unable to sign out.", "error");
-        return;
-      }
-
-      window.location.href = "signin.html";
     });
   }
 

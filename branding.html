@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
   <link rel="stylesheet" href="account-sections.css?v=20260514a">
-  <link rel="stylesheet" href="branding.css?v=20260514a">
+  <link rel="stylesheet" href="branding.css?v=20260514b">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -131,16 +131,21 @@
                       <input id="branding-header-label" class="branding-input" type="text" maxlength="50" placeholder="Appointment reminder">
                     </div>
 
-                    <div class="field-span-2" data-editor-group="body">
-                      <label class="branding-label" for="branding-greeting-template">Greeting line</label>
-                      <input id="branding-greeting-template" class="branding-input" type="text" maxlength="120" placeholder="Hello {client},">
-                      <p class="field-hint branding-helper">Use {client} to insert the client name automatically.</p>
+                    <div class="branding-editor-group-head branding-message-defaults-head">
+                      <h4>Message defaults</h4>
+                      <p>These lines apply to every branded reminder unless you edit the message on the Review screen.</p>
                     </div>
 
-                    <div class="field-span-2" data-editor-group="footer body">
-                      <label class="branding-label" for="branding-closing-paragraph">Last paragraph</label>
+                    <div class="field-span-2 branding-always-visible-control">
+                      <label class="branding-label" for="branding-greeting-template">Default greeting line</label>
+                      <input id="branding-greeting-template" class="branding-input" type="text" maxlength="120" placeholder="Hello {client},">
+                      <p class="field-hint branding-helper">Use {client} for the client name or {business} for your business name.</p>
+                    </div>
+
+                    <div class="field-span-2 branding-always-visible-control">
+                      <label class="branding-label" for="branding-closing-paragraph">Default last paragraph or disclosure</label>
                       <textarea id="branding-closing-paragraph" class="branding-input branding-textarea" maxlength="600" rows="4" placeholder="Thank you."></textarea>
-                      <p class="field-hint branding-helper">Add a disclosure, HIPAA notice, or closing text that should appear in every reminder.</p>
+                      <p class="field-hint branding-helper">Add a disclosure, HIPAA notice, consent note, or closing text that should appear in every reminder.</p>
                     </div>
 
                     <div data-editor-group="hero">
@@ -603,6 +608,6 @@
   </div>
 
   <script src="nav.js?v=20260427a"></script>
-  <script type="module" src="branding.js?v=20260514b"></script>
+  <script type="module" src="branding.js?v=20260514d"></script>
 </body>
 </html>
