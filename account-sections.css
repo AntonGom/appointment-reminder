@@ -1987,3 +1987,20 @@ button.calendar-week-mobile-day {
     border-radius: 16px;
   }
 }
+
+@media (max-width: 560px) {
+  .summary-grid {
+    grid-auto-flow: row;
+    grid-auto-columns: initial;
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+    padding: 0;
+    scroll-snap-type: none;
+    scrollbar-width: auto;
+  }
+
+  .summary-card {
+    width: 100%;
+    scroll-snap-align: none;
+  }
+}
