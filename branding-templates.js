@@ -271,6 +271,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
   const tagline = cleanText(profile?.tagline, 120);
   const headerLabel = cleanText(profile?.headerLabel, 50);
   const greetingTemplate = cleanText(profile?.greetingTemplate, 120);
+  const introTemplate = cleanText(profile?.introTemplate, 240);
   const closingParagraph = cleanText(profile?.closingParagraph, 600);
   const accentColor = normalizeHexColor(profile?.accentColor) || templatePreset.accentColor || DEFAULT_ACCENT;
   const headerColor = normalizeHexColor(profile?.headerColor) || templatePreset.headerColor || accentColor;
@@ -324,6 +325,7 @@ export function normalizeBrandingProfile(profile = {}, options = {}) {
     tagline,
     headerLabel,
     greetingTemplate,
+    introTemplate,
     closingParagraph,
     accentColor,
     headerColor,
@@ -2017,8 +2019,9 @@ function parseReminderMessage(message) {
 
     return -1;
   })();
-  const greeting = lines.find(line => line) || "Hello,";
-  const intro = lines.find(line => /^This is a friendly reminder/i.test(line)) || "";
+  const greetingIndex = lines.findIndex(line => line);
+  const greeting = greetingIndex >= 0 ? lines[greetingIndex] : "Hello,";
+  let intro = lines.find(line => /^This is a friendly reminder/i.test(line)) || "";
   const summary = [];
   const customFields = [];
   const body = [];
@@ -2040,6 +2043,18 @@ function parseReminderMessage(message) {
     currentCustomField = null;
   };
 
+  const isStructuredReminderLine = line => {
+    if (/^Date:/i.test(line) || /^Time:/i.test(line) || /^(Location|Service Location):/i.test(line)) {
+      return true;
+    }
+
+    if (/^(Appointment Notes|Additional Details):/i.test(line) || /^If you need to reach us/i.test(line) || /^Thank you/i.test(line)) {
+      return true;
+    }
+
+    return /^([^:\n]{1,80}):/.test(line);
+  };
+
   lines.forEach((line, index) => {
     if (!line) {
       if (captureDetails && detailsLines.length) {
@@ -2059,7 +2074,12 @@ function parseReminderMessage(message) {
       return;
     }
 
-    if (index === 0 || line === intro) {
+    if (index === greetingIndex || line === intro) {
+      return;
+    }
+
+    if (!intro && index > greetingIndex && !isStructuredReminderLine(line)) {
+      intro = line;
       return;
     }
 

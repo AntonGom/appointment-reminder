@@ -37,8 +37,9 @@ const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const REMINDER_PREFILL_QUERY_PARAM = "prefillClientId";
 const QA_LAST_EMAIL_STORAGE_KEY = "appointment-reminder:last-sent-email-html";
 const WIZARD_STEP_STORAGE_KEY = "appointment-reminder:wizard-step";
-const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260514a";
+const BRANDING_TEMPLATE_MODULE_PATH = "./branding-templates.js?v=20260514b";
 const CUSTOM_FORM_MODULE_PATH = "./custom-form-profile.js?v=20260514b";
+const DEFAULT_REMINDER_INTRO_TEMPLATE = "This is a friendly reminder about your upcoming appointment.";
 const DEFAULT_BACKGROUND_STYLE = "gradient";
 const DEFAULT_BACKGROUND_SOLID_COLOR = "#182131";
 const DEFAULT_FORM_SURFACE_COLOR = "#f6f8fc";
@@ -381,6 +382,7 @@ function getSavedBrandingProfile() {
     tagline: String(profile.tagline || "").trim(),
     headerLabel: String(profile.headerLabel || "").trim(),
     greetingTemplate: String(profile.greetingTemplate || "").trim(),
+    introTemplate: String(profile.introTemplate || "").trim(),
     closingParagraph: String(profile.closingParagraph || "").trim(),
     accentColor: String(profile.accentColor || "").trim(),
     headerColor: String(profile.headerColor || "").trim(),
@@ -3299,10 +3301,14 @@ function generateMessage() {
     client: name,
     business: businessName
   }) || "Thank you.";
+  const intro = applyReminderTextTemplate(brandingProfile?.introTemplate, {
+    client: name,
+    business: businessName
+  }) || DEFAULT_REMINDER_INTRO_TEMPLATE;
 
   lines.push(greeting);
   lines.push("");
-  lines.push("This is a friendly reminder about your upcoming appointment.");
+  lines.push(intro);
 
   if (date && shouldIncludeBuiltInAnswerInReminder("date")) lines.push("Date: " + formatDate(date));
   if (time && shouldIncludeBuiltInAnswerInReminder("time")) lines.push("Time: " + formatTime(time));

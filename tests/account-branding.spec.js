@@ -488,8 +488,11 @@ test.describe("Branding and Client Details", () => {
 
     await page.evaluate(() => {
       const businessName = document.getElementById("branding-business-name");
+      const introTemplate = document.getElementById("branding-intro-template");
       businessName.value = "Pink Paws Grooming Studio";
+      introTemplate.value = "Your pet's grooming visit is coming up soon.";
       businessName.dispatchEvent(new Event("input", { bubbles: true }));
+      introTemplate.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await page.locator("#send-branding-test-button").click();
 
@@ -497,7 +500,9 @@ test.describe("Branding and Client Details", () => {
     expect(requestPayload.clientEmail).toBe("owner@example.com");
     expect(requestPayload.trackingSource).toBe("branding_test_email");
     expect(requestPayload.brandingProfile.businessName).toBe("Pink Paws Grooming Studio");
+    expect(requestPayload.brandingProfile.introTemplate).toBe("Your pet's grooming visit is coming up soon.");
     expect(requestPayload.message).toContain("Hello Ava Johnson,");
+    expect(requestPayload.message).toContain("Your pet's grooming visit is coming up soon.");
   });
 
   test("branding preview field toggles include saved Form Creator fields", async ({ page }) => {
@@ -990,7 +995,7 @@ test.describe("Branding mobile UX", () => {
 
     const heroArea = page.frameLocator("#branding-preview-frame").locator('[data-preview-area="hero"]').first();
     await expect(heroArea).toBeVisible();
-    await heroArea.click();
+    await page.locator("#branding-mobile-preview-edit").tap();
 
     const editorCard = page.locator(".branding-editor-card");
     await expect(editorCard).toBeVisible();

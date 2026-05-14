@@ -6,7 +6,7 @@ import {
   buildReminderEmailSubject,
   hasSavedBrandingProfile,
   normalizeBrandingProfile
-} from "./branding-templates.js?v=20260514a";
+} from "./branding-templates.js?v=20260514b";
 import {
   BASE_REMINDER_STEPS,
   isContentBlockType,
@@ -26,6 +26,7 @@ const templateGrid = document.getElementById("template-grid");
 const templateGalleryCard = templateGrid?.closest(".branding-gallery-card") || null;
 const previewFrame = document.getElementById("branding-preview-frame");
 const previewStage = document.getElementById("branding-preview-stage");
+const mobilePreviewEditButton = document.getElementById("branding-mobile-preview-edit");
 const previewSubject = document.getElementById("branding-preview-subject");
 const previewTo = document.getElementById("branding-preview-to");
 const previewEmail = document.getElementById("branding-preview-email");
@@ -60,6 +61,7 @@ const BRANDING_PREVIEW_WIDTH = 664;
 const BRANDING_PREVIEW_MAX_HEIGHT_MOBILE = 340;
 const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
 const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
+const DEFAULT_INTRO_TEMPLATE = "This is a friendly reminder about your upcoming appointment.";
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
   const clientKey = `${supabaseUrl}::${publicKey}`;
@@ -85,6 +87,7 @@ const fieldIds = {
   tagline: "branding-tagline",
   headerLabel: "branding-header-label",
   greetingTemplate: "branding-greeting-template",
+  introTemplate: "branding-intro-template",
   closingParagraph: "branding-closing-paragraph",
   accentColor: "branding-accent-color",
   accentHex: "branding-accent-hex",
@@ -414,6 +417,7 @@ const FIELD_TO_EDITOR_GROUP = {
   [fieldIds.tagline]: "hero",
   [fieldIds.headerLabel]: "hero",
   [fieldIds.greetingTemplate]: "body",
+  [fieldIds.introTemplate]: "body",
   [fieldIds.closingParagraph]: "body",
   [fieldIds.accentColor]: "hero",
   [fieldIds.accentHex]: "hero",
@@ -1174,6 +1178,10 @@ function buildSampleMessage(profile) {
     client: clientName,
     business: profile?.businessName || ""
   }) || `Hello ${clientName},`;
+  const introLine = applyBrandingTextTemplate(profile?.introTemplate, {
+    client: clientName,
+    business: profile?.businessName || ""
+  }) || DEFAULT_INTRO_TEMPLATE;
   const closingParagraph = applyBrandingTextTemplate(profile?.closingParagraph, {
     client: clientName,
     business: profile?.businessName || ""
@@ -1187,7 +1195,7 @@ function buildSampleMessage(profile) {
   const lines = [
     greetingLine,
     "",
-    "This is a friendly reminder about your upcoming appointment."
+    introLine
   ];
 
   if (selectedById.has("date")) {
@@ -1340,6 +1348,7 @@ function getDraftBranding() {
     tagline: getFieldElement(fieldIds.tagline)?.value || "",
     headerLabel: getFieldElement(fieldIds.headerLabel)?.value || "",
     greetingTemplate: getFieldElement(fieldIds.greetingTemplate)?.value || "",
+    introTemplate: getFieldElement(fieldIds.introTemplate)?.value || "",
     closingParagraph: getFieldElement(fieldIds.closingParagraph)?.value || "",
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
@@ -1407,6 +1416,7 @@ function applyBrandingToForm(branding) {
   getFieldElement(fieldIds.tagline).value = branding.tagline || "";
   getFieldElement(fieldIds.headerLabel).value = branding.headerLabel || normalized.headerLabel || "";
   getFieldElement(fieldIds.greetingTemplate).value = normalized.greetingTemplate || "";
+  getFieldElement(fieldIds.introTemplate).value = normalized.introTemplate || "";
   getFieldElement(fieldIds.closingParagraph).value = normalized.closingParagraph || "";
   getFieldElement(fieldIds.accentColor).value = normalized.accentColor;
   getFieldElement(fieldIds.accentHex).value = normalized.accentColor;
@@ -1593,6 +1603,12 @@ function renderPreview() {
     clearPreviewFrameContentWatchers();
     previewFrame.srcdoc = previewHtml;
     schedulePreviewFrameResize();
+    window.setTimeout(() => {
+      hydratePreviewFrameForEditing();
+    }, 0);
+    window.setTimeout(() => {
+      hydratePreviewFrameForEditing();
+    }, 120);
   }
 
   applyLiveBrandingState(draftBranding);
@@ -1778,6 +1794,13 @@ function bindPreviewFrameContentWatchers() {
       }
     });
   };
+}
+
+function hydratePreviewFrameForEditing() {
+  bindPreviewFrameContentWatchers();
+  wirePreviewFrameInteractions();
+  applyPreviewHighlight(currentPreviewFocusField);
+  schedulePreviewFrameResize();
 }
 
 function setQaEmailStatus(message, type = "info") {
@@ -2583,7 +2606,7 @@ function wirePreviewFrameInteractions() {
       element.classList.remove("preview-hover");
     });
 
-    element.addEventListener("click", event => {
+    const activatePreviewArea = event => {
       if (!isBrandingEditingEnabled()) {
         event.preventDefault();
         event.stopPropagation();
@@ -2594,22 +2617,37 @@ function wirePreviewFrameInteractions() {
       event.stopPropagation();
       clearIframePreviewHover();
       focusFieldFromPreviewArea(element.dataset.previewArea || "");
-    });
+    };
+
+    element.addEventListener("click", activatePreviewArea);
+    element.addEventListener("touchend", activatePreviewArea, { passive: false });
   });
 
-  frameDocument.addEventListener("click", event => {
-    if (!isBrandingEditingEnabled()) {
-      clearIframePreviewHover();
-      return;
-    }
+  if (frameDocument.documentElement?.dataset.previewDelegatedBound !== "true") {
+    frameDocument.documentElement.dataset.previewDelegatedBound = "true";
+    const activateDelegatedPreviewArea = event => {
+      if (!isBrandingEditingEnabled()) {
+        clearIframePreviewHover();
+        return;
+      }
 
-    const interactiveArea = event.target?.closest?.("[data-preview-area]");
+      const interactiveArea = event.target?.closest?.("[data-preview-area]");
 
-    if (!interactiveArea) {
+      if (interactiveArea) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearIframePreviewHover();
+        focusFieldFromPreviewArea(interactiveArea.dataset.previewArea || "");
+        return;
+      }
+
       applyPreviewHighlight("");
       clearIframePreviewHover();
-    }
-  });
+    };
+
+    frameDocument.addEventListener("click", activateDelegatedPreviewArea);
+    frameDocument.addEventListener("touchend", activateDelegatedPreviewArea, { passive: false });
+  }
 
   syncPreviewFrameHeight();
 }
@@ -2692,6 +2730,7 @@ async function saveBranding() {
     tagline: (getFieldElement(fieldIds.tagline)?.value || "").trim(),
     headerLabel: (getFieldElement(fieldIds.headerLabel)?.value || "").trim(),
     greetingTemplate: (getFieldElement(fieldIds.greetingTemplate)?.value || "").trim(),
+    introTemplate: (getFieldElement(fieldIds.introTemplate)?.value || "").trim(),
     closingParagraph: (getFieldElement(fieldIds.closingParagraph)?.value || "").trim(),
     headerColor: getFieldElement(fieldIds.headerColor)?.value || getFieldElement(fieldIds.headerHex)?.value || "",
     secondaryColor: getFieldElement(fieldIds.secondaryColor)?.value || getFieldElement(fieldIds.secondaryHex)?.value || "",
@@ -3456,9 +3495,14 @@ function wireFormInputs() {
 
   if (previewFrame) {
     previewFrame.addEventListener("load", () => {
-      bindPreviewFrameContentWatchers();
-      wirePreviewFrameInteractions();
-      applyPreviewHighlight(currentPreviewFocusField);
+      hydratePreviewFrameForEditing();
+    });
+  }
+
+  if (mobilePreviewEditButton) {
+    mobilePreviewEditButton.addEventListener("click", event => {
+      event.preventDefault();
+      focusFieldFromPreviewArea(currentEditorGroup === "hero" ? "hero" : "body");
     });
   }
 

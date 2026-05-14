@@ -6,7 +6,7 @@
   <title>Branding</title>
   <link rel="stylesheet" href="nav.css?v=20260427a">
   <link rel="stylesheet" href="account-sections.css?v=20260514a">
-  <link rel="stylesheet" href="branding.css?v=20260514b">
+  <link rel="stylesheet" href="branding.css?v=20260514c">
 </head>
 <body data-page="branding">
   <div class="page">
@@ -140,6 +140,12 @@
                       <label class="branding-label" for="branding-greeting-template">Default greeting line</label>
                       <input id="branding-greeting-template" class="branding-input" type="text" maxlength="120" placeholder="Hello {client},">
                       <p class="field-hint branding-helper">Use {client} for the client name or {business} for your business name.</p>
+                    </div>
+
+                    <div class="field-span-2 branding-always-visible-control">
+                      <label class="branding-label" for="branding-intro-template">Default reminder sentence</label>
+                      <textarea id="branding-intro-template" class="branding-input branding-textarea" maxlength="240" rows="3" placeholder="This is a friendly reminder about your upcoming appointment."></textarea>
+                      <p class="field-hint branding-helper">This appears directly under the greeting in every branded reminder.</p>
                     </div>
 
                     <div class="field-span-2 branding-always-visible-control">
@@ -536,6 +542,7 @@
                       </div>
                     </div>
                     <iframe id="branding-preview-frame" class="branding-preview-frame" title="Branded email preview"></iframe>
+                    <button id="branding-mobile-preview-edit" class="branding-mobile-preview-edit" type="button" aria-label="Edit branding preview"></button>
                   </div>
                 </div>
 
@@ -608,6 +615,6 @@
   </div>
 
   <script src="nav.js?v=20260427a"></script>
-  <script type="module" src="branding.js?v=20260514d"></script>
+  <script type="module" src="branding.js?v=20260514e"></script>
 </body>
 </html>

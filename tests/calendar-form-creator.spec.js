@@ -597,6 +597,8 @@ test.describe("Calendar and Form Creator", () => {
     await page.goto("/calendar.html");
 
     await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await expect(page.locator(".calendar-import-menu")).toHaveAttribute("open", "");
     await page.locator("#calendar-feed-url").fill("webcal://calendar.example.com/feed.ics");
     await page.locator("#sync-calendar-link-button").click();
 
@@ -661,6 +663,8 @@ test.describe("Calendar and Form Creator", () => {
     await page.goto("/calendar.html");
 
     await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await expect(page.locator(".calendar-import-menu")).toHaveAttribute("open", "");
     await page.locator("#sync-outlook-calendar-button").click();
 
     await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
@@ -943,7 +947,7 @@ test.describe("Form Creator mobile UX", () => {
 
     await page.locator("#studio-context-action").click();
     await expect(page.locator("#form-editor-popover")).toBeVisible();
-    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
+    await expect(page.locator("#form-editor-title")).toContainText("Business page settings");
     await expect(page.locator("#editor-page-nav-label")).toBeVisible();
     await expect(page.locator("[data-page-item-edit]")).toHaveCount(7);
     await expect(page.locator("#editor-delete-page")).toBeVisible();
@@ -966,7 +970,7 @@ test.describe("Form Creator mobile UX", () => {
     await page.waitForTimeout(250);
     await page.locator("#studio-context-action").click();
     await expect(page.locator("#form-editor-popover")).toBeVisible();
-    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
+    await expect(page.locator("#form-editor-title")).toContainText("Business page settings");
     await page.locator("#editor-delete-page").click();
 
     await expect(stepButtons).toHaveCount(initialStepCount + 1);
@@ -996,7 +1000,7 @@ test.describe("Form Creator mobile UX", () => {
 
     await page.locator("#studio-context-action").click();
     await expect(page.locator("#form-editor-popover")).toBeVisible();
-    await expect(page.locator("#form-editor-title")).toContainText("Page settings");
+    await expect(page.locator("#form-editor-title")).toContainText("Business page settings");
     await expect(page.locator("#editor-page-nav-label")).toBeVisible();
     await expect(page.locator("[data-page-item-edit]")).toHaveCount(3);
     await expect(page.locator("#editor-delete-page")).toBeVisible();
