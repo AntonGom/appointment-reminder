@@ -209,6 +209,7 @@ let suppressNextMobileStudioHandleClick = false;
 let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
 const SUPABASE_QUERY_TIMEOUT_MS = 32000;
+const PROFILE_SETTINGS_SAVE_TIMEOUT_MS = 9000;
 const FORM_SAVE_TIMEOUT_MS = 22000;
 const FORM_SAVE_RETRY_TIMEOUT_MS = 32000;
 const FORM_CLEANUP_TIMEOUT_MS = 7000;
@@ -2677,6 +2678,108 @@ async function getLatestSignedInUser() {
   return data?.user || session.user;
 }
 
+async function getCurrentAccountAccessToken() {
+  if (!supabase) {
+    return "";
+  }
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  return String(session?.access_token || "").trim();
+}
+
+function mergeAccountProfileIntoUser(user, accountProfile = {}) {
+  if (!user) {
+    return null;
+  }
+
+  const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
+    ? accountProfile.custom_form_profile
+    : user.user_metadata?.custom_form_profile;
+  const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
+    ? accountProfile.branding_profile
+    : user.user_metadata?.branding_profile;
+
+  return {
+    ...user,
+    user_metadata: {
+      ...(user.user_metadata || {}),
+      ...(customFormProfile ? { custom_form_profile: customFormProfile } : {}),
+      ...(brandingProfile ? { branding_profile: brandingProfile } : {})
+    }
+  };
+}
+
+async function fetchAccountProfile(user = currentUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }),
+    SUPABASE_QUERY_TIMEOUT_MS,
+    "Loading profile settings timed out."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to load profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+}
+
+async function saveAccountProfilePatch(patch, user = currentUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: user?.email || "",
+        ...patch
+      })
+    }),
+    PROFILE_SETTINGS_SAVE_TIMEOUT_MS,
+    "Saving profile settings timed out. Check your connection and try again."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+}
+
 async function syncLatestUserProfile(options = {}) {
   const { silent = true, preserveDirty = true } = options;
 
@@ -2698,11 +2801,16 @@ async function syncLatestUserProfile(options = {}) {
       return;
     }
 
-    const latestProfile = normalizeCustomFormProfile(latestUser.user_metadata?.custom_form_profile || {});
+    const accountProfile = await fetchAccountProfile(latestUser).catch(error => {
+      console.warn("Unable to load latest profile settings.", error);
+      return null;
+    });
+    const mergedUser = mergeAccountProfileIntoUser(latestUser, accountProfile);
+    const latestProfile = normalizeCustomFormProfile(mergedUser.user_metadata?.custom_form_profile || {});
     const savedProfileChanged = !areProfilesEquivalent(latestProfile, savedFormProfile);
     const localProfileDirty = !areProfilesEquivalent(currentFormProfile, savedFormProfile);
 
-    currentUser = latestUser;
+    currentUser = mergedUser;
     setSignedInView(currentUser);
 
     if (!savedProfileChanged) {
@@ -5818,32 +5926,16 @@ async function saveFormProfile(options = {}) {
 
   try {
     const normalized = normalizeCustomFormProfile(currentFormProfile);
-    const metadata = {
-      ...(currentUser.user_metadata || {}),
-      custom_form_profile: normalized
-    };
-
     if (!silent) {
       setStatus("Saving form to Supabase...", "info", {
         loading: true,
-        progress: saveOperation?.progress?.(2, "Update account metadata")
+        progress: saveOperation?.progress?.(2, "Update profile settings")
       });
     }
 
-    const { data, error } = await updateUserMetadataWithRetry(metadata, {
-      onRetry: () => {
-        if (!silent) {
-          setStatus("Supabase is responding slowly. Retrying form save...", "info", {
-            loading: true,
-            progress: saveOperation?.progress?.(2, "Retry account metadata update")
-          });
-        }
-      }
+    const savedAccountProfile = await saveAccountProfilePatch({
+      custom_form_profile: normalized
     });
-
-    if (error) {
-      throw error;
-    }
 
     try {
       if (!silent) {
@@ -5861,13 +5953,9 @@ async function saveFormProfile(options = {}) {
       console.warn("Unable to clean up deleted remembered client answers.", cleanupError);
     }
 
-    currentUser = {
-      ...(data.user || currentUser),
-      user_metadata: {
-        ...((data.user || currentUser)?.user_metadata || {}),
-        custom_form_profile: normalized
-      }
-    };
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+      custom_form_profile: normalized
+    });
     currentFormProfile = normalizeCustomFormProfile(normalized);
     savedFormProfile = normalizeCustomFormProfile(normalized);
     renderBuilder();
@@ -5882,7 +5970,7 @@ async function saveFormProfile(options = {}) {
     const debugError = window.AppointmentReminderDebug?.formatError?.(
       saveOperation,
       error,
-      "META",
+      "DB",
       "Unable to save this form right now."
     );
     lastFormSaveError = new Error(debugError?.message || error.message || "Unable to save this form right now.");

@@ -244,6 +244,85 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
   return window.__appointmentReminderSupabaseClients.get(clientKey);
 }
 
+async function getCurrentAccountAccessToken() {
+  if (!appSupabase) {
+    return "";
+  }
+
+  const {
+    data: { session }
+  } = await appSupabase.auth.getSession();
+
+  return String(session?.access_token || "").trim();
+}
+
+function mergeAccountProfileIntoSignedInUser(user, accountProfile = {}) {
+  if (!user) {
+    return null;
+  }
+
+  const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
+    ? accountProfile.custom_form_profile
+    : user.user_metadata?.custom_form_profile;
+  const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
+    ? accountProfile.branding_profile
+    : user.user_metadata?.branding_profile;
+
+  return {
+    ...user,
+    user_metadata: {
+      ...(user.user_metadata || {}),
+      ...(customFormProfile ? { custom_form_profile: customFormProfile } : {}),
+      ...(brandingProfile ? { branding_profile: brandingProfile } : {})
+    }
+  };
+}
+
+async function fetchAccountProfile(user = currentSignedInUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }),
+    SUPABASE_QUERY_TIMEOUT_MS,
+    "Loading profile settings timed out."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to load profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+}
+
+async function syncAccountProfileIntoCurrentUser(user = currentSignedInUser) {
+  if (!user) {
+    currentSignedInUser = null;
+    return null;
+  }
+
+  const accountProfile = await fetchAccountProfile(user).catch(error => {
+    console.warn("Unable to load profile settings.", error);
+    return null;
+  });
+  currentSignedInUser = mergeAccountProfileIntoSignedInUser(user, accountProfile);
+  return currentSignedInUser;
+}
+
 function setCustomFormLoading(isLoading) {
   window.clearTimeout(customFormLoadingExitTimer);
   customFormLoadingExitTimer = null;
@@ -506,6 +585,9 @@ async function initAccountTierState() {
 
     currentSignedInUser = session?.user || null;
     currentAuthUserId = session?.user?.id || "";
+    if (currentSignedInUser) {
+      await syncAccountProfileIntoCurrentUser(currentSignedInUser);
+    }
     renderBronzeFeatures();
     updateDraftPreviewChrome();
     if (session?.user) {
@@ -521,7 +603,7 @@ async function initAccountTierState() {
     }
     setCustomFormLoading(false);
 
-    appSupabase.auth.onAuthStateChange((event, nextSession) => {
+    appSupabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {
         return;
       }
@@ -534,6 +616,9 @@ async function initAccountTierState() {
 
       currentAuthUserId = nextUserId;
       currentSignedInUser = nextSession?.user || null;
+      if (currentSignedInUser) {
+        await syncAccountProfileIntoCurrentUser(currentSignedInUser);
+      }
       renderBronzeFeatures();
       updateDraftPreviewChrome();
       syncCustomFormFromUser(currentSignedInUser);
@@ -2289,6 +2374,7 @@ async function syncLatestSignedInUser(options = {}) {
 
     currentSignedInUser = data?.user || session.user;
     currentAuthUserId = currentSignedInUser?.id || session.user.id || "";
+    await syncAccountProfileIntoCurrentUser(currentSignedInUser);
     renderBronzeFeatures();
     updateDraftPreviewChrome();
     await syncCustomFormFromUser(currentSignedInUser);

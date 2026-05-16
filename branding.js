@@ -63,6 +63,7 @@ const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
 const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
 const DEFAULT_INTRO_TEMPLATE = "This is a friendly reminder about your upcoming appointment.";
 const SUPABASE_QUERY_TIMEOUT_MS = 32000;
+const PROFILE_SETTINGS_SAVE_TIMEOUT_MS = 9000;
 const BRANDING_SAVE_TIMEOUT_MS = 22000;
 const BRANDING_SAVE_RETRY_TIMEOUT_MS = 32000;
 
@@ -166,6 +167,108 @@ async function updateBrandingMetadataWithRetry(metadata, options = {}) {
   }
 
   throw lastError || new Error("Unable to save branding right now.");
+}
+
+async function getCurrentAccountAccessToken() {
+  if (!supabase) {
+    return "";
+  }
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  return String(session?.access_token || "").trim();
+}
+
+function mergeAccountProfileIntoUser(user, accountProfile = {}) {
+  if (!user) {
+    return null;
+  }
+
+  const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
+    ? accountProfile.custom_form_profile
+    : user.user_metadata?.custom_form_profile;
+  const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
+    ? accountProfile.branding_profile
+    : user.user_metadata?.branding_profile;
+
+  return {
+    ...user,
+    user_metadata: {
+      ...(user.user_metadata || {}),
+      ...(customFormProfile ? { custom_form_profile: customFormProfile } : {}),
+      ...(brandingProfile ? { branding_profile: brandingProfile } : {})
+    }
+  };
+}
+
+async function fetchAccountProfile(user = currentUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }),
+    SUPABASE_QUERY_TIMEOUT_MS,
+    "Loading profile settings timed out."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to load profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+}
+
+async function saveAccountProfilePatch(patch, user = currentUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: user?.email || "",
+        ...patch
+      })
+    }),
+    PROFILE_SETTINGS_SAVE_TIMEOUT_MS,
+    "Saving profile settings timed out. Check your connection and try again."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
 }
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
@@ -2924,35 +3027,23 @@ async function saveBranding() {
   let saved = false;
 
   try {
-    const metadata = {
-      ...(currentUser.user_metadata || {}),
-      branding_profile: normalizedForStorage
-    };
-
     setStatus("Saving branding to Supabase...", "info", {
       loading: true,
-      progress: saveOperation?.progress?.(2, "Update account metadata")
+      progress: saveOperation?.progress?.(2, "Update profile settings")
     });
 
-    const { data, error } = await updateBrandingMetadataWithRetry(metadata, {
-      onRetry: () => {
-        setStatus("Supabase is responding slowly. Retrying branding save...", "info", {
-          loading: true,
-          progress: saveOperation?.progress?.(2, "Retry account metadata update")
-        });
-      }
+    const savedAccountProfile = await saveAccountProfilePatch({
+      branding_profile: normalizedForStorage
     });
-
-    if (error) {
-      throw error;
-    }
 
     setStatus("Applying saved branding preview...", "info", {
       loading: true,
       progress: saveOperation?.progress?.(3, "Refresh local preview")
     });
 
-    currentUser = data.user || currentUser;
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+      branding_profile: normalizedForStorage
+    });
     currentSavedBranding = { ...normalizedForStorage };
     applyBrandingToForm(currentSavedBranding);
     saved = true;
@@ -2967,7 +3058,7 @@ async function saveBranding() {
     const debugError = window.AppointmentReminderDebug?.formatError?.(
       saveOperation,
       error,
-      "META",
+      "DB",
       "Unable to save branding right now."
     );
     setStatus(debugError?.message || error.message || "Unable to save branding right now.", "error", {
@@ -3075,32 +3166,20 @@ async function persistBrandingToggleState(enabled) {
   try {
     setStatus("Saving branding toggle...", "info", {
       loading: true,
-      progress: toggleOperation?.progress?.(1, "Update account metadata")
+      progress: toggleOperation?.progress?.(1, "Update profile settings")
     });
 
-    const metadata = {
-      ...(currentUser.user_metadata || {}),
+    const savedAccountProfile = await saveAccountProfilePatch({
       branding_profile: normalizedForStorage
-    };
-
-    const { data, error } = await updateBrandingMetadataWithRetry(metadata, {
-      onRetry: () => {
-        setStatus("Supabase is responding slowly. Retrying branding toggle...", "info", {
-          loading: true,
-          progress: toggleOperation?.progress?.(1, "Retry account metadata update")
-        });
-      }
     });
-
-    if (error) {
-      throw error;
-    }
 
     if (thisSaveToken !== brandingToggleSaveToken) {
       return;
     }
 
-    currentUser = data.user || currentUser;
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+      branding_profile: normalizedForStorage
+    });
     setStatus("Applying branding toggle...", "info", {
       loading: true,
       progress: toggleOperation?.progress?.(2, "Refresh local preview")
@@ -3135,7 +3214,7 @@ async function persistBrandingToggleState(enabled) {
     const debugError = window.AppointmentReminderDebug?.formatError?.(
       toggleOperation,
       error,
-      "META",
+      "DB",
       "Unable to save the branding toggle right now."
     );
     setStatus(debugError?.message || error.message || "Unable to save the branding toggle right now.", "error", {
@@ -3795,6 +3874,13 @@ async function initBrandingPage() {
 
   currentUser = session?.user || null;
   currentAuthUserId = session?.user?.id || "";
+  if (currentUser) {
+    const accountProfile = await fetchAccountProfile(currentUser).catch(error => {
+      console.warn("Unable to load saved profile settings.", error);
+      return null;
+    });
+    currentUser = mergeAccountProfileIntoUser(currentUser, accountProfile);
+  }
   updateSignedInView(currentUser);
 
   currentSavedBranding = currentUser?.user_metadata?.branding_profile || {};
@@ -3803,7 +3889,7 @@ async function initBrandingPage() {
     loadLastSentEmailHtml({ announce: false });
   }
 
-  supabase.auth.onAuthStateChange((event, nextSession) => {
+  supabase.auth.onAuthStateChange(async (event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
       return;
     }
@@ -3816,6 +3902,13 @@ async function initBrandingPage() {
 
     currentAuthUserId = nextUserId;
     currentUser = nextSession?.user || null;
+    if (currentUser) {
+      const accountProfile = await fetchAccountProfile(currentUser).catch(error => {
+        console.warn("Unable to load saved profile settings.", error);
+        return null;
+      });
+      currentUser = mergeAccountProfileIntoUser(currentUser, accountProfile);
+    }
     currentSavedBranding = currentUser?.user_metadata?.branding_profile || {};
     updateSignedInView(currentUser);
     applyBrandingToForm(currentSavedBranding);

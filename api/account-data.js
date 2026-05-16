@@ -113,6 +113,109 @@ async function insertRestRows({ supabaseUrl, publicKey, token, table, rows }) {
   return Array.isArray(payload) ? payload : [];
 }
 
+async function upsertRestRows({ supabaseUrl, publicKey, token, table, rows, onConflict = "id" }) {
+  const url = new URL(`/rest/v1/${table}`, supabaseUrl);
+  if (onConflict) {
+    url.searchParams.set("on_conflict", onConflict);
+  }
+
+  const response = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: {
+      apikey: publicKey,
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify(Array.isArray(rows) ? rows : [rows])
+  });
+  const text = await response.text();
+  let payload = null;
+
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (_error) {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    const error = new Error(typeof payload?.message === "string" ? payload.message : `Unable to save ${table}.`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return Array.isArray(payload) ? payload : [];
+}
+
+async function loadProfile(config, ownerId) {
+  if (!ownerId) {
+    return [];
+  }
+
+  return fetchRestRows({
+    ...config,
+    table: "profiles",
+    select: "id,email,tier,custom_form_profile,branding_profile,updated_at",
+    searchParams: {
+      id: `eq.${ownerId}`,
+      limit: "1"
+    }
+  }).catch(error => {
+    if (error.payload?.code === "42P01" || isMissingColumnError(error.payload, "custom_form_profile") || isMissingColumnError(error.payload, "branding_profile")) {
+      return [];
+    }
+
+    throw error;
+  });
+}
+
+function normalizeProfilePayload(body, ownerId) {
+  const source = body && typeof body === "object" ? body : {};
+  const row = {
+    id: ownerId,
+    updated_at: new Date().toISOString()
+  };
+
+  if (typeof source.email === "string") {
+    row.email = source.email.slice(0, 320);
+  }
+
+  if (source.custom_form_profile && typeof source.custom_form_profile === "object") {
+    row.custom_form_profile = source.custom_form_profile;
+  }
+
+  if (source.branding_profile && typeof source.branding_profile === "object") {
+    row.branding_profile = source.branding_profile;
+  }
+
+  return row;
+}
+
+async function saveProfile(config, ownerId, body) {
+  if (!ownerId) {
+    const error = new Error("Missing account owner.");
+    error.status = 400;
+    throw error;
+  }
+
+  const row = normalizeProfilePayload(body, ownerId);
+
+  if (!row.custom_form_profile && !row.branding_profile && !row.email) {
+    const error = new Error("No profile settings were provided.");
+    error.status = 400;
+    throw error;
+  }
+
+  return upsertRestRows({
+    ...config,
+    table: "profiles",
+    rows: row,
+    onConflict: "id"
+  });
+}
+
 async function loadClients(config) {
   const fallbackSelect = "id,client_name,client_email,client_phone,service_address,notes,created_at,updated_at";
   const primarySelect = `${fallbackSelect},profile_custom_answers`;
@@ -242,6 +345,12 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "POST") {
+      if (resource === "profile") {
+        const data = await saveProfile(config, ownerId, req.body || {});
+        sendJson(res, 200, { data });
+        return;
+      }
+
       if (resource !== "appointments") {
         sendJson(res, 400, { error: "This resource cannot be saved here." });
         return;
@@ -274,6 +383,8 @@ export default async function handler(req, res) {
       data = await loadCalendarAppointments(config, ownerId);
     } else if (resource === "history") {
       data = await loadHistory(config, ownerId);
+    } else if (resource === "profile") {
+      data = await loadProfile(config, ownerId);
     } else {
       sendJson(res, 400, { error: "Unknown account data resource." });
       return;

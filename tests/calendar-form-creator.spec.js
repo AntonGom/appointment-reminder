@@ -328,6 +328,54 @@ async function stubModulePages(page, seedState) {
     });
   });
 
+  await page.route("**/api/account-data?**", async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+
+    if (url.searchParams.get("resource") !== "profile") {
+      await route.fallback();
+      return;
+    }
+
+    const ownerId = url.searchParams.get("ownerId") || seedState.user?.id || "";
+    const state = JSON.parse(await page.evaluate(key => window.localStorage.getItem(key) || "{}", SUPABASE_STATE_KEY));
+    state.tables = state.tables || {};
+    state.tables.profiles = Array.isArray(state.tables.profiles) ? state.tables.profiles : [];
+    let profile = state.tables.profiles.find(row => row.id === ownerId) || null;
+
+    if (!profile) {
+      profile = {
+        id: ownerId,
+        email: state.user?.email || "",
+        custom_form_profile: state.user?.user_metadata?.custom_form_profile || {},
+        branding_profile: state.user?.user_metadata?.branding_profile || {}
+      };
+      state.tables.profiles.push(profile);
+    }
+
+    if (request.method() === "POST") {
+      const body = request.postDataJSON() || {};
+      Object.assign(profile, body, { id: ownerId });
+      state.user = state.user || {};
+      state.user.user_metadata = state.user.user_metadata || {};
+      if (body.custom_form_profile) {
+        state.user.user_metadata.custom_form_profile = body.custom_form_profile;
+      }
+      if (body.branding_profile) {
+        state.user.user_metadata.branding_profile = body.branding_profile;
+      }
+      await page.evaluate(({ key, state: nextState }) => {
+        window.localStorage.setItem(key, JSON.stringify(nextState));
+      }, { key: SUPABASE_STATE_KEY, state });
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: [profile] })
+    });
+  });
+
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm", async route => {
     await route.fulfill({
       status: 200,
