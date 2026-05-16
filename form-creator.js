@@ -2696,7 +2696,9 @@ function mergeAccountProfileIntoUser(user, accountProfile = {}) {
     return null;
   }
 
+  const hasStoredObject = value => Boolean(value && typeof value === "object" && Object.keys(value).length);
   const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
+    && hasStoredObject(accountProfile.custom_form_profile)
     ? accountProfile.custom_form_profile
     : user.user_metadata?.custom_form_profile;
   const customFormEnabled = typeof accountProfile?.use_custom_form_enabled === "boolean"
@@ -2711,6 +2713,7 @@ function mergeAccountProfileIntoUser(user, accountProfile = {}) {
       ? { isEnabled: customFormEnabled }
       : null;
   const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
+    && hasStoredObject(accountProfile.branding_profile)
     ? accountProfile.branding_profile
     : user.user_metadata?.branding_profile;
 
