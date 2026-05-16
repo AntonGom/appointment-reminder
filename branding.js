@@ -62,8 +62,9 @@ const BRANDING_PREVIEW_MAX_HEIGHT_MOBILE = 340;
 const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
 const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
 const DEFAULT_INTRO_TEMPLATE = "This is a friendly reminder about your upcoming appointment.";
-const SUPABASE_QUERY_TIMEOUT_MS = 8500;
-const BRANDING_SAVE_TIMEOUT_MS = 16000;
+const SUPABASE_QUERY_TIMEOUT_MS = 32000;
+const BRANDING_SAVE_TIMEOUT_MS = 22000;
+const BRANDING_SAVE_RETRY_TIMEOUT_MS = 32000;
 
 function createTimedSupabaseFetch() {
   return async (input, init = {}) => {
@@ -88,7 +89,7 @@ function createTimedSupabaseFetch() {
     }
 
     timeoutId = window.setTimeout(() => {
-      controller.abort(new Error("Supabase request timed out."));
+      controller.abort(new Error(`Supabase request timed out after ${Math.round(SUPABASE_QUERY_TIMEOUT_MS / 1000)} seconds.`));
     }, SUPABASE_QUERY_TIMEOUT_MS);
 
     try {
@@ -98,7 +99,8 @@ function createTimedSupabaseFetch() {
       });
     } catch (error) {
       if (controller.signal.aborted) {
-        throw new Error("Supabase request timed out.");
+        const reasonMessage = String(controller.signal.reason?.message || "").trim();
+        throw new Error(reasonMessage || `Supabase request timed out after ${Math.round(SUPABASE_QUERY_TIMEOUT_MS / 1000)} seconds.`);
       }
 
       throw error;
@@ -140,23 +142,25 @@ function isRetryableBrandingSaveError(error) {
     || message.includes("load failed");
 }
 
-async function updateBrandingMetadataWithRetry(metadata) {
+async function updateBrandingMetadataWithRetry(metadata, options = {}) {
   let lastError = null;
+  const saveTimeouts = [BRANDING_SAVE_TIMEOUT_MS, BRANDING_SAVE_RETRY_TIMEOUT_MS];
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < saveTimeouts.length; attempt += 1) {
     try {
       return await runWithTimeout(
         () => supabase.auth.updateUser({ data: metadata }),
-        BRANDING_SAVE_TIMEOUT_MS + (attempt * 4000),
-        "Saving branding timed out. Check your connection and try again."
+        saveTimeouts[attempt],
+        `Saving branding timed out after ${Math.round(saveTimeouts[attempt] / 1000)} seconds. Check your connection and try again.`
       );
     } catch (error) {
       lastError = error;
 
-      if (attempt > 0 || !isRetryableBrandingSaveError(error)) {
+      if (attempt >= saveTimeouts.length - 1 || !isRetryableBrandingSaveError(error)) {
         throw error;
       }
 
+      options.onRetry?.(error, attempt + 1);
       await supabase.auth.getSession().catch(() => null);
     }
   }
@@ -2930,7 +2934,14 @@ async function saveBranding() {
       progress: saveOperation?.progress?.(2, "Update account metadata")
     });
 
-    const { data, error } = await updateBrandingMetadataWithRetry(metadata);
+    const { data, error } = await updateBrandingMetadataWithRetry(metadata, {
+      onRetry: () => {
+        setStatus("Supabase is responding slowly. Retrying branding save...", "info", {
+          loading: true,
+          progress: saveOperation?.progress?.(2, "Retry account metadata update")
+        });
+      }
+    });
 
     if (error) {
       throw error;
@@ -3072,7 +3083,14 @@ async function persistBrandingToggleState(enabled) {
       branding_profile: normalizedForStorage
     };
 
-    const { data, error } = await updateBrandingMetadataWithRetry(metadata);
+    const { data, error } = await updateBrandingMetadataWithRetry(metadata, {
+      onRetry: () => {
+        setStatus("Supabase is responding slowly. Retrying branding toggle...", "info", {
+          loading: true,
+          progress: toggleOperation?.progress?.(1, "Retry account metadata update")
+        });
+      }
+    });
 
     if (error) {
       throw error;

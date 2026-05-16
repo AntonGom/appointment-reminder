@@ -208,9 +208,10 @@ let mobileStudioExpandedState = { kind: "preset", size: "balanced" };
 let suppressNextMobileStudioHandleClick = false;
 let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
-const SUPABASE_QUERY_TIMEOUT_MS = 8500;
-const FORM_SAVE_TIMEOUT_MS = 12000;
-const FORM_CLEANUP_TIMEOUT_MS = 5000;
+const SUPABASE_QUERY_TIMEOUT_MS = 32000;
+const FORM_SAVE_TIMEOUT_MS = 22000;
+const FORM_SAVE_RETRY_TIMEOUT_MS = 32000;
+const FORM_CLEANUP_TIMEOUT_MS = 7000;
 
 function createTimedSupabaseFetch() {
   return async (input, init = {}) => {
@@ -235,7 +236,7 @@ function createTimedSupabaseFetch() {
     }
 
     timeoutId = window.setTimeout(() => {
-      controller.abort(new Error("Supabase request timed out."));
+      controller.abort(new Error(`Supabase request timed out after ${Math.round(SUPABASE_QUERY_TIMEOUT_MS / 1000)} seconds.`));
     }, SUPABASE_QUERY_TIMEOUT_MS);
 
     try {
@@ -245,7 +246,8 @@ function createTimedSupabaseFetch() {
       });
     } catch (error) {
       if (controller.signal.aborted) {
-        throw new Error("Supabase request timed out.");
+        const reasonMessage = String(controller.signal.reason?.message || "").trim();
+        throw new Error(reasonMessage || `Supabase request timed out after ${Math.round(SUPABASE_QUERY_TIMEOUT_MS / 1000)} seconds.`);
       }
 
       throw error;
@@ -5742,23 +5744,25 @@ function isRetryableFormSaveError(error) {
     || message.includes("load failed");
 }
 
-async function updateUserMetadataWithRetry(metadata) {
+async function updateUserMetadataWithRetry(metadata, options = {}) {
   let lastError = null;
+  const saveTimeouts = [FORM_SAVE_TIMEOUT_MS, FORM_SAVE_RETRY_TIMEOUT_MS];
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < saveTimeouts.length; attempt += 1) {
     try {
       return await runWithTimeout(
         () => supabase.auth.updateUser({ data: metadata }),
-        FORM_SAVE_TIMEOUT_MS + (attempt * 4000),
-        "Saving the form timed out. Check your connection and try again."
+        saveTimeouts[attempt],
+        `Saving the form timed out after ${Math.round(saveTimeouts[attempt] / 1000)} seconds. Check your connection and try again.`
       );
     } catch (error) {
       lastError = error;
 
-      if (attempt > 0 || !isRetryableFormSaveError(error)) {
+      if (attempt >= saveTimeouts.length - 1 || !isRetryableFormSaveError(error)) {
         throw error;
       }
 
+      options.onRetry?.(error, attempt + 1);
       await supabase.auth.getSession().catch(() => null);
     }
   }
@@ -5826,7 +5830,16 @@ async function saveFormProfile(options = {}) {
       });
     }
 
-    const { data, error } = await updateUserMetadataWithRetry(metadata);
+    const { data, error } = await updateUserMetadataWithRetry(metadata, {
+      onRetry: () => {
+        if (!silent) {
+          setStatus("Supabase is responding slowly. Retrying form save...", "info", {
+            loading: true,
+            progress: saveOperation?.progress?.(2, "Retry account metadata update")
+          });
+        }
+      }
+    });
 
     if (error) {
       throw error;
