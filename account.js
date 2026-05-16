@@ -251,22 +251,26 @@ function setStatus(message, type = "info", options = {}) {
 
   if (!message) {
     statusBanner.hidden = true;
-    statusBanner.textContent = "";
+    statusBanner.replaceChildren();
     statusBanner.className = "status-banner";
     return;
   }
 
   statusBanner.hidden = false;
-  statusBanner.textContent = message;
   statusBanner.className = `status-banner ${type}${options.loading ? " loading" : ""}`;
+  const messageNode = document.createElement("span");
+  messageNode.className = "status-banner-message";
+  messageNode.textContent = message;
+  statusBanner.replaceChildren(messageNode);
+  window.AppointmentReminderDebug?.appendStatusDetails?.(statusBanner, options);
 
   if (type === "success" || type === "error") {
     statusBannerTimer = window.setTimeout(() => {
       statusBanner.hidden = true;
-      statusBanner.textContent = "";
+      statusBanner.replaceChildren();
       statusBanner.className = "status-banner";
       statusBannerTimer = 0;
-    }, type === "error" ? 4600 : 3200);
+    }, Number.isFinite(Number(options.duration)) ? Number(options.duration) : type === "error" ? 9000 : 3200);
   }
 }
 
@@ -3393,21 +3397,51 @@ async function handleSignOut() {
 async function handleSaveClient(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  const saveOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CD",
+    action: "SAVE",
+    totalSteps: 4,
+    label: "Save client details"
+  });
 
   if (!supabase) {
-    setStatus("Add your Supabase keys in Vercel before using accounts.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      new Error("Supabase client was not configured."),
+      "CONFIG",
+      "Add your Supabase keys in Vercel before using accounts."
+    );
+    setStatus(debugError?.message || "Add your Supabase keys in Vercel before using accounts.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 9000
+    });
     setClientFormStatus("Accounts are not configured yet.", "error");
     return;
   }
 
   let user = null;
+  setStatus("Checking account before saving...", "info", {
+    loading: true,
+    progress: saveOperation?.progress?.(1, "Confirm signed-in user")
+  });
 
   try {
     const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
     user = userResult?.data?.user || null;
   } catch (error) {
-    setStatus(error.message || "Unable to reach accounts right now.", "error");
-    setClientFormStatus("Could not save. Nothing was changed.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      error,
+      "AUTH",
+      "Unable to reach accounts right now."
+    );
+    setStatus(debugError?.message || error.message || "Unable to reach accounts right now.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 12000
+    });
+    setClientFormStatus(`Could not save. Nothing was changed.${debugError?.code ? ` Code: ${debugError.code}` : ""}`, "error");
     return;
   }
 
@@ -3452,12 +3486,19 @@ async function handleSaveClient(event) {
   }
 
   setButtonBusy(saveClientButton, true, "Saving client...");
-  setStatus("");
+  setStatus("Preparing contact save...", "info", {
+    loading: true,
+    progress: saveOperation?.progress?.(2, "Validate contact fields")
+  });
   setClientFormStatus("Saving contact...", "info");
 
   try {
     const isEditing = Boolean(editingClientId);
     const activeEditingId = editingClientId;
+    setStatus(isEditing ? "Updating saved contact..." : "Saving new contact...", "info", {
+      loading: true,
+      progress: saveOperation?.progress?.(3, "Write client row")
+    });
     const { error } = await withSupabaseRetry(() => isEditing
       ? supabase.from("clients").update(payload).eq("id", activeEditingId).eq("owner_id", user.id)
       : supabase.from("clients").insert(payload));
@@ -3466,12 +3507,27 @@ async function handleSaveClient(event) {
       throw error;
     }
 
+    setStatus("Refreshing saved contacts...", "info", {
+      loading: true,
+      progress: saveOperation?.progress?.(4, "Reload client list")
+    });
     await loadSavedClients();
     resetClientForm();
+    saveOperation?.success?.(isEditing ? "Contact updated" : "Contact saved");
     setStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");
   } catch (error) {
-    setStatus(error.message || "Unable to save this client.", "error");
-    setClientFormStatus(error.message || "Unable to save this contact.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      error,
+      "CLIENT",
+      "Unable to save this client."
+    );
+    setStatus(debugError?.message || error.message || "Unable to save this client.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 12000
+    });
+    setClientFormStatus(debugError?.message || error.message || "Unable to save this contact.", "error");
   } finally {
     setButtonBusy(saveClientButton, false);
   }
@@ -3700,8 +3756,17 @@ async function handleImportClientsFile(event) {
     return;
   }
 
+  const importOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CD",
+    action: "IMPORT",
+    totalSteps: 4,
+    label: "Import client data"
+  });
   setButtonBusy(importClientsButton, true, "Importing...");
-  setStatus("Importing client data...", "info", { loading: true });
+  setStatus("Reading client import file...", "info", {
+    loading: true,
+    progress: importOperation?.progress?.(1, "Read uploaded file")
+  });
 
   try {
     const extension = String(file.name.split(".").pop() || "").trim().toLowerCase();
@@ -3718,6 +3783,10 @@ async function handleImportClientsFile(event) {
     const normalizedRecords = rawRecords
       .map(record => normalizeImportedClientRecord(record, user.id))
       .filter(Boolean);
+    setStatus("Checking imported clients...", "info", {
+      loading: true,
+      progress: importOperation?.progress?.(2, "Validate client rows")
+    });
 
     if (!normalizedRecords.length) {
       throw new Error("No valid clients were found in that file.");
@@ -3752,11 +3821,19 @@ async function handleImportClientsFile(event) {
       .filter(record => record.canInsert && (!record.importId || !existingClientIds.has(record.importId)))
       .map(record => record.payload);
 
+    setStatus("Saving imported clients...", "info", {
+      loading: true,
+      progress: importOperation?.progress?.(3, "Write client rows")
+    });
     for (const record of updateRecords) {
       await persistImportedClientUpdate(record.importId, user.id, record.payload);
     }
 
     await persistImportedClientInserts(insertRecords);
+    setStatus("Refreshing saved contacts...", "info", {
+      loading: true,
+      progress: importOperation?.progress?.(4, "Reload client list")
+    });
     await loadSavedClients();
 
     const importedCount = updateRecords.length + insertRecords.length;
@@ -3777,9 +3854,20 @@ async function handleImportClientsFile(event) {
       summary.push(`${skippedCount} skipped`);
     }
 
+    importOperation?.success?.(`Imported ${importedCount} clients`);
     setStatus(`${summary.join(" - ")}.`, "success");
   } catch (error) {
-    setStatus(error.message || "Unable to import client data.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      importOperation,
+      error,
+      "IMPORT",
+      "Unable to import client data."
+    );
+    setStatus(debugError?.message || error.message || "Unable to import client data.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 12000
+    });
   } finally {
     setButtonBusy(importClientsButton, false);
     fileInput.value = "";

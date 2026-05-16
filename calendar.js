@@ -218,21 +218,25 @@ async function loadSupabaseCreateClient() {
   throw lastError || new Error("Unable to load Supabase SDK.");
 }
 
-function setStatus(message, type = "info") {
+function setStatus(message, type = "info", options = {}) {
   if (!statusBanner) {
     return;
   }
 
   if (!message) {
     statusBanner.hidden = true;
-    statusBanner.textContent = "";
+    statusBanner.replaceChildren();
     statusBanner.className = "status-banner";
     return;
   }
 
   statusBanner.hidden = false;
-  statusBanner.textContent = message;
-  statusBanner.className = `status-banner ${type}`;
+  statusBanner.className = `status-banner ${type}${options.loading ? " loading" : ""}`;
+  const messageNode = document.createElement("span");
+  messageNode.className = "status-banner-message";
+  messageNode.textContent = message;
+  statusBanner.replaceChildren(messageNode);
+  window.AppointmentReminderDebug?.appendStatusDetails?.(statusBanner, options);
 }
 
 function setButtonBusy(button, busy, busyText = "Working...") {
@@ -246,6 +250,22 @@ function setButtonBusy(button, busy, busyText = "Working...") {
 
   button.disabled = busy;
   button.textContent = busy ? busyText : button.dataset.defaultText;
+}
+
+function setDebugErrorStatus(error, operation, step, fallbackMessage) {
+  const debugError = error?.debugCode
+    ? {
+        code: error.debugCode,
+        detail: error.debugDetail || window.AppointmentReminderDebug?.describeError?.(error),
+        message: error.userMessage || `${fallbackMessage} Code: ${error.debugCode}`
+      }
+    : window.AppointmentReminderDebug?.formatError?.(operation, error, step, fallbackMessage);
+
+  setStatus(debugError?.message || error.message || fallbackMessage, "error", {
+    code: debugError?.code,
+    detail: debugError?.detail,
+    duration: 12000
+  });
 }
 
 function recordCalendarDebug(step, detail = "") {
@@ -1293,8 +1313,18 @@ async function importAppointmentRecords(rawRecords, user, options = {}) {
   const {
     source = "import",
     emptyMessage = "No valid appointments were found. Include at least a client name/email/phone and appointment date.",
-    successVerb = "Imported"
+    successVerb = "Imported",
+    operation = window.AppointmentReminderDebug?.createOperation?.({
+      scope: "CAL",
+      action: "IMPORT",
+      totalSteps: 4,
+      label: "Import appointments"
+    })
   } = options;
+  setStatus("Checking appointment records...", "info", {
+    loading: true,
+    progress: operation?.progress?.(2, "Normalize appointment fields")
+  });
   const normalizedRecords = rawRecords
     .map(record => normalizeImportedAppointmentRecord(record, user.id, source))
     .filter(Boolean);
@@ -1324,8 +1354,25 @@ async function importAppointmentRecords(rawRecords, user, options = {}) {
     return { saved: 0, skippedDuplicates };
   }
 
-  await persistImportedAppointments(pendingRows);
-  await loadAppointments(user);
+  try {
+    setStatus("Saving appointment records...", "info", {
+      loading: true,
+      progress: operation?.progress?.(3, "Write appointment rows")
+    });
+    await persistImportedAppointments(pendingRows);
+    setStatus("Refreshing calendar view...", "info", {
+      loading: true,
+      progress: operation?.progress?.(4, "Reload appointments")
+    });
+    await loadAppointments(user);
+  } catch (error) {
+    throw window.AppointmentReminderDebug?.attachError?.(
+      error,
+      operation,
+      "SAVE",
+      "Unable to save imported appointments."
+    ) || error;
+  }
 
   const summary = [`${successVerb} ${pendingRows.length} appointment${pendingRows.length === 1 ? "" : "s"}`];
 
@@ -1334,6 +1381,7 @@ async function importAppointmentRecords(rawRecords, user, options = {}) {
   }
 
   setStatus(`${summary.join("; ")}.`, "success");
+  operation?.success?.(`${successVerb} ${pendingRows.length} appointments`);
   return { saved: pendingRows.length, skippedDuplicates };
 }
 
@@ -1361,8 +1409,17 @@ async function handleImportAppointmentsFile(event) {
     return;
   }
 
+  const importOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "FILE",
+    totalSteps: 4,
+    label: "Import appointment file"
+  });
   setButtonBusy(importAppointmentsButton, true, "Importing...");
-  setStatus("Importing appointments...", "info");
+  setStatus("Reading appointment file...", "info", {
+    loading: true,
+    progress: importOperation?.progress?.(1, "Read CSV or JSON file")
+  });
 
   try {
     const text = await file.text();
@@ -1372,10 +1429,11 @@ async function handleImportAppointmentsFile(event) {
       : parseImportedAppointmentCsv(text);
     await importAppointmentRecords(rawRecords, user, {
       source: "import",
-      successVerb: "Imported"
+      successVerb: "Imported",
+      operation: importOperation
     });
   } catch (error) {
-    setStatus(error.message || "Unable to import appointments.", "error");
+    setDebugErrorStatus(error, importOperation, "FILE", "Unable to import appointments.");
   } finally {
     setButtonBusy(importAppointmentsButton, false);
   }
@@ -1405,18 +1463,28 @@ async function handleImportIcsFile(event) {
     return;
   }
 
+  const icsOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "ICS",
+    totalSteps: 4,
+    label: "Import ICS file"
+  });
   setButtonBusy(importIcsButton, true, "Importing...");
-  setStatus("Importing calendar events...", "info");
+  setStatus("Reading calendar events...", "info", {
+    loading: true,
+    progress: icsOperation?.progress?.(1, "Read ICS file")
+  });
 
   try {
     const rawRecords = parseIcsAppointments(await file.text());
     await importAppointmentRecords(rawRecords, user, {
       source: "ics_import",
       successVerb: "Imported",
-      emptyMessage: "No valid calendar events were found. Events need a date and at least a title, email, or phone number."
+      emptyMessage: "No valid calendar events were found. Events need a date and at least a title, email, or phone number.",
+      operation: icsOperation
     });
   } catch (error) {
-    setStatus(error.message || "Unable to import that calendar file.", "error");
+    setDebugErrorStatus(error, icsOperation, "ICS", "Unable to import that calendar file.");
   } finally {
     setButtonBusy(importIcsButton, false);
   }
@@ -1666,12 +1734,24 @@ async function handleSyncOutlookCalendar() {
     return;
   }
 
+  const outlookOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "OUTLOOK",
+    totalSteps: 4,
+    label: "Sync Outlook Calendar"
+  });
   setButtonBusy(syncOutlookCalendarButton, true, "Syncing...");
-  setStatus("Connecting to Outlook Calendar...", "info");
+  setStatus("Connecting to Outlook Calendar...", "info", {
+    loading: true,
+    progress: outlookOperation?.progress?.(1, "Connect to Outlook")
+  });
 
   try {
     const accessToken = await requestOutlookCalendarAccessToken();
-    setStatus("Reading Outlook Calendar events...", "info");
+    setStatus("Reading Outlook Calendar events...", "info", {
+      loading: true,
+      progress: outlookOperation?.progress?.(2, "Read calendar events")
+    });
     const rawRecords = await fetchOutlookCalendarEvents(accessToken);
 
     if (!rawRecords.length) {
@@ -1682,10 +1762,11 @@ async function handleSyncOutlookCalendar() {
     await importAppointmentRecords(rawRecords, user, {
       source: "outlook_calendar",
       successVerb: "Synced",
-      emptyMessage: "No usable Outlook Calendar events were found. Events need a date and at least a title, attendee email, or phone number."
+      emptyMessage: "No usable Outlook Calendar events were found. Events need a date and at least a title, attendee email, or phone number.",
+      operation: outlookOperation
     });
   } catch (error) {
-    setStatus(error.message || "Unable to sync Outlook Calendar.", "error");
+    setDebugErrorStatus(error, outlookOperation, "OUTLOOK", "Unable to sync Outlook Calendar.");
   } finally {
     setButtonBusy(syncOutlookCalendarButton, false);
     updateAppointmentSourceControls(user);
@@ -1709,12 +1790,24 @@ async function handleSyncGoogleCalendar() {
     return;
   }
 
+  const googleOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "GOOGLE",
+    totalSteps: 4,
+    label: "Sync Google Calendar"
+  });
   setButtonBusy(syncGoogleCalendarButton, true, "Syncing...");
-  setStatus("Connecting to Google Calendar...", "info");
+  setStatus("Connecting to Google Calendar...", "info", {
+    loading: true,
+    progress: googleOperation?.progress?.(1, "Connect to Google")
+  });
 
   try {
     const accessToken = await requestGoogleCalendarAccessToken();
-    setStatus("Reading Google Calendar events...", "info");
+    setStatus("Reading Google Calendar events...", "info", {
+      loading: true,
+      progress: googleOperation?.progress?.(2, "Read calendar events")
+    });
     const rawRecords = await fetchGoogleCalendarEvents(accessToken);
 
     if (!rawRecords.length) {
@@ -1725,10 +1818,11 @@ async function handleSyncGoogleCalendar() {
     await importAppointmentRecords(rawRecords, user, {
       source: "google_calendar",
       successVerb: "Synced",
-      emptyMessage: "No usable Google Calendar events were found. Events need a date and at least a title, attendee email, or phone number."
+      emptyMessage: "No usable Google Calendar events were found. Events need a date and at least a title, attendee email, or phone number.",
+      operation: googleOperation
     });
   } catch (error) {
-    setStatus(error.message || "Unable to sync Google Calendar.", "error");
+    setDebugErrorStatus(error, googleOperation, "GOOGLE", "Unable to sync Google Calendar.");
   } finally {
     setButtonBusy(syncGoogleCalendarButton, false);
     updateAppointmentSourceControls(user);
@@ -1784,8 +1878,17 @@ async function handleSyncCalendarLink() {
     return;
   }
 
+  const linkOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "LINK",
+    totalSteps: 4,
+    label: "Sync calendar link"
+  });
   setButtonBusy(syncCalendarLinkButton, true, "Syncing...");
-  setStatus("Reading calendar link...", "info");
+  setStatus("Reading calendar link...", "info", {
+    loading: true,
+    progress: linkOperation?.progress?.(1, "Fetch calendar link")
+  });
 
   try {
     const text = await fetchCalendarFeedText(feedUrl);
@@ -1793,10 +1896,11 @@ async function handleSyncCalendarLink() {
     await importAppointmentRecords(rawRecords, user, {
       source: "calendar_link",
       successVerb: "Synced",
-      emptyMessage: "No valid calendar events were found in that link."
+      emptyMessage: "No valid calendar events were found in that link.",
+      operation: linkOperation
     });
   } catch (error) {
-    setStatus(error.message || "Unable to sync that calendar link.", "error");
+    setDebugErrorStatus(error, linkOperation, "LINK", "Unable to sync that calendar link.");
   } finally {
     setButtonBusy(syncCalendarLinkButton, false);
     updateAppointmentSourceControls(user);

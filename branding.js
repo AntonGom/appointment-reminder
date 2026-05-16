@@ -62,9 +62,110 @@ const BRANDING_PREVIEW_MAX_HEIGHT_MOBILE = 340;
 const BRANDING_PREVIEW_MIN_HEIGHT_MOBILE = 220;
 const BRANDING_PREVIEW_MAX_SCALE_MOBILE = 0.54;
 const DEFAULT_INTRO_TEMPLATE = "This is a friendly reminder about your upcoming appointment.";
+const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const BRANDING_SAVE_TIMEOUT_MS = 16000;
+
+function createTimedSupabaseFetch() {
+  return async (input, init = {}) => {
+    if (typeof AbortController === "undefined") {
+      return fetch(input, init);
+    }
+
+    const controller = new AbortController();
+    const upstreamSignal = init?.signal;
+    let timeoutId = 0;
+
+    const abortFromUpstream = () => {
+      controller.abort(upstreamSignal?.reason);
+    };
+
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        abortFromUpstream();
+      } else {
+        upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+      }
+    }
+
+    timeoutId = window.setTimeout(() => {
+      controller.abort(new Error("Supabase request timed out."));
+    }, SUPABASE_QUERY_TIMEOUT_MS);
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error("Supabase request timed out.");
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (upstreamSignal) {
+        upstreamSignal.removeEventListener("abort", abortFromUpstream);
+      }
+    }
+  };
+}
+
+async function runWithTimeout(operation, timeoutMs, message = "Request timed out.") {
+  let timeoutId = 0;
+
+  try {
+    return await Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
+function isRetryableBrandingSaveError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("timed out")
+    || message.includes("timeout")
+    || message.includes("failed to fetch")
+    || message.includes("network")
+    || message.includes("load failed");
+}
+
+async function updateBrandingMetadataWithRetry(metadata) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await runWithTimeout(
+        () => supabase.auth.updateUser({ data: metadata }),
+        BRANDING_SAVE_TIMEOUT_MS + (attempt * 4000),
+        "Saving branding timed out. Check your connection and try again."
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (attempt > 0 || !isRetryableBrandingSaveError(error)) {
+        throw error;
+      }
+
+      await supabase.auth.getSession().catch(() => null);
+    }
+  }
+
+  throw lastError || new Error("Unable to save branding right now.");
+}
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
-  const clientKey = `${supabaseUrl}::${publicKey}`;
+  const clientKey = `${supabaseUrl}::${publicKey}::abortable-branding-v1`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
@@ -73,6 +174,9 @@ function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true
+      },
+      global: {
+        fetch: createTimedSupabaseFetch()
       }
     }));
   }
@@ -688,7 +792,7 @@ function setStatus(message, type = "info", options = {}) {
   }
 
   statusBanner.hidden = false;
-  statusBanner.className = `status-banner ${type}`;
+  statusBanner.className = `status-banner ${type}${options.loading ? " loading" : ""}`;
   statusBanner.setAttribute("role", type === "error" ? "alert" : "status");
   statusBanner.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
 
@@ -696,6 +800,7 @@ function setStatus(message, type = "info", options = {}) {
   messageNode.className = "status-banner-message";
   messageNode.textContent = message;
   statusBanner.replaceChildren(messageNode);
+  window.AppointmentReminderDebug?.appendStatusDetails?.(statusBanner, options);
 
   const dismissButton = document.createElement("button");
   dismissButton.className = "status-banner-dismiss";
@@ -2718,8 +2823,25 @@ function updateSignedInView(user) {
 }
 
 async function saveBranding() {
+  const saveOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "BR",
+    action: "SAVE",
+    totalSteps: 3,
+    label: "Save branding"
+  });
+
   if (!supabase || !currentUser) {
-    setStatus("Please sign in first.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      new Error("No signed-in Supabase user was available."),
+      "AUTH",
+      "Please sign in first."
+    );
+    setStatus(debugError?.message || "Please sign in first.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 9000
+    });
     return;
   }
 
@@ -2791,7 +2913,10 @@ async function saveBranding() {
   };
 
   setButtonBusy(saveBrandingButton, true, "Saving branding...");
-  setStatus("");
+  setStatus("Preparing branding save...", "info", {
+    loading: true,
+    progress: saveOperation?.progress?.(1, "Validate branding fields")
+  });
   let saved = false;
 
   try {
@@ -2800,18 +2925,27 @@ async function saveBranding() {
       branding_profile: normalizedForStorage
     };
 
-    const { data, error } = await supabase.auth.updateUser({
-      data: metadata
+    setStatus("Saving branding to Supabase...", "info", {
+      loading: true,
+      progress: saveOperation?.progress?.(2, "Update account metadata")
     });
+
+    const { data, error } = await updateBrandingMetadataWithRetry(metadata);
 
     if (error) {
       throw error;
     }
 
+    setStatus("Applying saved branding preview...", "info", {
+      loading: true,
+      progress: saveOperation?.progress?.(3, "Refresh local preview")
+    });
+
     currentUser = data.user || currentUser;
     currentSavedBranding = { ...normalizedForStorage };
     applyBrandingToForm(currentSavedBranding);
     saved = true;
+    saveOperation?.success?.("Branding saved");
     setStatus(
       normalizedForStorage.brandingEnabled === false
         ? "Branding saved. Outgoing emails will use the standard reminder layout until you turn branding back on."
@@ -2819,7 +2953,17 @@ async function saveBranding() {
       "success"
     );
   } catch (error) {
-    setStatus(error.message || "Unable to save branding right now.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      error,
+      "META",
+      "Unable to save branding right now."
+    );
+    setStatus(debugError?.message || error.message || "Unable to save branding right now.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 12000
+    });
   } finally {
     setButtonBusy(saveBrandingButton, false);
     if (saved) {
@@ -2896,6 +3040,12 @@ async function persistBrandingToggleState(enabled) {
     return;
   }
 
+  const toggleOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "BR",
+    action: "TOGGLE",
+    totalSteps: 2,
+    label: "Save branding toggle"
+  });
   const thisSaveToken = ++brandingToggleSaveToken;
   const baseBranding = getDraftBranding();
   const normalizedForStorage = {
@@ -2912,14 +3062,17 @@ async function persistBrandingToggleState(enabled) {
   };
 
   try {
+    setStatus("Saving branding toggle...", "info", {
+      loading: true,
+      progress: toggleOperation?.progress?.(1, "Update account metadata")
+    });
+
     const metadata = {
       ...(currentUser.user_metadata || {}),
       branding_profile: normalizedForStorage
     };
 
-    const { data, error } = await supabase.auth.updateUser({
-      data: metadata
-    });
+    const { data, error } = await updateBrandingMetadataWithRetry(metadata);
 
     if (error) {
       throw error;
@@ -2930,11 +3083,16 @@ async function persistBrandingToggleState(enabled) {
     }
 
     currentUser = data.user || currentUser;
+    setStatus("Applying branding toggle...", "info", {
+      loading: true,
+      progress: toggleOperation?.progress?.(2, "Refresh local preview")
+    });
     currentSavedBranding = {
       ...currentSavedBranding,
       ...normalizedForStorage,
       brandingEnabled: enabled
     };
+    toggleOperation?.success?.("Branding toggle saved");
 
     setStatus(
       enabled
@@ -2956,7 +3114,17 @@ async function persistBrandingToggleState(enabled) {
     updateBrandingEditorAvailability();
     updateHelperHints();
     queuePreviewRender();
-    setStatus(error.message || "Unable to save the branding toggle right now.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      toggleOperation,
+      error,
+      "META",
+      "Unable to save the branding toggle right now."
+    );
+    setStatus(debugError?.message || error.message || "Unable to save the branding toggle right now.", "error", {
+      code: debugError?.code,
+      detail: debugError?.detail,
+      duration: 12000
+    });
   }
 }
 

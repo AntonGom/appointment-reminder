@@ -1044,12 +1044,13 @@ function setStatus(message, type = "info", options = {}) {
   }
 
   statusBanner.hidden = false;
-  statusBanner.className = `status-banner ${type}`;
+  statusBanner.className = `status-banner ${type}${options.loading ? " loading" : ""}`;
 
   const messageNode = document.createElement("span");
   messageNode.className = "status-banner-message";
   messageNode.textContent = message;
   statusBanner.replaceChildren(messageNode);
+  window.AppointmentReminderDebug?.appendStatusDetails?.(statusBanner, options);
 
   if (options.actionLabel && typeof options.onAction === "function") {
     const actionButton = document.createElement("button");
@@ -5767,15 +5768,32 @@ async function updateUserMetadataWithRetry(metadata) {
 
 async function saveFormProfile(options = {}) {
   const { silent = false, skipBusy = false } = options;
+  const saveOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "FC",
+    action: "SAVE",
+    totalSteps: 3,
+    label: "Save Form Creator"
+  });
 
   if (pendingResetState) {
     clearPendingResetSave();
   }
 
   if (!supabase || !currentUser) {
-    lastFormSaveError = new Error("Please sign in first.");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      new Error("No signed-in Supabase user was available."),
+      "AUTH",
+      "Please sign in first."
+    );
+    lastFormSaveError = new Error(debugError?.message || "Please sign in first.");
+    lastFormSaveError.debugCode = debugError?.code;
     if (!silent) {
-      setStatus("Please sign in first.", "error");
+      setStatus(debugError?.message || "Please sign in first.", "error", {
+        code: debugError?.code,
+        detail: debugError?.detail,
+        duration: 9000
+      });
     }
     return false;
   }
@@ -5785,7 +5803,10 @@ async function saveFormProfile(options = {}) {
   }
 
   if (!silent) {
-    setStatus("");
+    setStatus("Preparing form save...", "info", {
+      loading: true,
+      progress: saveOperation?.progress?.(1, "Normalize form profile")
+    });
   }
   let saved = false;
   formProfileSaveInFlight = true;
@@ -5798,6 +5819,13 @@ async function saveFormProfile(options = {}) {
       custom_form_profile: normalized
     };
 
+    if (!silent) {
+      setStatus("Saving form to Supabase...", "info", {
+        loading: true,
+        progress: saveOperation?.progress?.(2, "Update account metadata")
+      });
+    }
+
     const { data, error } = await updateUserMetadataWithRetry(metadata);
 
     if (error) {
@@ -5805,6 +5833,12 @@ async function saveFormProfile(options = {}) {
     }
 
     try {
+      if (!silent) {
+        setStatus("Cleaning remembered client answers...", "info", {
+          loading: true,
+          progress: saveOperation?.progress?.(3, "Prune deleted saved fields")
+        });
+      }
       await runWithTimeout(
         () => pruneRememberedClientAnswersForProfile(normalized),
         FORM_CLEANUP_TIMEOUT_MS,
@@ -5825,14 +5859,29 @@ async function saveFormProfile(options = {}) {
     savedFormProfile = normalizeCustomFormProfile(normalized);
     renderBuilder();
     saved = true;
+    saveOperation?.success?.("Form saved");
     if (!silent) {
       setStatus("Form saved. Send Reminder will use this custom questionnaire when you are signed in.", "success");
     }
     lastFormSaveError = null;
     return true;
   } catch (error) {
-    lastFormSaveError = error;
-    setStatus(error.message || "Unable to save this form right now.", "error");
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      saveOperation,
+      error,
+      "META",
+      "Unable to save this form right now."
+    );
+    lastFormSaveError = new Error(debugError?.message || error.message || "Unable to save this form right now.");
+    lastFormSaveError.debugCode = debugError?.code;
+    lastFormSaveError.debugDetail = debugError?.detail;
+    if (!silent) {
+      setStatus(debugError?.message || error.message || "Unable to save this form right now.", "error", {
+        code: debugError?.code,
+        detail: debugError?.detail,
+        duration: 12000
+      });
+    }
     return false;
   } finally {
     if (!skipBusy) {
@@ -6056,6 +6105,12 @@ studioContextAction?.addEventListener("click", () => {
 formEnabledToggle?.addEventListener("change", async event => {
   const nextEnabled = Boolean(event.target.checked);
   const previousEnabled = currentFormProfile.isEnabled !== false;
+  const toggleOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "FC",
+    action: "TOGGLE",
+    totalSteps: 2,
+    label: "Save Use Custom Form toggle"
+  });
   currentFormProfile = {
     ...currentFormProfile,
     isEnabled: nextEnabled
@@ -6069,7 +6124,11 @@ formEnabledToggle?.addEventListener("change", async event => {
     nextEnabled
       ? "Turning custom Form Creator flow on..."
       : "Turning custom Form Creator flow off so Send Reminder uses the default form...",
-    "info"
+    "info",
+    {
+      loading: true,
+      progress: toggleOperation?.progress?.(1, "Save toggle preference")
+    }
   );
 
   const saved = await saveFormProfile({ silent: true, skipBusy: true });
@@ -6086,9 +6145,14 @@ formEnabledToggle?.addEventListener("change", async event => {
         ? `That change was not saved: ${errorMessage}`
         : "That change was not saved, so the form toggle was restored.",
       "error",
-      { duration: 5200 }
+      {
+        code: lastFormSaveError?.debugCode,
+        detail: lastFormSaveError?.debugDetail,
+        duration: 12000
+      }
     );
   } else {
+    toggleOperation?.success?.("Use Custom Form toggle saved");
     setStatus(
       nextEnabled
         ? "Custom form is on. Send Reminder will use your Form Creator flow."

@@ -5018,14 +5018,18 @@ function setSendStatus(message, type = "info", options = {}) {
 
   if (!message) {
     status.hidden = true;
-    status.textContent = "";
+    status.replaceChildren();
     status.className = "send-status";
     return;
   }
 
   status.hidden = false;
-  status.textContent = message;
-  status.className = `send-status ${type}`;
+  status.className = `send-status ${type}${options.loading ? " loading" : ""}`;
+  const messageNode = document.createElement("span");
+  messageNode.className = "status-banner-message";
+  messageNode.textContent = message;
+  status.replaceChildren(messageNode);
+  window.AppointmentReminderDebug?.appendStatusDetails?.(status, options);
 
   if (options.autoHide) {
     sendStatusResetTimer = window.setTimeout(() => {
@@ -5096,6 +5100,24 @@ function storeQaLastSentEmail(record) {
   }
 }
 
+function setSendDebugErrorStatus(error, operation, step, fallbackMessage) {
+  const debugError = error?.debugCode
+    ? {
+        code: error.debugCode,
+        detail: error.debugDetail || window.AppointmentReminderDebug?.describeError?.(error),
+        message: error.userMessage || `${fallbackMessage} Code: ${error.debugCode}`
+      }
+    : window.AppointmentReminderDebug?.formatError?.(operation, error, step, fallbackMessage);
+
+  setSendStatus(debugError?.message || error.message || fallbackMessage, "error", {
+    code: debugError?.code,
+    detail: debugError?.detail,
+    autoHide: 12000
+  });
+
+  return debugError?.message || error.message || fallbackMessage;
+}
+
 async function confirmSendBrevoEmail() {
   const payload = getBrevoPayloadOrAlert();
 
@@ -5105,12 +5127,25 @@ async function confirmSendBrevoEmail() {
 
   closeEmailModal();
   setSendEmailButtonState("loading");
-  setSendStatus("Sending email...", "info");
+  const sendOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "SR",
+    action: "SEND",
+    totalSteps: isBronzeUser() ? 5 : 2,
+    label: "Send reminder email"
+  });
+  setSendStatus("Preparing reminder email...", "info", {
+    loading: true,
+    progress: sendOperation?.progress?.(1, "Build email payload")
+  });
   try {
     let clientId = null;
 
     if (isBronzeUser()) {
       try {
+        setSendStatus("Saving client before email...", "info", {
+          loading: true,
+          progress: sendOperation?.progress?.(2, "Save client details")
+        });
         clientId = await runWithTimeout(
           () => autoSaveBronzeContact(),
           POST_SEND_SAVE_TIMEOUT_MS,
@@ -5118,10 +5153,29 @@ async function confirmSendBrevoEmail() {
         );
       } catch (saveError) {
         console.warn("Unable to save Bronze contact before sending email.", saveError);
-        setSendStatus("Sending email now. Client Details may update after the send.", "info");
+        const codedSaveError = window.AppointmentReminderDebug?.attachError?.(
+          saveError,
+          sendOperation,
+          "CLIENT",
+          "Client Details did not save before email send."
+        );
+        setSendStatus(
+          codedSaveError?.userMessage || "Sending email now. Client Details may update after the send.",
+          "info",
+          {
+            code: codedSaveError?.debugCode,
+            detail: codedSaveError?.debugDetail,
+            loading: true,
+            progress: sendOperation?.progress?.(3, "Continue email send")
+          }
+        );
       }
     }
 
+    setSendStatus("Sending email through Brevo...", "info", {
+      loading: true,
+      progress: sendOperation?.progress?.(isBronzeUser() ? 3 : 2, "Send email request")
+    });
     const { response: res, data } = await fetchJsonWithTimeout("/api/send-email", {
       method: "POST",
       headers: {
@@ -5142,9 +5196,13 @@ async function confirmSendBrevoEmail() {
 
       safeToLeaveAfterSend = true;
       setSendEmailButtonState("sent");
-      setSendStatus("Email sent. Saving the appointment record...", "success");
+      setSendStatus("Email sent. Saving the appointment record...", "success", {
+        loading: isBronzeUser(),
+        progress: isBronzeUser() ? sendOperation?.progress?.(4, "Save appointment record") : undefined
+      });
 
       let savedRecord = false;
+      let recordDebugError = null;
 
       if (isBronzeUser()) {
         try {
@@ -5165,31 +5223,64 @@ async function confirmSendBrevoEmail() {
           savedRecord = Boolean(appointmentId || clientId);
         } catch (recordError) {
           console.warn("Email sent, but saving the Bronze record failed.", recordError);
+          const codedRecordError = window.AppointmentReminderDebug?.attachError?.(
+            recordError,
+            sendOperation,
+            "RECORD",
+            "Email sent, but Client Details did not finish saving."
+          );
+          recordDebugError = codedRecordError;
+          setSendStatus(
+            codedRecordError?.userMessage || "Email sent, but Client Details did not finish saving.",
+            "info",
+            {
+              code: codedRecordError?.debugCode,
+              detail: codedRecordError?.debugDetail,
+              progress: sendOperation?.progress?.(5, "Record save failed")
+            }
+          );
         }
       }
 
+      sendOperation?.success?.(savedRecord ? "Email sent and saved" : "Email sent");
       setSendStatus(
         isBronzeUser()
           ? (savedRecord
               ? "Email sent and saved to Client Details."
-              : "Email sent. Client Details did not finish saving, so check that page before relying on the saved record.")
+              : (recordDebugError?.userMessage || "Email sent. Client Details did not finish saving, so check that page before relying on the saved record."))
           : "Email sent.",
-        savedRecord || !isBronzeUser() ? "success" : "info"
+        savedRecord || !isBronzeUser() ? "success" : "info",
+        recordDebugError
+          ? {
+              code: recordDebugError.debugCode,
+              detail: recordDebugError.debugDetail,
+              autoHide: 12000
+            }
+          : {}
       );
       showThankYouScreen();
     } else {
       setSendEmailButtonState("idle");
-      const message = data.error || "Email could not be sent. Review the details and try again.";
-      setSendStatus(message, "error");
+      const apiError = new Error(data.error || "Email could not be sent. Review the details and try again.");
+      const message = setSendDebugErrorStatus(
+        apiError,
+        sendOperation,
+        "EMAIL",
+        "Email could not be sent. Review the details and try again."
+      );
       alert(message);
     }
   } catch (error) {
     console.warn("Unable to send automated email.", error);
     setSendEmailButtonState("idle");
-    const message = /timed out/i.test(String(error?.message || ""))
-      ? error.message
-      : "Email could not be sent. Check your connection and try again.";
-    setSendStatus(message, "error");
+    const message = setSendDebugErrorStatus(
+      error,
+      sendOperation,
+      "EMAIL",
+      /timed out/i.test(String(error?.message || ""))
+        ? "Email request timed out."
+        : "Email could not be sent. Check your connection and try again."
+    );
     alert(message);
   }
 }
