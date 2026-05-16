@@ -3776,6 +3776,13 @@ function wireFormInputs() {
     saveBranding();
   });
 
+  if (saveBrandingButton) {
+    saveBrandingButton.addEventListener("click", event => {
+      event.preventDefault();
+      saveBranding();
+    });
+  }
+
   if (resetBrandingButton) {
     resetBrandingButton.addEventListener("click", resetBranding);
   }
