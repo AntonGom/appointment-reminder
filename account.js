@@ -522,6 +522,37 @@ async function fetchAccountDataResource(resource, ownerId = "") {
   return Array.isArray(payload?.data) ? payload.data : [];
 }
 
+async function saveAccountDataResource(resource, body = {}, ownerId = "") {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({ resource });
+
+  if (ownerId) {
+    params.set("ownerId", ownerId);
+  }
+
+  const response = await runWithTimeout(() => fetch(`/api/account-data?${params.toString()}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save account data.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 function setClientFormStatus(message, type = "info") {
   if (!clientFormStatus) {
     return;
@@ -2932,6 +2963,27 @@ function openBlankClientForm() {
   openClientModal();
 }
 
+function mergeSavedClientRow(row) {
+  if (!row?.id) {
+    return;
+  }
+
+  const normalizedRow = {
+    ...row,
+    profile_custom_answers: normalizeProfileCustomAnswers(row.profile_custom_answers)
+  };
+  const existingIndex = savedClients.findIndex(client => client.id === normalizedRow.id);
+
+  if (existingIndex >= 0) {
+    savedClients = savedClients.map((client, index) => index === existingIndex ? normalizedRow : client);
+  } else {
+    savedClients = [normalizedRow, ...savedClients];
+  }
+
+  clientsLoadError = "";
+  renderSavedClients();
+}
+
 function getClientFormValue(fieldId) {
   const field = document.getElementById(fieldId);
   return field && "value" in field ? String(field.value || "") : "";
@@ -3498,19 +3550,21 @@ async function handleSaveClient(event) {
       loading: true,
       progress: saveOperation?.progress?.(3, "Write client row")
     });
-    const { error } = await withSupabaseRetry(() => isEditing
-      ? supabase.from("clients").update(payload).eq("id", activeEditingId).eq("owner_id", user.id)
-      : supabase.from("clients").insert(payload));
+    const savedRows = await saveAccountDataResource("clients", {
+      id: isEditing ? activeEditingId : "",
+      row: payload
+    }, user.id);
+    const savedRow = savedRows[0] || null;
 
-    if (error) {
-      throw error;
-    }
-
-    setStatus("Refreshing saved contacts...", "info", {
+    setStatus("Updating contacts list...", "info", {
       loading: true,
-      progress: saveOperation?.progress?.(4, "Reload client list")
+      progress: saveOperation?.progress?.(4, "Refresh client list")
     });
-    await loadSavedClients();
+    if (savedRow) {
+      mergeSavedClientRow(savedRow);
+    } else {
+      await loadSavedClients();
+    }
     resetClientForm();
     saveOperation?.success?.(isEditing ? "Contact updated" : "Contact saved");
     setStatus(isEditing ? "Contact updated." : "Contact saved to your account.", "success");

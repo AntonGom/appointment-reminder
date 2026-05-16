@@ -365,8 +365,9 @@ async function stubModulePages(page, seedState) {
   await page.route("**/api/account-data?**", async route => {
     const request = route.request();
     const url = new URL(request.url());
+    const resource = url.searchParams.get("resource");
 
-    if (url.searchParams.get("resource") !== "profile") {
+    if (resource !== "profile" && resource !== "clients") {
       await route.fallback();
       return;
     }
@@ -374,6 +375,55 @@ async function stubModulePages(page, seedState) {
     const ownerId = url.searchParams.get("ownerId") || seedState.user?.id || "";
     const state = JSON.parse(await page.evaluate(key => window.localStorage.getItem(key) || "{}", SUPABASE_STATE_KEY));
     state.tables = state.tables || {};
+    state.tables.clients = Array.isArray(state.tables.clients) ? state.tables.clients : [];
+
+    if (resource === "clients") {
+      if (request.method() === "POST") {
+        const body = request.postDataJSON() || {};
+        const row = {
+          ...(body.row || body || {}),
+          owner_id: ownerId,
+          updated_at: (body.row || body || {}).updated_at || new Date().toISOString()
+        };
+        const clientId = body.id || body.clientId || "";
+
+        if (clientId) {
+          row.id = clientId;
+          const index = state.tables.clients.findIndex(client => client.id === clientId && client.owner_id === ownerId);
+          if (index >= 0) {
+            state.tables.clients[index] = {
+              ...state.tables.clients[index],
+              ...row
+            };
+          } else {
+            state.tables.clients.unshift(row);
+          }
+        } else {
+          row.id = `client_${Date.now()}`;
+          row.created_at = row.created_at || new Date().toISOString();
+          state.tables.clients.unshift(row);
+        }
+
+        await page.evaluate(({ key, state: nextState }) => {
+          window.localStorage.setItem(key, JSON.stringify(nextState));
+        }, { key: SUPABASE_STATE_KEY, state });
+
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: [row] })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: state.tables.clients.filter(client => !ownerId || client.owner_id === ownerId) })
+      });
+      return;
+    }
+
     state.tables.profiles = Array.isArray(state.tables.profiles) ? state.tables.profiles : [];
     let profile = state.tables.profiles.find(row => row.id === ownerId) || null;
 

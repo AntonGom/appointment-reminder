@@ -113,6 +113,45 @@ async function insertRestRows({ supabaseUrl, publicKey, token, table, rows }) {
   return Array.isArray(payload) ? payload : [];
 }
 
+async function updateRestRows({ supabaseUrl, publicKey, token, table, row, searchParams }) {
+  const url = new URL(`/rest/v1/${table}`, supabaseUrl);
+
+  Object.entries(searchParams || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  const response = await fetchWithTimeout(url, {
+    method: "PATCH",
+    headers: {
+      apikey: publicKey,
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(row)
+  });
+  const text = await response.text();
+  let payload = null;
+
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (_error) {
+    payload = text;
+  }
+
+  if (!response.ok) {
+    const error = new Error(typeof payload?.message === "string" ? payload.message : `Unable to update ${table}.`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return Array.isArray(payload) ? payload : [];
+}
+
 async function upsertRestRows({ supabaseUrl, publicKey, token, table, rows, onConflict = "id" }) {
   const url = new URL(`/rest/v1/${table}`, supabaseUrl);
   if (onConflict) {
@@ -251,6 +290,99 @@ async function loadClients(config) {
   }
 }
 
+function normalizeClientPayload(body, ownerId) {
+  const source = body && typeof body === "object" ? body : {};
+  const row = {
+    owner_id: ownerId,
+    updated_at: new Date().toISOString()
+  };
+
+  if (typeof source.client_name === "string") {
+    row.client_name = source.client_name.trim().slice(0, 30);
+  }
+
+  if (typeof source.client_email === "string") {
+    row.client_email = source.client_email.trim().slice(0, 320);
+  }
+
+  if (typeof source.client_phone === "string") {
+    row.client_phone = source.client_phone.trim().slice(0, 30);
+  }
+
+  if (typeof source.service_address === "string") {
+    row.service_address = source.service_address.trim().slice(0, 160);
+  }
+
+  if (typeof source.notes === "string") {
+    row.notes = source.notes.trim().slice(0, 1200);
+  }
+
+  if (source.profile_custom_answers && typeof source.profile_custom_answers === "object") {
+    row.profile_custom_answers = source.profile_custom_answers;
+  }
+
+  return row;
+}
+
+async function saveClient(config, ownerId, body) {
+  if (!ownerId) {
+    const error = new Error("Missing account owner.");
+    error.status = 400;
+    throw error;
+  }
+
+  const source = body && typeof body === "object" ? body : {};
+  const row = normalizeClientPayload(source.row || source, ownerId);
+  const clientId = String(source.id || source.clientId || "").trim();
+
+  if (!row.client_name && !row.client_email && !row.client_phone) {
+    const error = new Error("Add at least a client name, email, or phone number before saving.");
+    error.status = 400;
+    throw error;
+  }
+
+  const saveWithProfileAnswers = () => clientId
+    ? updateRestRows({
+        ...config,
+        table: "clients",
+        row,
+        searchParams: {
+          id: `eq.${clientId}`,
+          owner_id: `eq.${ownerId}`
+        }
+      })
+    : insertRestRows({
+        ...config,
+        table: "clients",
+        rows: row
+      });
+
+  try {
+    return await saveWithProfileAnswers();
+  } catch (error) {
+    if (!isMissingColumnError(error.payload, "profile_custom_answers")) {
+      throw error;
+    }
+
+    const { profile_custom_answers, ...fallbackRow } = row;
+    return clientId
+      ? updateRestRows({
+          ...config,
+          table: "clients",
+          row: fallbackRow,
+          searchParams: {
+            id: `eq.${clientId}`,
+            owner_id: `eq.${ownerId}`
+          }
+        })
+      : insertRestRows({
+          ...config,
+          table: "clients",
+          rows: fallbackRow
+        });
+  }
+}
+
 async function loadAppointments(config, ownerId) {
   const fallbackSelect = "id,client_id,client_name,client_email,client_phone,service_date,service_time,service_location,notes,last_channel,last_source,created_at,updated_at";
   const primarySelect = `${fallbackSelect},custom_answers`;
@@ -354,6 +486,12 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       if (resource === "profile") {
         const data = await saveProfile(config, ownerId, req.body || {});
+        sendJson(res, 200, { data });
+        return;
+      }
+
+      if (resource === "clients") {
+        const data = await saveClient(config, ownerId, req.body || {});
         sendJson(res, 200, { data });
         return;
       }
