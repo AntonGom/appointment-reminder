@@ -3427,8 +3427,7 @@ async function handleSaveClient(event) {
   });
 
   try {
-    const userResult = await withSupabaseRetry(() => supabase.auth.getUser());
-    user = userResult?.data?.user || null;
+    user = currentAuthUser?.id ? currentAuthUser : await getCurrentSupabaseUser();
   } catch (error) {
     const debugError = window.AppointmentReminderDebug?.formatError?.(
       saveOperation,

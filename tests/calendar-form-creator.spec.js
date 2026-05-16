@@ -348,7 +348,10 @@ async function stubModulePages(page, seedState) {
         id: ownerId,
         email: state.user?.email || "",
         custom_form_profile: state.user?.user_metadata?.custom_form_profile || {},
-        branding_profile: state.user?.user_metadata?.branding_profile || {}
+        branding_profile: state.user?.user_metadata?.branding_profile || {},
+        use_custom_form_enabled: typeof state.user?.user_metadata?.custom_form_profile?.isEnabled === "boolean"
+          ? state.user.user_metadata.custom_form_profile.isEnabled
+          : null
       };
       state.tables.profiles.push(profile);
     }
@@ -360,6 +363,12 @@ async function stubModulePages(page, seedState) {
       state.user.user_metadata = state.user.user_metadata || {};
       if (body.custom_form_profile) {
         state.user.user_metadata.custom_form_profile = body.custom_form_profile;
+      }
+      if (typeof body.use_custom_form_enabled === "boolean") {
+        state.user.user_metadata.custom_form_profile = {
+          ...(state.user.user_metadata.custom_form_profile || {}),
+          isEnabled: body.use_custom_form_enabled
+        };
       }
       if (body.branding_profile) {
         state.user.user_metadata.branding_profile = body.branding_profile;

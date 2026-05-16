@@ -210,6 +210,7 @@ let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
 const SUPABASE_QUERY_TIMEOUT_MS = 32000;
 const PROFILE_SETTINGS_SAVE_TIMEOUT_MS = 9000;
+const PROFILE_TOGGLE_SAVE_TIMEOUT_MS = 3500;
 const FORM_SAVE_TIMEOUT_MS = 22000;
 const FORM_SAVE_RETRY_TIMEOUT_MS = 32000;
 const FORM_CLEANUP_TIMEOUT_MS = 7000;
@@ -2698,6 +2699,17 @@ function mergeAccountProfileIntoUser(user, accountProfile = {}) {
   const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
     ? accountProfile.custom_form_profile
     : user.user_metadata?.custom_form_profile;
+  const customFormEnabled = typeof accountProfile?.use_custom_form_enabled === "boolean"
+    ? accountProfile.use_custom_form_enabled
+    : null;
+  const mergedCustomFormProfile = customFormProfile && typeof customFormProfile === "object"
+    ? {
+        ...customFormProfile,
+        ...(customFormEnabled !== null ? { isEnabled: customFormEnabled } : {})
+      }
+    : customFormEnabled !== null
+      ? { isEnabled: customFormEnabled }
+      : null;
   const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
     ? accountProfile.branding_profile
     : user.user_metadata?.branding_profile;
@@ -2706,7 +2718,7 @@ function mergeAccountProfileIntoUser(user, accountProfile = {}) {
     ...user,
     user_metadata: {
       ...(user.user_metadata || {}),
-      ...(customFormProfile ? { custom_form_profile: customFormProfile } : {}),
+      ...(mergedCustomFormProfile ? { custom_form_profile: mergedCustomFormProfile } : {}),
       ...(brandingProfile ? { branding_profile: brandingProfile } : {})
     }
   };
@@ -2775,6 +2787,43 @@ async function saveAccountProfilePatch(patch, user = currentUser) {
 
   if (!response.ok) {
     throw new Error(payload?.error || "Unable to save profile settings.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+}
+
+async function saveCustomFormEnabledPreference(enabled, user = currentUser) {
+  const token = await getCurrentAccountAccessToken();
+  const ownerId = String(user?.id || "").trim();
+
+  if (!token || !ownerId) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({
+    resource: "profile",
+    ownerId
+  });
+  const response = await runWithTimeout(
+    () => fetch(`/api/account-data?${params.toString()}`, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email: user?.email || "",
+        use_custom_form_enabled: Boolean(enabled)
+      })
+    }),
+    PROFILE_TOGGLE_SAVE_TIMEOUT_MS,
+    "Saving the custom form toggle timed out. Check your connection and try again."
+  );
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save the custom form toggle.");
   }
 
   return Array.isArray(payload?.data) ? payload.data[0] || null : null;
@@ -5934,7 +5983,8 @@ async function saveFormProfile(options = {}) {
     }
 
     const savedAccountProfile = await saveAccountProfilePatch({
-      custom_form_profile: normalized
+      custom_form_profile: normalized,
+      use_custom_form_enabled: normalized.isEnabled !== false
     });
 
     try {
@@ -6216,10 +6266,14 @@ formEnabledToggle?.addEventListener("change", async event => {
     ...currentFormProfile,
     isEnabled: nextEnabled
   };
+  currentUser = {
+    ...currentUser,
+    user_metadata: {
+      ...(currentUser?.user_metadata || {}),
+      custom_form_profile: normalizeCustomFormProfile(currentFormProfile)
+    }
+  };
   renderBuilder();
-  if (formEnabledToggle) {
-    formEnabledToggle.disabled = true;
-  }
 
   setStatus(
     nextEnabled
@@ -6227,43 +6281,56 @@ formEnabledToggle?.addEventListener("change", async event => {
       : "Turning custom Form Creator flow off so Send Reminder uses the default form...",
     "info",
     {
-      loading: true,
+      duration: 2200,
       progress: toggleOperation?.progress?.(1, "Save toggle preference")
     }
   );
 
-  const saved = await saveFormProfile({ silent: true, skipBusy: true });
-
-  if (!saved) {
-    const errorMessage = String(lastFormSaveError?.message || "").trim();
+  try {
+    const savedAccountProfile = await saveCustomFormEnabledPreference(nextEnabled);
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+      use_custom_form_enabled: nextEnabled
+    });
+    savedFormProfile = normalizeCustomFormProfile({
+      ...savedFormProfile,
+      isEnabled: nextEnabled
+    });
+    toggleOperation?.success?.("Use Custom Form toggle saved");
+    setStatus(
+      nextEnabled
+        ? "Custom form is on."
+        : "Custom form is off. Send Reminder will use the default appointment form.",
+      "success",
+      { duration: 2600 }
+    );
+  } catch (error) {
     currentFormProfile = {
       ...currentFormProfile,
       isEnabled: previousEnabled
     };
+    currentUser = {
+      ...currentUser,
+      user_metadata: {
+        ...(currentUser?.user_metadata || {}),
+        custom_form_profile: normalizeCustomFormProfile(currentFormProfile)
+      }
+    };
     renderBuilder();
+    const debugError = window.AppointmentReminderDebug?.formatError?.(
+      toggleOperation,
+      error,
+      "DB",
+      "Unable to save the custom form toggle right now."
+    );
     setStatus(
-      errorMessage
-        ? `That change was not saved: ${errorMessage}`
-        : "That change was not saved, so the form toggle was restored.",
+      debugError?.message || "That change was not saved, so the form toggle was restored.",
       "error",
       {
-        code: lastFormSaveError?.debugCode,
-        detail: lastFormSaveError?.debugDetail,
+        code: debugError?.code,
+        detail: debugError?.detail,
         duration: 12000
       }
     );
-  } else {
-    toggleOperation?.success?.("Use Custom Form toggle saved");
-    setStatus(
-      nextEnabled
-        ? "Custom form is on. Send Reminder will use your Form Creator flow."
-        : "Custom form is off. Send Reminder will use the default appointment form.",
-      "success"
-    );
-  }
-
-  if (formEnabledToggle) {
-    formEnabledToggle.disabled = false;
   }
 });
 studioTabButtons.forEach(button => {

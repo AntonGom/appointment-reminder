@@ -81,6 +81,7 @@ const BRONZE_REVIEW_MAX_SCALE_MOBILE = 0.62;
 const PREVIEW_SCROLL_HINT_TEXT = "Scroll to review the rest of the message.";
 const PREVIEW_FALLBACK_HINT_TEXT = "We couldn't load the branded preview, so review this plain message before sending.";
 const SUPABASE_QUERY_TIMEOUT_MS = 8500;
+const PROFILE_SETTINGS_READ_TIMEOUT_MS = 3500;
 const SEND_EMAIL_TIMEOUT_MS = 25000;
 const POST_SEND_SAVE_TIMEOUT_MS = 8500;
 
@@ -264,6 +265,17 @@ function mergeAccountProfileIntoSignedInUser(user, accountProfile = {}) {
   const customFormProfile = accountProfile?.custom_form_profile && typeof accountProfile.custom_form_profile === "object"
     ? accountProfile.custom_form_profile
     : user.user_metadata?.custom_form_profile;
+  const customFormEnabled = typeof accountProfile?.use_custom_form_enabled === "boolean"
+    ? accountProfile.use_custom_form_enabled
+    : null;
+  const mergedCustomFormProfile = customFormProfile && typeof customFormProfile === "object"
+    ? {
+        ...customFormProfile,
+        ...(customFormEnabled !== null ? { isEnabled: customFormEnabled } : {})
+      }
+    : customFormEnabled !== null
+      ? { isEnabled: customFormEnabled }
+      : null;
   const brandingProfile = accountProfile?.branding_profile && typeof accountProfile.branding_profile === "object"
     ? accountProfile.branding_profile
     : user.user_metadata?.branding_profile;
@@ -272,7 +284,7 @@ function mergeAccountProfileIntoSignedInUser(user, accountProfile = {}) {
     ...user,
     user_metadata: {
       ...(user.user_metadata || {}),
-      ...(customFormProfile ? { custom_form_profile: customFormProfile } : {}),
+      ...(mergedCustomFormProfile ? { custom_form_profile: mergedCustomFormProfile } : {}),
       ...(brandingProfile ? { branding_profile: brandingProfile } : {})
     }
   };
@@ -297,7 +309,7 @@ async function fetchAccountProfile(user = currentSignedInUser) {
         Authorization: `Bearer ${token}`
       }
     }),
-    SUPABASE_QUERY_TIMEOUT_MS,
+    PROFILE_SETTINGS_READ_TIMEOUT_MS,
     "Loading profile settings timed out."
   );
   const payload = await response.json().catch(() => ({}));
@@ -590,18 +602,17 @@ async function initAccountTierState() {
     }
     renderBronzeFeatures();
     updateDraftPreviewChrome();
-    if (session?.user) {
-      const refreshed = await syncLatestSignedInUser({ silent: true });
-
-      if (!refreshed) {
-        await syncCustomFormFromUser(currentSignedInUser);
-        await hydrateReminderPrefillFromSelectedClient();
-      }
-    } else {
-      await syncCustomFormFromUser(null);
-      await hydrateReminderPrefillFromSelectedClient();
-    }
+    await syncCustomFormFromUser(currentSignedInUser);
+    await hydrateReminderPrefillFromSelectedClient();
     setCustomFormLoading(false);
+
+    if (session?.user) {
+      window.setTimeout(() => {
+        syncLatestSignedInUser({ silent: true }).catch(error => {
+          console.warn("Background account refresh failed.", error);
+        });
+      }, 120);
+    }
 
     appSupabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (event === "TOKEN_REFRESHED") {

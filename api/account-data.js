@@ -157,13 +157,16 @@ async function loadProfile(config, ownerId) {
   return fetchRestRows({
     ...config,
     table: "profiles",
-    select: "id,email,tier,custom_form_profile,branding_profile,updated_at",
+    select: "id,email,tier,custom_form_profile,branding_profile,use_custom_form_enabled,updated_at",
     searchParams: {
       id: `eq.${ownerId}`,
       limit: "1"
     }
   }).catch(error => {
-    if (error.payload?.code === "42P01" || isMissingColumnError(error.payload, "custom_form_profile") || isMissingColumnError(error.payload, "branding_profile")) {
+    if (error.payload?.code === "42P01"
+      || isMissingColumnError(error.payload, "custom_form_profile")
+      || isMissingColumnError(error.payload, "branding_profile")
+      || isMissingColumnError(error.payload, "use_custom_form_enabled")) {
       return [];
     }
 
@@ -190,6 +193,10 @@ function normalizeProfilePayload(body, ownerId) {
     row.branding_profile = source.branding_profile;
   }
 
+  if (typeof source.use_custom_form_enabled === "boolean") {
+    row.use_custom_form_enabled = source.use_custom_form_enabled;
+  }
+
   return row;
 }
 
@@ -202,7 +209,7 @@ async function saveProfile(config, ownerId, body) {
 
   const row = normalizeProfilePayload(body, ownerId);
 
-  if (!row.custom_form_profile && !row.branding_profile && !row.email) {
+  if (!row.custom_form_profile && !row.branding_profile && typeof row.use_custom_form_enabled !== "boolean" && !row.email) {
     const error = new Error("No profile settings were provided.");
     error.status = 400;
     throw error;
