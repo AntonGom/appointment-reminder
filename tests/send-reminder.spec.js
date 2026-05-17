@@ -231,6 +231,7 @@ test.describe("Send Reminder", () => {
       document.getElementById("address").value = "";
       refreshFormState();
     });
+    await expect.poll(async () => page.evaluate(() => getFieldValue("address"))).toBe("");
     await goToReviewStep(page);
 
     const previewBody = page.frameLocator("#bronze-preview-frame").locator("body");
@@ -240,6 +241,9 @@ test.describe("Send Reminder", () => {
       buildManualReviewMessageFromFrame(frame.contentDocument)
     ));
     expect(manualMessage).toContain("Hello Antonio,");
+    expect(manualMessage).not.toContain("Location:");
+    expect(manualMessage).not.toContain("Date:");
+    expect(manualMessage).not.toContain("Time:");
     expect(manualMessage).not.toContain("Location: Antonio");
     expect(manualMessage).not.toContain("Date: Antonio");
     expect(manualMessage).not.toContain("Time: Antonio");

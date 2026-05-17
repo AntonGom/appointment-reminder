@@ -211,7 +211,7 @@ let studioViewAnimationTimer = null;
 let editorTransitionTimer = null;
 const SUPABASE_QUERY_TIMEOUT_MS = 32000;
 const PROFILE_SETTINGS_SAVE_TIMEOUT_MS = 9000;
-const PROFILE_TOGGLE_SAVE_TIMEOUT_MS = 3500;
+const PROFILE_TOGGLE_SAVE_TIMEOUT_MS = 2500;
 const FORM_SAVE_TIMEOUT_MS = 22000;
 const FORM_SAVE_RETRY_TIMEOUT_MS = 32000;
 const FORM_CLEANUP_TIMEOUT_MS = 7000;
@@ -6343,15 +6343,25 @@ formEnabledToggle?.addEventListener("change", async event => {
       custom_form_profile: normalizeCustomFormProfile(currentFormProfile)
     }
   };
+  const optimisticTogglePatch = {
+    custom_form_profile: normalizeCustomFormProfile(currentFormProfile),
+    use_custom_form_enabled: nextEnabled
+  };
+  writeCachedAccountProfile(currentUser, optimisticTogglePatch);
+  currentUser = mergeAccountProfileIntoUser(currentUser, optimisticTogglePatch);
+  savedFormProfile = normalizeCustomFormProfile({
+    ...savedFormProfile,
+    isEnabled: nextEnabled
+  });
   renderBuilder();
 
   setStatus(
     nextEnabled
-      ? "Turning custom Form Creator flow on..."
-      : "Turning custom Form Creator flow off so Send Reminder uses the default form...",
-    "info",
+      ? "Custom form is on."
+      : "Custom form is off. Send Reminder will use the default appointment form.",
+    "success",
     {
-      duration: 2200,
+      duration: 1800,
       progress: toggleOperation?.progress?.(1, "Save toggle preference")
     }
   );
@@ -6359,24 +6369,31 @@ formEnabledToggle?.addEventListener("change", async event => {
   try {
     const savedAccountProfile = await saveCustomFormEnabledPreference(nextEnabled);
     const savedTogglePatch = savedAccountProfile || {
-      custom_form_profile: normalizeCustomFormProfile(currentFormProfile),
       use_custom_form_enabled: nextEnabled
     };
     writeCachedAccountProfile(currentUser, savedTogglePatch);
     currentUser = mergeAccountProfileIntoUser(currentUser, savedTogglePatch);
-    savedFormProfile = normalizeCustomFormProfile({
-      ...savedFormProfile,
-      isEnabled: nextEnabled
-    });
     toggleOperation?.success?.("Use Custom Form toggle saved");
-    setStatus(
-      nextEnabled
-        ? "Custom form is on."
-        : "Custom form is off. Send Reminder will use the default appointment form.",
-      "success",
-      { duration: 2600 }
-    );
   } catch (error) {
+    if (/timed out/i.test(String(error?.message || ""))) {
+      const debugError = window.AppointmentReminderDebug?.formatError?.(
+        toggleOperation,
+        error,
+        "DB",
+        "The custom form toggle changed here, but the database is still catching up."
+      );
+      setStatus(
+        debugError?.message || "The custom form toggle changed here, but the database is still catching up.",
+        "info",
+        {
+          code: debugError?.code,
+          detail: debugError?.detail,
+          duration: 5000
+        }
+      );
+      return;
+    }
+
     currentFormProfile = {
       ...currentFormProfile,
       isEnabled: previousEnabled

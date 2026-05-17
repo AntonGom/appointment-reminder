@@ -25,6 +25,7 @@ const FIELD_LIMITS = {
   address: { label: "Service Location", maxLength: 160 },
   businessContact: { label: "Business Contact Information", maxLength: 60 }
 };
+const SEMANTIC_FIELD_FALLBACK_MIN_SCORE = 48;
 
 const PHONE_DIGIT_LIMIT = 10;
 const BASE_FORM_FIELD_IDS = ["phone", "email", "name", "address", "businessContact", "date", "time", "notes"];
@@ -940,7 +941,7 @@ function getRenderedFieldValueFallback(fieldId) {
     }
   });
 
-  return bestValue;
+  return bestScore >= SEMANTIC_FIELD_FALLBACK_MIN_SCORE ? bestValue : "";
 }
 
 function getRenderedPrefillTargets() {
@@ -1125,7 +1126,7 @@ function getSemanticFieldFallbackValue(fieldId) {
     }
   });
 
-  return bestMatch;
+  return bestScore >= SEMANTIC_FIELD_FALLBACK_MIN_SCORE ? bestMatch : "";
 }
 
 function isPhoneLikeField(fieldId) {
