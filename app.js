@@ -84,6 +84,7 @@ const SUPABASE_QUERY_TIMEOUT_MS = 8500;
 const PROFILE_SETTINGS_READ_TIMEOUT_MS = 3500;
 const SEND_EMAIL_TIMEOUT_MS = 25000;
 const POST_SEND_SAVE_TIMEOUT_MS = 8500;
+const ACCOUNT_PROFILE_CACHE_KEY = "appointment-reminder:account-profile-cache";
 
 let currentStepIndex = 0;
 let wizardSteps = [];
@@ -293,6 +294,44 @@ function mergeAccountProfileIntoSignedInUser(user, accountProfile = {}) {
   };
 }
 
+function readCachedAccountProfile(user = currentSignedInUser) {
+  const ownerId = String(user?.id || "").trim();
+
+  if (!ownerId) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    const profile = parsed?.[ownerId];
+    return profile && typeof profile === "object" ? profile : null;
+  } catch (error) {
+    console.warn("Unable to read cached profile settings.", error);
+    return null;
+  }
+}
+
+function writeCachedAccountProfile(user = currentSignedInUser, profile = {}) {
+  const ownerId = String(user?.id || profile?.id || "").trim();
+
+  if (!ownerId || !profile || typeof profile !== "object") {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    parsed[ownerId] = {
+      ...(parsed[ownerId] || {}),
+      ...profile,
+      id: ownerId,
+      cached_at: new Date().toISOString()
+    };
+    window.localStorage.setItem(ACCOUNT_PROFILE_CACHE_KEY, JSON.stringify(parsed));
+  } catch (error) {
+    console.warn("Unable to cache profile settings.", error);
+  }
+}
+
 async function fetchAccountProfile(user = currentSignedInUser) {
   const token = await getCurrentAccountAccessToken();
   const ownerId = String(user?.id || "").trim();
@@ -321,7 +360,11 @@ async function fetchAccountProfile(user = currentSignedInUser) {
     throw new Error(payload?.error || "Unable to load profile settings.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 async function syncAccountProfileIntoCurrentUser(user = currentSignedInUser) {
@@ -330,11 +373,13 @@ async function syncAccountProfileIntoCurrentUser(user = currentSignedInUser) {
     return null;
   }
 
+  const cachedProfile = readCachedAccountProfile(user);
+  currentSignedInUser = mergeAccountProfileIntoSignedInUser(user, cachedProfile);
   const accountProfile = await fetchAccountProfile(user).catch(error => {
     console.warn("Unable to load profile settings.", error);
-    return null;
+    return cachedProfile;
   });
-  currentSignedInUser = mergeAccountProfileIntoSignedInUser(user, accountProfile);
+  currentSignedInUser = mergeAccountProfileIntoSignedInUser(currentSignedInUser, accountProfile);
   return currentSignedInUser;
 }
 

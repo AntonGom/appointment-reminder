@@ -193,24 +193,47 @@ async function loadProfile(config, ownerId) {
     return [];
   }
 
-  return fetchRestRows({
-    ...config,
-    table: "profiles",
-    select: "id,email,tier,custom_form_profile,branding_profile,use_custom_form_enabled,updated_at",
-    searchParams: {
-      id: `eq.${ownerId}`,
-      limit: "1"
+  const searchParams = {
+    id: `eq.${ownerId}`,
+    limit: "1"
+  };
+
+  try {
+    return await fetchRestRows({
+      ...config,
+      table: "profiles",
+      select: "id,email,tier,custom_form_profile,branding_profile,use_custom_form_enabled,updated_at",
+      searchParams
+    });
+  } catch (error) {
+    if (error.payload?.code === "42P01") {
+      return [];
     }
-  }).catch(error => {
-    if (error.payload?.code === "42P01"
-      || isMissingColumnError(error.payload, "custom_form_profile")
-      || isMissingColumnError(error.payload, "branding_profile")
-      || isMissingColumnError(error.payload, "use_custom_form_enabled")) {
+
+    if (isMissingColumnError(error.payload, "use_custom_form_enabled")) {
+      return fetchRestRows({
+        ...config,
+        table: "profiles",
+        select: "id,email,tier,custom_form_profile,branding_profile,updated_at",
+        searchParams
+      }).catch(fallbackError => {
+        if (fallbackError.payload?.code === "42P01"
+          || isMissingColumnError(fallbackError.payload, "custom_form_profile")
+          || isMissingColumnError(fallbackError.payload, "branding_profile")) {
+          return [];
+        }
+
+        throw fallbackError;
+      });
+    }
+
+    if (isMissingColumnError(error.payload, "custom_form_profile")
+      || isMissingColumnError(error.payload, "branding_profile")) {
       return [];
     }
 
     throw error;
-  });
+  }
 }
 
 function normalizeProfilePayload(body, ownerId) {

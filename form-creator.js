@@ -194,6 +194,7 @@ let latestUserSyncInterval = null;
 let formProfileSaveInFlight = false;
 let lastFormProfileSaveEndedAt = 0;
 let lastFormSaveError = null;
+let currentAuthUserId = "";
 let pendingResetSaveTimer = null;
 let pendingResetCountdownTimer = null;
 let pendingResetState = null;
@@ -214,6 +215,7 @@ const PROFILE_TOGGLE_SAVE_TIMEOUT_MS = 3500;
 const FORM_SAVE_TIMEOUT_MS = 22000;
 const FORM_SAVE_RETRY_TIMEOUT_MS = 32000;
 const FORM_CLEANUP_TIMEOUT_MS = 7000;
+const ACCOUNT_PROFILE_CACHE_KEY = "appointment-reminder:account-profile-cache";
 
 function createTimedSupabaseFetch() {
   return async (input, init = {}) => {
@@ -2691,6 +2693,44 @@ async function getCurrentAccountAccessToken() {
   return String(session?.access_token || "").trim();
 }
 
+function readCachedAccountProfile(user = currentUser) {
+  const ownerId = String(user?.id || "").trim();
+
+  if (!ownerId) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    const profile = parsed?.[ownerId];
+    return profile && typeof profile === "object" ? profile : null;
+  } catch (error) {
+    console.warn("Unable to read cached account profile.", error);
+    return null;
+  }
+}
+
+function writeCachedAccountProfile(user = currentUser, profile = {}) {
+  const ownerId = String(user?.id || profile?.id || "").trim();
+
+  if (!ownerId || !profile || typeof profile !== "object") {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    parsed[ownerId] = {
+      ...(parsed[ownerId] || {}),
+      ...profile,
+      id: ownerId,
+      cached_at: new Date().toISOString()
+    };
+    window.localStorage.setItem(ACCOUNT_PROFILE_CACHE_KEY, JSON.stringify(parsed));
+  } catch (error) {
+    console.warn("Unable to cache account profile.", error);
+  }
+}
+
 function mergeAccountProfileIntoUser(user, accountProfile = {}) {
   if (!user) {
     return null;
@@ -2755,7 +2795,11 @@ async function fetchAccountProfile(user = currentUser) {
     throw new Error(payload?.error || "Unable to load profile settings.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 async function saveAccountProfilePatch(patch, user = currentUser) {
@@ -2792,7 +2836,11 @@ async function saveAccountProfilePatch(patch, user = currentUser) {
     throw new Error(payload?.error || "Unable to save profile settings.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 async function saveCustomFormEnabledPreference(enabled, user = currentUser) {
@@ -2829,7 +2877,11 @@ async function saveCustomFormEnabledPreference(enabled, user = currentUser) {
     throw new Error(payload?.error || "Unable to save the custom form toggle.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 async function syncLatestUserProfile(options = {}) {
@@ -2853,11 +2905,12 @@ async function syncLatestUserProfile(options = {}) {
       return;
     }
 
+    const cachedProfile = readCachedAccountProfile(latestUser);
     const accountProfile = await fetchAccountProfile(latestUser).catch(error => {
       console.warn("Unable to load latest profile settings.", error);
-      return null;
+      return cachedProfile;
     });
-    const mergedUser = mergeAccountProfileIntoUser(latestUser, accountProfile);
+    const mergedUser = mergeAccountProfileIntoUser(mergeAccountProfileIntoUser(latestUser, cachedProfile), accountProfile);
     const latestProfile = normalizeCustomFormProfile(mergedUser.user_metadata?.custom_form_profile || {});
     const savedProfileChanged = !areProfilesEquivalent(latestProfile, savedFormProfile);
     const localProfileDirty = !areProfilesEquivalent(currentFormProfile, savedFormProfile);
@@ -6006,9 +6059,12 @@ async function saveFormProfile(options = {}) {
       console.warn("Unable to clean up deleted remembered client answers.", cleanupError);
     }
 
-    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
-      custom_form_profile: normalized
-    });
+    const savedProfilePatch = savedAccountProfile || {
+      custom_form_profile: normalized,
+      use_custom_form_enabled: normalized.isEnabled !== false
+    };
+    writeCachedAccountProfile(currentUser, savedProfilePatch);
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedProfilePatch);
     currentFormProfile = normalizeCustomFormProfile(normalized);
     savedFormProfile = normalizeCustomFormProfile(normalized);
     renderBuilder();
@@ -6173,13 +6229,15 @@ async function loadPublicConfig() {
 }
 
 function hydrateBuilderFromUser(user) {
-  currentUser = user || null;
+  currentUser = user ? mergeAccountProfileIntoUser(user, readCachedAccountProfile(user)) : null;
   setSignedInView(currentUser);
 
   if (!currentUser) {
+    currentAuthUserId = "";
     return;
   }
 
+  currentAuthUserId = currentUser.id || "";
   const storedProfile = normalizeCustomFormProfile(currentUser.user_metadata?.custom_form_profile || {});
   currentFormProfile = storedProfile;
   savedFormProfile = normalizeCustomFormProfile(storedProfile);
@@ -6217,12 +6275,21 @@ async function init() {
   }
   startLatestUserSyncLoop();
 
-  supabase.auth.onAuthStateChange((event, nextSession) => {
+  supabase.auth.onAuthStateChange(async (event, nextSession) => {
     if (event === "TOKEN_REFRESHED") {
       return;
     }
 
+    const nextUserId = nextSession?.user?.id || "";
+
+    if (nextUserId === currentAuthUserId && event !== "USER_UPDATED") {
+      return;
+    }
+
     hydrateBuilderFromUser(nextSession?.user || null);
+    if (nextSession?.user) {
+      await syncLatestUserProfile({ silent: true, preserveDirty: false });
+    }
   });
 }
 
@@ -6291,9 +6358,12 @@ formEnabledToggle?.addEventListener("change", async event => {
 
   try {
     const savedAccountProfile = await saveCustomFormEnabledPreference(nextEnabled);
-    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+    const savedTogglePatch = savedAccountProfile || {
+      custom_form_profile: normalizeCustomFormProfile(currentFormProfile),
       use_custom_form_enabled: nextEnabled
-    });
+    };
+    writeCachedAccountProfile(currentUser, savedTogglePatch);
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedTogglePatch);
     savedFormProfile = normalizeCustomFormProfile({
       ...savedFormProfile,
       isEnabled: nextEnabled

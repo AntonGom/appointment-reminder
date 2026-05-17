@@ -66,6 +66,7 @@ const SUPABASE_QUERY_TIMEOUT_MS = 32000;
 const PROFILE_SETTINGS_SAVE_TIMEOUT_MS = 9000;
 const BRANDING_SAVE_TIMEOUT_MS = 22000;
 const BRANDING_SAVE_RETRY_TIMEOUT_MS = 32000;
+const ACCOUNT_PROFILE_CACHE_KEY = "appointment-reminder:account-profile-cache";
 
 function createTimedSupabaseFetch() {
   return async (input, init = {}) => {
@@ -206,6 +207,44 @@ function mergeAccountProfileIntoUser(user, accountProfile = {}) {
   };
 }
 
+function readCachedAccountProfile(user = currentUser) {
+  const ownerId = String(user?.id || "").trim();
+
+  if (!ownerId) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    const profile = parsed?.[ownerId];
+    return profile && typeof profile === "object" ? profile : null;
+  } catch (error) {
+    console.warn("Unable to read cached profile settings.", error);
+    return null;
+  }
+}
+
+function writeCachedAccountProfile(user = currentUser, profile = {}) {
+  const ownerId = String(user?.id || profile?.id || "").trim();
+
+  if (!ownerId || !profile || typeof profile !== "object") {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_CACHE_KEY) || "{}");
+    parsed[ownerId] = {
+      ...(parsed[ownerId] || {}),
+      ...profile,
+      id: ownerId,
+      cached_at: new Date().toISOString()
+    };
+    window.localStorage.setItem(ACCOUNT_PROFILE_CACHE_KEY, JSON.stringify(parsed));
+  } catch (error) {
+    console.warn("Unable to cache profile settings.", error);
+  }
+}
+
 async function fetchAccountProfile(user = currentUser) {
   const token = await getCurrentAccountAccessToken();
   const ownerId = String(user?.id || "").trim();
@@ -234,7 +273,11 @@ async function fetchAccountProfile(user = currentUser) {
     throw new Error(payload?.error || "Unable to load profile settings.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 async function saveAccountProfilePatch(patch, user = currentUser) {
@@ -271,7 +314,11 @@ async function saveAccountProfilePatch(patch, user = currentUser) {
     throw new Error(payload?.error || "Unable to save profile settings.");
   }
 
-  return Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  const profile = Array.isArray(payload?.data) ? payload.data[0] || null : null;
+  if (profile) {
+    writeCachedAccountProfile(user, profile);
+  }
+  return profile;
 }
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
@@ -3044,9 +3091,11 @@ async function saveBranding() {
       progress: saveOperation?.progress?.(3, "Refresh local preview")
     });
 
-    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+    const savedProfilePatch = savedAccountProfile || {
       branding_profile: normalizedForStorage
-    });
+    };
+    writeCachedAccountProfile(currentUser, savedProfilePatch);
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedProfilePatch);
     currentSavedBranding = { ...normalizedForStorage };
     applyBrandingToForm(currentSavedBranding);
     saved = true;
@@ -3180,9 +3229,11 @@ async function persistBrandingToggleState(enabled) {
       return;
     }
 
-    currentUser = mergeAccountProfileIntoUser(currentUser, savedAccountProfile || {
+    const savedTogglePatch = savedAccountProfile || {
       branding_profile: normalizedForStorage
-    });
+    };
+    writeCachedAccountProfile(currentUser, savedTogglePatch);
+    currentUser = mergeAccountProfileIntoUser(currentUser, savedTogglePatch);
     setStatus("Applying branding toggle...", "info", {
       loading: true,
       progress: toggleOperation?.progress?.(2, "Refresh local preview")
@@ -3885,9 +3936,10 @@ async function initBrandingPage() {
   currentUser = session?.user || null;
   currentAuthUserId = session?.user?.id || "";
   if (currentUser) {
+    currentUser = mergeAccountProfileIntoUser(currentUser, readCachedAccountProfile(currentUser));
     const accountProfile = await fetchAccountProfile(currentUser).catch(error => {
       console.warn("Unable to load saved profile settings.", error);
-      return null;
+      return readCachedAccountProfile(currentUser);
     });
     currentUser = mergeAccountProfileIntoUser(currentUser, accountProfile);
   }
@@ -3913,9 +3965,10 @@ async function initBrandingPage() {
     currentAuthUserId = nextUserId;
     currentUser = nextSession?.user || null;
     if (currentUser) {
+      currentUser = mergeAccountProfileIntoUser(currentUser, readCachedAccountProfile(currentUser));
       const accountProfile = await fetchAccountProfile(currentUser).catch(error => {
         console.warn("Unable to load saved profile settings.", error);
-        return null;
+        return readCachedAccountProfile(currentUser);
       });
       currentUser = mergeAccountProfileIntoUser(currentUser, accountProfile);
     }
