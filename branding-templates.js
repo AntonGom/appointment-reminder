@@ -507,9 +507,9 @@ function buildEmailContent({ message, branding, calendarLinks }) {
   const summaryHtml = parsed.summary.length
     ? `<div data-preview-area="summary" style="display:grid;grid-template-columns:repeat(${summaryCount}, minmax(0, 1fr));gap:10px;margin:0 0 18px;">
         ${parsed.summary.map(item => `
-          <div style="${surfaceStyle}min-height:104px;padding:14px 16px;background:${buildSectionBackground(branding.panelColor, branding.summaryGradientStyle, 0.48)};border:1px solid ${hexToRgba(branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${summaryTextColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:15px;font-weight:700;color:${summaryTextColor};line-height:1.45;">${escapeHtml(item.value)}</div>
+          <div data-summary-item style="${surfaceStyle}min-height:104px;padding:14px 16px;background:${buildSectionBackground(branding.panelColor, branding.summaryGradientStyle, 0.48)};border:1px solid ${hexToRgba(branding.panelColor || DEFAULT_PANEL, 0.24)};box-shadow:0 10px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column;justify-content:flex-start;">
+            <div data-summary-label style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${summaryTextColor};margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div data-summary-value style="font-size:15px;font-weight:700;color:${summaryTextColor};line-height:1.45;">${escapeHtml(item.value)}</div>
           </div>`).join("")}
       </div>`
     : "";
@@ -1478,12 +1478,12 @@ function buildProductionSummary(summaryItems, branding) {
   const visibleItems = summaryItems.slice(0, 3);
   const columnWidth = `${(100 / visibleItems.length).toFixed(2)}%`;
   const cells = visibleItems.map((item, index) => `
-    <td valign="top" width="${columnWidth}" style="width:${columnWidth};padding:0 ${index === visibleItems.length - 1 ? 0 : 8}px 0 0;">
+    <td data-summary-item valign="top" width="${columnWidth}" style="width:${columnWidth};padding:0 ${index === visibleItems.length - 1 ? 0 : 8}px 0 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="${panelColor}" style="border:1px solid ${hexToRgba(panelColor, 0.42)};${radius}background-color:${panelColor};table-layout:fixed;">
         <tr>
           <td height="106" valign="top" bgcolor="${panelColor}" style="height:106px;padding:14px 14px 12px;background-color:${panelColor};">
-            <div style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(summaryTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
-            <div style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(summaryTextColor)}">${escapeHtml(item.value)}</div>
+            <div data-summary-label style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${paintTextColor(summaryTextColor)}margin:0 0 6px;">${escapeHtml(item.label)}</div>
+            <div data-summary-value style="font-size:16px;font-weight:700;line-height:1.45;${paintTextColor(summaryTextColor)}">${escapeHtml(item.value)}</div>
           </td>
         </tr>
       </table>

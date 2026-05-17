@@ -199,7 +199,50 @@ test.describe("Send Reminder", () => {
     await expect(previewBody).toContainText("245 Rosebud Lane, Miami, FL 33131");
     await expect(previewBody).toContainText("Appointment Notes");
     await expect(previewBody).toContainText("Please bring Bella's vaccination records.");
+
+    const manualMessage = await page.locator("#bronze-preview-frame").evaluate(frame => (
+      buildManualReviewMessageFromFrame(frame.contentDocument)
+    ));
+    expect(manualMessage).toContain("Date: 05/08/2026");
+    expect(manualMessage).toContain("Time: 10:30 AM");
+    expect(manualMessage).toContain("Location: 245 Rosebud Lane, Miami, FL 33131");
+    expect(manualMessage).not.toContain("Date: Time");
     expect(consoleErrors.join("\n")).not.toContain("index is not defined");
+  });
+
+  test("keeps blank appointment fields from shifting branded preview variables", async ({ page }) => {
+    await page.goto("/index.html");
+    await setSignedInUser(page, createBronzeUser({
+      user_metadata: {
+        branding_profile: {
+          brandingEnabled: true,
+          businessName: "Northline Realty",
+          templateStyle: "signature",
+          contactEmail: "team@northline.example"
+        }
+      }
+    }));
+
+    await page.evaluate(() => {
+      document.getElementById("name").value = "Antonio";
+      document.getElementById("email").value = "antonio@example.com";
+      document.getElementById("date").value = "";
+      document.getElementById("time").value = "";
+      document.getElementById("address").value = "";
+      refreshFormState();
+    });
+    await goToReviewStep(page);
+
+    const previewBody = page.frameLocator("#bronze-preview-frame").locator("body");
+    await expect(previewBody).toContainText("Hello Antonio,");
+
+    const manualMessage = await page.locator("#bronze-preview-frame").evaluate(frame => (
+      buildManualReviewMessageFromFrame(frame.contentDocument)
+    ));
+    expect(manualMessage).toContain("Hello Antonio,");
+    expect(manualMessage).not.toContain("Location: Antonio");
+    expect(manualMessage).not.toContain("Date: Antonio");
+    expect(manualMessage).not.toContain("Time: Antonio");
   });
 
   test("falls back to the plain review message if the branded preview cannot render", async ({ page }) => {

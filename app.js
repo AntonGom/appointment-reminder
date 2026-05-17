@@ -1677,6 +1677,16 @@ function getEditableFrameText(element) {
     .trim();
 }
 
+function getFrameSourceText(element) {
+  return String(element?.textContent || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n")
+    .trim();
+}
+
 function buildManualReviewMessageFromFrame(frameDocument) {
   const lines = [];
   const greeting = getEditableFrameText(frameDocument.querySelector('[data-review-edit="greeting"]')) || "Hello,";
@@ -1695,13 +1705,23 @@ function buildManualReviewMessageFromFrame(frameDocument) {
     .filter(Boolean);
   const contactPrompt = getEditableFrameText(frameDocument.querySelector('[data-review-edit="contact"]'));
   const closing = getEditableFrameText(frameDocument.querySelector('[data-review-edit="closing"]')) || "Thank you.";
-  const summaryItems = Array.from(frameDocument.querySelectorAll('[data-preview-area="summary"] > *')).map(cell => {
+  const summaryItems = Array.from(frameDocument.querySelectorAll('[data-preview-area="summary"] [data-summary-item], [data-preview-area="summary"] > [data-summary-item]')).map(cell => {
+    const markedLabel = getFrameSourceText(cell.querySelector("[data-summary-label]"));
+    const markedValue = getFrameSourceText(cell.querySelector("[data-summary-value]"));
+
+    if (markedLabel || markedValue) {
+      return {
+        label: markedLabel,
+        value: markedValue
+      };
+    }
+
     const parts = Array.from(cell.querySelectorAll("div, span")).map(getEditableFrameText).filter(Boolean);
     return {
       label: parts[0] || "",
       value: parts[1] || ""
     };
-  });
+  }).filter(item => item.label && item.value);
 
   lines.push(greeting);
 
@@ -1711,9 +1731,7 @@ function buildManualReviewMessageFromFrame(frameDocument) {
   }
 
   summaryItems.forEach(item => {
-    if (item.label && item.value) {
-      lines.push(`${item.label}: ${item.value}`);
-    }
+    lines.push(`${item.label}: ${item.value}`);
   });
 
   customFieldItems.forEach(item => {
