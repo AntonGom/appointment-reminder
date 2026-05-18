@@ -570,6 +570,33 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#all-appointments-list")).toContainText("No appointments have been saved yet.");
   });
 
+  test("calendar import menu expands in the page flow on full desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await expect(page.locator(".calendar-import-menu")).toHaveAttribute("open", "");
+
+    const boxes = await page.evaluate(() => {
+      const panel = document.querySelector(".calendar-import-panel")?.getBoundingClientRect();
+      const card = document.querySelector(".appointment-import-card")?.getBoundingClientRect();
+      const layout = document.querySelector("#calendar-layout")?.getBoundingClientRect();
+      return {
+        panel: panel ? { x: panel.x, y: panel.y, width: panel.width, height: panel.height, bottom: panel.bottom } : null,
+        card: card ? { x: card.x, y: card.y, width: card.width, height: card.height, bottom: card.bottom } : null,
+        layout: layout ? { x: layout.x, y: layout.y, width: layout.width, height: layout.height } : null
+      };
+    });
+
+    expect(boxes.panel).not.toBeNull();
+    expect(boxes.card).not.toBeNull();
+    expect(boxes.layout).not.toBeNull();
+    expect(boxes.panel.width).toBeLessThanOrEqual(boxes.card.width + 1);
+    expect(boxes.layout.y).toBeGreaterThanOrEqual(boxes.panel.bottom - 1);
+  });
+
   test("calendar imports appointments from CSV", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/calendar.html");
@@ -676,6 +703,65 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].notes).toContain("Please bring the gate code.");
     expect(state.tables.appointments[0].notes).not.toContain("Client: Riley Forward");
     expect(state.tables.appointments[0].last_source).toBe("raw_email");
+  });
+
+  test("calendar imports a Gmail sent-style appointment paste without special formatting", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await page.locator("#raw-email-import-text").fill([
+      "Subject: Showing confirmation",
+      "From: Real Estate Team <agent@example.com>",
+      "To: Naomi Buyer <naomi.buyer@example.com>",
+      "Date: Mon, May 3, 2027 at 8:14 AM",
+      "",
+      "Hi Naomi,",
+      "Confirming our showing on May 12, 2027 at 2:15 PM.",
+      "Location: 44 Palm Street",
+      "Please bring your ID for the building desk."
+    ].join("\n"));
+    await page.locator("#import-raw-email-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Naomi Buyer");
+    await expect(page.locator("#all-appointments-list")).toContainText("44 Palm Street");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Naomi Buyer");
+    expect(state.tables.appointments[0].client_email).toBe("naomi.buyer@example.com");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-12");
+    expect(state.tables.appointments[0].service_time).toBe("14:15");
+  });
+
+  test("calendar imports multiple pasted sent emails at once", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await page.locator("#raw-email-import-text").fill([
+      "Subject: First tour",
+      "To: Alex One <alex.one@example.com>",
+      "Let's meet May 13, 2027 at 10:00 AM.",
+      "Location: 1 One Way",
+      "",
+      "Subject: Second tour",
+      "To: Casey Two <casey.two@example.com>",
+      "Let's meet May 14, 2027 at 11:30 AM.",
+      "Location: 2 Two Way"
+    ].join("\n"));
+    await page.locator("#import-raw-email-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 2 appointments");
+    await expect(page.locator("#all-appointments-list")).toContainText("Alex One");
+    await expect(page.locator("#all-appointments-list")).toContainText("Casey Two");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(2);
+    expect(state.tables.appointments.map(row => row.client_email).sort()).toEqual(["alex.one@example.com", "casey.two@example.com"]);
   });
 
   test("calendar imports appointments from ICS", async ({ page }) => {

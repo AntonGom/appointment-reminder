@@ -1236,14 +1236,95 @@ function extractImportTextLabelValue(text, labels) {
   return match ? match[1].trim() : "";
 }
 
+function extractImportNonHeaderLabelValue(text, labels) {
+  const labelPattern = labels.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const pattern = new RegExp(`^\\s*(?:${labelPattern})\\s*[:\\-]\\s*([^\\n]+)`, "i");
+  const lines = String(text || "").split("\n");
+  const headerZone = lines.slice(0, 10).join("\n");
+  const looksLikeEmailHeader = /(^|\n)\s*(from|to|cc|bcc|sent)\s*[:\-]/i.test(headerZone);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] || "";
+    const match = line.match(pattern);
+
+    if (!match) {
+      continue;
+    }
+
+    if (looksLikeEmailHeader && index < 10 && !/appointment|booking|reservation|scheduled|event/i.test(line)) {
+      continue;
+    }
+
+    return match[1].trim();
+  }
+
+  return "";
+}
+
+function extractEmailAddress(value) {
+  const match = String(value || "").match(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/i);
+  return match ? match[0].trim().replace(/[),.;]+$/g, "") : "";
+}
+
+function extractDisplayNameFromEmailLine(value) {
+  const text = String(value || "").trim();
+  const angleMatch = text.match(/^"?([^"<]+?)"?\s*<[^>]+>/);
+
+  if (angleMatch?.[1]) {
+    return angleMatch[1].trim();
+  }
+
+  const withoutEmail = text
+    .replace(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/gi, "")
+    .replace(/[<>"']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return withoutEmail && withoutEmail.length <= 80 ? withoutEmail : "";
+}
+
+function getFirstEmailByLabel(text, labels) {
+  for (const label of labels) {
+    const value = extractImportTextLabelValue(text, [label]);
+    const email = extractEmailAddress(value);
+
+    if (email) {
+      return {
+        email,
+        name: extractDisplayNameFromEmailLine(value)
+      };
+    }
+  }
+
+  return { email: "", name: "" };
+}
+
+function getFirstMeaningfulEmailLine(text) {
+  const ignoredLinePattern = /^(from|to|cc|bcc|sent|date|subject|reply-to|attachments?|forwarded message|original message)\s*[:\-]/i;
+  const ignoredContentPattern = /^(hi|hello|thanks|thank you|regards|sincerely|best|sent from|on .+ wrote:?)$/i;
+
+  return String(text || "")
+    .split("\n")
+    .map(line => line.trim())
+    .find(line => line && line.length <= 120 && !ignoredLinePattern.test(line) && !ignoredContentPattern.test(line) && !extractEmailAddress(line)) || "";
+}
+
+function getTextWithoutEmailHeaders(text) {
+  return String(text || "")
+    .split("\n")
+    .filter(line => !/^\s*(from|to|cc|bcc|sent|date|subject|reply-to|attachments?|forwarded message|original message)\s*[:\-]/i.test(line))
+    .join("\n");
+}
+
 function extractImportDateCandidate(text) {
-  const labelDate = extractImportTextLabelValue(text, ["date", "appointment date", "event date", "when", "start date", "scheduled for"]);
+  const labelDate = extractImportTextLabelValue(text, ["appointment date", "event date", "when", "start date", "scheduled for", "booking date", "reservation date"])
+    || extractImportNonHeaderLabelValue(text, ["date"]);
 
   if (labelDate) {
     return labelDate;
   }
 
-  const match = String(text || "").match(/(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?)/i);
+  const match = getTextWithoutEmailHeaders(text).match(/(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?)/i);
   return match ? match[1] : "";
 }
 
@@ -1254,8 +1335,32 @@ function extractImportTimeCandidate(text) {
     return labelTime;
   }
 
-  const match = String(text || "").match(/\b(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))\b/i);
+  const match = getTextWithoutEmailHeaders(text).match(/\b(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))\b/i);
   return match ? match[1] : "";
+}
+
+function splitRawEmailAppointmentBlocks(text) {
+  const normalizedText = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+
+  if (!normalizedText) {
+    return [];
+  }
+
+  const subjectMatches = [...normalizedText.matchAll(/(?:^|\n)\s*Subject\s*[:\-]/gi)];
+
+  if (subjectMatches.length > 1) {
+    return subjectMatches.map((match, index) => {
+      const start = match.index + (normalizedText[match.index] === "\n" ? 1 : 0);
+      const nextMatch = subjectMatches[index + 1];
+      const end = nextMatch ? nextMatch.index : normalizedText.length;
+      return normalizedText.slice(start, end).trim();
+    }).filter(Boolean);
+  }
+
+  return [normalizedText];
 }
 
 function parseRawEmailAppointmentText(text) {
@@ -1268,8 +1373,8 @@ function parseRawEmailAppointmentText(text) {
     throw new Error("Paste an appointment email first.");
   }
 
-  const emailMatch = normalizedText.match(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/i);
-  const labeledEmail = extractImportTextLabelValue(normalizedText, ["email", "client email", "customer email", "invitee email", "guest email"]);
+  const recipient = getFirstEmailByLabel(normalizedText, ["to", "recipient", "client email", "customer email", "invitee email", "guest email", "email"]);
+  const fallbackEmail = extractEmailAddress(normalizedText);
   const phoneMatch = normalizedText.match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/);
   const subject = extractImportTextLabelValue(normalizedText, ["subject"]);
   const clientName = extractImportTextLabelValue(normalizedText, [
@@ -1281,7 +1386,7 @@ function parseRawEmailAppointmentText(text) {
     "invitee",
     "guest",
     "patient"
-  ]) || subject.replace(/^(fwd?|fw|re):\s*/i, "");
+  ]) || recipient.name || subject.replace(/^(fwd?|fw|re):\s*/i, "") || getFirstMeaningfulEmailLine(normalizedText);
   const serviceDate = extractImportDateCandidate(normalizedText);
   const serviceTime = extractImportTimeCandidate(normalizedText);
   const notes = normalizedText
@@ -1294,7 +1399,7 @@ function parseRawEmailAppointmentText(text) {
 
   return {
     client_name: clientName,
-    client_email: (labeledEmail || (emailMatch ? emailMatch[0] : "")).replace(/[),.;]+$/g, ""),
+    client_email: recipient.email || fallbackEmail,
     client_phone: phoneMatch ? phoneMatch[0] : "",
     appointment_date: serviceDate,
     appointment_time: serviceTime,
@@ -1302,6 +1407,11 @@ function parseRawEmailAppointmentText(text) {
     appointment_type: extractImportTextLabelValue(normalizedText, ["service", "appointment type", "event type", "type"]),
     notes
   };
+}
+
+function parseRawEmailAppointmentRecords(text) {
+  const records = splitRawEmailAppointmentBlocks(text).map(parseRawEmailAppointmentText);
+  return records.length ? records : [parseRawEmailAppointmentText(text)];
 }
 
 function getGoogleEventEmail(rawRecord) {
@@ -2074,11 +2184,11 @@ async function handleImportRawEmailText() {
   });
 
   try {
-    const rawRecord = parseRawEmailAppointmentText(rawText);
-    const result = await importAppointmentRecords([rawRecord], user, {
+    const rawRecords = parseRawEmailAppointmentRecords(rawText);
+    const result = await importAppointmentRecords(rawRecords, user, {
       source: "raw_email",
       successVerb: "Imported",
-      emptyMessage: "We could not find enough appointment details in that email. Include a date and at least a client name, email, or phone number.",
+      emptyMessage: "We could not find enough appointment details in that email text. Try copying the email body with the recipient, date, time, and location visible.",
       operation: emailOperation
     });
 

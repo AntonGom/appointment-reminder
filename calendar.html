@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
-  <link rel="stylesheet" href="account-sections.css?v=20260518a">
+  <link rel="stylesheet" href="account-sections.css?v=20260518b">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -76,13 +76,24 @@
             <div class="section-card appointment-import-card">
               <div class="appointments-card-head">
                 <div>
-                  <h3>Calendar imports</h3>
-                  <p>Bring in bookings from another system, calendar, or forwarded confirmation email.</p>
+                  <h3>Import appointments</h3>
+                  <p>Paste from Gmail, Outlook, or another booking system. One email or several emails can be imported at once.</p>
                 </div>
                 <details class="calendar-import-menu">
                   <summary class="secondary-button calendar-import-summary">Import Calendar Data</summary>
                   <div class="calendar-import-panel">
                     <div class="appointment-source-list">
+                      <div class="appointment-source-row appointment-source-row-primary appointment-source-row-stacked">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Paste</span>
+                          <span>Copy appointment emails from Sent or your inbox, paste them here, and import.</span>
+                        </div>
+                        <textarea id="raw-email-import-text" class="calendar-raw-email-input" rows="6" placeholder="Paste one or more appointment emails here"></textarea>
+                        <div class="calendar-import-actions">
+                          <button id="import-raw-email-button" class="secondary-button" type="button">Import Pasted Emails</button>
+                          <button id="clear-raw-email-button" class="secondary-button subtle" type="button">Clear</button>
+                        </div>
+                      </div>
                       <div class="appointment-source-row">
                         <div class="appointment-source-copy">
                           <span class="source-chip">File</span>
@@ -131,23 +142,12 @@
                           <button id="copy-forwarding-email-button" class="secondary-button" type="button">Copy Address</button>
                         </div>
                       </div>
-                      <div class="appointment-source-row appointment-source-row-stacked">
-                        <div class="appointment-source-copy">
-                          <span class="source-chip">Email text</span>
-                          <span>Paste a confirmation email you already received, then import it as an appointment.</span>
-                        </div>
-                        <textarea id="raw-email-import-text" class="calendar-raw-email-input" rows="6" placeholder="Paste appointment email text here"></textarea>
-                        <div class="calendar-import-actions">
-                          <button id="import-raw-email-button" class="secondary-button" type="button">Import Email Text</button>
-                          <button id="clear-raw-email-button" class="secondary-button subtle" type="button">Clear</button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </details>
               </div>
               <div class="import-helper">
-                Common fields work automatically: client name, email, phone, date, time, location, notes, and appointment type.
+                The importer looks for client name, email, phone, date, time, location, notes, and appointment type automatically.
               </div>
             </div>
 
@@ -273,6 +273,6 @@
 
   <script src="nav.js?v=20260501a"></script>
   <script src="debug-save.js?v=20260516a"></script>
-  <script type="module" src="calendar.js?v=20260518b"></script>
+  <script type="module" src="calendar.js?v=20260518c"></script>
 </body>
 </html>

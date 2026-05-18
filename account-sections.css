@@ -898,11 +898,14 @@ h1 {
 .calendar-import-menu {
   position: relative;
   z-index: 5;
+  width: 100%;
 }
 
 .calendar-import-summary {
   list-style: none;
   cursor: pointer;
+  width: fit-content;
+  margin-left: auto;
 }
 
 .calendar-import-summary::-webkit-details-marker,
@@ -918,16 +921,15 @@ h1 {
 }
 
 .calendar-import-panel {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
+  position: static;
   z-index: 80;
-  width: min(760px, calc(100vw - 42px));
+  width: min(100%, 980px);
+  margin-top: 12px;
   padding: 12px;
   border-radius: 22px;
   border: 1px solid rgba(191, 219, 254, 0.88);
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
   backdrop-filter: blur(20px);
 }
 
@@ -945,6 +947,11 @@ h1 {
   border: 1px solid rgba(203, 213, 225, 0.86);
   border-radius: 14px;
   background: rgba(248, 250, 252, 0.72);
+}
+
+.appointment-source-row-primary {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.92));
 }
 
 .appointment-source-copy {
@@ -1676,12 +1683,6 @@ button.calendar-week-mobile-day {
     padding-right: 0;
   }
 
-  .calendar-import-panel {
-    position: static;
-    width: 100%;
-    margin-top: 10px;
-  }
-
   .button-row button,
   .button-row .primary-link {
     width: 100%;
@@ -1781,6 +1782,11 @@ button.calendar-week-mobile-day {
   .appointment-source-copy {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .calendar-import-summary {
+    width: 100%;
+    margin-left: 0;
   }
 
   .calendar-feed-input {
