@@ -673,6 +673,8 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].client_email).toBe("riley.forward@example.com");
     expect(state.tables.appointments[0].service_date).toBe("2027-05-08");
     expect(state.tables.appointments[0].service_time).toBe("16:20");
+    expect(state.tables.appointments[0].notes).toContain("Please bring the gate code.");
+    expect(state.tables.appointments[0].notes).not.toContain("Client: Riley Forward");
     expect(state.tables.appointments[0].last_source).toBe("raw_email");
   });
 

@@ -1284,6 +1284,13 @@ function parseRawEmailAppointmentText(text) {
   ]) || subject.replace(/^(fwd?|fw|re):\s*/i, "");
   const serviceDate = extractImportDateCandidate(normalizedText);
   const serviceTime = extractImportTimeCandidate(normalizedText);
+  const notes = normalizedText
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => !/^(subject|client|client name|customer|customer name|name|invitee|guest|patient|email|client email|customer email|invitee email|guest email|phone|date|appointment date|event date|when|start date|scheduled for|time|appointment time|event time|start time|location|address|where|service location|service|appointment type|event type|type)\s*[:\-]/i.test(line))
+    .join("\n")
+    .trim();
 
   return {
     client_name: clientName,
@@ -1293,7 +1300,7 @@ function parseRawEmailAppointmentText(text) {
     appointment_time: serviceTime,
     location: extractImportTextLabelValue(normalizedText, ["location", "address", "where", "service location"]),
     appointment_type: extractImportTextLabelValue(normalizedText, ["service", "appointment type", "event type", "type"]),
-    notes: normalizedText
+    notes
   };
 }
 
