@@ -89,9 +89,9 @@
                           <span>Upload CSV, JSON, or exported calendar files.</span>
                         </div>
                         <div class="calendar-import-actions">
-                          <input id="import-appointments-input" type="file" accept=".csv,.json,text/csv,application/json" hidden>
+                          <input id="import-appointments-input" type="file" accept=".csv,.json,.xlsx,.xls,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
                           <input id="import-ics-input" type="file" accept=".ics,text/calendar" hidden>
-                          <button id="import-appointments-button" class="secondary-button" type="button">Upload CSV/JSON</button>
+                          <button id="import-appointments-button" class="secondary-button" type="button">Upload CSV/Excel/JSON</button>
                           <button id="import-ics-button" class="secondary-button" type="button">Upload ICS</button>
                         </div>
                       </div>
@@ -129,6 +129,17 @@
                         </div>
                         <div class="calendar-import-actions">
                           <button id="copy-forwarding-email-button" class="secondary-button" type="button">Copy Address</button>
+                        </div>
+                      </div>
+                      <div class="appointment-source-row appointment-source-row-stacked">
+                        <div class="appointment-source-copy">
+                          <span class="source-chip">Email text</span>
+                          <span>Paste a confirmation email you already received, then import it as an appointment.</span>
+                        </div>
+                        <textarea id="raw-email-import-text" class="calendar-raw-email-input" rows="6" placeholder="Paste appointment email text here"></textarea>
+                        <div class="calendar-import-actions">
+                          <button id="import-raw-email-button" class="secondary-button" type="button">Import Email Text</button>
+                          <button id="clear-raw-email-button" class="secondary-button subtle" type="button">Clear</button>
                         </div>
                       </div>
                     </div>

@@ -37,6 +37,9 @@ const calendarFeedUrlInput = document.getElementById("calendar-feed-url");
 const syncCalendarLinkButton = document.getElementById("sync-calendar-link-button");
 const forwardingEmailValue = document.getElementById("forwarding-email-value");
 const copyForwardingEmailButton = document.getElementById("copy-forwarding-email-button");
+const rawEmailImportText = document.getElementById("raw-email-import-text");
+const importRawEmailButton = document.getElementById("import-raw-email-button");
+const clearRawEmailButton = document.getElementById("clear-raw-email-button");
 const appointmentDetailModal = document.getElementById("appointment-detail-modal");
 const appointmentDetailTitle = document.getElementById("appointment-detail-title");
 const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
@@ -88,6 +91,8 @@ const APPOINTMENT_IMPORT_ALIASES = {
   notes: ["notes", "note", "description", "details", "appointment_notes", "internal_notes"],
   appointmentType: ["appointment_type", "type", "service", "service_name", "event_type", "booking_type"]
 };
+const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
+const XLSX_MODULE_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 const SUPABASE_MODULE_URLS = [
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
@@ -1000,6 +1005,28 @@ function parseImportedAppointmentCsv(text) {
   });
 }
 
+async function parseImportedAppointmentWorkbook(file) {
+  const workbookModule = await import(XLSX_MODULE_URL);
+  const XLSX = workbookModule.default || workbookModule;
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const firstSheetName = workbook.SheetNames?.[0] || "";
+
+  if (!firstSheetName || !workbook.Sheets?.[firstSheetName]) {
+    throw new Error("That Excel file does not include any appointment sheets.");
+  }
+
+  const records = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+    defval: "",
+    raw: false
+  });
+
+  if (!records.length) {
+    throw new Error("That Excel file does not have any appointment rows yet.");
+  }
+
+  return records;
+}
+
 function unfoldIcsLines(text) {
   const lines = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const unfolded = [];
@@ -1200,6 +1227,74 @@ function parseTimeFromText(value) {
   }
 
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function extractImportTextLabelValue(text, labels) {
+  const labelPattern = labels.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const pattern = new RegExp(`(?:^|\\n)\\s*(?:${labelPattern})\\s*[:\\-]\\s*([^\\n]+)`, "i");
+  const match = String(text || "").match(pattern);
+  return match ? match[1].trim() : "";
+}
+
+function extractImportDateCandidate(text) {
+  const labelDate = extractImportTextLabelValue(text, ["date", "appointment date", "event date", "when", "start date", "scheduled for"]);
+
+  if (labelDate) {
+    return labelDate;
+  }
+
+  const match = String(text || "").match(/(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?)/i);
+  return match ? match[1] : "";
+}
+
+function extractImportTimeCandidate(text) {
+  const labelTime = extractImportTextLabelValue(text, ["time", "appointment time", "event time", "start time"]);
+
+  if (labelTime) {
+    return labelTime;
+  }
+
+  const match = String(text || "").match(/\b(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))\b/i);
+  return match ? match[1] : "";
+}
+
+function parseRawEmailAppointmentText(text) {
+  const normalizedText = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
+
+  if (!normalizedText) {
+    throw new Error("Paste an appointment email first.");
+  }
+
+  const emailMatch = normalizedText.match(/[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/i);
+  const labeledEmail = extractImportTextLabelValue(normalizedText, ["email", "client email", "customer email", "invitee email", "guest email"]);
+  const phoneMatch = normalizedText.match(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/);
+  const subject = extractImportTextLabelValue(normalizedText, ["subject"]);
+  const clientName = extractImportTextLabelValue(normalizedText, [
+    "client",
+    "client name",
+    "customer",
+    "customer name",
+    "name",
+    "invitee",
+    "guest",
+    "patient"
+  ]) || subject.replace(/^(fwd?|fw|re):\s*/i, "");
+  const serviceDate = extractImportDateCandidate(normalizedText);
+  const serviceTime = extractImportTimeCandidate(normalizedText);
+
+  return {
+    client_name: clientName,
+    client_email: (labeledEmail || (emailMatch ? emailMatch[0] : "")).replace(/[),.;]+$/g, ""),
+    client_phone: phoneMatch ? phoneMatch[0] : "",
+    appointment_date: serviceDate,
+    appointment_time: serviceTime,
+    location: extractImportTextLabelValue(normalizedText, ["location", "address", "where", "service location"]),
+    appointment_type: extractImportTextLabelValue(normalizedText, ["service", "appointment type", "event type", "type"]),
+    notes: normalizedText
+  };
 }
 
 function getGoogleEventEmail(rawRecord) {
@@ -1418,15 +1513,18 @@ async function handleImportAppointmentsFile(event) {
   setButtonBusy(importAppointmentsButton, true, "Importing...");
   setStatus("Reading appointment file...", "info", {
     loading: true,
-    progress: importOperation?.progress?.(1, "Read CSV or JSON file")
+    progress: importOperation?.progress?.(1, "Read appointment file")
   });
 
   try {
-    const text = await file.text();
     const extension = String(file.name || "").split(".").pop().toLowerCase();
-    const rawRecords = extension === "json" || file.type === "application/json"
-      ? parseImportedAppointmentJson(text)
-      : parseImportedAppointmentCsv(text);
+    const isExcelFile = extension === "xlsx" || extension === "xls"
+      || /spreadsheet|excel/i.test(String(file.type || ""));
+    const rawRecords = isExcelFile
+      ? await parseImportedAppointmentWorkbook(file)
+      : extension === "json" || file.type === "application/json"
+        ? parseImportedAppointmentJson(await file.text())
+        : parseImportedAppointmentCsv(await file.text());
     await importAppointmentRecords(rawRecords, user, {
       source: "import",
       successVerb: "Imported",
@@ -1932,6 +2030,62 @@ async function copyForwardingEmailAddress() {
   }
 }
 
+async function handleImportRawEmailText() {
+  if (!supabase) {
+    setStatus("Add your Supabase keys before importing appointment emails.", "error");
+    return;
+  }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before importing appointment emails.", "error");
+    return;
+  }
+
+  const rawText = String(rawEmailImportText?.value || "").trim();
+
+  if (!rawText) {
+    setStatus("Paste an appointment email first.", "error");
+    return;
+  }
+
+  const emailOperation = window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "EMAILTEXT",
+    totalSteps: 4,
+    label: "Import email text"
+  });
+  setButtonBusy(importRawEmailButton, true, "Importing...");
+  setStatus("Reading appointment email text...", "info", {
+    loading: true,
+    progress: emailOperation?.progress?.(1, "Parse email text")
+  });
+
+  try {
+    const rawRecord = parseRawEmailAppointmentText(rawText);
+    const result = await importAppointmentRecords([rawRecord], user, {
+      source: "raw_email",
+      successVerb: "Imported",
+      emptyMessage: "We could not find enough appointment details in that email. Include a date and at least a client name, email, or phone number.",
+      operation: emailOperation
+    });
+
+    if (result?.saved && rawEmailImportText) {
+      rawEmailImportText.value = "";
+    }
+  } catch (error) {
+    setDebugErrorStatus(error, emailOperation, "EMAILTEXT", "Unable to import that email text.");
+  } finally {
+    setButtonBusy(importRawEmailButton, false);
+    updateAppointmentSourceControls(user);
+  }
+}
+
 function formatPhone(value) {
   const digits = normalizePhone(value);
 
@@ -1952,6 +2106,7 @@ function getAppointmentTitle(appointment) {
 
 function getAppointmentTags(appointment) {
   const tags = [];
+  const source = String(appointment?.last_source || "").trim().toLowerCase();
 
   if (appointment?.last_channel === "email") {
     tags.push("Email");
@@ -1965,7 +2120,60 @@ function getAppointmentTags(appointment) {
     tags.push("Location saved");
   }
 
+  if (source === "ics_import") {
+    tags.push("ICS");
+  } else if (source === "calendar_link") {
+    tags.push("Calendar link");
+  } else if (source === "google_calendar") {
+    tags.push("Google");
+  } else if (source === "outlook_calendar") {
+    tags.push("Outlook");
+  } else if (source === "raw_email" || source === "forwarded_email") {
+    tags.push("Email import");
+  } else if (source === "import") {
+    tags.push("Imported");
+  }
+
   return tags;
+}
+
+function buildAppointmentReminderPrefill(appointment) {
+  return {
+    id: appointment.id || "",
+    appointmentId: appointment.id || "",
+    name: appointment.client_name || "",
+    email: appointment.client_email || "",
+    phone: appointment.client_phone ? formatPhone(appointment.client_phone) : "",
+    address: appointment.service_location || "",
+    date: appointment.service_date || "",
+    time: appointment.service_time || "",
+    notes: appointment.notes || ""
+  };
+}
+
+function useAppointmentInReminder(appointmentId) {
+  const appointment = appointments.find(entry => String(entry.id || "") === String(appointmentId || ""));
+
+  if (!appointment) {
+    setStatus("Unable to find that appointment.", "error");
+    return;
+  }
+
+  const prefillPayload = JSON.stringify(buildAppointmentReminderPrefill(appointment));
+
+  try {
+    window.sessionStorage.setItem(REMINDER_PREFILL_KEY, prefillPayload);
+  } catch (error) {
+    console.warn("Unable to save appointment prefill to session storage.", error);
+  }
+
+  try {
+    window.localStorage.setItem(REMINDER_PREFILL_KEY, prefillPayload);
+  } catch (error) {
+    console.warn("Unable to save appointment prefill to local storage.", error);
+  }
+
+  window.location.href = new URL("index.html", window.location.href).toString();
 }
 
 function getReminderHistoryChannelLabel(entry) {
@@ -2360,14 +2568,17 @@ function openAppointmentDetailModal(appointmentId) {
 
   appointmentDetailBody.innerHTML = `
     <div class="expanded-client-panel modal-client-panel">
-      <div class="expanded-client-block">
-        <div class="expanded-client-label">Appointment Details</div>
-        <div class="expanded-history-dates">
-          <div><strong>Scheduled for:</strong> ${escapeHtml(appointmentDateLabel)}</div>
-          ${appointment.service_location ? `<div><strong>Location:</strong> ${escapeHtml(appointment.service_location)}</div>` : ""}
-          ${appointment.notes ? `<div><strong>Notes:</strong> ${escapeHtml(appointment.notes)}</div>` : ""}
+        <div class="expanded-client-block">
+          <div class="expanded-client-label">Appointment Details</div>
+          <div class="expanded-history-dates">
+            <div><strong>Scheduled for:</strong> ${escapeHtml(appointmentDateLabel)}</div>
+            ${appointment.service_location ? `<div><strong>Location:</strong> ${escapeHtml(appointment.service_location)}</div>` : ""}
+            ${appointment.notes ? `<div><strong>Notes:</strong> ${escapeHtml(appointment.notes)}</div>` : ""}
+          </div>
+          <div class="appointment-row-actions">
+            <button class="primary-button" type="button" data-action="use-appointment" data-appointment-id="${escapeHtml(appointment.id)}">Send reminder</button>
+          </div>
         </div>
-      </div>
         <div class="expanded-client-block expanded-client-block-plain expanded-reminder-activity-shell">
           <div class="expanded-client-label">Full Reminder Activity</div>
           ${renderExpandedReminderHistory(reminderEntries)}
@@ -2413,6 +2624,9 @@ function renderAppointmentRow(appointment) {
       ${appointment.notes ? `<div class="appointment-note">${escapeHtml(appointment.notes)}</div>` : ""}
       <div class="appointment-tags">
         ${getAppointmentTags(appointment).map(tag => `<span class="appointment-tag">${escapeHtml(tag)}</span>`).join("")}
+      </div>
+      <div class="appointment-row-actions">
+        <button class="primary-button" type="button" data-action="use-appointment" data-appointment-id="${escapeHtml(appointment.id)}">Send reminder</button>
       </div>
     </div>
   `;
@@ -3151,6 +3365,17 @@ function bindCalendarControls() {
     copyForwardingEmailButton.addEventListener("click", copyForwardingEmailAddress);
   }
 
+  if (importRawEmailButton) {
+    importRawEmailButton.addEventListener("click", handleImportRawEmailText);
+  }
+
+  if (clearRawEmailButton && rawEmailImportText) {
+    clearRawEmailButton.addEventListener("click", () => {
+      rawEmailImportText.value = "";
+      rawEmailImportText.focus();
+    });
+  }
+
   if (monthSelect) {
     monthSelect.addEventListener("change", event => {
       const nextMonth = Number(event.target.value);
@@ -3232,6 +3457,15 @@ function bindCalendarControls() {
 
   if (calendarMonthGrid) {
     calendarMonthGrid.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const appointmentElement = event.target.closest("[data-appointment-id]");
 
       if (appointmentElement) {
@@ -3272,6 +3506,15 @@ function bindCalendarControls() {
 
   if (calendarWeekGrid) {
     calendarWeekGrid.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const helpButton = event.target.closest("[data-status-help]");
 
       if (helpButton) {
@@ -3316,6 +3559,15 @@ function bindCalendarControls() {
 
   if (upcomingList) {
     upcomingList.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const appointmentElement = event.target.closest("[data-appointment-id]");
 
       if (appointmentElement) {
@@ -3326,6 +3578,15 @@ function bindCalendarControls() {
 
   if (previousList) {
     previousList.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const appointmentElement = event.target.closest("[data-appointment-id]");
 
       if (appointmentElement) {
@@ -3336,6 +3597,15 @@ function bindCalendarControls() {
 
   if (allAppointmentsList) {
     allAppointmentsList.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const retryButton = event.target.closest("[data-calendar-retry]");
 
       if (retryButton) {
@@ -3354,6 +3624,15 @@ function bindCalendarControls() {
 
   if (appointmentDetailModal) {
     appointmentDetailModal.addEventListener("click", event => {
+      const useButton = event.target.closest('[data-action="use-appointment"]');
+
+      if (useButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        useAppointmentInReminder(useButton.dataset.appointmentId || "");
+        return;
+      }
+
       const helpButton = event.target.closest("[data-status-help]");
 
       if (helpButton) {

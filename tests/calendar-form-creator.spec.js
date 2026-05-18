@@ -323,7 +323,8 @@ async function stubModulePages(page, seedState) {
         googleCalendarEnabled: false,
         outlookCalendarClientId: "outlook-client-id",
         outlookCalendarEnabled: true,
-        inboundAppointmentEmail: ""
+        inboundAppointmentEmail: "",
+        ...(seedState.publicConfig || {})
       })
     });
   });
@@ -595,6 +596,86 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].last_source).toBe("import");
   });
 
+  test("calendar imports appointments from Excel files", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.route("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/javascript",
+        body: `
+          export function read() {
+            return { SheetNames: ["Appointments"], Sheets: { Appointments: {} } };
+          }
+          export const utils = {
+            sheet_to_json() {
+              return [{
+                Customer: "Xavier Excel",
+                Email: "xavier@example.com",
+                Phone: "404-555-0199",
+                Start: "2027-05-07 09:05",
+                Location: "19 Spreadsheet Lane",
+                Notes: "Imported from an Excel booking export"
+              }];
+            }
+          };
+          export default { read, utils };
+        `
+      });
+    });
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator("#import-appointments-input").setInputFiles({
+      name: "appointments.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: Buffer.from("fake workbook bytes")
+    });
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Xavier Excel");
+    await expect(page.locator("#all-appointments-list")).toContainText("19 Spreadsheet Lane");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Xavier Excel");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-07");
+    expect(state.tables.appointments[0].service_time).toBe("09:05");
+  });
+
+  test("calendar imports appointment details from pasted email text", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await page.locator("#raw-email-import-text").fill([
+      "Subject: Showing confirmed",
+      "Client: Riley Forward",
+      "Email: riley.forward@example.com",
+      "Phone: (786) 555-0142",
+      "Date: May 8, 2027",
+      "Time: 4:20 PM",
+      "Location: 808 Forwarded Email Rd",
+      "Service: Buyer showing",
+      "",
+      "Please bring the gate code."
+    ].join("\n"));
+    await page.locator("#import-raw-email-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Riley Forward");
+    await expect(page.locator("#all-appointments-list")).toContainText("808 Forwarded Email Rd");
+    await expect(page.locator("#all-appointments-list")).toContainText("Email import");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Riley Forward");
+    expect(state.tables.appointments[0].client_email).toBe("riley.forward@example.com");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-08");
+    expect(state.tables.appointments[0].service_time).toBe("16:20");
+    expect(state.tables.appointments[0].last_source).toBe("raw_email");
+  });
+
   test("calendar imports appointments from ICS", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/calendar.html");
@@ -671,6 +752,77 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].last_source).toBe("calendar_link");
   });
 
+  test("calendar syncs appointments from Google Calendar", async ({ page }) => {
+    const seed = createSupabaseSeed();
+    seed.publicConfig = {
+      googleCalendarClientId: "google-client-id",
+      googleCalendarEnabled: true
+    };
+    await stubModulePages(page, seed);
+    await page.route("https://accounts.google.com/gsi/client", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/javascript",
+        body: `
+          window.google = {
+            accounts: {
+              oauth2: {
+                initTokenClient(options) {
+                  return {
+                    requestAccessToken() {
+                      options.callback({ access_token: "google-access-token" });
+                    }
+                  };
+                }
+              }
+            }
+          };
+        `
+      });
+    });
+    await page.route("https://www.googleapis.com/calendar/v3/calendars/primary/events?**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [
+            {
+              id: "google_event_1",
+              iCalUID: "google-uid-1",
+              summary: "Google Consult",
+              start: {
+                dateTime: "2027-05-09T11:30:00-04:00"
+              },
+              location: "303 Google Calendar Way",
+              attendees: [
+                {
+                  email: "gwen.google@example.com"
+                }
+              ],
+              description: "Imported from Google Calendar"
+            }
+          ]
+        })
+      });
+    });
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await page.locator("#sync-google-calendar-button").click();
+
+    await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
+    await expect(page.locator("#all-appointments-list")).toContainText("Google Consult");
+    await expect(page.locator("#all-appointments-list")).toContainText("303 Google Calendar Way");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Google Consult");
+    expect(state.tables.appointments[0].client_email).toBe("gwen.google@example.com");
+    expect(state.tables.appointments[0].service_date).toBe("2027-05-09");
+    expect(state.tables.appointments[0].last_source).toBe("google_calendar");
+  });
+
   test("calendar syncs appointments from Outlook Calendar", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.addInitScript(() => {
@@ -735,6 +887,39 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].service_date).toBe("2027-05-06");
     expect(state.tables.appointments[0].service_time).toBe("13:45");
     expect(state.tables.appointments[0].last_source).toBe("outlook_calendar");
+  });
+
+  test("calendar appointment rows can start a prefilled reminder", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed({
+      appointments: [
+        {
+          id: "appointment_use_1",
+          owner_id: "bronze_user_1",
+          client_name: "Jordan Existing",
+          client_email: "jordan.existing@example.com",
+          client_phone: "3055550123",
+          service_date: "2027-05-10",
+          service_time: "12:40",
+          service_location: "700 Already Booked Blvd",
+          notes: "Imported appointment needs a 24 hour reminder.",
+          last_source: "raw_email",
+          updated_at: "2027-05-01T12:00:00.000Z"
+        }
+      ]
+    }));
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#all-appointments-list")).toContainText("Jordan Existing");
+    await page.locator('#all-appointments-list [data-action="use-appointment"]').first().click();
+
+    await expect(page).toHaveURL(/index\.html/);
+    await expect.poll(async () => page.locator("#name").inputValue()).toBe("Jordan Existing");
+    await expect(page.locator("#email")).toHaveValue("jordan.existing@example.com");
+    await expect(page.locator("#phone")).toHaveValue("(305) 555-0123");
+    await expect(page.locator("#address")).toHaveValue("700 Already Booked Blvd");
+    await expect(page.locator("#date")).toHaveValue("2027-05-10");
+    await expect(page.locator("#time")).toHaveValue("12:40");
+    await expect(page.locator("#notes")).toHaveValue("Imported appointment needs a 24 hour reminder.");
   });
 
   test("form creator saves a selected template and keeps it after reload", async ({ page }) => {

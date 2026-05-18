@@ -1223,9 +1223,12 @@ function normalizeReminderPrefillPayload(value) {
   const email = String(value?.email || "").trim();
   const phone = String(value?.phone || "").trim();
   const address = String(value?.address || "").trim();
+  const date = String(value?.date || value?.serviceDate || "").trim();
+  const time = String(value?.time || value?.serviceTime || "").trim();
+  const notes = String(value?.notes || "").trim();
   const profileCustomAnswers = normalizeClientProfileAnswerMap(value?.profileCustomAnswers);
 
-  if (!id && !name && !email && !phone && !address && !Object.keys(profileCustomAnswers).length) {
+  if (!id && !name && !email && !phone && !address && !date && !time && !notes && !Object.keys(profileCustomAnswers).length) {
     return null;
   }
 
@@ -1235,6 +1238,9 @@ function normalizeReminderPrefillPayload(value) {
     email,
     phone,
     address,
+    date,
+    time,
+    notes,
     profileCustomAnswers
   };
 }
@@ -2391,7 +2397,10 @@ function applyReminderClientPrefillPayload(prefillPayload) {
     name: normalizedPayload.name,
     email: normalizedPayload.email,
     phone: normalizedPayload.phone,
-    address: normalizedPayload.address
+    address: normalizedPayload.address,
+    date: normalizedPayload.date,
+    time: normalizedPayload.time,
+    notes: normalizedPayload.notes
   };
 
   Object.entries(mappedFields).forEach(([fieldId, value]) => {

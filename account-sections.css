@@ -1005,6 +1005,34 @@ h1 {
   border-color: rgba(37, 99, 235, 0.72);
 }
 
+.appointment-source-row-stacked {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.calendar-raw-email-input {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.86);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.calendar-raw-email-input::placeholder {
+  color: #94a3b8;
+}
+
+.calendar-raw-email-input:focus {
+  outline: 3px solid rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.72);
+}
+
 .calendar-import-actions {
   display: flex;
   gap: 10px;
@@ -1097,6 +1125,13 @@ h1 {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.appointment-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .appointment-tag {
