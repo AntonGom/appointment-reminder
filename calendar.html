@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
-  <link rel="stylesheet" href="account-sections.css?v=20260518b">
+  <link rel="stylesheet" href="account-sections.css?v=20260519a">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -149,6 +149,23 @@
               <div class="import-helper">
                 The importer looks for client name, email, phone, date, time, location, notes, and appointment type automatically.
               </div>
+              <div class="import-safety-note" role="note">
+                This importer is for non-healthcare appointments. Do not import medical, dental, therapy, insurance, pharmacy, or other patient information.
+              </div>
+              <div id="calendar-import-review" class="import-review-panel" hidden>
+                <div class="import-review-head">
+                  <div>
+                    <h3 id="import-review-title">Review appointments</h3>
+                    <p id="import-review-copy">Check what was found before saving it to your calendar.</p>
+                  </div>
+                  <span id="import-review-count" class="source-chip">0 found</span>
+                </div>
+                <div id="import-review-list" class="import-review-list"></div>
+                <div class="import-review-actions">
+                  <button id="save-import-review-button" class="secondary-button" type="button">Save Selected</button>
+                  <button id="clear-import-review-button" class="secondary-button subtle" type="button">Discard</button>
+                </div>
+              </div>
             </div>
 
             <div id="calendar-loading" class="loading-card loading-card-skeleton" hidden>
@@ -273,6 +290,6 @@
 
   <script src="nav.js?v=20260501a"></script>
   <script src="debug-save.js?v=20260516a"></script>
-  <script type="module" src="calendar.js?v=20260518c"></script>
+  <script type="module" src="calendar.js?v=20260519a"></script>
 </body>
 </html>

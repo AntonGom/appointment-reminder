@@ -404,6 +404,13 @@ async function stubModulePages(page, seedState) {
   });
 }
 
+async function saveReviewedImport(page, expectedCount = 1) {
+  await expect(page.locator("#calendar-import-review")).toBeVisible();
+  await expect(page.locator("#import-review-count")).toContainText(`${expectedCount} found`);
+  await page.locator("#save-import-review-button").click();
+  await expect(page.locator("#calendar-import-review")).toBeHidden();
+}
+
 async function pointerDrag(page, fromLocator, toLocator, options = {}) {
   const {
     startAt = "center",
@@ -611,6 +618,9 @@ test.describe("Calendar and Form Creator", () => {
       ].join("\n"))
     });
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Mia Tenant");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Mia Tenant");
     await expect(page.locator("#all-appointments-list")).toContainText("44 Rental Ave");
@@ -658,6 +668,9 @@ test.describe("Calendar and Form Creator", () => {
       buffer: Buffer.from("fake workbook bytes")
     });
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Xavier Excel");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Xavier Excel");
     await expect(page.locator("#all-appointments-list")).toContainText("19 Spreadsheet Lane");
@@ -689,6 +702,9 @@ test.describe("Calendar and Form Creator", () => {
     ].join("\n"));
     await page.locator("#import-raw-email-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Riley Forward");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Riley Forward");
     await expect(page.locator("#all-appointments-list")).toContainText("808 Forwarded Email Rd");
@@ -724,6 +740,9 @@ test.describe("Calendar and Form Creator", () => {
     ].join("\n"));
     await page.locator("#import-raw-email-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Naomi Buyer");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Naomi Buyer");
     await expect(page.locator("#all-appointments-list")).toContainText("44 Palm Street");
@@ -734,6 +753,33 @@ test.describe("Calendar and Form Creator", () => {
     expect(state.tables.appointments[0].client_email).toBe("naomi.buyer@example.com");
     expect(state.tables.appointments[0].service_date).toBe("2027-05-12");
     expect(state.tables.appointments[0].service_time).toBe("14:15");
+  });
+
+  test("calendar lets users correct parsed appointments before saving", async ({ page }) => {
+    await stubModulePages(page, createSupabaseSeed());
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#calendar-layout")).toBeVisible();
+    await page.locator(".calendar-import-summary").click();
+    await page.locator("#raw-email-import-text").fill([
+      "Subject: Listing prep",
+      "To: Draft Client <draft.client@example.com>",
+      "Let's meet May 15, 2027 at 9:45 AM.",
+      "Location: needs cleanup",
+      "Bring listing agreement."
+    ].join("\n"));
+    await page.locator("#import-raw-email-button").click();
+
+    await expect(page.locator("#calendar-import-review")).toBeVisible();
+    await page.locator('#calendar-import-review [data-review-field="client_name"]').fill("Dana Seller");
+    await page.locator('#calendar-import-review [data-review-field="service_location"]').fill("88 Corrected Lane");
+    await saveReviewedImport(page, 1);
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    expect(state.tables.appointments).toHaveLength(1);
+    expect(state.tables.appointments[0].client_name).toBe("Dana Seller");
+    expect(state.tables.appointments[0].service_location).toBe("88 Corrected Lane");
+    expect(state.tables.appointments[0].notes).toContain("Bring listing agreement.");
   });
 
   test("calendar imports multiple pasted sent emails at once", async ({ page }) => {
@@ -755,6 +801,9 @@ test.describe("Calendar and Form Creator", () => {
     ].join("\n"));
     await page.locator("#import-raw-email-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 2 appointments");
+    await expect.poll(async () => page.locator('#calendar-import-review [data-review-field="client_name"]').evaluateAll(inputs => inputs.map(input => input.value).sort())).toEqual(["Alex One", "Casey Two"]);
+    await saveReviewedImport(page, 2);
     await expect(page.locator("#status-banner")).toContainText("Imported 2 appointments");
     await expect(page.locator("#all-appointments-list")).toContainText("Alex One");
     await expect(page.locator("#all-appointments-list")).toContainText("Casey Two");
@@ -786,6 +835,9 @@ test.describe("Calendar and Form Creator", () => {
       ].join("\r\n"))
     });
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Mila Grooming");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Imported 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Mila Grooming");
     await expect(page.locator("#all-appointments-list")).toContainText("22 Pink Paws Ave");
@@ -828,6 +880,9 @@ test.describe("Calendar and Form Creator", () => {
     await page.locator("#calendar-feed-url").fill("webcal://calendar.example.com/feed.ics");
     await page.locator("#sync-calendar-link-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Outlook Client Visit");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Outlook Client Visit");
     await expect(page.locator("#all-appointments-list")).toContainText("77 Sync Street");
@@ -899,6 +954,9 @@ test.describe("Calendar and Form Creator", () => {
     await page.locator(".calendar-import-summary").click();
     await page.locator("#sync-google-calendar-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Google Consult");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Google Consult");
     await expect(page.locator("#all-appointments-list")).toContainText("303 Google Calendar Way");
@@ -964,6 +1022,9 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator(".calendar-import-menu")).toHaveAttribute("open", "");
     await page.locator("#sync-outlook-calendar-button").click();
 
+    await expect(page.locator("#status-banner")).toContainText("Found 1 appointment");
+    await expect(page.locator('#calendar-import-review [data-review-field="client_name"]')).toHaveValue("Olivia Outlook");
+    await saveReviewedImport(page, 1);
     await expect(page.locator("#status-banner")).toContainText("Synced 1 appointment");
     await expect(page.locator("#all-appointments-list")).toContainText("Olivia Outlook");
     await expect(page.locator("#all-appointments-list")).toContainText("91 Outlook Ave");

@@ -40,6 +40,13 @@ const copyForwardingEmailButton = document.getElementById("copy-forwarding-email
 const rawEmailImportText = document.getElementById("raw-email-import-text");
 const importRawEmailButton = document.getElementById("import-raw-email-button");
 const clearRawEmailButton = document.getElementById("clear-raw-email-button");
+const importReviewPanel = document.getElementById("calendar-import-review");
+const importReviewTitle = document.getElementById("import-review-title");
+const importReviewCopy = document.getElementById("import-review-copy");
+const importReviewCount = document.getElementById("import-review-count");
+const importReviewList = document.getElementById("import-review-list");
+const saveImportReviewButton = document.getElementById("save-import-review-button");
+const clearImportReviewButton = document.getElementById("clear-import-review-button");
 const appointmentDetailModal = document.getElementById("appointment-detail-modal");
 const appointmentDetailTitle = document.getElementById("appointment-detail-title");
 const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
@@ -103,6 +110,7 @@ let calendarLoadStartedAt = 0;
 let calendarLoadSequence = 0;
 let googleCalendarTokenGranted = false;
 let microsoftCalendarAuthClient = null;
+let pendingImportReview = null;
 const calendarDebugEnabled = new URLSearchParams(window.location.search).has("debugAccount");
 const calendarDebugLog = [];
 
@@ -1496,6 +1504,263 @@ function getAppointmentDuplicateKey(appointment) {
   ].join("|");
 }
 
+function getImportSourceLabel(source) {
+  const normalizedSource = String(source || "").trim().toLowerCase();
+
+  if (normalizedSource === "raw_email") {
+    return "Pasted email";
+  }
+
+  if (normalizedSource === "forwarded_email") {
+    return "Forwarded email";
+  }
+
+  if (normalizedSource === "ics_import") {
+    return "ICS file";
+  }
+
+  if (normalizedSource === "calendar_link") {
+    return "Calendar link";
+  }
+
+  if (normalizedSource === "google_calendar") {
+    return "Google Calendar";
+  }
+
+  if (normalizedSource === "outlook_calendar") {
+    return "Outlook Calendar";
+  }
+
+  return "Imported file";
+}
+
+function getImportReviewWarnings(row) {
+  const warnings = [];
+
+  if (!String(row?.client_email || "").trim() && !String(row?.client_phone || "").trim()) {
+    warnings.push("No contact method");
+  }
+
+  if (!String(row?.service_time || "").trim()) {
+    warnings.push("No time");
+  }
+
+  if (!String(row?.service_location || "").trim()) {
+    warnings.push("No location");
+  }
+
+  return warnings;
+}
+
+function clearImportReview(options = {}) {
+  pendingImportReview = null;
+
+  if (importReviewPanel) {
+    importReviewPanel.hidden = true;
+  }
+
+  if (importReviewList) {
+    importReviewList.replaceChildren();
+  }
+
+  if (importReviewCount) {
+    importReviewCount.textContent = "0 found";
+  }
+
+  if (options.statusMessage) {
+    setStatus(options.statusMessage, options.statusType || "info");
+  }
+}
+
+function renderImportReview(records, options = {}) {
+  if (!importReviewPanel || !importReviewList) {
+    return;
+  }
+
+  const {
+    source = "import",
+    successVerb = "Imported",
+    skippedDuplicates = 0,
+    clearPasteAfterSave = false,
+    operation = null
+  } = options;
+  const sourceLabel = getImportSourceLabel(source);
+  pendingImportReview = {
+    source,
+    sourceLabel,
+    successVerb,
+    skippedDuplicates,
+    clearPasteAfterSave,
+    operation
+  };
+
+  if (importReviewTitle) {
+    importReviewTitle.textContent = `Review ${records.length} appointment${records.length === 1 ? "" : "s"}`;
+  }
+
+  if (importReviewCopy) {
+    const duplicateCopy = skippedDuplicates
+      ? ` ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`
+      : "";
+    importReviewCopy.textContent = `Edit anything that looks off, uncheck anything you do not want, then save.${duplicateCopy}`;
+  }
+
+  if (importReviewCount) {
+    importReviewCount.textContent = `${records.length} found`;
+  }
+
+  importReviewList.innerHTML = records.map((row, index) => {
+    const warnings = getImportReviewWarnings(row);
+    const warningMarkup = warnings.length
+      ? `<div class="import-review-warnings">${warnings.map(warning => `<span class="import-review-warning">${escapeHtml(warning)}</span>`).join("")}</div>`
+      : "";
+
+    return `
+      <div class="import-review-card" data-import-review-card data-review-index="${index}">
+        <div class="import-review-card-head">
+          <label class="import-review-check">
+            <input type="checkbox" data-review-include checked>
+            Save this appointment
+          </label>
+          <span class="import-review-source">${escapeHtml(sourceLabel)}</span>
+        </div>
+        <div class="import-review-fields">
+          <label class="import-review-field">
+            Client name
+            <input data-review-field="client_name" value="${escapeHtml(row.client_name)}" autocomplete="off">
+          </label>
+          <label class="import-review-field">
+            Email
+            <input data-review-field="client_email" type="email" value="${escapeHtml(row.client_email)}" autocomplete="off">
+          </label>
+          <label class="import-review-field">
+            Phone
+            <input data-review-field="client_phone" inputmode="tel" value="${escapeHtml(row.client_phone)}" autocomplete="off">
+          </label>
+          <label class="import-review-field">
+            Date
+            <input data-review-field="service_date" type="date" value="${escapeHtml(row.service_date)}">
+          </label>
+          <label class="import-review-field">
+            Time
+            <input data-review-field="service_time" type="time" value="${escapeHtml(String(row.service_time || "").slice(0, 5))}">
+          </label>
+          <label class="import-review-field">
+            Location
+            <input data-review-field="service_location" value="${escapeHtml(row.service_location)}" autocomplete="off">
+          </label>
+          <label class="import-review-field is-wide">
+            Notes
+            <textarea data-review-field="notes">${escapeHtml(row.notes)}</textarea>
+          </label>
+        </div>
+        ${warningMarkup}
+      </div>
+    `;
+  }).join("");
+
+  importReviewPanel.hidden = false;
+  importReviewPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function buildRowsFromImportReview() {
+  if (!importReviewList || !pendingImportReview) {
+    return [];
+  }
+
+  const cards = [...importReviewList.querySelectorAll("[data-import-review-card]")];
+
+  return cards
+    .filter(card => card.querySelector("[data-review-include]")?.checked)
+    .map(card => {
+      const readField = field => String(card.querySelector(`[data-review-field="${field}"]`)?.value || "").trim();
+      return {
+        owner_id: currentAuthUser?.id || currentAuthUserId || "",
+        client_name: readField("client_name").slice(0, 80),
+        client_email: readField("client_email").slice(0, 320),
+        client_phone: normalizePhone(readField("client_phone")),
+        service_date: readField("service_date"),
+        service_time: readField("service_time") || null,
+        service_location: readField("service_location").slice(0, 240),
+        notes: readField("notes").slice(0, 1200),
+        last_source: pendingImportReview.source || "import",
+        updated_at: new Date().toISOString()
+      };
+    });
+}
+
+function validateImportReviewRows(rows) {
+  if (!rows.length) {
+    throw new Error("Choose at least one appointment to save.");
+  }
+
+  const invalidRow = rows.find(row => !row.service_date || (!row.client_name && !row.client_email && !row.client_phone));
+
+  if (invalidRow) {
+    throw new Error("Each saved appointment needs a date and at least a client name, email, or phone number.");
+  }
+
+  const invalidEmail = rows.find(row => row.client_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(row.client_email));
+
+  if (invalidEmail) {
+    throw new Error("One of the email addresses does not look valid.");
+  }
+}
+
+async function prepareImportReview(rawRecords, user, options = {}) {
+  const {
+    source = "import",
+    emptyMessage = "No valid appointments were found. Include at least a client name/email/phone and appointment date.",
+    successVerb = "Imported",
+    operation = null,
+    clearPasteAfterSave = false
+  } = options;
+
+  setStatus("Checking appointment records...", "info", {
+    loading: true,
+    progress: operation?.progress?.(2, "Normalize appointment fields")
+  });
+
+  const normalizedRecords = rawRecords
+    .map(record => normalizeImportedAppointmentRecord(record, user.id, source))
+    .filter(Boolean);
+
+  if (!normalizedRecords.length) {
+    throw new Error(emptyMessage);
+  }
+
+  const knownKeys = new Set((appointments || []).map(getAppointmentDuplicateKey));
+  const reviewRows = [];
+  let skippedDuplicates = 0;
+
+  normalizedRecords.forEach(record => {
+    const key = getAppointmentDuplicateKey(record.payload);
+
+    if (knownKeys.has(key)) {
+      skippedDuplicates += 1;
+      return;
+    }
+
+    knownKeys.add(key);
+    reviewRows.push(record.payload);
+  });
+
+  if (!reviewRows.length) {
+    setStatus(`No new appointments found. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
+    return { prepared: 0, skippedDuplicates };
+  }
+
+  renderImportReview(reviewRows, {
+    source,
+    successVerb,
+    skippedDuplicates,
+    clearPasteAfterSave,
+    operation
+  });
+  setStatus(`Found ${reviewRows.length} appointment${reviewRows.length === 1 ? "" : "s"} to review.`, "success");
+  return { prepared: reviewRows.length, skippedDuplicates };
+}
+
 async function persistImportedAppointments(rows) {
   if (!rows.length) {
     return [];
@@ -1521,80 +1786,88 @@ async function persistImportedAppointments(rows) {
   return data || rows;
 }
 
-async function importAppointmentRecords(rawRecords, user, options = {}) {
-  const {
-    source = "import",
-    emptyMessage = "No valid appointments were found. Include at least a client name/email/phone and appointment date.",
-    successVerb = "Imported",
-    operation = window.AppointmentReminderDebug?.createOperation?.({
-      scope: "CAL",
-      action: "IMPORT",
-      totalSteps: 4,
-      label: "Import appointments"
-    })
-  } = options;
-  setStatus("Checking appointment records...", "info", {
-    loading: true,
-    progress: operation?.progress?.(2, "Normalize appointment fields")
-  });
-  const normalizedRecords = rawRecords
-    .map(record => normalizeImportedAppointmentRecord(record, user.id, source))
-    .filter(Boolean);
-
-  if (!normalizedRecords.length) {
-    throw new Error(emptyMessage);
+async function savePendingImportReview() {
+  if (!pendingImportReview) {
+    setStatus("There are no reviewed appointments to save.", "info");
+    return;
   }
 
-  const knownKeys = new Set((appointments || []).map(getAppointmentDuplicateKey));
-  const pendingRows = [];
-  let skippedDuplicates = 0;
-
-  normalizedRecords.forEach(record => {
-    const key = getAppointmentDuplicateKey(record.payload);
-
-    if (knownKeys.has(key)) {
-      skippedDuplicates += 1;
-      return;
-    }
-
-    knownKeys.add(key);
-    pendingRows.push(record.payload);
-  });
-
-  if (!pendingRows.length) {
-    setStatus(`No new appointments saved. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
-    return { saved: 0, skippedDuplicates };
+  if (!supabase) {
+    setStatus("Add your Supabase keys before saving appointments.", "error");
+    return;
   }
+
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before saving appointments.", "error");
+    return;
+  }
+
+  const rows = buildRowsFromImportReview().map(row => ({
+    ...row,
+    owner_id: user.id
+  }));
 
   try {
-    setStatus("Saving appointment records...", "info", {
+    validateImportReviewRows(rows);
+  } catch (error) {
+    setStatus(error.message, "error");
+    return;
+  }
+
+  const operation = pendingImportReview.operation || window.AppointmentReminderDebug?.createOperation?.({
+    scope: "CAL",
+    action: "SAVEIMPORT",
+    totalSteps: 2,
+    label: "Save reviewed appointments"
+  });
+  const successVerb = pendingImportReview.successVerb || "Imported";
+  const skippedDuplicates = pendingImportReview.skippedDuplicates || 0;
+  const clearPasteAfterSave = pendingImportReview.clearPasteAfterSave;
+
+  setButtonBusy(saveImportReviewButton, true, "Saving...");
+
+  try {
+    setStatus("Saving reviewed appointments...", "info", {
       loading: true,
-      progress: operation?.progress?.(3, "Write appointment rows")
+      progress: operation?.progress?.(3, "Write selected rows")
     });
-    await persistImportedAppointments(pendingRows);
+    await persistImportedAppointments(rows);
     setStatus("Refreshing calendar view...", "info", {
       loading: true,
       progress: operation?.progress?.(4, "Reload appointments")
     });
     await loadAppointments(user);
+
+    const summary = [`${successVerb} ${rows.length} appointment${rows.length === 1 ? "" : "s"}`];
+
+    if (skippedDuplicates) {
+      summary.push(`skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}`);
+    }
+
+    if (clearPasteAfterSave && rawEmailImportText) {
+      rawEmailImportText.value = "";
+    }
+
+    clearImportReview();
+    setStatus(`${summary.join("; ")}.`, "success");
+    operation?.success?.(`${successVerb} ${rows.length} appointments`);
   } catch (error) {
-    throw window.AppointmentReminderDebug?.attachError?.(
+    const debugError = window.AppointmentReminderDebug?.attachError?.(
       error,
       operation,
       "SAVE",
-      "Unable to save imported appointments."
+      "Unable to save reviewed appointments."
     ) || error;
+    setDebugErrorStatus(debugError, operation, "SAVE", "Unable to save reviewed appointments.");
+  } finally {
+    setButtonBusy(saveImportReviewButton, false);
   }
-
-  const summary = [`${successVerb} ${pendingRows.length} appointment${pendingRows.length === 1 ? "" : "s"}`];
-
-  if (skippedDuplicates) {
-    summary.push(`skipped ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"}`);
-  }
-
-  setStatus(`${summary.join("; ")}.`, "success");
-  operation?.success?.(`${successVerb} ${pendingRows.length} appointments`);
-  return { saved: pendingRows.length, skippedDuplicates };
 }
 
 async function handleImportAppointmentsFile(event) {
@@ -1642,7 +1915,7 @@ async function handleImportAppointmentsFile(event) {
       : extension === "json" || file.type === "application/json"
         ? parseImportedAppointmentJson(await file.text())
         : parseImportedAppointmentCsv(await file.text());
-    await importAppointmentRecords(rawRecords, user, {
+    await prepareImportReview(rawRecords, user, {
       source: "import",
       successVerb: "Imported",
       operation: importOperation
@@ -1692,7 +1965,7 @@ async function handleImportIcsFile(event) {
 
   try {
     const rawRecords = parseIcsAppointments(await file.text());
-    await importAppointmentRecords(rawRecords, user, {
+    await prepareImportReview(rawRecords, user, {
       source: "ics_import",
       successVerb: "Imported",
       emptyMessage: "No valid calendar events were found. Events need a date and at least a title, email, or phone number.",
@@ -1974,7 +2247,7 @@ async function handleSyncOutlookCalendar() {
       return;
     }
 
-    await importAppointmentRecords(rawRecords, user, {
+    await prepareImportReview(rawRecords, user, {
       source: "outlook_calendar",
       successVerb: "Synced",
       emptyMessage: "No usable Outlook Calendar events were found. Events need a date and at least a title, attendee email, or phone number.",
@@ -2030,7 +2303,7 @@ async function handleSyncGoogleCalendar() {
       return;
     }
 
-    await importAppointmentRecords(rawRecords, user, {
+    await prepareImportReview(rawRecords, user, {
       source: "google_calendar",
       successVerb: "Synced",
       emptyMessage: "No usable Google Calendar events were found. Events need a date and at least a title, attendee email, or phone number.",
@@ -2108,7 +2381,7 @@ async function handleSyncCalendarLink() {
   try {
     const text = await fetchCalendarFeedText(feedUrl);
     const rawRecords = parseIcsAppointments(text);
-    await importAppointmentRecords(rawRecords, user, {
+    await prepareImportReview(rawRecords, user, {
       source: "calendar_link",
       successVerb: "Synced",
       emptyMessage: "No valid calendar events were found in that link.",
@@ -2185,15 +2458,16 @@ async function handleImportRawEmailText() {
 
   try {
     const rawRecords = parseRawEmailAppointmentRecords(rawText);
-    const result = await importAppointmentRecords(rawRecords, user, {
+    const result = await prepareImportReview(rawRecords, user, {
       source: "raw_email",
       successVerb: "Imported",
       emptyMessage: "We could not find enough appointment details in that email text. Try copying the email body with the recipient, date, time, and location visible.",
-      operation: emailOperation
+      operation: emailOperation,
+      clearPasteAfterSave: true
     });
 
-    if (result?.saved && rawEmailImportText) {
-      rawEmailImportText.value = "";
+    if (!result?.prepared) {
+      return;
     }
   } catch (error) {
     setDebugErrorStatus(error, emailOperation, "EMAILTEXT", "Unable to import that email text.");
@@ -3489,7 +3763,18 @@ function bindCalendarControls() {
   if (clearRawEmailButton && rawEmailImportText) {
     clearRawEmailButton.addEventListener("click", () => {
       rawEmailImportText.value = "";
+      clearImportReview();
       rawEmailImportText.focus();
+    });
+  }
+
+  if (saveImportReviewButton) {
+    saveImportReviewButton.addEventListener("click", savePendingImportReview);
+  }
+
+  if (clearImportReviewButton) {
+    clearImportReviewButton.addEventListener("click", () => {
+      clearImportReview({ statusMessage: "Import review discarded.", statusType: "info" });
     });
   }
 

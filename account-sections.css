@@ -1053,6 +1053,153 @@ h1 {
   line-height: 1.55;
 }
 
+.import-safety-note {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(255, 251, 235, 0.78);
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.import-review-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+}
+
+.import-review-head,
+.import-review-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.import-review-head h3 {
+  margin: 0 0 4px;
+  color: var(--text-main);
+  font-size: 20px;
+}
+
+.import-review-head p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.import-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.import-review-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.import-review-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.import-review-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 820;
+}
+
+.import-review-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.import-review-source {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.import-review-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.import-review-field {
+  display: grid;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.import-review-field input,
+.import-review-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(148, 163, 184, 0.86);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.import-review-field textarea {
+  min-height: 78px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.import-review-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.import-review-warnings {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.import-review-warning {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(255, 251, 235, 0.9);
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.import-review-empty {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(241, 245, 249, 0.9);
+  color: var(--text-soft);
+  font-weight: 720;
+}
+
 .calendar-layout.is-month-view .appointment-lists {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1800,6 +1947,14 @@ button.calendar-week-mobile-day {
   .calendar-import-actions .secondary-button {
     flex: 1 1 142px;
     min-width: 0;
+  }
+
+  .import-review-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .import-review-actions .secondary-button {
+    flex: 1 1 100%;
   }
 
   .calendar-view-toggle,
