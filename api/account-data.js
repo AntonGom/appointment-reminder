@@ -462,7 +462,7 @@ async function loadHistory(config, ownerId) {
   return fetchRestRows({
     ...config,
     table: "client_reminder_history",
-    select: "id,client_id,channel,source,message_id,recipient_email,event_type,status,occurred_at,sent_at,created_at,message_preview",
+    select: "id,client_id,channel,source,message_id,recipient_email,event_type,status,occurred_at,sent_at,created_at,message_preview,event_key,raw_event",
     searchParams: {
       owner_id: ownerId ? `eq.${ownerId}` : "",
       order: "sent_at.desc",
@@ -474,6 +474,72 @@ async function loadHistory(config, ownerId) {
     }
 
     throw error;
+  });
+}
+
+function createHistoryEventKey(ownerId) {
+  const randomValue = typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return `manual:${ownerId}:${randomValue}`;
+}
+
+function normalizeHistoryPayload(body, ownerId) {
+  const source = body && typeof body === "object" ? body : {};
+  const row = source.row && typeof source.row === "object" ? source.row : source;
+  const channel = String(row.channel || "").trim().toLowerCase() === "sms" ? "sms" : "email";
+  const status = String(row.status || row.event_type || "sent").trim().toLowerCase().slice(0, 40) || "sent";
+  const occurredAt = String(row.occurred_at || row.sent_at || "").trim() || new Date().toISOString();
+  const recipientEmail = String(row.recipient_email || "").trim().slice(0, 320);
+  const rawEvent = row.raw_event && typeof row.raw_event === "object" ? row.raw_event : {};
+
+  return {
+    owner_id: ownerId,
+    client_id: String(row.client_id || "").trim() || null,
+    channel,
+    source: String(row.source || "external_import").trim().slice(0, 80) || "external_import",
+    message_id: String(row.message_id || "").trim().slice(0, 180) || null,
+    recipient_email: channel === "email" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(recipientEmail) ? recipientEmail : null,
+    event_type: String(row.event_type || status || "sent").trim().slice(0, 80) || "sent",
+    status,
+    occurred_at: occurredAt,
+    sent_at: occurredAt,
+    event_key: String(row.event_key || "").trim().slice(0, 240) || createHistoryEventKey(ownerId),
+    message_preview: String(row.message_preview || "").trim().slice(0, 1200) || null,
+    raw_event: {
+      ...rawEvent,
+      imported_from: String(rawEvent.imported_from || "messages_page").slice(0, 80),
+      recipient_phone: String(rawEvent.recipient_phone || row.recipient_phone || "").replace(/\D/g, "").slice(0, 20) || null
+    }
+  };
+}
+
+async function saveHistory(config, ownerId, body) {
+  if (!ownerId) {
+    const error = new Error("Missing account owner.");
+    error.status = 400;
+    throw error;
+  }
+
+  const row = normalizeHistoryPayload(body, ownerId);
+
+  if (!row.client_id && !row.recipient_email && !row.raw_event.recipient_phone) {
+    const error = new Error("Choose a client or add a recipient before saving that message.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!row.message_preview) {
+    const error = new Error("Add a short message preview before saving.");
+    error.status = 400;
+    throw error;
+  }
+
+  return insertRestRows({
+    ...config,
+    table: "client_reminder_history",
+    rows: row
   });
 }
 
@@ -515,6 +581,12 @@ export default async function handler(req, res) {
 
       if (resource === "clients") {
         const data = await saveClient(config, ownerId, req.body || {});
+        sendJson(res, 200, { data });
+        return;
+      }
+
+      if (resource === "history") {
+        const data = await saveHistory(config, ownerId, req.body || {});
         sendJson(res, 200, { data });
         return;
       }
