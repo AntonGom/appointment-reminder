@@ -1,6 +1,7 @@
 const EMAIL_PATTERN = /[^\s<>"']+@[^\s<>"']+\.[^\s<>"']+/gi;
 const SINGLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const APPOINTMENT_SOURCE_COLUMNS = ["source_type", "source_external_id", "source_signature", "source_synced_at"];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -45,13 +46,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const insertedRows = await supabaseAdminFetch("appointments", {
-      method: "POST",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: appointment
-    });
+    const insertedRows = await insertAppointment(appointment);
 
     return sendJson(res, 200, {
       success: true,
@@ -127,7 +122,10 @@ async function supabaseAdminFetch(path, options = {}) {
   const payload = text ? safeJsonParse(text) : null;
 
   if (!response.ok) {
-    throw new Error(`Supabase error (${response.status}): ${text || response.statusText}`);
+    const error = new Error(`Supabase error (${response.status}): ${text || response.statusText}`);
+    error.status = response.status;
+    error.payload = payload || text;
+    throw error;
   }
 
   return payload;
@@ -139,6 +137,18 @@ function safeJsonParse(value) {
   } catch {
     return null;
   }
+}
+
+function isMissingColumnError(error, columnName) {
+  const text = [
+    error?.payload?.code,
+    error?.payload?.message,
+    error?.payload?.details,
+    error?.payload?.hint,
+    error?.message
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  return text.includes("42703") || text.includes(String(columnName || "").toLowerCase());
 }
 
 function normalizeUuid(value) {
@@ -393,7 +403,7 @@ function parseInboundAppointment(payload = {}, ownerId) {
   const dateCandidate = extractDateCandidate(combinedText);
   const timeCandidate = extractTimeCandidate(combinedText);
 
-  return {
+  const appointment = {
     owner_id: ownerId,
     client_name: clientName,
     client_email: emailCandidates[0] || "",
@@ -403,8 +413,61 @@ function parseInboundAppointment(payload = {}, ownerId) {
     service_location: extractLabelValue(combinedText, ["location", "address", "where"]).slice(0, 240),
     notes: buildInboundNotes(payload, bodyText),
     last_source: "forwarded_email",
+    source_type: "forwarded_email",
+    source_external_id: String(payload.messageId || payload.message_id || payload.id || "").trim().slice(0, 240) || null,
+    source_synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
+  appointment.source_signature = buildSourceSignature(appointment).slice(0, 500);
+  return appointment;
+}
+
+function buildSourceSignature(appointment) {
+  if (appointment.source_external_id) {
+    return `${appointment.owner_id}|${appointment.source_type}|id:${appointment.source_external_id}`;
+  }
+
+  return [
+    appointment.owner_id,
+    appointment.source_type,
+    appointment.service_date,
+    appointment.service_time || "",
+    String(appointment.client_email || "").toLowerCase(),
+    normalizePhone(appointment.client_phone || ""),
+    String(appointment.client_name || "").trim().toLowerCase()
+  ].join("|");
+}
+
+function stripSourceColumns(row) {
+  const nextRow = { ...row };
+  APPOINTMENT_SOURCE_COLUMNS.forEach(column => {
+    delete nextRow[column];
+  });
+  return nextRow;
+}
+
+async function insertAppointment(appointment) {
+  try {
+    return await supabaseAdminFetch("appointments", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: appointment
+    });
+  } catch (error) {
+    if (!APPOINTMENT_SOURCE_COLUMNS.some(column => isMissingColumnError(error, column))) {
+      throw error;
+    }
+
+    return supabaseAdminFetch("appointments", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation"
+      },
+      body: stripSourceColumns(appointment)
+    });
+  }
 }
 
 async function findDuplicateAppointment(appointment) {

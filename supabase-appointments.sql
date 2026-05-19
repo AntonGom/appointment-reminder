@@ -11,15 +11,33 @@ create table if not exists public.appointments (
   notes text,
   last_channel text check (last_channel in ('email', 'sms')),
   last_source text,
+  source_type text,
+  source_external_id text,
+  source_signature text,
+  source_synced_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.appointments
+  add column if not exists source_type text,
+  add column if not exists source_external_id text,
+  add column if not exists source_signature text,
+  add column if not exists source_synced_at timestamptz;
 
 create index if not exists appointments_owner_date_idx
   on public.appointments(owner_id, service_date asc, service_time asc);
 
 create index if not exists appointments_client_idx
   on public.appointments(client_id, service_date asc);
+
+create index if not exists appointments_source_external_idx
+  on public.appointments(owner_id, source_type, source_external_id)
+  where source_external_id is not null;
+
+create index if not exists appointments_source_signature_idx
+  on public.appointments(owner_id, source_signature)
+  where source_signature is not null;
 
 alter table public.appointments enable row level security;
 

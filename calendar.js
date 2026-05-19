@@ -47,6 +47,28 @@ const importReviewCount = document.getElementById("import-review-count");
 const importReviewList = document.getElementById("import-review-list");
 const saveImportReviewButton = document.getElementById("save-import-review-button");
 const clearImportReviewButton = document.getElementById("clear-import-review-button");
+const schedulerAddonStatus = document.getElementById("scheduler-addon-status");
+const schedulerAddonEnabled = document.getElementById("scheduler-addon-enabled");
+const schedulerSourceGoogle = document.getElementById("scheduler-source-google");
+const schedulerSourceOutlook = document.getElementById("scheduler-source-outlook");
+const schedulerSourceLink = document.getElementById("scheduler-source-link");
+const schedulerSourceForwardedEmail = document.getElementById("scheduler-source-forwarded-email");
+const schedulerSourceWebhook = document.getElementById("scheduler-source-webhook");
+const schedulerAddonFeedUrl = document.getElementById("scheduler-addon-feed-url");
+const schedulerUseFeedButton = document.getElementById("scheduler-use-feed-button");
+const schedulerSyncFeedButton = document.getElementById("scheduler-sync-feed-button");
+const schedulerWebhookUrl = document.getElementById("scheduler-webhook-url");
+const schedulerWebhookSecret = document.getElementById("scheduler-webhook-secret");
+const copySchedulerWebhookUrlButton = document.getElementById("copy-scheduler-webhook-url-button");
+const copySchedulerWebhookSecretButton = document.getElementById("copy-scheduler-webhook-secret-button");
+const regenerateSchedulerSecretButton = document.getElementById("regenerate-scheduler-secret-button");
+const schedulerRuleAutoSave = document.getElementById("scheduler-rule-auto-save");
+const schedulerRuleEmail24h = document.getElementById("scheduler-rule-email-24h");
+const schedulerRuleEmailSameDay = document.getElementById("scheduler-rule-email-same-day");
+const schedulerRuleFollowUp = document.getElementById("scheduler-rule-follow-up");
+const schedulerRuleReviewFirst = document.getElementById("scheduler-rule-review-first");
+const schedulerAddonSummary = document.getElementById("scheduler-addon-summary");
+const saveSchedulerAddonButton = document.getElementById("save-scheduler-addon-button");
 const appointmentDetailModal = document.getElementById("appointment-detail-modal");
 const appointmentDetailTitle = document.getElementById("appointment-detail-title");
 const appointmentDetailCopy = document.getElementById("appointment-detail-copy");
@@ -60,6 +82,9 @@ let supabase = null;
 let appConfig = null;
 let appointments = [];
 let reminderHistory = [];
+let currentIntegrationProfile = null;
+let integrationProfileDirty = false;
+let lastIntegrationSaveAt = 0;
 let appointmentsReady = true;
 let calendarLoadFailed = false;
 let viewMonth = startOfMonth(new Date());
@@ -560,6 +585,37 @@ async function postAccountDataResource(resource, rows, ownerId = "") {
   return Array.isArray(payload?.data) ? payload.data : [];
 }
 
+async function postAccountDataPayload(resource, body, ownerId = "") {
+  const token = await getCurrentSupabaseAccessToken();
+
+  if (!token) {
+    throw new Error("No account session token is available.");
+  }
+
+  const params = new URLSearchParams({ resource });
+
+  if (ownerId) {
+    params.set("ownerId", ownerId);
+  }
+
+  const response = await runWithTimeout(() => fetch(`/api/account-data?${params.toString()}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  }), SUPABASE_READ_TIMEOUT_MS);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Unable to save account data.");
+  }
+
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 async function refreshCalendarSessionAndData() {
   if (!supabase) {
     recordCalendarDebug("refresh skipped", "no supabase client");
@@ -574,6 +630,7 @@ async function refreshCalendarSessionAndData() {
     currentAuthUser = user || null;
     currentAuthUserId = nextUserId;
     updateSignedInView(user || null);
+    await loadIntegrationProfileForUser(user || null);
     await loadAppointments(user || null);
   } catch (error) {
     recordCalendarDebug("refresh error", error?.message || String(error));
@@ -758,6 +815,314 @@ function updateAppointmentSourceControls(user = currentAuthUser) {
   if (copyForwardingEmailButton) {
     copyForwardingEmailButton.disabled = !forwardingAddress;
   }
+
+  renderIntegrationProfile();
+}
+
+function createSchedulerSecret() {
+  const randomParts = [];
+  const bytes = new Uint8Array(18);
+
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+    bytes.forEach(byte => randomParts.push(byte.toString(36).padStart(2, "0")));
+  } else {
+    randomParts.push(Date.now().toString(36), Math.random().toString(36).slice(2));
+  }
+
+  return `arwh_${randomParts.join("").slice(0, 32)}`;
+}
+
+function getDefaultIntegrationProfile() {
+  return {
+    version: 1,
+    addonModeEnabled: false,
+    sources: {
+      googleCalendar: { enabled: false },
+      outlookCalendar: { enabled: false },
+      calendarLink: { enabled: false, url: "" },
+      forwardedEmail: { enabled: false },
+      webhook: { enabled: false }
+    },
+    webhook: {
+      enabled: false,
+      sourceName: "scheduler_webhook",
+      secret: createSchedulerSecret()
+    },
+    reminderRules: {
+      autoSaveTrustedAppointments: true,
+      email24h: true,
+      emailSameDay: false,
+      followUpAfter: false,
+      reviewFirstReminderForNewClient: true
+    },
+    savedAt: ""
+  };
+}
+
+function normalizeIntegrationProfile(profile) {
+  const defaults = getDefaultIntegrationProfile();
+  const source = profile && typeof profile === "object" ? profile : {};
+  const sourceConfig = source.sources && typeof source.sources === "object" ? source.sources : {};
+  const webhookConfig = source.webhook && typeof source.webhook === "object" ? source.webhook : {};
+  const rules = source.reminderRules && typeof source.reminderRules === "object" ? source.reminderRules : {};
+
+  return {
+    ...defaults,
+    version: 1,
+    addonModeEnabled: source.addonModeEnabled === true,
+    sources: {
+      googleCalendar: { enabled: sourceConfig.googleCalendar?.enabled === true },
+      outlookCalendar: { enabled: sourceConfig.outlookCalendar?.enabled === true },
+      calendarLink: {
+        enabled: sourceConfig.calendarLink?.enabled === true,
+        url: String(sourceConfig.calendarLink?.url || "").trim().slice(0, 1000)
+      },
+      forwardedEmail: { enabled: sourceConfig.forwardedEmail?.enabled === true },
+      webhook: { enabled: sourceConfig.webhook?.enabled === true }
+    },
+    webhook: {
+      enabled: sourceConfig.webhook?.enabled === true || webhookConfig.enabled === true,
+      sourceName: String(webhookConfig.sourceName || "scheduler_webhook").trim().slice(0, 80) || "scheduler_webhook",
+      secret: String(webhookConfig.secret || defaults.webhook.secret).trim().slice(0, 80)
+    },
+    reminderRules: {
+      autoSaveTrustedAppointments: rules.autoSaveTrustedAppointments !== false,
+      email24h: rules.email24h !== false,
+      emailSameDay: rules.emailSameDay === true,
+      followUpAfter: rules.followUpAfter === true,
+      reviewFirstReminderForNewClient: rules.reviewFirstReminderForNewClient !== false
+    },
+    savedAt: String(source.savedAt || "").trim()
+  };
+}
+
+function getSchedulerWebhookUrl(user = currentAuthUser) {
+  if (!user?.id) {
+    return "";
+  }
+
+  const url = new URL("/api/scheduler-webhook", window.location.origin);
+  url.searchParams.set("ownerId", user.id);
+  url.searchParams.set("source", currentIntegrationProfile?.webhook?.sourceName || "scheduler_webhook");
+  return url.toString();
+}
+
+function getEnabledIntegrationSourceCount(profile = currentIntegrationProfile) {
+  if (!profile?.sources) {
+    return 0;
+  }
+
+  return Object.values(profile.sources).filter(source => source?.enabled === true).length;
+}
+
+function renderIntegrationProfile() {
+  const profile = normalizeIntegrationProfile(currentIntegrationProfile);
+  currentIntegrationProfile = profile;
+  const enabledCount = getEnabledIntegrationSourceCount(profile);
+  const hasUser = Boolean(currentAuthUser?.id);
+
+  if (schedulerAddonEnabled) schedulerAddonEnabled.checked = profile.addonModeEnabled;
+  if (schedulerSourceGoogle) schedulerSourceGoogle.checked = profile.sources.googleCalendar.enabled;
+  if (schedulerSourceOutlook) schedulerSourceOutlook.checked = profile.sources.outlookCalendar.enabled;
+  if (schedulerSourceLink) schedulerSourceLink.checked = profile.sources.calendarLink.enabled;
+  if (schedulerSourceForwardedEmail) schedulerSourceForwardedEmail.checked = profile.sources.forwardedEmail.enabled;
+  if (schedulerSourceWebhook) schedulerSourceWebhook.checked = profile.sources.webhook.enabled;
+  if (schedulerAddonFeedUrl) schedulerAddonFeedUrl.value = profile.sources.calendarLink.url || "";
+  if (schedulerWebhookUrl) schedulerWebhookUrl.value = getSchedulerWebhookUrl();
+  if (schedulerWebhookSecret) schedulerWebhookSecret.value = profile.webhook.secret || "";
+  if (schedulerRuleAutoSave) schedulerRuleAutoSave.checked = profile.reminderRules.autoSaveTrustedAppointments;
+  if (schedulerRuleEmail24h) schedulerRuleEmail24h.checked = profile.reminderRules.email24h;
+  if (schedulerRuleEmailSameDay) schedulerRuleEmailSameDay.checked = profile.reminderRules.emailSameDay;
+  if (schedulerRuleFollowUp) schedulerRuleFollowUp.checked = profile.reminderRules.followUpAfter;
+  if (schedulerRuleReviewFirst) schedulerRuleReviewFirst.checked = profile.reminderRules.reviewFirstReminderForNewClient;
+
+  if (schedulerAddonStatus) {
+    schedulerAddonStatus.textContent = profile.addonModeEnabled ? `${enabledCount || 0} source${enabledCount === 1 ? "" : "s"}` : "Off";
+  }
+
+  if (schedulerAddonSummary) {
+    if (!hasUser) {
+      schedulerAddonSummary.textContent = "Sign in to save add-on settings.";
+    } else if (!profile.addonModeEnabled) {
+      schedulerAddonSummary.textContent = "Add-on mode is off. Existing manual imports still work.";
+    } else if (!enabledCount) {
+      schedulerAddonSummary.textContent = "Add-on mode is on, but no trusted sources are enabled yet.";
+    } else {
+      const ruleParts = [];
+      if (profile.reminderRules.email24h) ruleParts.push("24-hour email");
+      if (profile.reminderRules.emailSameDay) ruleParts.push("same-day email");
+      if (profile.reminderRules.followUpAfter) ruleParts.push("follow-up");
+      schedulerAddonSummary.textContent = `${enabledCount} trusted source${enabledCount === 1 ? "" : "s"} enabled. ${ruleParts.length ? `Rules: ${ruleParts.join(", ")}.` : "No reminder rules enabled yet."}`;
+    }
+  }
+
+  [
+    schedulerAddonEnabled,
+    schedulerSourceGoogle,
+    schedulerSourceOutlook,
+    schedulerSourceLink,
+    schedulerSourceForwardedEmail,
+    schedulerSourceWebhook,
+    schedulerAddonFeedUrl,
+    schedulerUseFeedButton,
+    schedulerSyncFeedButton,
+    copySchedulerWebhookUrlButton,
+    copySchedulerWebhookSecretButton,
+    regenerateSchedulerSecretButton,
+    schedulerRuleAutoSave,
+    schedulerRuleEmail24h,
+    schedulerRuleEmailSameDay,
+    schedulerRuleFollowUp,
+    schedulerRuleReviewFirst,
+    saveSchedulerAddonButton
+  ].forEach(control => {
+    if (control) {
+      control.disabled = !hasUser;
+    }
+  });
+}
+
+function readIntegrationProfileFromUi() {
+  const current = normalizeIntegrationProfile(currentIntegrationProfile);
+  return normalizeIntegrationProfile({
+    ...current,
+    addonModeEnabled: schedulerAddonEnabled?.checked === true,
+    sources: {
+      googleCalendar: { enabled: schedulerSourceGoogle?.checked === true },
+      outlookCalendar: { enabled: schedulerSourceOutlook?.checked === true },
+      calendarLink: {
+        enabled: schedulerSourceLink?.checked === true,
+        url: String(schedulerAddonFeedUrl?.value || "").trim()
+      },
+      forwardedEmail: { enabled: schedulerSourceForwardedEmail?.checked === true },
+      webhook: { enabled: schedulerSourceWebhook?.checked === true }
+    },
+    webhook: {
+      ...current.webhook,
+      enabled: schedulerSourceWebhook?.checked === true,
+      secret: String(schedulerWebhookSecret?.value || current.webhook.secret || createSchedulerSecret()).trim()
+    },
+    reminderRules: {
+      autoSaveTrustedAppointments: schedulerRuleAutoSave?.checked === true,
+      email24h: schedulerRuleEmail24h?.checked === true,
+      emailSameDay: schedulerRuleEmailSameDay?.checked === true,
+      followUpAfter: schedulerRuleFollowUp?.checked === true,
+      reviewFirstReminderForNewClient: schedulerRuleReviewFirst?.checked === true
+    },
+    savedAt: new Date().toISOString()
+  });
+}
+
+async function loadIntegrationProfileForUser(user = currentAuthUser, options = {}) {
+  if (integrationProfileDirty && !options.force) {
+    return;
+  }
+
+  if (!user?.id) {
+    currentIntegrationProfile = normalizeIntegrationProfile(null);
+    integrationProfileDirty = false;
+    renderIntegrationProfile();
+    return;
+  }
+
+  try {
+    const rows = await fetchAccountDataResource("profile", user.id);
+    const profile = rows[0] || {};
+    currentIntegrationProfile = normalizeIntegrationProfile(profile.integration_profile || user.user_metadata?.integration_profile || null);
+    if (calendarFeedUrlInput && currentIntegrationProfile.sources.calendarLink.url && !calendarFeedUrlInput.value) {
+      calendarFeedUrlInput.value = currentIntegrationProfile.sources.calendarLink.url;
+    }
+  } catch (error) {
+    console.warn("Unable to load integration settings.", error);
+    currentIntegrationProfile = normalizeIntegrationProfile(currentAuthUser?.user_metadata?.integration_profile || null);
+  }
+
+  integrationProfileDirty = false;
+  renderIntegrationProfile();
+}
+
+async function saveIntegrationProfileForUser() {
+  let user = currentAuthUser;
+
+  if (!user?.id) {
+    user = await getCurrentSupabaseUser();
+  }
+
+  if (!user?.id) {
+    setStatus("Please sign in before saving add-on settings.", "error");
+    return;
+  }
+
+  const profile = readIntegrationProfileFromUi();
+  currentIntegrationProfile = profile;
+  renderIntegrationProfile();
+  setButtonBusy(saveSchedulerAddonButton, true, "Saving...");
+  setStatus("Saving add-on settings...", "info");
+
+  try {
+    await postAccountDataPayload("profile", {
+      email: user.email || "",
+      integration_profile: profile
+    }, user.id);
+    integrationProfileDirty = false;
+    lastIntegrationSaveAt = Date.now();
+    setStatus("Add-on settings saved.", "success");
+  } catch (error) {
+    console.warn("Unable to save integration settings.", error);
+    integrationProfileDirty = true;
+    setStatus(error.message || "Unable to save add-on settings.", "error");
+  } finally {
+    setButtonBusy(saveSchedulerAddonButton, false);
+    renderIntegrationProfile();
+  }
+}
+
+async function copyTextToClipboard(value, successMessage) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    setStatus("There is nothing to copy yet.", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(successMessage, "success");
+  } catch (error) {
+    console.warn("Clipboard copy failed.", error);
+    setStatus("Unable to copy. Select the text and copy it manually.", "error");
+  }
+}
+
+function syncSavedFeedToImportMenu() {
+  const feedUrl = String(schedulerAddonFeedUrl?.value || "").trim();
+
+  if (!feedUrl) {
+    setStatus("Paste a saved calendar link first.", "error");
+    return;
+  }
+
+  if (calendarFeedUrlInput) {
+    calendarFeedUrlInput.value = feedUrl;
+  }
+
+  setStatus("Saved link copied into the import menu.", "success");
+}
+
+async function syncSavedFeedNow() {
+  syncSavedFeedToImportMenu();
+  await handleSyncCalendarLink();
+}
+
+function regenerateSchedulerWebhookSecret() {
+  if (schedulerWebhookSecret) {
+    schedulerWebhookSecret.value = createSchedulerSecret();
+  }
+
+  currentIntegrationProfile = readIntegrationProfileFromUi();
+  renderIntegrationProfile();
+  setStatus("New webhook secret generated. Save add-on settings to activate it.", "info");
 }
 
 async function getPublicConfig() {
@@ -1489,9 +1854,34 @@ function normalizeImportedAppointmentRecord(rawRecord, ownerId, source = "import
       service_location: serviceLocation,
       notes,
       last_source: source,
+      source_type: source,
+      source_external_id: importId || null,
+      source_synced_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
   };
+}
+
+function getAppointmentSourceSignature(appointment) {
+  const externalId = String(appointment?.source_external_id || "").trim();
+
+  if (externalId) {
+    return [
+      appointment?.owner_id || currentAuthUserId || "",
+      appointment?.source_type || appointment?.last_source || "",
+      `id:${externalId}`
+    ].join("|");
+  }
+
+  return [
+    appointment?.owner_id || currentAuthUserId || "",
+    appointment?.source_type || appointment?.last_source || "",
+    String(appointment?.service_date || "").trim(),
+    String(appointment?.service_time || "").trim(),
+    String(appointment?.client_email || "").trim().toLowerCase(),
+    normalizePhone(appointment?.client_phone || ""),
+    String(appointment?.client_name || "").trim().toLowerCase()
+  ].join("|");
 }
 
 function getAppointmentDuplicateKey(appointment) {
@@ -1531,7 +1921,43 @@ function getImportSourceLabel(source) {
     return "Outlook Calendar";
   }
 
+  if (normalizedSource === "scheduler_webhook") {
+    return "Scheduler webhook";
+  }
+
   return "Imported file";
+}
+
+function shouldAutoSaveImportSource(source) {
+  const profile = normalizeIntegrationProfile(currentIntegrationProfile);
+
+  if (!profile.addonModeEnabled || !profile.reminderRules.autoSaveTrustedAppointments) {
+    return false;
+  }
+
+  const normalizedSource = String(source || "").trim().toLowerCase();
+
+  if (normalizedSource === "google_calendar") {
+    return profile.sources.googleCalendar.enabled;
+  }
+
+  if (normalizedSource === "outlook_calendar") {
+    return profile.sources.outlookCalendar.enabled;
+  }
+
+  if (normalizedSource === "calendar_link") {
+    return profile.sources.calendarLink.enabled;
+  }
+
+  if (normalizedSource === "forwarded_email") {
+    return profile.sources.forwardedEmail.enabled;
+  }
+
+  if (normalizedSource === "scheduler_webhook") {
+    return profile.sources.webhook.enabled;
+  }
+
+  return false;
 }
 
 function getImportReviewWarnings(row) {
@@ -1616,7 +2042,7 @@ function renderImportReview(records, options = {}) {
       : "";
 
     return `
-      <div class="import-review-card" data-import-review-card data-review-index="${index}">
+      <div class="import-review-card" data-import-review-card data-review-index="${index}" data-source-type="${escapeHtml(row.source_type || source)}" data-source-external-id="${escapeHtml(row.source_external_id || "")}" data-source-signature="${escapeHtml(row.source_signature || getAppointmentSourceSignature(row))}" data-source-synced-at="${escapeHtml(row.source_synced_at || "")}">
         <div class="import-review-card-head">
           <label class="import-review-check">
             <input type="checkbox" data-review-include checked>
@@ -1674,7 +2100,7 @@ function buildRowsFromImportReview() {
     .filter(card => card.querySelector("[data-review-include]")?.checked)
     .map(card => {
       const readField = field => String(card.querySelector(`[data-review-field="${field}"]`)?.value || "").trim();
-      return {
+      const row = {
         owner_id: currentAuthUser?.id || currentAuthUserId || "",
         client_name: readField("client_name").slice(0, 80),
         client_email: readField("client_email").slice(0, 320),
@@ -1684,8 +2110,16 @@ function buildRowsFromImportReview() {
         service_location: readField("service_location").slice(0, 240),
         notes: readField("notes").slice(0, 1200),
         last_source: pendingImportReview.source || "import",
+        source_type: String(card.dataset.sourceType || pendingImportReview.source || "import").slice(0, 80),
+        source_external_id: String(card.dataset.sourceExternalId || "").trim() || null,
+        source_signature: String(card.dataset.sourceSignature || "").trim().slice(0, 500) || null,
+        source_synced_at: String(card.dataset.sourceSyncedAt || "").trim() || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      if (!row.source_external_id) {
+        row.source_signature = getAppointmentSourceSignature(row).slice(0, 500);
+      }
+      return row;
     });
 }
 
@@ -1722,7 +2156,13 @@ async function prepareImportReview(rawRecords, user, options = {}) {
   });
 
   const normalizedRecords = rawRecords
-    .map(record => normalizeImportedAppointmentRecord(record, user.id, source))
+    .map(record => {
+      const normalized = normalizeImportedAppointmentRecord(record, user.id, source);
+      if (normalized?.payload && !normalized.payload.source_signature) {
+        normalized.payload.source_signature = getAppointmentSourceSignature(normalized.payload).slice(0, 500);
+      }
+      return normalized;
+    })
     .filter(Boolean);
 
   if (!normalizedRecords.length) {
@@ -1748,6 +2188,17 @@ async function prepareImportReview(rawRecords, user, options = {}) {
   if (!reviewRows.length) {
     setStatus(`No new appointments found. ${skippedDuplicates} duplicate${skippedDuplicates === 1 ? "" : "s"} skipped.`, "info");
     return { prepared: 0, skippedDuplicates };
+  }
+
+  if (shouldAutoSaveImportSource(source)) {
+    setStatus("Saving trusted appointments...", "info", {
+      loading: true,
+      progress: operation?.progress?.(3, "Auto-save trusted rows")
+    });
+    await persistImportedAppointments(reviewRows);
+    await loadAppointments(user);
+    setStatus(`Synced and saved ${reviewRows.length} trusted appointment${reviewRows.length === 1 ? "" : "s"}.`, "success");
+    return { prepared: reviewRows.length, saved: reviewRows.length, skippedDuplicates };
   }
 
   renderImportReview(reviewRows, {
@@ -2521,6 +2972,8 @@ function getAppointmentTags(appointment) {
     tags.push("Outlook");
   } else if (source === "raw_email" || source === "forwarded_email") {
     tags.push("Email import");
+  } else if (source === "scheduler_webhook") {
+    tags.push("Scheduler");
   } else if (source === "import") {
     tags.push("Imported");
   }
@@ -3606,7 +4059,9 @@ async function loadAppointments(user) {
   }
 
   setLoadingState(true);
-  setStatus("");
+  if (Date.now() - lastIntegrationSaveAt > 3500) {
+    setStatus("");
+  }
   calendarLoadFailed = false;
   recordCalendarDebug("load appointments start", `user ${user.id}`);
 
@@ -3632,7 +4087,7 @@ async function loadAppointments(user) {
     if (!appointmentsResult) {
       appointmentsResult = await withSupabaseRetry(() => supabase
         .from("appointments")
-        .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, created_at, updated_at")
+        .select("id, client_id, client_name, client_email, client_phone, service_date, service_time, service_location, notes, last_channel, last_source, source_type, source_external_id, source_signature, source_synced_at, created_at, updated_at")
         .eq("owner_id", user.id)
         .order("service_date", { ascending: true })
         .order("service_time", { ascending: true }), { attempts: 1, timeoutMs: SUPABASE_READ_TIMEOUT_MS });
@@ -3754,6 +4209,62 @@ function bindCalendarControls() {
 
   if (copyForwardingEmailButton) {
     copyForwardingEmailButton.addEventListener("click", copyForwardingEmailAddress);
+  }
+
+  if (saveSchedulerAddonButton) {
+    saveSchedulerAddonButton.addEventListener("click", saveIntegrationProfileForUser);
+  }
+
+  [
+    schedulerAddonEnabled,
+    schedulerSourceGoogle,
+    schedulerSourceOutlook,
+    schedulerSourceLink,
+    schedulerSourceForwardedEmail,
+    schedulerSourceWebhook,
+    schedulerRuleAutoSave,
+    schedulerRuleEmail24h,
+    schedulerRuleEmailSameDay,
+    schedulerRuleFollowUp,
+    schedulerRuleReviewFirst
+  ].forEach(control => {
+    if (control) {
+      control.addEventListener("change", () => {
+        integrationProfileDirty = true;
+        currentIntegrationProfile = readIntegrationProfileFromUi();
+        renderIntegrationProfile();
+      });
+    }
+  });
+
+  if (schedulerAddonFeedUrl) {
+    schedulerAddonFeedUrl.addEventListener("input", () => {
+      integrationProfileDirty = true;
+    });
+  }
+
+  if (schedulerUseFeedButton) {
+    schedulerUseFeedButton.addEventListener("click", syncSavedFeedToImportMenu);
+  }
+
+  if (schedulerSyncFeedButton) {
+    schedulerSyncFeedButton.addEventListener("click", syncSavedFeedNow);
+  }
+
+  if (copySchedulerWebhookUrlButton) {
+    copySchedulerWebhookUrlButton.addEventListener("click", () => {
+      copyTextToClipboard(schedulerWebhookUrl?.value || "", "Webhook endpoint copied.");
+    });
+  }
+
+  if (copySchedulerWebhookSecretButton) {
+    copySchedulerWebhookSecretButton.addEventListener("click", () => {
+      copyTextToClipboard(schedulerWebhookSecret?.value || "", "Webhook secret copied.");
+    });
+  }
+
+  if (regenerateSchedulerSecretButton) {
+    regenerateSchedulerSecretButton.addEventListener("click", regenerateSchedulerWebhookSecret);
   }
 
   if (importRawEmailButton) {
@@ -4106,6 +4617,7 @@ async function initPage() {
   currentAuthUserId = initialUser?.id || "";
   scheduleCalendarSessionRecovery();
   updateSignedInView(initialUser || null);
+  await loadIntegrationProfileForUser(initialUser || null);
   await loadAppointments(initialUser || null);
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
@@ -4123,6 +4635,7 @@ async function initPage() {
     currentAuthUserId = nextUserId;
     currentAuthUser = nextSession?.user || null;
     updateSignedInView(currentAuthUser);
+    await loadIntegrationProfileForUser(currentAuthUser);
     await loadAppointments(currentAuthUser);
   });
 

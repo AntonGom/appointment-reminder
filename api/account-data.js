@@ -202,12 +202,43 @@ async function loadProfile(config, ownerId) {
     return await fetchRestRows({
       ...config,
       table: "profiles",
-      select: "id,email,tier,custom_form_profile,branding_profile,use_custom_form_enabled,updated_at",
+      select: "id,email,tier,custom_form_profile,branding_profile,integration_profile,use_custom_form_enabled,updated_at",
       searchParams
     });
   } catch (error) {
     if (error.payload?.code === "42P01") {
       return [];
+    }
+
+    if (isMissingColumnError(error.payload, "integration_profile")) {
+      return fetchRestRows({
+        ...config,
+        table: "profiles",
+        select: "id,email,tier,custom_form_profile,branding_profile,use_custom_form_enabled,updated_at",
+        searchParams
+      }).catch(fallbackError => {
+        if (fallbackError.payload?.code === "42P01"
+          || isMissingColumnError(fallbackError.payload, "use_custom_form_enabled")
+          || isMissingColumnError(fallbackError.payload, "custom_form_profile")
+          || isMissingColumnError(fallbackError.payload, "branding_profile")) {
+          return fetchRestRows({
+            ...config,
+            table: "profiles",
+            select: "id,email,tier,custom_form_profile,branding_profile,updated_at",
+            searchParams
+          }).catch(secondFallbackError => {
+            if (secondFallbackError.payload?.code === "42P01"
+              || isMissingColumnError(secondFallbackError.payload, "custom_form_profile")
+              || isMissingColumnError(secondFallbackError.payload, "branding_profile")) {
+              return [];
+            }
+
+            throw secondFallbackError;
+          });
+        }
+
+        throw fallbackError;
+      });
     }
 
     if (isMissingColumnError(error.payload, "use_custom_form_enabled")) {
@@ -255,6 +286,10 @@ function normalizeProfilePayload(body, ownerId) {
     row.branding_profile = source.branding_profile;
   }
 
+  if (source.integration_profile && typeof source.integration_profile === "object") {
+    row.integration_profile = source.integration_profile;
+  }
+
   if (typeof source.use_custom_form_enabled === "boolean") {
     row.use_custom_form_enabled = source.use_custom_form_enabled;
   }
@@ -271,18 +306,107 @@ async function saveProfile(config, ownerId, body) {
 
   const row = normalizeProfilePayload(body, ownerId);
 
-  if (!row.custom_form_profile && !row.branding_profile && typeof row.use_custom_form_enabled !== "boolean" && !row.email) {
+  if (!row.custom_form_profile && !row.branding_profile && !row.integration_profile && typeof row.use_custom_form_enabled !== "boolean" && !row.email) {
     const error = new Error("No profile settings were provided.");
     error.status = 400;
     throw error;
   }
 
-  return upsertRestRows({
-    ...config,
-    table: "profiles",
-    rows: row,
-    onConflict: "id"
-  });
+  try {
+    return await upsertRestRows({
+      ...config,
+      table: "profiles",
+      rows: row,
+      onConflict: "id"
+    });
+  } catch (error) {
+    if (row.integration_profile && isMissingColumnError(error.payload, "integration_profile")) {
+      const retryRow = { ...row };
+      delete retryRow.integration_profile;
+      const retryResult = await upsertRestRows({
+        ...config,
+        table: "profiles",
+        rows: retryRow,
+        onConflict: "id"
+      });
+      const missingColumnError = new Error("Integration settings need the latest Supabase profile SQL before they can be saved.");
+      missingColumnError.status = 409;
+      missingColumnError.payload = error.payload;
+      missingColumnError.savedFallback = retryResult;
+      throw missingColumnError;
+    }
+
+    throw error;
+  }
+}
+
+const APPOINTMENT_SELECT_BASE = "id,client_id,client_name,client_email,client_phone,service_date,service_time,service_location,notes,last_channel,last_source,source_type,source_external_id,source_signature,source_synced_at,created_at,updated_at";
+const APPOINTMENT_SELECT_LEGACY = "id,client_id,client_name,client_email,client_phone,service_date,service_time,service_location,notes,last_channel,last_source,created_at,updated_at";
+
+function stripAppointmentSourceColumns(row) {
+  const {
+    source_type,
+    source_external_id,
+    source_signature,
+    source_synced_at,
+    ...legacyRow
+  } = row || {};
+
+  return legacyRow;
+}
+
+function isMissingAppointmentSourceColumn(error) {
+  return ["source_type", "source_external_id", "source_signature", "source_synced_at"].some(column => isMissingColumnError(error?.payload, column));
+}
+
+async function insertAppointmentRows(config, rows) {
+  try {
+    return await insertRestRows({
+      ...config,
+      table: "appointments",
+      rows
+    });
+  } catch (error) {
+    if (!isMissingAppointmentSourceColumn(error)) {
+      throw error;
+    }
+
+    return insertRestRows({
+      ...config,
+      table: "appointments",
+      rows: (Array.isArray(rows) ? rows : [rows]).map(stripAppointmentSourceColumns)
+    });
+  }
+}
+
+async function fetchAppointmentRows(config, select, searchParams) {
+  try {
+    return await fetchRestRows({
+      ...config,
+      table: "appointments",
+      select,
+      searchParams
+    });
+  } catch (error) {
+    if (error.payload?.code === "42P01") {
+      return [];
+    }
+
+    if (!isMissingAppointmentSourceColumn(error)) {
+      throw error;
+    }
+
+    const legacySelect = select.includes("custom_answers")
+      ? `${APPOINTMENT_SELECT_LEGACY},custom_answers`
+      : APPOINTMENT_SELECT_LEGACY;
+
+    return fetchRestRows({
+      ...config,
+      table: "appointments",
+      select: legacySelect,
+      searchParams
+    });
+  }
 }
 
 async function loadClients(config) {
@@ -407,7 +531,7 @@ async function saveClient(config, ownerId, body) {
 }
 
 async function loadAppointments(config, ownerId) {
-  const fallbackSelect = "id,client_id,client_name,client_email,client_phone,service_date,service_time,service_location,notes,last_channel,last_source,created_at,updated_at";
+  const fallbackSelect = APPOINTMENT_SELECT_BASE;
   const primarySelect = `${fallbackSelect},custom_answers`;
   const searchParams = {
     owner_id: ownerId ? `eq.${ownerId}` : "",
@@ -416,12 +540,7 @@ async function loadAppointments(config, ownerId) {
   };
 
   try {
-    return await fetchRestRows({
-      ...config,
-      table: "appointments",
-      select: primarySelect,
-      searchParams
-    });
+    return await fetchAppointmentRows(config, primarySelect, searchParams);
   } catch (error) {
     if (error.payload?.code === "42P01") {
       return [];
@@ -431,24 +550,14 @@ async function loadAppointments(config, ownerId) {
       throw error;
     }
 
-    return fetchRestRows({
-      ...config,
-      table: "appointments",
-      select: fallbackSelect,
-      searchParams
-    });
+    return fetchAppointmentRows(config, fallbackSelect, searchParams);
   }
 }
 
 async function loadCalendarAppointments(config, ownerId) {
-  return fetchRestRows({
-    ...config,
-    table: "appointments",
-    select: "id,client_id,client_name,client_email,client_phone,service_date,service_time,service_location,notes,last_channel,last_source,created_at,updated_at",
-    searchParams: {
-      owner_id: ownerId ? `eq.${ownerId}` : "",
-      order: "service_date.asc,service_time.asc"
-    }
+  return fetchAppointmentRows(config, APPOINTMENT_SELECT_BASE, {
+    owner_id: ownerId ? `eq.${ownerId}` : "",
+    order: "service_date.asc,service_time.asc"
   }).catch(error => {
     if (error.payload?.code === "42P01") {
       return [];
@@ -603,11 +712,7 @@ export default async function handler(req, res) {
         return;
       }
 
-      const data = await insertRestRows({
-        ...config,
-        table: "appointments",
-        rows
-      });
+      const data = await insertAppointmentRows(config, rows);
 
       sendJson(res, 200, { data });
       return;

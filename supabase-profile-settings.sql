@@ -4,6 +4,7 @@ create table if not exists public.profiles (
   tier text,
   custom_form_profile jsonb not null default '{}'::jsonb,
   branding_profile jsonb not null default '{}'::jsonb,
+  integration_profile jsonb not null default '{}'::jsonb,
   use_custom_form_enabled boolean,
   updated_at timestamptz not null default now()
 );
@@ -13,6 +14,7 @@ alter table public.profiles
   add column if not exists tier text,
   add column if not exists custom_form_profile jsonb not null default '{}'::jsonb,
   add column if not exists branding_profile jsonb not null default '{}'::jsonb,
+  add column if not exists integration_profile jsonb not null default '{}'::jsonb,
   add column if not exists use_custom_form_enabled boolean,
   add column if not exists updated_at timestamptz not null default now();
 

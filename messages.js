@@ -487,6 +487,10 @@ function getAppointmentSourceLabel(appointment) {
     return "Outlook Calendar import";
   }
 
+  if (source === "scheduler_webhook") {
+    return "Scheduler webhook import";
+  }
+
   if (source === "import") {
     return "File import";
   }
@@ -655,7 +659,7 @@ function buildReminderTimelineEvents(lookup) {
 }
 
 function buildAppointmentTimelineEvents(lookup) {
-  const importSources = new Set(["raw_email", "forwarded_email", "ics_import", "calendar_link", "google_calendar", "outlook_calendar", "import"]);
+  const importSources = new Set(["raw_email", "forwarded_email", "ics_import", "calendar_link", "google_calendar", "outlook_calendar", "scheduler_webhook", "import"]);
 
   return (appointments || [])
     .filter(appointment => importSources.has(String(appointment?.last_source || "").trim().toLowerCase()))

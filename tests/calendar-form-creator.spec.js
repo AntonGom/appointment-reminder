@@ -604,6 +604,71 @@ test.describe("Calendar and Form Creator", () => {
     expect(boxes.layout.y).toBeGreaterThanOrEqual(boxes.panel.bottom - 1);
   });
 
+  test("calendar saves existing scheduler add-on settings", async ({ page }) => {
+    const seed = createSupabaseSeed({
+      profiles: [
+        {
+          id: "bronze_user_1",
+          email: "owner@example.com",
+          tier: "bronze",
+          custom_form_profile: {},
+          branding_profile: {},
+          integration_profile: {
+            addonModeEnabled: true,
+            sources: {
+              googleCalendar: { enabled: true },
+              outlookCalendar: { enabled: false },
+              calendarLink: { enabled: true, url: "https://scheduler.example/old.ics" },
+              forwardedEmail: { enabled: false },
+              webhook: { enabled: true }
+            },
+            webhook: {
+              enabled: true,
+              sourceName: "scheduler_webhook",
+              secret: "arwh_savedsecret"
+            },
+            reminderRules: {
+              autoSaveTrustedAppointments: true,
+              email24h: true,
+              emailSameDay: false,
+              followUpAfter: false,
+              reviewFirstReminderForNewClient: true
+            }
+          },
+          use_custom_form_enabled: null,
+          updated_at: "2026-05-19T12:00:00.000Z"
+        }
+      ]
+    });
+
+    await stubModulePages(page, seed);
+    await page.goto("/calendar.html");
+
+    await expect(page.locator("#scheduler-addon-enabled")).toBeChecked();
+    await expect(page.locator("#scheduler-source-google")).toBeChecked();
+    await expect(page.locator("#scheduler-source-link")).toBeChecked();
+    await expect(page.locator("#scheduler-source-webhook")).toBeChecked();
+    await expect(page.locator("#scheduler-addon-feed-url")).toHaveValue("https://scheduler.example/old.ics");
+    await expect(page.locator("#scheduler-webhook-url")).toHaveValue(/ownerId=bronze_user_1/);
+    await expect(page.locator("#scheduler-webhook-secret")).toHaveValue("arwh_savedsecret");
+    await expect(page.locator("#calendar-loading")).toBeHidden();
+
+    await page.locator("#scheduler-addon-feed-url").fill("https://scheduler.example/new-feed.ics");
+    await page.locator("#scheduler-source-outlook").check();
+    await page.locator("#scheduler-rule-email-same-day").check();
+    await page.locator("#scheduler-rule-follow-up").check();
+    await page.locator("#save-scheduler-addon-button").click();
+    await expect(page.locator("#status-banner")).toContainText("Add-on settings saved.");
+
+    const state = await page.evaluate(key => JSON.parse(window.localStorage.getItem(key) || "{}"), SUPABASE_STATE_KEY);
+    const profile = state.tables.profiles.find(row => row.id === "bronze_user_1");
+    expect(profile.integration_profile.addonModeEnabled).toBe(true);
+    expect(profile.integration_profile.sources.outlookCalendar.enabled).toBe(true);
+    expect(profile.integration_profile.sources.calendarLink.url).toBe("https://scheduler.example/new-feed.ics");
+    expect(profile.integration_profile.reminderRules.emailSameDay).toBe(true);
+    expect(profile.integration_profile.reminderRules.followUpAfter).toBe(true);
+  });
+
   test("calendar imports appointments from CSV", async ({ page }) => {
     await stubModulePages(page, createSupabaseSeed());
     await page.goto("/calendar.html");

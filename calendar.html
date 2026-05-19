@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
-  <link rel="stylesheet" href="account-sections.css?v=20260519a">
+  <link rel="stylesheet" href="account-sections.css?v=20260519b">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -169,6 +169,97 @@
               </div>
             </div>
 
+            <div class="section-card scheduler-addon-card">
+              <div class="appointments-card-head">
+                <div>
+                  <h3>Existing scheduler add-on</h3>
+                  <p>Let another scheduler stay in charge while this app collects appointments and prepares reminders.</p>
+                </div>
+                <span id="scheduler-addon-status" class="source-chip">Off</span>
+              </div>
+
+              <div class="scheduler-addon-grid">
+                <label class="scheduler-toggle-row scheduler-addon-primary-toggle">
+                  <input id="scheduler-addon-enabled" type="checkbox">
+                  <span>
+                    <strong>Use this account as a reminder add-on</strong>
+                    <small>Appointments from trusted outside systems can flow into this calendar without retyping them here.</small>
+                  </span>
+                </label>
+
+                <div class="scheduler-addon-block scheduler-addon-block-wide">
+                  <div class="scheduler-addon-block-head">
+                    <h4>Trusted sources</h4>
+                    <p>Choose where appointments are allowed to come from automatically.</p>
+                  </div>
+                  <div class="scheduler-source-options">
+                    <label><input id="scheduler-source-google" type="checkbox"> Google Calendar</label>
+                    <label><input id="scheduler-source-outlook" type="checkbox"> Outlook Calendar</label>
+                    <label><input id="scheduler-source-link" type="checkbox"> Calendar link</label>
+                    <label><input id="scheduler-source-forwarded-email" type="checkbox"> Forwarded email</label>
+                    <label><input id="scheduler-source-webhook" type="checkbox"> Scheduler webhook</label>
+                  </div>
+                </div>
+
+                <div class="scheduler-addon-block scheduler-addon-block-wide">
+                  <div class="scheduler-addon-block-head">
+                    <h4>Saved calendar link</h4>
+                    <p>Use this for schedulers that publish a private .ics or webcal feed.</p>
+                  </div>
+                  <div class="scheduler-input-row">
+                    <input id="scheduler-addon-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste the scheduler's private calendar link">
+                    <button id="scheduler-use-feed-button" class="secondary-button" type="button">Use in Import Menu</button>
+                    <button id="scheduler-sync-feed-button" class="secondary-button" type="button">Sync Saved Link</button>
+                  </div>
+                </div>
+
+                <div class="scheduler-addon-block scheduler-addon-block-wide">
+                  <div class="scheduler-addon-block-head">
+                    <h4>Webhook for schedulers</h4>
+                    <p>For tools that can send booking webhooks, point them here and send the secret as a Bearer token.</p>
+                  </div>
+                  <div class="scheduler-webhook-row">
+                    <label>
+                      Endpoint
+                      <input id="scheduler-webhook-url" readonly value="">
+                    </label>
+                    <label>
+                      Secret
+                      <input id="scheduler-webhook-secret" readonly value="">
+                    </label>
+                  </div>
+                  <div class="calendar-import-actions">
+                    <button id="copy-scheduler-webhook-url-button" class="secondary-button" type="button">Copy Endpoint</button>
+                    <button id="copy-scheduler-webhook-secret-button" class="secondary-button" type="button">Copy Secret</button>
+                    <button id="regenerate-scheduler-secret-button" class="secondary-button subtle" type="button">Regenerate Secret</button>
+                  </div>
+                </div>
+
+                <div class="scheduler-addon-block scheduler-addon-block-wide">
+                  <div class="scheduler-addon-block-head">
+                    <h4>Reminder rules</h4>
+                    <p>Saved rules decide what this add-on should prepare when trusted appointments arrive.</p>
+                  </div>
+                  <div class="scheduler-rule-options">
+                    <label><input id="scheduler-rule-auto-save" type="checkbox"> Auto-save trusted appointments after dedupe</label>
+                    <label><input id="scheduler-rule-email-24h" type="checkbox"> Prepare email reminder 24 hours before</label>
+                    <label><input id="scheduler-rule-email-same-day" type="checkbox"> Prepare same-day email reminder</label>
+                    <label><input id="scheduler-rule-follow-up" type="checkbox"> Prepare follow-up after appointment</label>
+                    <label><input id="scheduler-rule-review-first" type="checkbox"> Ask before sending the first reminder for a newly imported client</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="scheduler-addon-actions">
+                <p id="scheduler-addon-summary" class="scheduler-addon-summary">Add-on mode is off. Existing manual imports still work.</p>
+                <button id="save-scheduler-addon-button" class="primary-button" type="button">Save Add-on Settings</button>
+              </div>
+
+              <div class="import-safety-note" role="note">
+                Keep this for non-healthcare workflows unless you have the right compliance agreements and safeguards in place.
+              </div>
+            </div>
+
             <div id="calendar-loading" class="loading-card loading-card-skeleton" hidden>
               <div class="loading-spinner" aria-hidden="true"></div>
               <div class="calendar-loading-skeleton" aria-hidden="true">
@@ -291,6 +382,6 @@
 
   <script src="nav.js?v=20260519b"></script>
   <script src="debug-save.js?v=20260516a"></script>
-  <script type="module" src="calendar.js?v=20260519a"></script>
+  <script type="module" src="calendar.js?v=20260519b"></script>
 </body>
 </html>
