@@ -37,6 +37,10 @@ const calendarFeedUrlInput = document.getElementById("calendar-feed-url");
 const syncCalendarLinkButton = document.getElementById("sync-calendar-link-button");
 const forwardingEmailValue = document.getElementById("forwarding-email-value");
 const copyForwardingEmailButton = document.getElementById("copy-forwarding-email-button");
+const schedulerCardSyncGoogleButton = document.getElementById("scheduler-card-sync-google-button");
+const schedulerCardSyncOutlookButton = document.getElementById("scheduler-card-sync-outlook-button");
+const schedulerForwardingEmailValue = document.getElementById("scheduler-forwarding-email-value");
+const schedulerCardCopyForwardingButton = document.getElementById("scheduler-card-copy-forwarding-button");
 const rawEmailImportText = document.getElementById("raw-email-import-text");
 const importRawEmailButton = document.getElementById("import-raw-email-button");
 const clearRawEmailButton = document.getElementById("clear-raw-email-button");
@@ -789,19 +793,21 @@ function updateAppointmentSourceControls(user = currentAuthUser) {
   const hasOutlookClient = Boolean(String(appConfig?.outlookCalendarClientId || "").trim());
   const forwardingAddress = getForwardingAddressForUser(user);
 
-  if (syncGoogleCalendarButton) {
-    syncGoogleCalendarButton.disabled = !hasUser || !hasGoogleClient;
-    syncGoogleCalendarButton.title = hasGoogleClient
+  [syncGoogleCalendarButton, schedulerCardSyncGoogleButton].forEach(button => {
+    if (!button) return;
+    button.disabled = !hasUser || !hasGoogleClient;
+    button.title = hasGoogleClient
       ? "Connect Google Calendar and import upcoming events"
       : "Add GOOGLE_CALENDAR_CLIENT_ID in Vercel to enable Google Calendar sync";
-  }
+  });
 
-  if (syncOutlookCalendarButton) {
-    syncOutlookCalendarButton.disabled = !hasUser || !hasOutlookClient;
-    syncOutlookCalendarButton.title = hasOutlookClient
+  [syncOutlookCalendarButton, schedulerCardSyncOutlookButton].forEach(button => {
+    if (!button) return;
+    button.disabled = !hasUser || !hasOutlookClient;
+    button.title = hasOutlookClient
       ? "Connect Outlook Calendar and import upcoming events"
       : "Add OUTLOOK_CALENDAR_CLIENT_ID in Vercel to enable Outlook Calendar sync";
-  }
+  });
 
   if (syncCalendarLinkButton) {
     syncCalendarLinkButton.disabled = !hasUser;
@@ -812,9 +818,16 @@ function updateAppointmentSourceControls(user = currentAuthUser) {
     forwardingEmailValue.classList.toggle("is-empty", !forwardingAddress);
   }
 
-  if (copyForwardingEmailButton) {
-    copyForwardingEmailButton.disabled = !forwardingAddress;
+  if (schedulerForwardingEmailValue) {
+    schedulerForwardingEmailValue.textContent = forwardingAddress || "Set INBOUND_APPOINTMENT_EMAIL in Vercel";
+    schedulerForwardingEmailValue.classList.toggle("is-empty", !forwardingAddress);
   }
+
+  [copyForwardingEmailButton, schedulerCardCopyForwardingButton].forEach(button => {
+    if (button) {
+      button.disabled = !forwardingAddress;
+    }
+  });
 
   renderIntegrationProfile();
 }
@@ -1100,7 +1113,7 @@ function syncSavedFeedToImportMenu() {
 
   if (!feedUrl) {
     setStatus("Paste a saved calendar link first.", "error");
-    return;
+    return false;
   }
 
   if (calendarFeedUrlInput) {
@@ -1108,11 +1121,14 @@ function syncSavedFeedToImportMenu() {
   }
 
   setStatus("Saved link copied into the import menu.", "success");
+  return true;
 }
 
 async function syncSavedFeedNow() {
-  syncSavedFeedToImportMenu();
-  await handleSyncCalendarLink();
+  if (!syncSavedFeedToImportMenu()) {
+    return;
+  }
+  await handleSyncCalendarLink(schedulerSyncFeedButton);
 }
 
 function regenerateSchedulerWebhookSecret() {
@@ -2656,7 +2672,7 @@ async function fetchOutlookCalendarEvents(accessToken) {
     .sort((left, right) => String(left?.start?.dateTime || "").localeCompare(String(right?.start?.dateTime || "")));
 }
 
-async function handleSyncOutlookCalendar() {
+async function handleSyncOutlookCalendar(triggerButton = syncOutlookCalendarButton) {
   if (!supabase) {
     setStatus("Add your Supabase keys before syncing appointments.", "error");
     return;
@@ -2679,7 +2695,7 @@ async function handleSyncOutlookCalendar() {
     totalSteps: 4,
     label: "Sync Outlook Calendar"
   });
-  setButtonBusy(syncOutlookCalendarButton, true, "Syncing...");
+  setButtonBusy(triggerButton, true, "Syncing...");
   setStatus("Connecting to Outlook Calendar...", "info", {
     loading: true,
     progress: outlookOperation?.progress?.(1, "Connect to Outlook")
@@ -2707,12 +2723,12 @@ async function handleSyncOutlookCalendar() {
   } catch (error) {
     setDebugErrorStatus(error, outlookOperation, "OUTLOOK", "Unable to sync Outlook Calendar.");
   } finally {
-    setButtonBusy(syncOutlookCalendarButton, false);
+    setButtonBusy(triggerButton, false);
     updateAppointmentSourceControls(user);
   }
 }
 
-async function handleSyncGoogleCalendar() {
+async function handleSyncGoogleCalendar(triggerButton = syncGoogleCalendarButton) {
   if (!supabase) {
     setStatus("Add your Supabase keys before syncing appointments.", "error");
     return;
@@ -2735,7 +2751,7 @@ async function handleSyncGoogleCalendar() {
     totalSteps: 4,
     label: "Sync Google Calendar"
   });
-  setButtonBusy(syncGoogleCalendarButton, true, "Syncing...");
+  setButtonBusy(triggerButton, true, "Syncing...");
   setStatus("Connecting to Google Calendar...", "info", {
     loading: true,
     progress: googleOperation?.progress?.(1, "Connect to Google")
@@ -2763,7 +2779,7 @@ async function handleSyncGoogleCalendar() {
   } catch (error) {
     setDebugErrorStatus(error, googleOperation, "GOOGLE", "Unable to sync Google Calendar.");
   } finally {
-    setButtonBusy(syncGoogleCalendarButton, false);
+    setButtonBusy(triggerButton, false);
     updateAppointmentSourceControls(user);
   }
 }
@@ -2793,7 +2809,7 @@ async function fetchCalendarFeedText(feedUrl) {
   return String(payload?.text || "");
 }
 
-async function handleSyncCalendarLink() {
+async function handleSyncCalendarLink(triggerButton = syncCalendarLinkButton) {
   if (!supabase) {
     setStatus("Add your Supabase keys before syncing appointments.", "error");
     return;
@@ -2823,7 +2839,7 @@ async function handleSyncCalendarLink() {
     totalSteps: 4,
     label: "Sync calendar link"
   });
-  setButtonBusy(syncCalendarLinkButton, true, "Syncing...");
+  setButtonBusy(triggerButton, true, "Syncing...");
   setStatus("Reading calendar link...", "info", {
     loading: true,
     progress: linkOperation?.progress?.(1, "Fetch calendar link")
@@ -2841,7 +2857,7 @@ async function handleSyncCalendarLink() {
   } catch (error) {
     setDebugErrorStatus(error, linkOperation, "LINK", "Unable to sync that calendar link.");
   } finally {
-    setButtonBusy(syncCalendarLinkButton, false);
+    setButtonBusy(triggerButton, false);
     updateAppointmentSourceControls(user);
   }
 }
@@ -4187,15 +4203,23 @@ function bindCalendarControls() {
   }
 
   if (syncGoogleCalendarButton) {
-    syncGoogleCalendarButton.addEventListener("click", handleSyncGoogleCalendar);
+    syncGoogleCalendarButton.addEventListener("click", () => handleSyncGoogleCalendar(syncGoogleCalendarButton));
+  }
+
+  if (schedulerCardSyncGoogleButton) {
+    schedulerCardSyncGoogleButton.addEventListener("click", () => handleSyncGoogleCalendar(schedulerCardSyncGoogleButton));
   }
 
   if (syncOutlookCalendarButton) {
-    syncOutlookCalendarButton.addEventListener("click", handleSyncOutlookCalendar);
+    syncOutlookCalendarButton.addEventListener("click", () => handleSyncOutlookCalendar(syncOutlookCalendarButton));
+  }
+
+  if (schedulerCardSyncOutlookButton) {
+    schedulerCardSyncOutlookButton.addEventListener("click", () => handleSyncOutlookCalendar(schedulerCardSyncOutlookButton));
   }
 
   if (syncCalendarLinkButton) {
-    syncCalendarLinkButton.addEventListener("click", handleSyncCalendarLink);
+    syncCalendarLinkButton.addEventListener("click", () => handleSyncCalendarLink(syncCalendarLinkButton));
   }
 
   if (calendarFeedUrlInput) {
@@ -4209,6 +4233,10 @@ function bindCalendarControls() {
 
   if (copyForwardingEmailButton) {
     copyForwardingEmailButton.addEventListener("click", copyForwardingEmailAddress);
+  }
+
+  if (schedulerCardCopyForwardingButton) {
+    schedulerCardCopyForwardingButton.addEventListener("click", copyForwardingEmailAddress);
   }
 
   if (saveSchedulerAddonButton) {

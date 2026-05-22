@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
-  <link rel="stylesheet" href="account-sections.css?v=20260522b">
+  <link rel="stylesheet" href="account-sections.css?v=20260522c">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -192,7 +192,7 @@
                     <span class="scheduler-step-number">1</span>
                     <div>
                       <strong>Pick trusted sources</strong>
-                      <small>Choose which outside systems are allowed to bring appointments in.</small>
+                    <small>Use the enable control inside any source card.</small>
                     </div>
                   </div>
                   <div class="scheduler-simple-step">
@@ -213,103 +213,102 @@
 
                 <div class="scheduler-addon-block scheduler-addon-block-wide">
                   <div class="scheduler-addon-block-head">
-                    <h4>Trusted appointment sources</h4>
-                    <p>Checking a source saves permission for that import path. It does not replace your current scheduler or send reminders by itself.</p>
-                  </div>
-                  <div class="scheduler-source-options">
-                    <label><input id="scheduler-source-google" type="checkbox"> Google Calendar</label>
-                    <label><input id="scheduler-source-outlook" type="checkbox"> Outlook Calendar</label>
-                    <label><input id="scheduler-source-link" type="checkbox"> Calendar link</label>
-                    <label><input id="scheduler-source-forwarded-email" type="checkbox"> Forwarded email</label>
-                    <label><input id="scheduler-source-webhook" type="checkbox"> Scheduler webhook</label>
-                  </div>
-                </div>
-
-                <div class="scheduler-addon-block scheduler-addon-block-wide">
-                  <div class="scheduler-addon-block-head">
                     <h4>How to connect each option</h4>
-                    <p>Pick the path that matches the tools the business already uses. You can use more than one.</p>
+                    <p>Pick the path that matches the tools the business already uses. Enable the source and run its action from the same card.</p>
                   </div>
                   <div class="scheduler-setup-list">
                     <article class="scheduler-setup-card">
-                      <div class="source-chip">Google</div>
+                      <div class="scheduler-setup-card-head">
+                        <div class="source-chip">Google</div>
+                        <label class="scheduler-card-enable"><input id="scheduler-source-google" type="checkbox"><span>Enable</span></label>
+                      </div>
                       <h5>Google Calendar</h5>
                       <ol>
-                        <li>Check Google Calendar under trusted sources.</li>
-                        <li>Open Import Calendar Data and click Sync Google Calendar.</li>
+                        <li>Enable this source.</li>
+                        <li>Click Sync Google Calendar and approve calendar access.</li>
                         <li>Review the appointments found, then save the ones you want reminders for.</li>
                       </ol>
+                      <div class="scheduler-card-actions">
+                        <button id="scheduler-card-sync-google-button" class="secondary-button" type="button">Sync Google Calendar</button>
+                      </div>
                     </article>
                     <article class="scheduler-setup-card">
-                      <div class="source-chip">Outlook</div>
+                      <div class="scheduler-setup-card-head">
+                        <div class="source-chip">Outlook</div>
+                        <label class="scheduler-card-enable"><input id="scheduler-source-outlook" type="checkbox"><span>Enable</span></label>
+                      </div>
                       <h5>Outlook Calendar</h5>
                       <ol>
-                        <li>Check Outlook Calendar under trusted sources.</li>
-                        <li>Open Import Calendar Data and click Sync Outlook Calendar.</li>
+                        <li>Enable this source.</li>
+                        <li>Click Sync Outlook Calendar and approve calendar access.</li>
                         <li>Review the appointments found, then save the ones you want reminders for.</li>
                       </ol>
+                      <div class="scheduler-card-actions">
+                        <button id="scheduler-card-sync-outlook-button" class="secondary-button" type="button">Sync Outlook Calendar</button>
+                      </div>
                     </article>
-                    <article class="scheduler-setup-card">
-                      <div class="source-chip">Link</div>
+                    <article class="scheduler-setup-card scheduler-setup-card-wide">
+                      <div class="scheduler-setup-card-head">
+                        <div class="source-chip">Link</div>
+                        <label class="scheduler-card-enable"><input id="scheduler-source-link" type="checkbox"><span>Enable</span></label>
+                      </div>
                       <h5>Calendar link</h5>
                       <ol>
                         <li>Copy the private webcal or .ics link from the outside scheduler.</li>
-                        <li>Paste it below, then click Sync Saved Link.</li>
+                        <li>Paste it here, then click Sync Saved Link.</li>
                         <li>Save add-on settings so the link is ready next time.</li>
                       </ol>
+                      <div class="scheduler-card-control">
+                        <input id="scheduler-addon-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste the scheduler's private calendar link">
+                        <div class="scheduler-card-actions">
+                          <button id="scheduler-use-feed-button" class="secondary-button subtle" type="button">Use in Import Menu</button>
+                          <button id="scheduler-sync-feed-button" class="secondary-button" type="button">Sync Saved Link</button>
+                        </div>
+                      </div>
                     </article>
                     <article class="scheduler-setup-card">
-                      <div class="source-chip">Email</div>
+                      <div class="scheduler-setup-card-head">
+                        <div class="source-chip">Email</div>
+                        <label class="scheduler-card-enable"><input id="scheduler-source-forwarded-email" type="checkbox"><span>Enable</span></label>
+                      </div>
                       <h5>Forwarded appointment emails</h5>
                       <ol>
-                        <li>Open Import Calendar Data and copy the forwarding address.</li>
+                        <li>Copy the forwarding address.</li>
                         <li>Forward appointment emails from the business inbox to that address.</li>
                         <li>Imported appointments appear for review before they are saved.</li>
                       </ol>
+                      <span id="scheduler-forwarding-email-value" class="forwarding-address scheduler-card-note">Forwarding address not configured</span>
+                      <div class="scheduler-card-actions">
+                        <button id="scheduler-card-copy-forwarding-button" class="secondary-button" type="button">Copy Address</button>
+                      </div>
                     </article>
-                    <article class="scheduler-setup-card">
-                      <div class="source-chip">Webhook</div>
+                    <article class="scheduler-setup-card scheduler-setup-card-wide">
+                      <div class="scheduler-setup-card-head">
+                        <div class="source-chip">Webhook</div>
+                        <label class="scheduler-card-enable"><input id="scheduler-source-webhook" type="checkbox"><span>Enable</span></label>
+                      </div>
                       <h5>Scheduler webhook</h5>
                       <ol>
-                        <li>Check Scheduler webhook under trusted sources.</li>
+                        <li>Enable this source.</li>
                         <li>Copy the endpoint and secret below.</li>
                         <li>Paste them into the scheduler's webhook settings and send the secret as a Bearer token.</li>
                       </ol>
+                      <div class="scheduler-webhook-row scheduler-card-webhook-row">
+                        <label>
+                          Endpoint
+                          <input id="scheduler-webhook-url" readonly value="">
+                        </label>
+                        <label>
+                          Secret
+                          <input id="scheduler-webhook-secret" readonly value="">
+                        </label>
+                      </div>
+                      <div class="scheduler-card-actions">
+                        <button id="copy-scheduler-webhook-url-button" class="secondary-button" type="button">Copy Endpoint</button>
+                        <button id="copy-scheduler-webhook-secret-button" class="secondary-button" type="button">Copy Secret</button>
+                        <button id="regenerate-scheduler-secret-button" class="secondary-button subtle" type="button">Regenerate Secret</button>
+                      </div>
                     </article>
-                  </div>
-                </div>
-
-                <div class="scheduler-addon-block scheduler-addon-block-wide">
-                  <div class="scheduler-addon-block-head">
-                    <h4>Calendar link setup</h4>
-                    <p>Use this when the scheduler gives you a private webcal or .ics feed.</p>
-                  </div>
-                  <div class="scheduler-input-row">
-                    <input id="scheduler-addon-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste the scheduler's private calendar link">
-                    <button id="scheduler-use-feed-button" class="secondary-button" type="button">Use in Import Menu</button>
-                    <button id="scheduler-sync-feed-button" class="secondary-button" type="button">Sync Saved Link</button>
-                  </div>
-                </div>
-
-                <div class="scheduler-addon-block scheduler-addon-block-wide">
-                  <div class="scheduler-addon-block-head">
-                    <h4>Webhook setup</h4>
-                    <p>Use this for schedulers that can send a booking webhook whenever an appointment is created or changed.</p>
-                  </div>
-                  <div class="scheduler-webhook-row">
-                    <label>
-                      Endpoint
-                      <input id="scheduler-webhook-url" readonly value="">
-                    </label>
-                    <label>
-                      Secret
-                      <input id="scheduler-webhook-secret" readonly value="">
-                    </label>
-                  </div>
-                  <div class="calendar-import-actions">
-                    <button id="copy-scheduler-webhook-url-button" class="secondary-button" type="button">Copy Endpoint</button>
-                    <button id="copy-scheduler-webhook-secret-button" class="secondary-button" type="button">Copy Secret</button>
-                    <button id="regenerate-scheduler-secret-button" class="secondary-button subtle" type="button">Regenerate Secret</button>
                   </div>
                 </div>
 
