@@ -1078,6 +1078,52 @@ h1 {
   gap: 12px;
 }
 
+.scheduler-simple-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scheduler-simple-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(20, 184, 166, 0.22);
+  border-radius: 14px;
+  background: rgba(240, 253, 250, 0.72);
+}
+
+.scheduler-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.scheduler-simple-step strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.scheduler-simple-step small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .scheduler-addon-block,
 .scheduler-toggle-row {
   padding: 14px;
@@ -1159,6 +1205,51 @@ h1 {
   font-size: 14px;
   font-weight: 760;
   line-height: 1.35;
+}
+
+.scheduler-setup-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.scheduler-setup-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.74);
+}
+
+.scheduler-setup-card .source-chip {
+  width: fit-content;
+  min-width: 0;
+}
+
+.scheduler-setup-card h5 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.scheduler-setup-card ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 19px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 680;
+  line-height: 1.4;
+}
+
+.scheduler-setup-card li::marker {
+  color: #0f766e;
+  font-weight: 900;
 }
 
 .scheduler-input-row {
@@ -2095,6 +2186,8 @@ button.calendar-week-mobile-day {
   }
 
   .scheduler-addon-grid,
+  .scheduler-simple-steps,
+  .scheduler-setup-list,
   .scheduler-source-options,
   .scheduler-rule-options,
   .scheduler-input-row,

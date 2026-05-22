@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
-  <link rel="stylesheet" href="account-sections.css?v=20260519b">
+  <link rel="stylesheet" href="account-sections.css?v=20260522b">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -172,8 +172,8 @@
             <div class="section-card scheduler-addon-card">
               <div class="appointments-card-head">
                 <div>
-                  <h3>Existing scheduler add-on</h3>
-                  <p>Let another scheduler stay in charge while this app collects appointments and prepares reminders.</p>
+                  <h3>Connect an existing scheduler</h3>
+                  <p>Keep booking appointments wherever you already do. This app only pulls those appointments into your calendar so reminders and follow-ups can be prepared here.</p>
                 </div>
                 <span id="scheduler-addon-status" class="source-chip">Off</span>
               </div>
@@ -182,15 +182,39 @@
                 <label class="scheduler-toggle-row scheduler-addon-primary-toggle">
                   <input id="scheduler-addon-enabled" type="checkbox">
                   <span>
-                    <strong>Use this account as a reminder add-on</strong>
-                    <small>Appointments from trusted outside systems can flow into this calendar without retyping them here.</small>
+                    <strong>Use this account as a scheduler add-on</strong>
+                    <small>Turn this on when the business already has appointments somewhere else and wants this app to help with reminders.</small>
                   </span>
                 </label>
 
+                <div class="scheduler-simple-steps scheduler-addon-block-wide" aria-label="Scheduler add-on setup steps">
+                  <div class="scheduler-simple-step">
+                    <span class="scheduler-step-number">1</span>
+                    <div>
+                      <strong>Pick trusted sources</strong>
+                      <small>Choose which outside systems are allowed to bring appointments in.</small>
+                    </div>
+                  </div>
+                  <div class="scheduler-simple-step">
+                    <span class="scheduler-step-number">2</span>
+                    <div>
+                      <strong>Connect or import</strong>
+                      <small>Use the setup steps below for Google, Outlook, links, forwarded email, or webhooks.</small>
+                    </div>
+                  </div>
+                  <div class="scheduler-simple-step">
+                    <span class="scheduler-step-number">3</span>
+                    <div>
+                      <strong>Choose reminder rules</strong>
+                      <small>Decide which reminders should be prepared when appointments are found.</small>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="scheduler-addon-block scheduler-addon-block-wide">
                   <div class="scheduler-addon-block-head">
-                    <h4>Trusted sources</h4>
-                    <p>Choose where appointments are allowed to come from automatically.</p>
+                    <h4>Trusted appointment sources</h4>
+                    <p>Checking a source saves permission for that import path. It does not replace your current scheduler or send reminders by itself.</p>
                   </div>
                   <div class="scheduler-source-options">
                     <label><input id="scheduler-source-google" type="checkbox"> Google Calendar</label>
@@ -203,8 +227,62 @@
 
                 <div class="scheduler-addon-block scheduler-addon-block-wide">
                   <div class="scheduler-addon-block-head">
-                    <h4>Saved calendar link</h4>
-                    <p>Use this for schedulers that publish a private .ics or webcal feed.</p>
+                    <h4>How to connect each option</h4>
+                    <p>Pick the path that matches the tools the business already uses. You can use more than one.</p>
+                  </div>
+                  <div class="scheduler-setup-list">
+                    <article class="scheduler-setup-card">
+                      <div class="source-chip">Google</div>
+                      <h5>Google Calendar</h5>
+                      <ol>
+                        <li>Check Google Calendar under trusted sources.</li>
+                        <li>Open Import Calendar Data and click Sync Google Calendar.</li>
+                        <li>Review the appointments found, then save the ones you want reminders for.</li>
+                      </ol>
+                    </article>
+                    <article class="scheduler-setup-card">
+                      <div class="source-chip">Outlook</div>
+                      <h5>Outlook Calendar</h5>
+                      <ol>
+                        <li>Check Outlook Calendar under trusted sources.</li>
+                        <li>Open Import Calendar Data and click Sync Outlook Calendar.</li>
+                        <li>Review the appointments found, then save the ones you want reminders for.</li>
+                      </ol>
+                    </article>
+                    <article class="scheduler-setup-card">
+                      <div class="source-chip">Link</div>
+                      <h5>Calendar link</h5>
+                      <ol>
+                        <li>Copy the private webcal or .ics link from the outside scheduler.</li>
+                        <li>Paste it below, then click Sync Saved Link.</li>
+                        <li>Save add-on settings so the link is ready next time.</li>
+                      </ol>
+                    </article>
+                    <article class="scheduler-setup-card">
+                      <div class="source-chip">Email</div>
+                      <h5>Forwarded appointment emails</h5>
+                      <ol>
+                        <li>Open Import Calendar Data and copy the forwarding address.</li>
+                        <li>Forward appointment emails from the business inbox to that address.</li>
+                        <li>Imported appointments appear for review before they are saved.</li>
+                      </ol>
+                    </article>
+                    <article class="scheduler-setup-card">
+                      <div class="source-chip">Webhook</div>
+                      <h5>Scheduler webhook</h5>
+                      <ol>
+                        <li>Check Scheduler webhook under trusted sources.</li>
+                        <li>Copy the endpoint and secret below.</li>
+                        <li>Paste them into the scheduler's webhook settings and send the secret as a Bearer token.</li>
+                      </ol>
+                    </article>
+                  </div>
+                </div>
+
+                <div class="scheduler-addon-block scheduler-addon-block-wide">
+                  <div class="scheduler-addon-block-head">
+                    <h4>Calendar link setup</h4>
+                    <p>Use this when the scheduler gives you a private webcal or .ics feed.</p>
                   </div>
                   <div class="scheduler-input-row">
                     <input id="scheduler-addon-feed-url" class="calendar-feed-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste the scheduler's private calendar link">
@@ -215,8 +293,8 @@
 
                 <div class="scheduler-addon-block scheduler-addon-block-wide">
                   <div class="scheduler-addon-block-head">
-                    <h4>Webhook for schedulers</h4>
-                    <p>For tools that can send booking webhooks, point them here and send the secret as a Bearer token.</p>
+                    <h4>Webhook setup</h4>
+                    <p>Use this for schedulers that can send a booking webhook whenever an appointment is created or changed.</p>
                   </div>
                   <div class="scheduler-webhook-row">
                     <label>
@@ -238,7 +316,7 @@
                 <div class="scheduler-addon-block scheduler-addon-block-wide">
                   <div class="scheduler-addon-block-head">
                     <h4>Reminder rules</h4>
-                    <p>Saved rules decide what this add-on should prepare when trusted appointments arrive.</p>
+                    <p>Choose what the app should prepare after an appointment is imported. Sending still follows your reminder workflow.</p>
                   </div>
                   <div class="scheduler-rule-options">
                     <label><input id="scheduler-rule-auto-save" type="checkbox"> Auto-save trusted appointments after dedupe</label>
