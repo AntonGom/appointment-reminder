@@ -246,12 +246,13 @@ async function stubMessagesPage(page, seedState) {
   });
 }
 
-test.describe("Messages timeline", () => {
+test.describe("Activity feed", () => {
   test("combines imported appointments, sent reminders, and logged past texts", async ({ page }) => {
     await stubMessagesPage(page, createMessagesSeed());
     await page.goto("/messages.html");
 
     await expect(page.locator("#bronze-shell")).toBeVisible();
+    await expect(page.locator("h1")).toHaveText("Business activity feed");
     await expect(page.locator("[data-message-event]")).toHaveCount(2);
     await expect(page.locator("#messages-total-count")).toHaveText("2");
     await expect(page.locator("#messages-reminder-count")).toHaveText("1");
@@ -284,6 +285,6 @@ test.describe("Messages timeline", () => {
     await expect(page.locator("#messages-reminder-count")).toHaveText("2");
     await expect(page.locator("#messages-timeline")).toContainText("Client confirmed via text.");
     await expect(page.locator("#messages-timeline")).toContainText("Text");
-    await expect(page.locator("#messages-timeline")).toContainText("Logged past message");
+    await expect(page.locator("#messages-timeline")).toContainText("Logged communication");
   });
 });

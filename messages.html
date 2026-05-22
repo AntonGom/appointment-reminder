@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messages</title>
+  <title>Activity</title>
   <link rel="stylesheet" href="nav.css?v=20260516a">
   <link rel="stylesheet" href="account-sections.css?v=20260519a">
-  <link rel="stylesheet" href="messages.css?v=20260519a">
+  <link rel="stylesheet" href="messages.css?v=20260522a">
 </head>
-<body data-page="messages">
+<body data-page="activity">
   <div class="page">
     <section class="hero">
       <div class="hero-content">
         <div class="eyebrow">
-          Messages
+          Activity
           <span id="price-pill" class="price-pill">Optional Bronze</span>
         </div>
-        <h1>Communication timeline</h1>
-        <p class="lead">See reminders, imported appointment emails, calendar imports, and older messages in one organized view.</p>
+        <h1>Business activity feed</h1>
+        <p class="lead">Track imported appointments, scheduler syncs, sent reminders, and logged communication across the business.</p>
       </div>
     </section>
 
@@ -30,7 +30,7 @@
         <nav class="account-page-nav" aria-label="Account pages">
           <a class="account-page-link" href="client-details.html">Client Details</a>
           <a class="account-page-link" href="calendar.html">Calendar</a>
-          <a class="account-page-link is-active" href="messages.html">Messages</a>
+          <a class="account-page-link is-active" href="messages.html">Activity</a>
           <a class="account-page-link" href="account-info.html">Account Info</a>
           <a class="account-page-link" href="branding.html" data-auth-only hidden>Branding</a>
           <a class="account-page-link" href="settings.html">Settings</a>
@@ -39,16 +39,16 @@
 
         <div class="content-stack">
           <div id="signed-out-shell" class="section-card" hidden>
-            <h2 class="section-title">Sign in to see messages</h2>
-            <p class="signed-out-copy">Sign in first, then come back here to view reminder activity and imported appointment messages.</p>
+            <h2 class="section-title">Sign in to see activity</h2>
+            <p class="signed-out-copy">Sign in first, then come back here to view imports, reminder activity, and logged communication.</p>
             <div class="button-row" style="margin-top:16px;">
               <a class="primary-link" href="signin.html">Go to Sign In</a>
             </div>
           </div>
 
           <div id="free-shell" class="section-card" hidden>
-            <h2 class="section-title">Messages are part of Bronze</h2>
-            <p class="card-copy">Free accounts can still send reminders, but saved timelines turn on with Bronze.</p>
+            <h2 class="section-title">Activity is part of Bronze</h2>
+            <p class="card-copy">Free accounts can still send reminders, but the business-wide activity feed turns on with Bronze.</p>
             <div class="button-row" style="margin-top:16px;">
               <a class="primary-link" href="settings.html">Go to Settings</a>
             </div>
@@ -57,12 +57,12 @@
           <div id="bronze-shell" class="messages-shell" hidden>
             <div class="summary-grid">
               <div class="summary-card">
-                <div class="summary-label">Timeline Items</div>
+                <div class="summary-label">Activity Items</div>
                 <div id="messages-total-count" class="summary-value">0</div>
                 <p class="summary-copy">All reminder and imported appointment activity.</p>
               </div>
               <div class="summary-card">
-                <div class="summary-label">Reminder Messages</div>
+                <div class="summary-label">Reminder Activity</div>
                 <div id="messages-reminder-count" class="summary-value">0</div>
                 <p class="summary-copy">Emails and texts sent or logged.</p>
               </div>
@@ -76,8 +76,8 @@
             <section class="section-card messages-log-card">
               <div class="messages-card-head">
                 <div>
-                  <h2>Log a past message</h2>
-                  <p>Add a short record of an email or text you already sent outside this app.</p>
+                  <h2>Log past communication</h2>
+                  <p>Add a short record of an email or text that already happened outside this app.</p>
                 </div>
               </div>
               <form id="past-message-form" class="past-message-form">
@@ -117,7 +117,7 @@
                   Save only the useful reminder context. Do not paste medical, dental, therapy, insurance, pharmacy, or patient information.
                 </div>
                 <div class="messages-form-actions">
-                  <button id="save-past-message-button" class="primary-button" type="submit">Save Past Message</button>
+                  <button id="save-past-message-button" class="primary-button" type="submit">Save Communication</button>
                 </div>
               </form>
             </section>
@@ -125,8 +125,8 @@
             <section class="section-card messages-timeline-card">
               <div class="messages-card-head">
                 <div>
-                  <h2>All communication activity</h2>
-                  <p>Filter sent reminders, logged messages, and imported appointments without jumping between pages.</p>
+                  <h2>All business activity</h2>
+                  <p>Filter imports, scheduler events, sent reminders, and logged communication without jumping between pages.</p>
                 </div>
               </div>
 
@@ -139,7 +139,7 @@
                   Filter
                   <select id="messages-filter">
                     <option value="all">Everything</option>
-                    <option value="reminders">Reminder messages</option>
+                    <option value="reminders">Reminder activity</option>
                     <option value="imports">Imported appointments</option>
                     <option value="email">Email</option>
                     <option value="sms">Text</option>
@@ -149,8 +149,8 @@
 
               <div id="messages-loading" class="loading-card loading-card-skeleton" hidden>
                 <div class="loading-spinner" aria-hidden="true"></div>
-                <p class="loading-title">Loading messages...</p>
-                <p class="loading-copy">Pulling reminder history, clients, and imported appointments.</p>
+                <p class="loading-title">Loading activity...</p>
+                <p class="loading-copy">Pulling reminder history, clients, scheduler events, and imported appointments.</p>
               </div>
 
               <div id="messages-timeline" class="messages-timeline"></div>
@@ -161,8 +161,8 @@
     </section>
   </div>
 
-  <script src="nav.js?v=20260519b"></script>
+  <script src="nav.js?v=20260522a"></script>
   <script src="debug-save.js?v=20260516a"></script>
-  <script type="module" src="messages.js?v=20260519b"></script>
+  <script type="module" src="messages.js?v=20260522a"></script>
 </body>
 </html>

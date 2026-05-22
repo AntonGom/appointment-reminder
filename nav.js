@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const accountDropdownMessagesLink = document.createElement("a");
   accountDropdownMessagesLink.className = "account-dropdown-link";
   accountDropdownMessagesLink.href = "messages.html";
-  accountDropdownMessagesLink.textContent = "Messages";
+  accountDropdownMessagesLink.textContent = "Activity";
 
   const accountDropdownSignOut = document.createElement("button");
   accountDropdownSignOut.className = "account-dropdown-action";
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <p class="site-nav-copy">Simple reminders for small businesses that want fewer no-shows without a complicated scheduling system.</p>
     <nav class="site-nav-links">
       <a href="index.html"${currentPage === "home" ? ' class="active"' : ""}>Send Reminder</a>
-      <a href="messages.html"${currentPage === "messages" ? ' class="active"' : ""}>Messages</a>
+      <a href="messages.html"${currentPage === "activity" ? ' class="active"' : ""}>Activity</a>
       <a href="account.html"${currentPage === "account" ? ' class="active"' : ""}>Account</a>
       <a href="about.html"${currentPage === "about" ? ' class="active"' : ""}>About</a>
       <a href="terms.html"${currentPage === "terms" ? ' class="active"' : ""}>Terms</a>

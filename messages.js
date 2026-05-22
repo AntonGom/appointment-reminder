@@ -450,7 +450,7 @@ function getReminderSourceLabel(entry) {
   }
 
   if (source === "external_import") {
-    return "Logged past message";
+    return "Logged communication";
   }
 
   if (source === "manual") {
@@ -791,7 +791,7 @@ function renderTimeline() {
   const filteredEvents = getFilteredEvents();
 
   if (!timelineEvents.length) {
-    messagesTimeline.innerHTML = `<div class="messages-empty">No message activity yet. Sent reminders, logged past messages, and imported appointments will appear here.</div>`;
+    messagesTimeline.innerHTML = `<div class="messages-empty">No activity yet. Sent reminders, logged communication, scheduler syncs, and imported appointments will appear here.</div>`;
     return;
   }
 
@@ -905,7 +905,7 @@ async function loadMessages(user) {
   }
 
   setLoading(true);
-  setStatus("Loading message timeline...", "info");
+  setStatus("Loading activity feed...", "info");
 
   try {
     const [clientRows, appointmentRows, historyData] = await Promise.all([
@@ -922,10 +922,10 @@ async function loadMessages(user) {
     renderTimeline();
     setStatus("", "info");
   } catch (error) {
-    console.warn("Unable to load messages.", error);
-    setStatus(error.message || "Unable to load messages.", "error");
+    console.warn("Unable to load activity.", error);
+    setStatus(error.message || "Unable to load activity.", "error");
     if (messagesTimeline) {
-      messagesTimeline.innerHTML = `<div class="messages-empty">Unable to load messages right now. Nothing was changed.</div>`;
+      messagesTimeline.innerHTML = `<div class="messages-empty">Unable to load activity right now. Nothing was changed.</div>`;
       messagesTimeline.hidden = false;
     }
   } finally {
@@ -968,7 +968,7 @@ async function handleSavePastMessage(event) {
   event.preventDefault();
 
   if (!currentAuthUser?.id) {
-    setStatus("Please sign in before saving a message.", "error");
+    setStatus("Please sign in before saving communication.", "error");
     return;
   }
 
@@ -996,17 +996,17 @@ async function handleSavePastMessage(event) {
   }
 
   if (channel === "sms" && !recipientPhone) {
-    setStatus("Enter a valid phone number for the text message.", "error");
+    setStatus("Enter a valid phone number for the text entry.", "error");
     return;
   }
 
   if (!preview) {
-    setStatus("Add a short message preview before saving.", "error");
+    setStatus("Add a short communication preview before saving.", "error");
     return;
   }
 
   setButtonBusy(savePastMessageButton, true, "Saving...");
-  setStatus("Saving past message...", "info");
+  setStatus("Saving communication...", "info");
 
   try {
     await saveAccountDataResource("history", {
@@ -1030,11 +1030,11 @@ async function handleSavePastMessage(event) {
 
     pastMessageForm?.reset();
     setDefaultPastMessageDate();
-    setStatus("Past message saved.", "success");
+    setStatus("Communication saved.", "success");
     await loadMessages(currentAuthUser);
   } catch (error) {
-    console.warn("Unable to save past message.", error);
-    setStatus(error.message || "Unable to save past message.", "error");
+    console.warn("Unable to save communication.", error);
+    setStatus(error.message || "Unable to save communication.", "error");
   } finally {
     setButtonBusy(savePastMessageButton, false);
   }
@@ -1120,8 +1120,8 @@ async function initMessagesPage() {
       }
     });
   } catch (error) {
-    console.error("Unable to initialize messages page.", error);
-    setStatus(error.message || "Unable to initialize messages page.", "error");
+    console.error("Unable to initialize activity page.", error);
+    setStatus(error.message || "Unable to initialize activity page.", "error");
   }
 }
 
