@@ -285,7 +285,7 @@ async function runWithTimeout(operation, timeoutMs, message = "Request timed out
 }
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClientFn) {
-  const clientKey = `${supabaseUrl}::${publicKey}::abortable-v1`;
+  const clientKey = `${supabaseUrl}::${publicKey}`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {

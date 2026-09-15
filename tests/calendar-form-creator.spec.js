@@ -1303,6 +1303,9 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("body")).not.toContainText("Client Link");
 
     const previewShell = page.locator("#form-preview-shell");
+    await expect.poll(() => previewShell.evaluate(element => (
+      element.getAnimations().every(animation => animation.playState === "finished")
+    ))).toBe(true);
     const widthBefore = await previewShell.evaluate(element => element.getBoundingClientRect().width);
 
     await toolbar.locator(".preview-mode-toggle").click();

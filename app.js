@@ -228,7 +228,7 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = SEND_EMAIL_TI
 }
 
 function getSharedSupabaseClient(supabaseUrl, publicKey, createClient) {
-  const clientKey = `${supabaseUrl}::${publicKey}::abortable-v1`;
+  const clientKey = `${supabaseUrl}::${publicKey}`;
   window.__appointmentReminderSupabaseClients = window.__appointmentReminderSupabaseClients || new Map();
 
   if (!window.__appointmentReminderSupabaseClients.has(clientKey)) {
