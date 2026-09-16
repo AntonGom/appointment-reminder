@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar</title>
-  <link rel="stylesheet" href="nav.css?v=20260516a">
+  <link rel="stylesheet" href="nav.css?v=20260916a">
   <link rel="stylesheet" href="account-sections.css?v=20260522c">
+  <link rel="stylesheet" href="ui-redesign.css?v=20260916a">
 </head>
 <body data-page="calendar">
   <div class="page">
@@ -15,8 +16,8 @@
           Calendar
           <span id="price-pill" class="price-pill">Optional Bronze</span>
         </div>
-        <h1>Appointments calendar</h1>
-        <p class="lead">See upcoming and previous appointments in one place.</p>
+        <h1>Calendar</h1>
+        <p class="lead">Review appointments, bring in events from other tools, and start reminders.</p>
       </div>
     </section>
 
@@ -169,14 +170,14 @@
               </div>
             </div>
 
-            <div class="section-card scheduler-addon-card">
-              <div class="appointments-card-head">
+            <details class="section-card scheduler-addon-card">
+              <summary class="appointments-card-head scheduler-addon-summary-row">
                 <div>
                   <h3>Connect an existing scheduler</h3>
                   <p>Keep booking appointments wherever you already do. This app only pulls those appointments into your calendar so reminders and follow-ups can be prepared here.</p>
                 </div>
                 <span id="scheduler-addon-status" class="source-chip">Off</span>
-              </div>
+              </summary>
 
               <div class="scheduler-addon-grid">
                 <label class="scheduler-toggle-row scheduler-addon-primary-toggle">
@@ -335,7 +336,7 @@
               <div class="import-safety-note" role="note">
                 Keep this for non-healthcare workflows unless you have the right compliance agreements and safeguards in place.
               </div>
-            </div>
+            </details>
 
             <div id="calendar-loading" class="loading-card loading-card-skeleton" hidden>
               <div class="loading-spinner" aria-hidden="true"></div>
@@ -421,15 +422,15 @@
               </div>
             </div>
 
-            <div class="section-card appointments-card">
-              <div class="appointments-card-head">
+            <details class="section-card appointments-card appointments-archive-card">
+              <summary class="appointments-card-head appointments-archive-summary">
                 <div>
                   <h3>All saved appointments</h3>
                   <p>Browse appointments across every month and year saved on this account.</p>
                 </div>
-              </div>
+              </summary>
               <div id="all-appointments-list" class="appointment-list"></div>
-            </div>
+            </details>
           </div>
         </div>
       </div>
@@ -457,7 +458,7 @@
     </div>
   </div>
 
-  <script src="nav.js?v=20260915a"></script>
+  <script src="nav.js?v=20260916a"></script>
   <script src="debug-save.js?v=20260516a"></script>
   <script type="module" src="calendar.js?v=20260915a"></script>
 </body>

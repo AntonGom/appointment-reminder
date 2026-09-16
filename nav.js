@@ -1,5 +1,42 @@
 document.addEventListener("DOMContentLoaded", () => {
   const currentPage = document.body.dataset.page || "";
+  const currentFile = window.location.pathname.split("/").pop() || "index.html";
+  const coreWorkspaceFiles = new Set([
+    "index.html",
+    "client-details.html",
+    "calendar.html",
+    "form-creator.html",
+    "branding.html"
+  ]);
+  const hasAppShell = coreWorkspaceFiles.has(currentFile);
+
+  if (hasAppShell) {
+    document.body.classList.add("has-app-shell");
+  }
+
+  const icons = {
+    send: '<path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path>',
+    calendar: '<path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
+    form: '<rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path>',
+    palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 22a10 10 0 1 0-10-10c0 4.42 2.87 8.17 6.84 9.5.9.3 1.9-.37 1.9-1.32v-.86c0-.78.63-1.41 1.41-1.41H14a2 2 0 0 0 0-4h-1.5a2.5 2.5 0 0 1 0-5H15"></path>',
+    activity: '<path d="M3 3v18h18"></path><path d="m7 16 4-5 4 3 5-7"></path>',
+    account: '<circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle>'
+  };
+
+  function iconMarkup(name) {
+    return `<svg class="app-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.form}</svg>`;
+  }
+
+  function isCurrentFile(file) {
+    return currentFile === file || (file === "index.html" && !currentFile);
+  }
+
+  function appNavLink(file, label, icon, className = "") {
+    const active = isCurrentFile(file);
+    return `<a href="${file}" class="app-nav-link${active ? " active" : ""}${className ? ` ${className}` : ""}"${active ? ' aria-current="page"' : ""}>${iconMarkup(icon)}<span>${label}</span></a>`;
+  }
   const statusCluster = document.createElement("div");
   statusCluster.className = "status-cluster";
   const accountMenu = document.createElement("div");
@@ -69,10 +106,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const nav = document.createElement("aside");
   nav.className = "site-nav";
-  nav.innerHTML = `
+  nav.innerHTML = hasAppShell ? `
+    <div class="site-nav-brand">
+      <span class="site-nav-mark" aria-hidden="true">AR</span>
+      <span>
+        <strong class="site-nav-title">Appointment Reminder</strong>
+        <small>Business workspace</small>
+      </span>
+    </div>
+    <nav class="site-nav-links" aria-label="Primary navigation">
+      <span class="site-nav-group-label">Workspace</span>
+      ${appNavLink("index.html", "Send reminder", "send")}
+      ${appNavLink("calendar.html", "Calendar", "calendar")}
+      ${appNavLink("client-details.html", "Clients", "users")}
+      ${appNavLink("form-creator.html", "Form creator", "form")}
+      ${appNavLink("branding.html", "Branding", "palette")}
+      <span class="site-nav-group-label">Manage</span>
+      ${appNavLink("messages.html", "Activity", "activity")}
+      ${appNavLink("account-info.html", "Account", "account")}
+      ${appNavLink("settings.html", "Settings", "settings")}
+    </nav>
+    <nav class="site-nav-footer-links" aria-label="Information pages">
+      <a href="about.html"${currentPage === "about" ? ' class="active"' : ""}>About</a>
+      <a href="terms.html"${currentPage === "terms" ? ' class="active"' : ""}>Terms</a>
+      <a href="privacy.html"${currentPage === "privacy" ? ' class="active"' : ""}>Privacy</a>
+    </nav>
+  ` : `
     <h2 class="site-nav-title">Appointment Reminder</h2>
     <p class="site-nav-copy">Simple reminders for small businesses that want fewer no-shows without a complicated scheduling system.</p>
-    <nav class="site-nav-links">
+    <nav class="site-nav-links" aria-label="Primary navigation">
       <a href="index.html"${currentPage === "home" ? ' class="active"' : ""}>Send Reminder</a>
       <a href="messages.html"${currentPage === "activity" ? ' class="active"' : ""}>Activity</a>
       <a href="account.html"${currentPage === "account" ? ' class="active"' : ""}>Account</a>
@@ -80,6 +142,17 @@ document.addEventListener("DOMContentLoaded", () => {
       <a href="terms.html"${currentPage === "terms" ? ' class="active"' : ""}>Terms</a>
       <a href="privacy.html"${currentPage === "privacy" ? ' class="active"' : ""}>Privacy</a>
     </nav>
+  `;
+
+  const mobileTabBar = document.createElement("nav");
+  mobileTabBar.className = "mobile-tab-bar";
+  mobileTabBar.setAttribute("aria-label", "Primary mobile navigation");
+  mobileTabBar.innerHTML = `
+    ${appNavLink("index.html", "Reminder", "send", "mobile-tab-link")}
+    ${appNavLink("calendar.html", "Calendar", "calendar", "mobile-tab-link")}
+    ${appNavLink("client-details.html", "Clients", "users", "mobile-tab-link")}
+    ${appNavLink("form-creator.html", "Form", "form", "mobile-tab-link")}
+    ${appNavLink("branding.html", "Branding", "palette", "mobile-tab-link")}
   `;
 
   let supabaseClient = null;
@@ -514,4 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.appendChild(toggle);
   document.body.appendChild(overlay);
   document.body.appendChild(nav);
+  if (hasAppShell) {
+    document.body.appendChild(mobileTabBar);
+  }
 });

@@ -632,3 +632,362 @@
     transform: translateX(6px);
   }
 }
+
+/* Adaptive workspace navigation used by the five primary product screens. */
+.mobile-tab-bar {
+  display: none;
+}
+
+.has-app-shell .site-nav {
+  width: var(--ui-sidebar-width, 232px);
+  padding: 18px 14px 14px;
+  border-right: 1px solid #dfe3e8;
+  background: #ffffff;
+  box-shadow: none;
+  color: #17191d;
+  overflow-y: auto;
+}
+
+.has-app-shell .site-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  margin-bottom: 20px;
+  padding: 6px 8px 14px;
+  border-bottom: 1px solid #e8ebef;
+}
+
+.has-app-shell .site-nav-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 8px;
+  background: #2457f5;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.has-app-shell .site-nav-title {
+  display: block;
+  margin: 0;
+  color: #17191d;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.has-app-shell .site-nav-brand small {
+  display: block;
+  margin-top: 2px;
+  color: #7a8391;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.has-app-shell .site-nav-links {
+  display: grid;
+  gap: 3px;
+}
+
+.has-app-shell .site-nav-group-label {
+  display: block;
+  margin: 16px 10px 5px;
+  color: #929aa6;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.has-app-shell .site-nav-group-label:first-child {
+  margin-top: 0;
+}
+
+.has-app-shell .site-nav-links .app-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #5e6672;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.has-app-shell .site-nav-links .app-nav-link:hover {
+  border-color: transparent;
+  background: #f1f3f6;
+  color: #17191d;
+}
+
+.has-app-shell .site-nav-links .app-nav-link.active {
+  border-color: #d5dfff;
+  background: #e9efff;
+  color: #1948da;
+}
+
+.app-nav-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.has-app-shell .site-nav-footer-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding: 14px 10px 4px;
+  border-top: 1px solid #e8ebef;
+}
+
+.has-app-shell .site-nav-footer-links a {
+  color: #7a8391;
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.has-app-shell .site-nav-footer-links a:hover,
+.has-app-shell .site-nav-footer-links a.active {
+  color: #1948da;
+}
+
+.has-app-shell .status-cluster {
+  top: 14px;
+  right: 18px;
+  gap: 8px;
+  max-width: calc(100vw - var(--ui-sidebar-width, 232px) - 40px);
+}
+
+.has-app-shell .account-chip,
+.has-app-shell .env-badge {
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #17191d;
+  box-shadow: 0 4px 16px rgba(23, 25, 29, 0.07);
+  backdrop-filter: blur(12px);
+}
+
+.has-app-shell .account-chip {
+  min-height: 40px;
+  padding: 7px 10px !important;
+}
+
+.has-app-shell .account-chip-email {
+  color: #3e454f;
+  font-size: 12px;
+}
+
+.has-app-shell .account-chip-label {
+  color: #17191d;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.has-app-shell .account-chip-tier {
+  padding: 4px 7px;
+  border: 0;
+  background: #fff3dd;
+  color: #8a4a03;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+}
+
+.has-app-shell .account-chip-tier.free {
+  background: #e9efff;
+  color: #1948da;
+}
+
+.has-app-shell .env-badge {
+  min-width: 60px;
+  padding: 8px 9px;
+  color: #5e6672;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.has-app-shell .env-badge.qa,
+.has-app-shell .env-badge.production,
+.has-app-shell .env-badge.local {
+  border-color: #dfe3e8;
+  background: rgba(255, 255, 255, 0.92);
+  color: #68707d;
+}
+
+.has-app-shell .account-dropdown {
+  top: calc(100% + 6px);
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 40px rgba(23, 25, 29, 0.14);
+  backdrop-filter: none;
+}
+
+.has-app-shell .account-dropdown-link,
+.has-app-shell .account-dropdown-action {
+  min-height: 40px;
+  padding: 9px 10px !important;
+  border-radius: 6px;
+  background: transparent;
+  color: #30353c;
+  font-size: 12px;
+}
+
+.has-app-shell .account-dropdown-link:hover,
+.has-app-shell .account-dropdown-action:hover {
+  background: #f1f3f6;
+}
+
+@media (min-width: 1101px) {
+  .has-app-shell .site-nav {
+    transform: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .has-app-shell .site-nav {
+    width: min(292px, 86vw);
+    padding: 70px 14px calc(var(--ui-mobile-nav-height, 68px) + 18px);
+    transform: translateX(-104%);
+    z-index: 1300;
+  }
+
+  .has-app-shell .site-nav.open {
+    transform: translateX(0);
+  }
+
+  .has-app-shell .site-nav-overlay {
+    z-index: 1290;
+  }
+
+  .has-app-shell .nav-toggle {
+    top: 14px;
+    left: 14px;
+    z-index: 1310;
+    width: 42px !important;
+    height: 42px;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 16px rgba(23, 25, 29, 0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  .has-app-shell .nav-toggle-bar {
+    width: 18px;
+    background: #30353c;
+  }
+
+  .has-app-shell .status-cluster {
+    top: 14px;
+    right: 14px;
+    max-width: calc(100vw - 80px);
+  }
+
+  .has-app-shell .mobile-tab-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1280;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: calc(var(--ui-mobile-nav-height, 68px) + env(safe-area-inset-bottom, 0px));
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #dfe3e8;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 -8px 28px rgba(23, 25, 29, 0.08);
+    backdrop-filter: blur(18px) saturate(120%);
+  }
+
+  .has-app-shell .mobile-tab-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 54px;
+    padding: 5px 2px;
+    border-radius: 7px;
+    color: #77808d;
+    font-size: 9px;
+    font-weight: 750;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .has-app-shell .mobile-tab-link .app-nav-icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .has-app-shell .mobile-tab-link.active {
+    background: #e9efff;
+    color: #1948da;
+  }
+}
+
+@media (max-width: 560px) {
+  .has-app-shell::before {
+    display: none !important;
+  }
+
+  .has-app-shell .nav-toggle {
+    top: 10px;
+    left: 10px;
+  }
+
+  .has-app-shell .status-cluster {
+    top: 10px;
+    right: 10px;
+    max-width: calc(100vw - 68px);
+  }
+
+  .has-app-shell .env-badge {
+    display: flex;
+    min-width: 54px;
+    padding: 6px 7px;
+  }
+
+  .has-app-shell .account-menu {
+    width: min(180px, calc(100vw - 86px));
+    max-width: min(180px, calc(100vw - 86px));
+  }
+
+  .has-app-shell .account-chip {
+    min-height: 42px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+  }
+
+  .has-app-shell .account-chip-email {
+    font-size: 10px;
+  }
+
+  .has-app-shell .account-chip-tier {
+    font-size: 8px;
+  }
+}

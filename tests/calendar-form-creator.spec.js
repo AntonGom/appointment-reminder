@@ -551,6 +551,7 @@ test.describe("Calendar and Form Creator", () => {
     await expect(page.locator("#previous-list")).toContainText("Ava Buyer");
     await expect(page.locator("#all-appointments-list")).toContainText("Jordan Fade");
 
+    await page.locator(".appointments-archive-card > summary").click();
     await page.locator("#all-appointments-list").getByText("Jordan Fade").click();
     await expect(page.locator("#appointment-detail-modal")).toBeVisible();
     await expect(page.locator("#appointment-detail-body")).toContainText("12 Barber Lane");
@@ -643,6 +644,7 @@ test.describe("Calendar and Form Creator", () => {
 
     await stubModulePages(page, seed);
     await page.goto("/calendar.html");
+    await page.locator(".scheduler-addon-card > summary").click();
 
     await expect(page.locator("#scheduler-addon-enabled")).toBeChecked();
     await expect(page.locator("#scheduler-source-google")).toBeChecked();
@@ -1124,6 +1126,7 @@ test.describe("Calendar and Form Creator", () => {
     await page.goto("/calendar.html");
 
     await expect(page.locator("#all-appointments-list")).toContainText("Jordan Existing");
+    await page.locator(".appointments-archive-card > summary").click();
     await page.locator('#all-appointments-list [data-action="use-appointment"]').first().click();
 
     await expect(page).toHaveURL(/index\.html/);
