@@ -4773,6 +4773,9 @@ function updateWizardUI() {
   const motionState = applyWizardMotionPresentation(activeCustomFormProfile || {});
   const isLoadingTransitionActive = isCustomFormLoadingTransitionActive();
 
+  document.body.classList.toggle("reminder-review-mode", isFinalStep);
+  document.body.classList.toggle("reminder-welcome-mode", isWelcomeStep);
+
   wizardSteps.forEach((step, index) => {
     step.classList.toggle("active", index === currentStepIndex);
   });

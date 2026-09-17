@@ -66,4 +66,42 @@ test.describe("Primary workspace redesign", () => {
     await expect(page.locator("#branding-business-name")).toHaveValue("Juniper & Co.");
     await expectNoHorizontalOverflow(page);
   });
+
+  test("send reminder uses the quick-entry desk and keeps review validation", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/index.html?demo=1");
+
+    await expect(page.locator(".quick-entry-form")).toBeVisible();
+    await expect(page.locator("#phone")).toBeVisible();
+    await expect(page.locator("#email")).toBeVisible();
+    await expect(page.locator("#date")).toBeVisible();
+    await expect(page.locator(".quick-reminder-rail")).toBeVisible();
+
+    await page.locator("#name").fill("Ava Johnson");
+    await page.locator("#email").fill("ava.johnson@example.com");
+    await page.locator("#date").fill("2026-10-12");
+    await page.locator("#time").fill("10:30");
+    await page.locator("#custom_service_type").selectOption("Follow-up");
+    await page.locator(".quick-review-button").click();
+
+    await expect(page.locator("body")).toHaveClass(/reminder-review-mode/);
+    await expect(page.locator(".wizard-step[data-field='consent']")).toBeVisible();
+    await page.locator(".quick-review-back").click();
+    await expect(page.locator("body")).not.toHaveClass(/reminder-review-mode/);
+  });
+
+  test("form creator keeps mobile tools out of the way until requested", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/form-creator.html?demo=1");
+
+    await expect(page.locator(".fc-next-topbar")).toBeVisible();
+    await expect(page.locator("#form-preview-shell")).toBeVisible();
+    await expect(page.locator(".fc-mobile-tools-button")).toBeVisible();
+    await expect(page.locator("body")).not.toHaveClass(/fc-tools-open/);
+
+    await page.locator(".fc-mobile-tools-button").click();
+    await expect(page.locator("body")).toHaveClass(/fc-tools-open/);
+    await expect(page.locator("#form-studio-panel")).toBeInViewport();
+    await expectNoHorizontalOverflow(page);
+  });
 });
