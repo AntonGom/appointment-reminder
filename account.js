@@ -72,6 +72,7 @@ const SUPABASE_MODULE_TIMEOUT_MS = 4500;
 const SESSION_RECOVERY_DELAYS_MS = [600, 1600, 3600, 7000];
 const CLIENTS_LOADING_STALE_MS = 4500;
 const SUPABASE_MODULE_URLS = [
+  "./supabase-client.js",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];

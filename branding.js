@@ -1,4 +1,4 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "./supabase-client.js";
 import {
   BRANDING_TEMPLATE_OPTIONS,
   TEMPLATE_STYLE_PRESETS,

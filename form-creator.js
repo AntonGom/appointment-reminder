@@ -1,4 +1,4 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from "./supabase-client.js";
 import {
   BASE_REMINDER_STEPS,
   CUSTOM_FIELD_TYPES,

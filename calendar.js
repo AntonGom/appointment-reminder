@@ -130,6 +130,7 @@ const APPOINTMENT_IMPORT_ALIASES = {
 const REMINDER_PREFILL_KEY = "appointment-reminder-selected-client";
 const XLSX_MODULE_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 const SUPABASE_MODULE_URLS = [
+  "./supabase-client.js",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
   "https://esm.sh/@supabase/supabase-js@2"
 ];

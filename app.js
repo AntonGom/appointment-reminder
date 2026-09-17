@@ -637,7 +637,7 @@ async function initAccountTierState() {
       return;
     }
 
-    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    const { createClient } = await import("./supabase-client.js");
     appSupabase = getSharedSupabaseClient(appPublicConfig.supabaseUrl, publicKey, createClient);
 
     const {
